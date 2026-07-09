@@ -1,0 +1,156 @@
+<?php
+$page_id=572;$page_slug='no_order_inquiry_page';
+include("connect.php");
+$ctable 	= "hsncode_master";
+$Where = "";
+
+if (isset($_REQUEST['searchName']) && $_REQUEST['searchName'] != "") {
+    $Where .= " (name like '%" . $_REQUEST['searchName'] . "%')    ";
+
+
+  $where11="";
+  $pro_r1=$db->rp_getData("tax","id","name LIKE '%".$_REQUEST['searchName']."%' AND isDelete=0","",0);
+  $PROIDS1=array();
+  if($pro_r1)
+  {
+    while($pro_d1=mysqli_fetch_assoc($pro_r1))
+    {
+      $PROIDS1[]=$pro_d1['id'];
+      
+    }
+  }
+  else{
+    $Where = " (name like '%" . $_REQUEST['searchName'] . "%') AND ";
+  }
+  if(!empty($PROIDS1))
+  {
+
+    $PROIDS1=implode(",", $PROIDS1);
+    // echo $PROIDS1; exit;
+    $where11=" OR tax_id IN (".$PROIDS1.") AND  ";
+    $Where .= $where11;
+    
+  }
+    
+}
+else {
+  // $Where .= "  isDelete='0' ";
+}
+
+// if(isset($_REQUEST['type']) && $_REQUEST['type']!="" && $_REQUEST['type']!=NULL)
+// {
+//   $Where .= " type = '".$_REQUEST['type']."' AND";
+// }
+
+// if(isset($_REQUEST['state']) && $_REQUEST['state']!="" && $_REQUEST['state']!=NULL)
+// {
+//   $Where .= " state = '".$_REQUEST['state']."' AND ";
+// }
+
+// if(isset($_REQUEST['city']) && $_REQUEST['city']!="" && $_REQUEST['city']!=NULL)
+// {
+//   $Where .= " city = '".$_REQUEST['city']."' AND";
+// }
+
+if(isset($_REQUEST['top_category_id']) && $_REQUEST['top_category_id']!="" && $_REQUEST['top_category_id']!=NULL && $_REQUEST['top_category_id']!=undefined)
+{
+ $Where .= "  tax_id = '".$_REQUEST['top_category_id']."' AND ";
+}
+
+$Where .= " isDelete=0";
+	
+
+$ctable_r = $db->rp_getData($ctable,"*",$Where,"id DESC",0);
+/*for log*/
+$flag = "Web";
+$module_name = "HSN Code";
+$log_description = $module_name." Printed By ".$_SESSION[SITE_SESS.'SESS_NAME']." ON ".date("Y-m-d H:i:s");
+$last_id = "";
+$db->insertLog($ctable,$last_id,"print","",$insert,0,$log_description,$flag,$module_name,$user_id,"");
+/*for log*/
+?>
+<style>
+.mainDiv, table{
+  height: auto;   
+  width:100%;
+  font-family: Calibri,sans-serif;
+  font-style: normal;
+  font-weight: 400;
+  padding: 0;
+  text-decoration: none;
+  font-size: 10pt;
+  margin:auto;
+  padding:auto;
+}
+tr{height: 30px;}
+table , td, th { border-collapse: collapse;border: 1px solid #000;}
+td, th {  padding: 5px;}
+th { border: 1px solid #595959;background: #f0e6cc;}
+.text-right{text-align: right;}
+.center{text-align:center;}
+.space{ padding: 10px;}
+.no-border{border-bottom: 1px solid #fff;}
+h2
+{
+  text-transform: uppercase;
+  margin-bottom: 0px;
+}
+</style>
+<table id="datatable_1" class="table table-striped table-bordered table-hover">
+  <thead>
+    <tr>
+      <th colspan="12" class="center">
+        <h2>Hsn Master <?= date("d-m-Y h:i a");?> Printed By : <?=$_SESSION[SITE_SESS.'SESS_NAME'];?></h2>
+      </th>
+    </tr>
+    <tr>
+      <th>Sr No.</th>
+    <th>Name</th>
+    <th>Tax Category</th>
+      <!-- <th>Image</th> -->
+    </tr>
+  </thead>
+ <tbody>
+  <?php
+  if(mysqli_num_rows($ctable_r)>0){
+    $count = 0;
+    
+    while($ctable_d = mysqli_fetch_array($ctable_r)){
+      $count++;
+  ?>
+    <tr>
+    
+      <td><?php echo $count; ?></td>
+      <td>
+      <?php 
+      echo stripslashes($ctable_d['name']); 
+      ?>
+      </td>
+      <td>
+      <?php 
+      echo $db->rp_getValue("tax","name","id='".$ctable_d['tax_id']."'"); 
+      ?>
+      </td>
+     <!--  <td>
+        <?php
+        if($ctable_d['image_path']!="" && file_exists(TOP_CATEGORY_A.$ctable_d['image_path'])){
+        ?>
+          <img src="<?php echo TOP_CATEGORY_A.$ctable_d['image_path']; ?>" width="50" />
+        <?php
+        }else{
+          echo "No Image Available.";
+        }
+        ?>
+      </td> -->
+      <!-- <td>
+      <a class="btn btn-info btn-sm" onClick="window.location.href='top_category_master_crud.php?mode=edit&id=<?php echo $ctable_d['id']; ?>'" title="Edit"><i class="fa fa-pencil"></i></a>
+      <a class="btn btn-danger btn-sm" onClick="del_conf('<?php echo $ctable_d['id']; ?>');" title="Delete"><i class="fa fa-times"></i></a>
+      </td> -->
+    </tr>
+  <?php
+    }
+  }
+  ?>
+  </tbody>
+</table>
+<?php require_once 'disconnect.php';  ?>

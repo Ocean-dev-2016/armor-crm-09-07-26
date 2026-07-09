@@ -1,0 +1,11 @@
+<?php
+	$page_id=400;$page_slug='dashboard';
+	$customers_select2 = $db->rp_getData("executive", "*", "isDelete=0 AND isActive=1", "",1);
+	while ($customer_select2 = mysqli_fetch_assoc($customers_select2)){
+?>
+		<option value="<?php echo $customer_select2['id']; ?>">
+			<?= $customer_select2['company_name']." - ".$customer_select2['cname']; ?>
+		</option>
+<?php 
+	}				
+?>

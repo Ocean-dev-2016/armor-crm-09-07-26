@@ -1,0 +1,142 @@
+.ui-state-highlight
+{
+  color: #a94485!important;
+}
+
+
+
+
+.task-container{
+  width: 100%;
+  min-height: 800px;
+}
+.task-container .col-sm-2{
+  padding-left: 1px;
+  padding-right: 1px;
+  width:20%;
+
+}
+.task-stage
+{
+  min-height: 800px;
+  height: 100%;
+  background: #dadde1;
+}
+.task-title{
+  padding: 10px;
+  font-size: 25px;
+  border-radius: 15px;
+  background-color: #444d58;
+  color:#FFF;
+  min-height: 50px;
+  line-height: 1;
+
+}
+.btn-task{
+  background-color: #FFF;
+  border-radius: 19px!important;
+  font-size: 12px;
+  padding: 4px 8px; 
+  margin-top: 5px;
+  float: right;
+  color:#000;
+}
+.task-body{
+  height: 100%;
+  list-style: none;
+  padding: 0px;
+  min-height: 150px;
+}
+.task-card{
+  border:1px solid #d9d7d7;
+  border-left: 4px solid;
+  margin:10px!important;
+  background-color: #FFF;
+  border-radius: 15px;
+  min-height: 110px;
+}
+.task-card-title{
+  padding: 5px;
+  font-size: 16px;
+  border-radius: 15px;
+  color:#000;
+  line-height: 1;
+  text-transform:uppercase;
+  padding-left: 5px;
+  font-weight: bold; 
+}
+.task-card-title > .btn-task-card-more{
+  color:#000;
+}
+.task-card-title .dropdown{
+  float: right;
+  text-transform:none!important;
+  font-weight: 100!important; 
+}
+.task-card-body{
+  padding: 5px 5px 30px 5px;
+  
+}
+.task-card-body > .task-card-description{
+  text-transform: uppercase;
+  padding-top: 10px;
+  padding-bottom: 5px;
+  margin-bottom: 5px;
+  border-bottom:1px dashed black;
+  margin-top: 0px;
+  word-wrap: break-word;
+  text-overflow:ellipsis;;
+  overflow: hidden;
+  max-height: 80px;
+}
+.btn-task-card-more{
+  font-size: 12px;
+  padding: 2px 2px; 
+  float: right;
+  color:#000;
+  font-weight: 100;
+}
+.btn-task-card-more:hover{
+  color:#000;
+}
+.ui-droppable-active{
+  background:#dd7!important; 
+}
+.task-card-notes{
+  list-style: none;
+  margin-left: 0px;
+  padding-left: 0px;
+}
+.task-card-notes >li{
+  border-bottom: 1px solid #B9B0B0; 
+}
+.task-card-notes p{
+  margin: 0px;
+  margin-bottom: 20px;
+  word-wrap: break-word; 
+  text-transform: uppercase; 
+}
+.task-card-notes .time{
+  float:right;
+  font-size:10px;
+  color:#B9B0B0;
+}
+.task-card-body .extra
+{
+  width:100%;
+  float: left;
+}
+.task-card-body .rating{
+  float: left;
+}
+
+.task-card-body .author{
+  float: right;
+  font-size:12px;
+  color:#B9B0B0; 
+}
+
+.author ::before{
+  content:"-"!important;
+}
+

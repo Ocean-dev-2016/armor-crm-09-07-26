@@ -1,0 +1,915 @@
+<?php
+
+$page_id = 566;
+$page_slug = 'page_order_ajax';
+require_once("connect_in.php");
+include("../include/no_to_word.php");
+
+$ntw = new NumToWord_RP;
+$order_id	= $_REQUEST['order_id'];
+$cart_detail_r 	= $db->rp_getData("orders", "*", "id='" . $order_id . "'", "", 0);
+$cart_detail_d 	= mysqli_fetch_assoc($cart_detail_r);
+$order_date = ($cart_detail_d['order_date'] != "0000-00-00 00:00:00") ? date("d-m-Y", strtotime($cart_detail_d['order_date'])) : "";
+$type_of_customer = $db->rp_getValue("executive", "type_of_executive", "id =  '" . $cart_detail_d['customer_id'] . "' ", 0);
+if ($type_of_customer == 3) {
+	$customer_id = $db->rp_getValue("executive", "dealer_distributor_id", "id= '" . $cart_detail_d['customer_id'] . "' ", 0);
+} else if ($type_of_customer == 2) {
+	$customer_id = $db->rp_getValue("executive", "super_stockist_id", "id = '" . $cart_detail_d['customer_id'] . "' ");
+} else {
+	$customer_id = "";
+}
+
+if (isset($cart_detail_d['customer_id']) && !empty($cart_detail_d['customer_id'])) {
+	$customer_address = $db->rp_getData("executive", "address,company_name,zip,mobile_no1,email", "id = '" . $cart_detail_d['customer_id'] . "' ", '');
+	$customer_address_d = mysqli_fetch_assoc($customer_address);
+}
+
+if (isset($_REQUEST['order_id']) && !empty($_REQUEST['order_id'])) {
+	$cat_id = $db->rp_getValue("order_product_item", "top_cat_id", "order_id = '" . $_REQUEST['order_id'] . "' ", 0);
+}
+if ($cat_id == 1) {
+	$header_image = '../images/category_sheetal_icecream.jpg';
+} else if ($cat_id == 2) {
+	$header_image = '../images/category_jadore_ice_cream.jpg';
+} else {
+	$header_image = '../images/sheetal_ice_creame.jpg';
+}
+
+
+$company_detail_r = $db->rp_getData("company_master", "*", "id='" . $cart_detail_d['type_of_company'] . "' AND isDelete=0", "", 0);
+
+$company_detail_d = mysqli_fetch_assoc($company_detail_r);
+
+$order_unit_arr = array("-1" => "Box", "-2" => "Strip", "-3" => "Pallet", "1" => "Caret", "2" => "Big Box", "100" => "Nos");
+$totalproqty = 0;
+$totalprice1 = 0;
+$totalqty = 0;
+$weight_total = 0;
+
+?>
+<html>
+
+<head>
+	<style>
+		.mainDiv,
+		table {
+			border: 1px solid #595959;
+			border-collapse: collapse;
+			font-size: 13px;
+			width: 250mm !important;
+			background-color: #FFF;
+			margin: auto;
+			padding: auto;
+		}
+
+		table,
+		td,
+		th {
+			border: 1px solid #595959;
+			border-spacing: 10px;
+		}
+
+		td,
+		th {
+			padding: 5px;
+			height: 15px;
+		}
+
+		.text-center {
+			text-align: center !important;
+		}
+
+		.text-right {
+			text-align: right !important;
+		}
+
+		.no-border-left {
+			border-left: hidden;
+		}
+
+		.no-border-right {
+			border-right: hidden;
+		}
+
+		.no-border-bottom {
+			border-bottom: hidden !important;
+		}
+
+		.no-border-top {
+			border-top: hidden !important;
+		}
+
+		.border td {
+			border-bottom: hidden !important;
+		}
+
+		.color {
+			background: #D3D3D3;
+		}
+
+		tbody {
+			/*text-transform: uppercase;*/
+		}
+
+		.font-size td {
+			font-size: 15px !important;
+		}
+
+		.image-width {
+			width: 10% !important;
+			min-width: 10% !important;
+			max-width: 10% !important;
+		}
+
+		.border-r-width {
+			border-right-width: 5px;
+		}
+
+		.border-gray {
+			border-right-color: #E5E5E5;
+		}
+
+		.border-blue {
+			border-right-color: <?= VIEW_COLOR ?>;
+		}
+
+		.vertical-top {
+			vertical-align: top;
+		}
+
+		.height-5 {
+			height: 5px;
+		}
+
+		.bg-gray {
+			background-color: #E5E5E5 !important;
+		}
+
+		.font-13 {
+			font-size: 10px !important;
+		}
+
+		.headerBorder {
+			border: 22px solid #eb268f;
+			border-bottom: none;
+			border-right: none;
+			border-left: none;
+		}
+
+		.main-container {
+			/*border: 1px solid #595959;*/
+			padding: 40px;
+			/* Add space around the content */
+			width: 250mm !important;
+			background-color: #FFF;
+			margin: auto;
+		}
+
+		/*.bolde-style
+		{
+			font-weight: bold;
+		}
+		.margin-top
+		{
+			margin-top: 8%;
+		}*/
+	</style>
+</head>
+
+<body>
+	<div class="main-container">
+		<table style="border: 1px solid #595959;border-collapse: collapse;width: 100%!important;">
+			<tbody>
+				<tr>
+					<td style="padding: 0;">
+						<?php
+						if (isset($company_detail_d['image_path']) && $company_detail_d['image_path'] != "") {
+						?>
+							<img style="width: 100%;padding: 0px !important" src="<?= HEADER_A . $company_detail_d['image_path'] ?>">
+						<?php
+						} else {
+						?>
+							<img style="width: 100%;padding: 0px !important;" src="../images/craftbox_header.jpg">
+						<?php
+						}
+						?>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+		<table>
+			<tbody class="<?= $cl; ?>">
+				<!-- <tr class="headerBorder">
+					<td colspan="6" class="no-border-right" style="background: #f1f1f1;padding: 0px !important;">
+						<img style="width: 50%;padding: 0px !important;margin: 2px 0 2px 2px;"  src="<?= $header_image; ?>">
+					</td>
+					<td colspan="6" class="" style="font-size: 27px;background: #f1f1f1;">
+						<?php
+						if ($customer_address) {
+						?>
+						<h2><strong><?= $customer_address_d['company_name']; ?></strong></h2>
+						<p class="font-13">
+							<i class="fa fa-location-arrow"></i> <?= $customer_address_d['address'] ?>
+						</p>	
+						<?php
+						}
+						?> -->
+
+				<!-- <strong style="color: #eb268f;"><?php echo CLIENT_BRAND_NAME ?></strong> -->
+				<!-- <br>
+						<p class="font-13">
+							<i class="fa fa-location-arrow"></i> <?= FACTORY_ADDRESS ?>
+							<br>
+							<i class="fa fa-envelope"></i> info@sheetalicecream.com <i class="fa fa-globe"></i> www.scplco.com
+						<br>
+						<strong>CIN: L15205GJ2013PLC077205</strong> -->
+				<!-- <i class="fa fa-location-arrow"></i><strong> Office Address : </strong><?= CLIENT_ADDRESS ?>
+							<br> -->
+				<!-- <i class="fa fa-phone"></i> <?= OFFICE_PHONE ?><br> <?= OFFICE_EMAIL ?>  -->
+				<!-- </p>
+					</td>
+				</tr> -->
+				<!-- <tr>
+					<td colspan="21">
+						<?php
+						if (isset($company_detail_d['image_path']) && $company_detail_d['image_path'] != "") {
+						?>
+								<img style="width: 100%;padding: 0px !important"  src="<?= HEADER_A . $company_detail_d['image_path'] ?>">
+						<?php
+						} else {
+						?>
+								<img style="width: 100%;padding: 0px !important;"  src="../images/craftbox_header.jpg">
+						<?php
+						}
+						?>
+					</td>
+				</tr> -->
+				<tr style="background-color:<?= VIEW_COLOR ?>">
+					<td colspan="21" align="center"><b>PRO FORMA INVOICE</b></td>
+				</tr>
+				<tr>
+					<td colspan="8" rowspan="4" style="text-align: left;vertical-align: top;">
+						Buyer
+						<h5 style="font-weight: 600;text-transform: uppercase;"><strong><?php echo $cart_detail_d['company_name']; ?></strong></h5>
+						<p style="margin:0"><?php echo wordwrap($cart_detail_d['address'], 40, "<br>\n") . "  <br/>" . $cart_detail_d['city'] . " , " . $cart_detail_d['state'] . " , " . $cart_detail_d['country'] ?></p>
+						<?php
+						if (!empty($customer_address_d['zip'])) {
+						?>
+							<p style="margin:0"><strong>Pincode :</strong> <?= $customer_address_d['zip']; ?></p>
+
+						<?php
+						}
+						?>
+						<?php
+						if (!empty($customer_address_d['mobile_no1'])) {
+						?>
+							<p style="margin:0"><strong>Mobile No. : </strong><?= $customer_address_d['mobile_no1'] ?></p>
+						<?php
+						}
+						?>
+
+						<?php
+						if (!empty($customer_address_d['email'])) {
+						?>
+							<p style="margin:0"><strong>Email : </strong><?= $customer_address_d['email'] ?></p>
+						<?php
+						}
+						?>
+						<?php
+						if (!empty($cart_detail_d['gst'])) {
+						?>
+							<p style="margin:0"><strong>GSTIN / UIN : </strong><?= $cart_detail_d['gst'] ?></p>
+						<?php
+						}
+						?>
+					</td>
+					<td colspan="5">
+						<p>
+							<span class="bolde-style">Billing Address:</span><br>
+							<?php echo wordwrap($cart_detail_d['billing_address'], 40, "<br>") ?>
+							<!-- <span><?= $cart_detail_d['billing_address']; ?></span> -->
+						</p>
+						<br>
+						<?php
+						if ($cart_detail_d['shipping_address'] != "") {
+						?>
+							<p>
+								<span class="bolde-style">Shipping Address:</span><br>
+								<?php echo wordwrap($cart_detail_d['shipping_address'], 40, "<br> ") ?>
+
+							</p>
+							<br>
+						<?php
+						} else {
+						?>
+							<br><br><br><br><br>
+						<?php
+						}
+						?>
+					</td>
+
+					<td colspan="8">
+						<p><b>Order No. : <?= $cart_detail_d['order_no'] ?></b></p>
+						<p><b>Order Date : <?= date('d-M-Y', strtotime($cart_detail_d['order_date'])); ?></b></p>
+						<!-- <p><b>Parcle : </b></p> -->
+						<p><b>Booking Add. :</b><?= $cart_detail_d['booking_place']; ?></p>
+						<p><b>Booking Pincode. : </b><?= $cart_detail_d['booking_pincode']; ?></p>
+						<p><b>Transport : </b><?php echo $db->rp_getValue("transport_master", "name", "isDelete=0 AND id='" . $cart_detail_d['transport_name'] . "'", 0); ?></p>
+						<p><b>Sales Person : </b><?php echo $db->rp_getValue("sales_executive", "name", "isDelete=0 AND id='" . $cart_detail_d['sales_id'] . "'", 0); ?></p>
+						<p><b>C C ATTACH : </b><?php if ($cart_detail_d['lr_image'] == "") {
+													echo "NO";
+												} else {
+													echo "Yes";
+												} ?>
+						</p>
+						<p><b>Max. Dispatch Dt. :</b><?php $max_dispatch_date = date('d-m-Y', strtotime($cart_detail_d['max_dispatch_date']));
+														if ($expected_dispatch_date != '01-01-1970' && $max_dispatch_date != '01-01-1970' && '00-00-0000') {
+															echo $max_dispatch_date;
+														} ?>
+						</p>
+						<p><b>Client Code : </b><?= $db->rp_getValue("executive", "client_code", "id='" . $cart_detail_d['customer_id'] . "' AND isDelete=0"); ?></p>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+
+		<table style="width:250mm!important;">
+			<tbody>
+				<tr class="text-center" style="background-color: <?= VIEW_COLOR ?>;">
+					<th colspan="1" class="text-center" width="5%">SR No.</th>
+					<!-- <th colspan="1" class="image-width text-center">Image</th>  -->
+					<th colspan="5" class="text-center">Product Name</th>
+					<th colspan="1" class="text-center">Brand <br> Name</th>
+					<th colspan="2" class="text-center">HSN Code</th>
+					<th colspan="3" class="text-center">Qty</th>
+					<th colspan="2" class="text-center">Weight (in kg)</th>
+					<!-- <th colspan="3" class="text-center">Price</th> -->
+					<!-- <th colspan="3" class="text-center">Discount</th> -->
+					<!-- <th colspan="3" class="text-center">Alt. Qty</th> -->
+					<th colspan="3" class="text-center">Rate</th>
+					<th colspan="3" class="text-center">GST /<br>IGST %</th>
+					<th colspan="3" class="text-center">Total Amount</th>
+				</tr>
+				<?php
+				$ITEMS = array();
+				$items1 = $db->rp_getData("order_product_item", "*", "order_id='" . $order_id . "'");
+				while ($item1 = mysqli_fetch_assoc($items1)) {
+					$item1['display_order'] = $db->rp_getValue("product", "display_order", "id='" . $item1['pro_id'] . "' AND isDelete=0");
+					$item1['weight_display_order'] = $db->rp_getValue("weight", "display_order", "id='" . $item1['weight_id'] . "' AND isDelete=0");
+					$item1['image_path'] = $db->rp_getValue("product", "image_path", "id='" . $item1['pro_id'] . "' AND isDelete=0", "", 0);
+					if ($item1['image_path'] != "") {
+						$img = SITEURL . PRODUCT . $item1['image_path'];
+					} else {
+						$img = SITEURL . "images/no_image_found.jpg";
+					}
+
+					$ITEMS[] = $item1;
+				}
+				if ($items1) {
+					$count = 0;
+					$GST = 0;
+					foreach ($ITEMS as $item) {
+
+						$pro_name = $db->rp_getValue("product", "name", "id='" . $item['pro_id'] . "' AND isDelete=0");
+						$size = $db->rp_getValue("weight", "name", "id='" . $item['weight_id'] . "' AND isDelete=0");
+						$product_code = $db->rp_getValue("product_weight_price", "catno", "product_id='" . $item['pro_id'] . "' AND weight_id='" . $item['weight_id'] . "'", 0);
+						$hsncode = $db->rp_getValue("product", "hsn_code", "id='" . $item['pro_id'] . "' AND isDelete=0", 0);
+
+						$count++;
+
+						if ($cart_detail_d['currency_code'] == 1) {
+							$currency = CURR;
+						} else if ($cart_detail_d['currency_code'] == 2) {
+							$currency = DOLLAR;
+						}
+
+						$totalproqty += $item['pro_qty'];
+						$totalprice1 += $item['totalprice'];
+
+						/*$qty_inner= $item['pro_qty']/$item['inner_size'];
+						$qty_outer= $item['pro_qty']/$item['outer_size'];*/
+						$qty_product = $item['pro_qty'];
+
+						$inner_unit = $db->rp_getValue("product_weight_price", "inner_unit", "product_id='" . $item['pro_id'] . "' AND weight_id='" . $item['weight_id'] . "'");
+						$outer_unit = $db->rp_getValue("product_weight_price", "outer_unit", "product_id='" . $item['pro_id'] . "' AND weight_id='" . $item['weight_id'] . "'");
+				?>
+						<tr>
+							<td colspan="1" class="text-center srno"><strong><?php echo $count; ?></strong></td>
+							<!-- <?php
+									if ($item['image_path'] != "") {
+									?>
+								<td colspan="1" class="image-width text-center"><img style="width: 80px;" src="<?php echo SITEURL . PRODUCT . $item['image_path'] ?>"></td>
+								<?php
+									} else {
+								?>
+								<td colspan="1" class="image-width text-center"><img style="width: 80px;" src="<?php echo SITEURL . PRODUCT . 'default.png' ?>"></td>
+								<?php
+									}
+								?> -->
+							<td colspan="5" class="model" style="position: relative;">
+								<?php
+								if ($item['weight_id'] != -1) {
+									echo "<b>#".$product_code."</b>-".$pro_name . " - " . $size;
+								} else {
+									echo "<b>#".$product_code."</b>-".$pro_name;
+								}
+								?>
+								<?= (isset($item['pro_description']) && $item['pro_description'] != "") ? "<br/><br/>" . $item['pro_description'] : "" ?>
+							</td>
+							<td colspan="1" class="text-center"><?php echo $db->rp_getValue("order_item_brand_master", "name", "isDelete=0 AND isActive=1 AND id='" . $item['order_item_brand_id'] . "'") ?></td>
+							<td colspan="2" class="text-center"> <?= $hsncode ?></td>
+							<td colspan="3" class="text-center"><?= $qty_product;
+																$totalqty += $qty_product;
+																?></td>
+							<td colspan="2" class="text-center">
+								<?php
+								$weight = $db->rp_getValue("product_weight_price", "pro_weight", "product_id='" . $item['pro_id'] . "' AND weight_id='" . $item['weight_id'] . "'");
+								echo $kg = $weight / 1000;
+
+								$weight_total += $kg;
+								?>
+							</td>
+							<!-- <td colspan="3" class="text-center"><?= $qty_outer ?>
+							<?= $order_unit_arr[$outer_unit] ?></td> -->
+							<!-- <td colspan="3" class="text-center"><?= $item['original_price'] ?></td> -->
+							<!-- <td colspan="3" class="text-center"><?= $item['discount_amount'] ?></td> -->
+							<td colspan="3" class="text-center">
+								<?php
+								if ($cart_detail_d['customer_type'] == 1 || $cart_detail_d['customer_type'] == 2) {
+									echo $item['unitprice'] * $item['inner_size'];
+								} else {
+									echo $item['unitprice'];
+								}
+								?>
+							</td>
+							<td colspan="3" class="text-center"><?= $pro_gst = $db->rp_getValue("product", "igst", "id='" . $item['pro_id'] . "' AND isDelete=0", 0); ?></td>
+							<td colspan="3" class="text-center"><?php echo $currency . ' ' . round($item['totalprice'], 2); ?></td>
+						</tr>
+						<?php
+					}
+
+					if ($count < 5) {
+						for ($i = 0; $i < 12 - $count; $i++) {
+						?>
+							<tr class="border">
+								<td colspan="1"></td>
+								<!-- <td colspan="1"></td> -->
+								<td colspan="5"></td>
+								<td colspan="1"></td>
+								<td colspan="2"></td>
+								<td colspan="3"></td>
+								<td colspan="2"></td>
+								<td colspan="3"></td>
+								<td colspan="3"></td>
+								<td colspan="3"></td>
+							</tr>
+				<?php
+						}
+					}
+				}
+				?>
+				<tr>
+					<td colspan="1"></td>
+					<!-- <td colspan="1"></td> -->
+					<td colspan="5"></td>
+					<td colspan="1"></td>
+					<td colspan="2"></td>
+					<td colspan="3"></td>
+					<td colspan="2"></td>
+					<td colspan="3"></td>
+					<td colspan="3"></td>
+					<td colspan="3"></td>
+				</tr>
+				<tr>
+					<td colspan="1"></td>
+					<!-- <td colspan="1"></td> -->
+					<td colspan="5"></td>
+					<td colspan="1"></td>
+					<td colspan="2"><strong>Total</strong></td>
+					<td colspan="3" style="text-align: center"><?php echo $totalqty; ?></td>
+					<td colspan="2" style="text-align: center"><?php echo $weight_total; ?></td>
+					<td colspan="3"></td>
+					<td colspan="3"></td>
+					<td colspan="3"></td>
+				</tr>
+			</tbody>
+		</table>
+		<table style="width:250mm!important;">
+			<tbody class="<?= $cl; ?>">
+				<tr class="font-size">
+					<td colspan="13" class="" rowspan="1" style="vertical-align: top;background-color: lightgray;">
+						<strong>GSTIN NO. : <?= $company_detail_d['gst'] ?></strong>
+					</td>
+					<td colspan="4" class="text-left font-13" style="background-color: lightgray;"><strong>Sub Total</strong></td>
+					<td colspan="4" class="text-right font-13" style="background-color: lightgray;"><strong><?php echo $currency . ' ' . $db->rp_number_format($totalprice1, 2); ?></strong></td>
+				</tr>
+				<?php if ($cart_detail_d['cash_discount_amount'] != "" && $cart_detail_d['cash_discount_amount'] != "0") { ?>
+					<tr>
+						<td colspan="13" rowspan="6">
+							<b>
+								<?php
+								if (isset($company_detail_d['bank_details']) && $company_detail_d['bank_details'] != "") {
+									echo html_entity_decode($company_detail_d['bank_details']);
+								} else {
+								?>
+									Bank Name : <?= COMPANY_BANK ?>, Bank Branch : <?= COMPANY_BANK_BRANCH ?><br>
+									Bank Account No : <?= COMPANY_BANK_ACC_NO ?>, Bank IFSC Code : <?= COMPANY_BANK_IFSC ?>
+								<?php
+								}
+								?>
+							</b>
+							<br>
+							<span class="font-13"><strong>Terms & Condition : </strong></span>
+							<span style="font-weight:normal;"><?= $cart_detail_d['terms_comdition'] ?></span>
+							<br>
+							<span class="font-13" style="color: red;"><b>This Pro Forma Invoice is valid for 7 days.</b></span>
+							<br>
+							<span class="font-13"><b>Note</b></span><br>
+							<span style="font-weight:normal;"><?php echo $cart_detail_d['remarks'] ?></span>
+							<br>
+							<span style="color: red;">Contact Sales Person : <?= strip_tags($cart_detail_d['faithfully']) ?> &nbsp; </span>
+							<?php
+							$modified_name = explode(",", $cart_detail_d['modified_by']);
+							$last_modified_id = array_slice($modified_name, -1)[0];
+							$modified_by_name = $db->rp_getValue("dealer_distributor_network", "name", "id='" . $last_modified_id . "'");
+							?>
+							<br /><span style="color: red;">Edited By : <?= $modified_by_name ?> &nbsp; </span>
+						</td>
+						<td colspan="4" class="text-left" style="font-size: 14px;"><strong>Cash Discount</strong></td>
+						<td colspan="4" class="text-right" style="font-size: 14px;"><strong><?php echo $currency . ' ' . $db->rp_number_format($cart_detail_d['cash_discount_amount'], 2); ?></strong></td>
+					</tr>
+				<?php } ?>
+				<?php if ($cart_detail_d['additional_discount_amount'] != "" && $cart_detail_d['additional_discount_amount'] != "0") { ?>
+					<tr>
+						<td colspan="4" class="text-left " style="font-size: 14px;"><strong>Additional Discount</strong></td>
+						<td colspan="4" class="text-right" style="font-size: 14px;"><strong><?php echo $currency . ' ' . $db->rp_number_format($cart_detail_d['additional_discount_amount'], 2); ?></strong></td>
+					</tr>
+				<?php } ?>
+				<!-- <tr>
+					<td colspan="4" class="text-left font-13"><strong>Transport Charge</strong></td>
+					<td colspan="4" class="text-right font-13"><strong><?php echo $currency . ' ' . $db->rp_number_format($cart_detail_d['transport_charge'], 2); ?></strong></td>
+				</tr>
+				<tr>
+					<td colspan="4" class="text-left font-13"><strong>Packing & Forwarding Charge</strong></td>
+					<td colspan="4" class="text-right font-13"><strong><?php echo $currency . ' ' . $db->rp_number_format($cart_detail_d['packing_charge'], 2); ?></strong></td>
+				</tr> -->
+				<tr>
+					<?php
+					if ($cart_detail_d['cash_discount_amount'] == "0" && $cart_detail_d['cash_discount_amount'] == "0") {
+					?>
+
+						<td colspan="13" rowspan="4">
+							<b>
+								<?php
+								if (isset($company_detail_d['bank_details']) && $company_detail_d['bank_details'] != "") {
+									echo html_entity_decode($company_detail_d['bank_details']);
+								} else {
+								?>
+									Bank Name : <?= COMPANY_BANK ?>, Bank Branch : <?= COMPANY_BANK_BRANCH ?><br>
+									Bank Account No : <?= COMPANY_BANK_ACC_NO ?>, Bank IFSC Code : <?= COMPANY_BANK_IFSC ?>
+								<?php
+								}
+								?>
+							</b>
+							<br>
+							<span class="font-13"><strong>Terms & Condition : </strong></span>
+							<span style="font-weight:normal;"><?= $cart_detail_d['terms_comdition'] ?></span>
+							<br>
+							<span class="font-13" style="color: red;"><b>This Pro Forma Invoice is valid for 7 days.</b></span>
+							<br>
+							<span class="font-13"><b>Remarks</b></span><br>
+							<span style="font-weight:normal;"><?php echo $cart_detail_d['remarks'] ?></span>
+							<br>
+							<span style="color: red;">Contact Sales Person : <?= strip_tags($cart_detail_d['faithfully']) ?> &nbsp; </span>
+							<?php
+							$modified_name = explode(",", $cart_detail_d['modified_by']);
+							$last_modified_id = array_slice($modified_name, -1)[0];
+							$modified_by_name = $db->rp_getValue("dealer_distributor_network", "name", "id='" . $last_modified_id . "'");
+							?>
+							<br /><span style="color: red;">Edited By : <?= $modified_by_name ?> &nbsp; </span>
+						</td>
+					<?php
+					}
+					?>
+
+					<td colspan="4" class="text-left" style="font-size: 14px;"><strong>Total Taxable Amount</strong></td>
+					<?php $total_tax_amt = $totalprice1 - ($cart_detail_d['cash_discount_amount'] + $cart_detail_d['additional_discount_amount']) + ($cart_detail_d['transport_charge'] + $cart_detail_d['packing_charge']); ?>
+					<td colspan="4" class="text-right" style="font-size: 14px;"><strong><?php echo $currency . ' ' . $db->rp_number_format($total_tax_amt, 2); ?></strong></td>
+				</tr>
+				<?php
+				if ($cart_detail_d['igst_amount'] != "0") {
+					if ($cart_detail_d['type_of_executive'] == 8) {
+						if (strtolower(CLIENT_STATE) == strtolower($cart_detail_d['state'])) {
+				?>
+							<tr>
+								<td colspan="4" class="text-left"><strong>C GST</strong></td>
+								<td colspan="4" class="text-right "><strong><?= ($currency . $db->rp_number_format(($cart_detail_d['igst_amount']) / 2, 2)) ?></strong> </td>
+							</tr>
+							<tr>
+								<td colspan="4" class="text-left"><strong>S GST</strong></td>
+								<td colspan="4" class="text-right "><strong><?= ($currency . $db->rp_number_format($cart_detail_d['igst_amount'] / 2, 2)) ?></strong></td>
+							</tr>
+						<?php
+						} else {
+						?>
+							<tr>
+								<td colspan="4" class="text-left"><strong>IGST</strong></td>
+								<td colspan="4" class="text-right "><strong><?= ($currency . $db->rp_number_format($cart_detail_d['igst_amount'], 2)) ?></strong></td>
+							</tr>
+							<tr>
+								<td colspan="4" class="text-left"></td>
+								<td colspan="4" class="text-right "></td>
+							</tr>
+						<?php
+						}
+					} else {
+						if (strtolower(CLIENT_STATE) == strtolower($cart_detail_d['state'])) {
+						?>
+							<tr>
+								<td colspan="4" class="text-left"><strong>C GST</strong></td>
+								<td colspan="4" class="text-right "><strong><?= ($currency . $db->rp_number_format($cart_detail_d['igst_amount'] / 2, 2)) ?></strong> </td>
+							</tr>
+							<tr>
+								<td colspan="4" class="text-left"><strong>S GST</strong></td>
+								<td colspan="4" class="text-right "><strong><?= ($currency . $db->rp_number_format($cart_detail_d['igst_amount'] / 2, 2)) ?></strong></td>
+							</tr>
+						<?php
+						} else {
+						?>
+							<tr>
+								<td colspan="4" class="text-left"><strong>IGST</strong></td>
+								<td colspan="4" class="text-right "><strong><?= ($currency . $db->rp_number_format($cart_detail_d['igst_amount'], 2)) ?></strong></td>
+							</tr>
+							<tr>
+								<td colspan="4" class="text-left"></td>
+								<td colspan="4" class="text-right "></td>
+							</tr>
+					<?php
+						}
+					}
+				} else {
+					?>
+					<tr>
+						<td colspan="4" class="text-left"></td>
+						<td colspan="4" class="text-right "></td>
+					</tr>
+					<tr>
+						<td colspan="4" class="text-left"></td>
+						<td colspan="4" class="text-right "></td>
+					</tr>
+				<?php
+				}
+				?>
+				<?php
+				if ($cart_detail_d['tcs_amount'] != "0") {
+				?>
+					<tr>
+						<td colspan="4">
+							<strong>TCS (<?= TCS_CHARGE_IN_PER ?>%)</strong>
+						</td>
+						<td colspan="4" class="text-right"><strong><?= $currency . number_format($cart_detail_d['tcs_amount'], 2) ?></strong></td>
+					</tr>
+				<?php
+				} else {
+				?>
+					<tr>
+						<td colspan="4"></td>
+						<td colspan="4" class="text-right"><strong></td>
+					</tr>
+				<?php
+				}
+				?>
+				<tr>
+					<td colspan="13" rowspan="1">
+						<!-- <b>Total GST In Words</b> :
+						<?php
+
+						// echo $totalprice1;exit;
+						if ($cart_detail_d['cash_discount_amount'] != "" && $cart_detail_d['cash_discount_amount'] != "0" && $cart_detail_d['additional_discount_amount'] != "" && $cart_detail_d['additional_discount_amount'] != "0") {
+							$sub_total = $db->rp_number_format($cart_detail_d['subtotal'], 2);
+							$gst_amts =  $sub_total * $pro_gst / 100;
+							// echo $pro_gst;exit;
+							$gst_amount = $db->rp_number_format($gst_amts, 2);
+							$total_gst = $ntw->rp_convertNumToWord($gst_amount);
+							echo ucwords(strtolower($total_gst));
+						} else {
+							$gst_amt = $totalprice1 * $pro_gst / 100;
+							$Total_gst = $ntw->rp_convertNumToWord($gst_amt);
+							echo ucwords(strtolower($Total_gst));
+						}
+						?>
+						<br> -->
+						<b>Bill Amount In Words</b> :
+						<?php
+						$grand_total_words = $ntw->rp_convertNumToWord($cart_detail_d['grand_total_rounded']);
+						echo ucwords(strtolower($grand_total_words));
+						?>
+					</td>
+					<td colspan="4">
+						<strong>Round Off</strong>
+					</td>
+					<td colspan="4" class="text-right"><strong>
+							<?php echo $currency . $cart_detail_d['roundoff']; ?>
+						</strong></td>
+				</tr>
+				<tr>
+					<td colspan="13" rowspan="1" style="background-color: #FFFF33 ">
+						<b>Note : KINDLY RELEASE PAYMENT FOR DISPATCH CLEARANCE</b>
+
+					</td>
+					<td colspan="4" style="background-color: <?= GRAND_TOTAL_COLOR ?>;font-size: 16px;">
+						<strong>Grand Total</strong>
+					</td>
+					<td colspan="4" class="text-right" style="background-color: <?= GRAND_TOTAL_COLOR ?>;font-size: 16px;"><strong>
+							<?php
+							echo $currency . ' ' . $db->rp_number_format($cart_detail_d['grand_total_rounded'], 2);
+							?>
+						</strong>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+
+		<?php
+		if ($cart_detail_d['igst_amount'] != 0) {
+		?>
+			<table style="width:250mm!important;">
+				<?php
+				if (strtolower(CLIENT_STATE) == strtolower($cart_detail_d['state'])) {
+					$gst_or_igst = "Total GST Rate";
+					$gst_or_igst1 = "Total GST Amount";
+				} else {
+					$gst_or_igst = "IGST% Rate";
+					$gst_or_igst1 = "IGST Amount";
+				}
+				?>
+				<tr>
+					<th class="text-center" colspan="2">HSN/SAC</th>
+					<!-- <th class="text-center" colspan="1">Qty</th> -->
+					<th class="text-center" colspan="2">Taxable Value</th>
+					<th class="text-center" colspan="2"><?php echo $gst_or_igst; ?></th>
+					<th class="text-center" colspan="2"><?php echo $gst_or_igst1; ?></th>
+					<th class="text-center" colspan="1">CGST% Rate</th>
+					<th class="text-center" colspan="2">CGST Amount</th>
+					<th class="text-center" colspan="2">SGST% Rate</th>
+					<th class="text-center" colspan="3">SGST Amount</th>
+				</tr>
+				<?php
+				$ITEMS = array();
+				$items1 = $db->rp_getData("order_product_item", "*", "isDelete=0 AND order_id='" . $order_id . "' GROUP BY hsn_code", "", 0);
+				while ($item = mysqli_fetch_assoc($items1)) {
+					// echo $items1;exit;
+					$ITEMS[] = $item1;
+					if ($items1) {
+						$gst_rate = $db->rp_getValue("product", "igst", "id='" . $item['pro_id'] . "' AND isDelete=0", 0);
+						$count = 0;
+						$totalprice = 0;
+						$final_price = 0;
+						$boxqty = 0;
+						$cartoonqty = 0;
+						$totalproqty = 0;
+						$totalrate = 0;
+						$totaldiscount = 0;
+						$gst_per_amount = 0;
+						$GST = 0;
+
+						if ($cart_detail_d['igst_amount'] != 0) {
+							$GST = $gst_rate;
+							$CGST = $gst_rate / 2;
+							$SGST = $gst_rate / 2;
+						} else {
+							$GST = "";
+							$CGST = "";
+							$SGST = "";
+						}
+
+						$Invoice = $db->rp_getData("order_product_item", "*", "isDelete=0 AND order_id='" . $order_id . "' AND hsn_code='" . $item['hsn_code'] . "'", "", 0);
+						$InvoiceIds = array();
+						while ($Invoice_d = mysqli_fetch_assoc($Invoice)) {
+							$InvoiceIds[] = $Invoice_d['id'];
+						}
+						$InvoiceIds = implode(",", $InvoiceIds);
+						// echo $InvoiceIds;exit;
+						$total_pro_qty = $db->rp_getValue("order_product_item", "SUM(pro_qty)", "id In (" . $InvoiceIds . ") AND isDelete=0", 0);
+						$total_pro_taxable = $db->rp_getValue("order_product_item", "SUM(taxable)", "id In (" . $InvoiceIds . ") AND isDelete=0", 0);
+
+						$cash_amount = ($total_pro_taxable * $cart_detail_d['cash_discount']) / 100;
+						if ($cash_amount > $total_pro_taxable) {
+							// $SubPrice=$cash_amount-$total_pro_taxable;
+							$SubPrice = $total_pro_taxable;
+						} else {
+							// $SubPrice=$total_pro_taxable-$cash_amount;
+							$SubPrice = $total_pro_taxable;
+						}
+						// $gst_per_amount=($SubPrice*$GST)/100; 							
+						if ($cart_detail_d['igst_amount'] != 0) {
+							$gst_per_amount += $db->rp_getValue("order_product_item", "SUM(igst_amount)", "id In (" . $InvoiceIds . ") AND isDelete=0", 0);
+							if (strtolower(CLIENT_STATE) == strtolower($cart_detail_d['state'])) {
+								$cgst_per_amount = ($gst_per_amount) / 2;
+								$sgst_per_amount = ($gst_per_amount) / 2;
+								// $cgst_per_amount=($SubPrice*$CGST)/100;
+								// $sgst_per_amount=($SubPrice*$SGST)/100;
+								$CGST = $GST / 2;
+								$SGST = $GST / 2;
+							} else {
+								$cgst_per_amount = "";
+								$sgst_per_amount = "";
+								$CGST = "";
+								$SGST = "";
+							}
+						} else {
+							$gst_per_amount = "";
+							$cgst_per_amount = "";
+							$sgst_per_amount = "";
+							$CGST = "";
+							$SGST = "";
+						}
+				?>
+						<tr>
+							<td colspan="2" class="box_qty " style="text-align: center;"><?= $db->rp_getValue("product", "hsn_code", "isDelete=0 AND id='" . $item['pro_id'] . "'", 0) ?></td>
+							<!-- <td colspan="1" class="text-center b_qty "><?php echo $total_pro_qty; ?></td> -->
+							<td colspan="2" class="text-right rate "><?php echo CURR . ' ' . number_format($total_pro_taxable, 2); ?></td>
+							<td colspan="2" class="text-right b_qty "><?php echo $GST; ?><?= ($GST) ? "%" : ""; ?></td>
+							<td colspan="2" class="text-right b_qty "><?= ($gst_per_amount) ? CURR : ""; ?><?= number_format($gst_per_amount, 2);  ?></td>
+							<td colspan="1" class="text-right b_qty "><?php echo $CGST; ?><?= ($CGST) ? "%" : ""; ?></td>
+							<td colspan="2" class="text-right b_qty "><?= ($CGST) ? CURR : ""; ?><?= number_format($cgst_per_amount, 2);  ?></td>
+							<td colspan="2" class="text-right b_qty "><?php echo $SGST; ?><?= ($SGST) ? "%" : ""; ?></td>
+							<td colspan="3" class="text-right b_qty "><?= ($SGST) ? CURR : ""; ?><?= number_format($sgst_per_amount, 2);  ?></td>
+						</tr>
+				<?php
+						$Total_total_pro_qty += $total_pro_qty;
+						$Total_total_pro_taxable += $total_pro_taxable;
+						$Total_gst_per_amount += $gst_per_amount;
+						$Total_cgst_per_amount += $cgst_per_amount;
+						$Total_sgst_per_amount += $sgst_per_amount;
+					}
+				}
+				?>
+				<tr>
+					<td colspan="2" class="text-center"><strong>Total</strong></td>
+					<!-- <td colspan="1" class="text-right"><b><?php echo $Total_total_pro_qty; ?></b></td> -->
+					<td colspan="2" class="text-right"><b><?php echo  CURR . ' ' . number_format($Total_total_pro_taxable, 2); ?></b></td>
+					<td colspan="2" class="text-right"><b><?php ?></b></td>
+					<td colspan="2" class="text-right"><b><?= ($Total_gst_per_amount) ? CURR : ""; ?><?= number_format($Total_gst_per_amount, 2); ?></b></td>
+					<td colspan="1" class="text-right"><b><?php ?></b></td>
+					<td colspan="2" class="text-right"><b><?= ($Total_cgst_per_amount) ? CURR : ""; ?><?= number_format($Total_cgst_per_amount, 2); ?></b></td>
+					<td colspan="2" class="text-right"><b><?php ?></b></td>
+					<td colspan="3" class="text-right"><b><?= ($Total_sgst_per_amount) ? CURR : ""; ?><?= number_format($Total_sgst_per_amount, 2); ?></b></td>
+				</tr>
+			</table>
+
+		<?php
+		}
+		?>
+		<!-- <table style="width:250mm!important;">
+			<tbody>
+				<tr>
+					<td colspan="8" rowspan="4" class="no-border-right text-left">
+						<br><br><br><br>
+						<strong style="margin-right: 36px;">Customer Signature</strong>
+					</td> 
+					<td colspan="8" rowspan="4" class="text-right">
+						<strong style="margin-right: 25px;">For, 
+							<?php
+							if (isset($company_detail_d['name']) && $company_detail_d['name'] != "") {
+								echo $company_detail_d['name'];
+							} else {
+								echo CLIENT_BRAND_NAME;
+							}
+							?>
+						<br>
+						</strong>
+						<br><br><br>
+						<strong  style="margin-right: 25px;">
+						Authorised SIgnatory</strong>
+					</td>
+				</tr>
+			</tbody> 
+		</table> -->
+		<!-- Footer detail division hear-->
+		<table style="border: 1px solid #595959;border-collapse: collapse;width: 100%!important;">
+			<tbody>
+				<tr>
+					<td style="padding: 0;">
+						<?php
+
+						if (isset($company_detail_d['footer_image_path']) && $company_detail_d['footer_image_path'] != "") {
+						?>
+
+							<img style="width: 100%;padding: 0px !important;" src="<?= FOOTER_A . $company_detail_d['footer_image_path'] ?>">
+						<?php
+						} else {
+						?>
+							<img style="width: 100%;padding: 0px !important;" src="../images/white_footer.jpg">
+						<?php
+						}
+						?>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+	<!-- Footer detail division end-->
+</body>
+
+</html>

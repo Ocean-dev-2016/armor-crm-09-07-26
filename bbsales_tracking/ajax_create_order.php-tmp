@@ -1,0 +1,121 @@
+<?php
+//$page_id = 566;
+$page_slug = 'page_quotation_ajax';
+
+$page_id   = 607;
+$page_slug = 'quotation';
+
+include ("connect.php");
+include ("../include/orders.class.php");
+$objOrder = new Order();
+
+$qid    = $_REQUEST['qid'];
+$ctable = "quotation_detail";
+
+$quo_r = $db->rp_getData($ctable, "*", "id='".$qid."' AND isDelete=0", "", 0);
+if ($quo_d = mysqli_fetch_assoc($quo_r)) {
+	// Array ( [id] => 6 [inquiry_id] => 7 [quotation_no] => QUOT/DD/06 [customer_id] => 3 [company_name] => RAJ COOLING SYSTEM [dealer_id] => 2 [super_stockist_id] => 1 [sales_id] => 1 [sales_type] => [class_id] => 0 [proforma_invoice_id] => 0 [class_name] => [area_id] => 0 [area_name] => [customer_name] => MUKESHBHAI [customer_type] => 3 [contact_number] => 9924717310 [address] => RAJ COOLING SYSTEM, Ahmedabad, Gujarat, india [city] => Ahmedabad [state] => GUJARAT [country] => India [email] => [quotation_date] => 2020-09-23 [dispatch_date] => [revised_date] => [status] => 0 [adate] => 0000-00-00 00:00:00 [isDelete] => 0 [isActive] => 1 [remarks] => chick [reason_of_cancel_order] => [created_by] => 1 [created_by_type] => 0 [modified_by] => 1 [modified_by_type] => 0 [created_date] => 2020-09-23 15:44:30 [modified_date] => 2020-09-23 15:44:30 [item_total_price] => 0 [total_qty] => 1500 [taxable] => 0 [discount] => 0 [discount_amount] => 0 [subtotal] => 24375000 [cash_discount] => 0 [cash_discount_amount] => 0 [total_amount] => 0 [cgst_amount] => 0 [sgst_amount] => 0 [igst_amount] => 4387500 [grand_total] => 28762500 [roundoff] => 0 [total_taxamount] => 0 [grand_total_rounded] => 0 [local_id] => 0 [taxable_amount] => 0 [discount_type] => 0 [modify_date] => 0000-00-00 00:00:00 [gst] => [booking] => [transport] => [entry_flag] => 1 )
+
+	$detail['cid']                = $quo_d['customer_id'];
+	$detail['customer_id']        = $quo_d['customer_id'];
+	$detail['sales_executive_id'] = $quo_d['sales_id'];
+	$detail['order_date']         = $quo_d['quotation_date'];
+	$order_no                     = $db->getLastInsertId("orders");
+	$order_no                     = OUTLETS_ORDER_NO.str_pad($order_no, 2, '0', STR_PAD_LEFT);
+	$detail['order_no']           = $order_no;
+	$detail['chalan_no']          = "";
+	$detail['po_no']              = "";
+	$detail['po_date']            = date('Y-m-d');
+	$detail['terms_comdition']    = $quo_d['terms_comdition'];
+	$detail['faithfully']         = $quo_d['faithfully'];
+	$detail['transport_name']     = $quo_d['transport_name'];
+	$detail['transport_through']  = $quo_d['transport_through'];
+	$detail['transport_charge']   = $quo_d['transport_charge'];
+	$detail['packing_charge']     = $quo_d['packing_charge'];
+	$detail['shipping_address']   = $quo_d['shipping_address'];
+	$detail['billing_address']    = $quo_d['billing_address'];
+	$detail['name_gstin']         = $quo_d['gst'];
+	$detail['vendor_code']        = $quo_d['vendor_code'];
+	$detail['tendor_code']        = $quo_d['tendor_code'];
+	$detail['igst_amount']        = $quo_d['igst_amount'];
+
+	$item_r = $db->rp_getData("quotation_product_item", "*", "quotation_id='".$quo_d['id']."' AND isDelete=0");
+	if ($item_r) {
+		$qty            = array();
+		$product_id     = array();
+		$price          = array();
+		$pro_name       = array();
+		$weight_id      = array();
+		$cartoon_qty    = array();
+		$box_qty        = array();
+		$original_price = array();
+		while ($item_d = mysqli_fetch_assoc($item_r)) {
+			$qty[]             = $item_d['remaining_qty'];
+			$product_id[]      = $item_d['pro_id'];
+			$price[]           = $item_d['unitprice'];
+			$original_price[]  = $item_d['original_price'];
+			$pro_name[]        = $item_d['pro_name'];
+			$weight_id[]       = $item_d['weight_id'];
+			$cartoon_qty[]     = $item_d['cartoon_qty'];
+			$box_qty[]         = $item_d['box_qty'];
+			$pro_description[] = $item_d['pro_description'];
+			$brand_id[]        = 0;
+		}
+		$size[]      = sizeof($product_id);
+		$value_check = sizeof($product_id);
+		if (in_array($value_check, $size)) {
+			$isValidArray = true;
+		} else {
+			$isValidArray = false;
+		}
+		if ($isValidArray && !empty($product_id)) {
+			for ($i = 0; $i < sizeof($qty); $i++) {
+				$item[] = array("qty" => $qty[$i], "pid" => $product_id[$i], "price" => $price[$i], "original_price" => $original_price[$i], "pro_name" => $pro_name[$i], "weight_id" => $weight_id[$i], "cartoon_qty" => $cartoon_qty[$i], "box_qty" => $box_qty[$i], "brand_id" => $brand_id[$i], "pro_description" => $pro_description[$i]);
+			}
+		}
+
+		// print_r($item);
+		exit;
+
+		$reply = $objOrder->AddToCart($detail, $item);
+		if ($reply['ack'] == 1) {
+
+			unset($detail['order_date']);
+			$detail['cash_discount_flag'] = 0;
+			$detail['order_id']           = $reply['order_id'];
+			$detail['sales_executive_id'] = $quo_d['sales_id'];
+			$detail['remarks']            = $quo_d['remarks'];
+
+			if ($detail['igst_amount'] != 0) {
+				$detail['gst_apply_flag'] = 1;
+			} else {
+				$detail['gst_apply_flag'] = 0;
+			}
+			$checkorder_update = $objOrder->PlaceOrderPanel($detail);
+			// print_r($checkorder_update);
+			exit;
+
+			if ($checkorder_update['ack'] == 1) {
+				// update quotation id in order
+				$update_order = $db->rp_update("orders", array("quotation_id" => $qid), "id='".$reply['order_id']."'");
+
+				/*update Customer flag*/
+				$count = $db->rp_getTotalRecord("orders", "customer_id='".$detail['customer_id']."' AND isDelete=0", 0);
+				if ($count == 1) {
+					$update_order = $db->rp_update("executive", array("customer_flag" => 0, "seid" => $detail['sales_executive_id']), "id='".$detail['customer_id']."'", 0);
+				}
+				/*update Customer flag*/
+				$update_quo = $db->rp_update($ctable, array("status" => 4), "id='".$qid."'");
+				$reply1     = array("ack"                            => 1, "ack_msg"                            => "Order Generated Successfully", "order_id"                            => $reply['order_id']);
+			} else {
+				$reply1 = array("ack" => 0, "ack_msg" => $checkorder_update['ack_msg']);
+			}
+		} else {
+			$reply1 = array("ack" => 0, "ack_msg" => $reply['ack_msg']);
+		}
+	} else {
+		$reply1 = array("ack" => 0, "ack_msg" => "No Such a Item found!!");
+	}
+	echo json_encode($reply1);
+}
+require_once 'disconnect.php'; 

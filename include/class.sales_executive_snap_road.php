@@ -1,0 +1,1265 @@
+<?php
+require_once("main.class.php");
+require_once("function.class.php");
+class SalesExecutive extends Functions
+{
+	public $db;
+	public $pin_type=array("create_order"=>"Order Creation","update_order"=>"Update Order","login"=>"Login","logout"=>"Logout","attandance"=>"Attendance","add_customer"=>"Customer Creation","add_expense"=>"Expense Added","add_inquiry"=>"Add Inquiry","edit_inquiry"=>"Edit Inquiry","delete_inquiry"=>"Deleted Inquiry","sync"=>"Data Sync","profile"=>"Profile","password"=>"Password Changed","tracking"=>"Tracking","sync_hour"=>"Hourly Sync data","sync hour"=>"Hourly Sync data","visit"=>"Visit");
+
+	public $pin_icon=array("create_order"=>"a.png","update_order"=>"b.png","login"=>"c.png","logout"=>"d.png","attandance"=>"e.png","add_customer"=>"f.png","add_expense"=>"g.png","add_inquiry"=>"h.png","edit_inquiry"=>"i.png","delete_inquiry"=>"j.png","sync"=>"k.png","profile"=>"l.png","password"=>"m.png","tracking"=>"n.png","sync_hour"=>"n.png","sync hour"=>"n.png","visit"=>"a.png");
+	
+	public $ctable="sales_executive";
+	public $ctableMap="sales_executive_map_area";
+	public $ctableTracking="salesexecutive_tracking_snapped";
+	public $ctableNoOrderInquiry="no_order_inquiry";
+	//public $sales_type_title=array("sales_manager"=>"Sales Manager","area_sales_manager"=>"Area Sales Manager","sales_officer"=>"Area Sales Manager","sales_executive"=>"Sales Officer");
+	public $sales_type_title=array("sales_manager"=>"SM","area_sales_manager"=>"ASM","sales_officer"=>"SO","sales_executive"=>"SE");
+	function __construct($id="") 
+	{
+		$db = new Functions();
+		$conn = $db->connect();
+		$this->db=$db;		   
+    } 
+//------------#Insert Sales Officer Information------------------------------------------------------------------------------// 	
+	 public function InsertSalesExecutive($id,$name,$email,$username,$password,$phone,$address,$zip,$country,$state,$city,$imei,$type,$regDate,$sm_id,$asm_id,$so_id,$se_id,$class_id,$item,$refreshToken,$executive_in_min,$executive_in_max,$executive_out,$super_stokist_order_view_flag="",$super_stokist_order_insert_flag="",$super_stokist_order_update_flag="",$super_stokist_order_delete_flag="",$outlets_order_view_flag="",$outlets_order_insert_flag="",$outlets_order_update_flag="",$outlets_order_delete_flag="",$dealer_order_view_flag="",$dealer_order_insert_flag="",$dealer_order_update_flag="",$dealer_order_delete_flag="",$project_order_view_flag="",$project_order_insert_flag="",$project_order_update_flag="",$project_order_delete_flag="",$oem_order_view_flag="",$oem_order_insert_flag="",$oem_order_update_flag="",$oem_order_delete_flag="",$survey_customer_view_flag="",$survey_customer_insert_flag="",$survey_customer_update_flag="",$survey_customer_delete_flag="",$customer_leads_view_flag="",$customer_leads_insert_flag="",$customer_leads_update_flag="",$customer_leads_delete_flag="",$customer_view_flag="",$customer_insert_flag="",$customer_update_flag="",$customer_delete_flag="",$followup_view_flag="",$followup_insert_flag="",$followup_update_flag="",$followup_delete_flag="",$create_order_view_flag="",$create_order_insert_flag="",$create_order_update_flag="",$create_order_delete_flag="",$order_history_view_flag="",$order_history_insert_flag="",$order_history_update_flag="",$order_history_delete_flag="",$complain_view_flag="",$complain_insert_flag="",$complain_update_flag="",$complain_delete_flag="",$request_view_flag="",$request_insert_flag="",$request_update_flag="",$request_delete_flag="",$customer_meeting_view_flag="",$customer_meeting_insert_flag="",$customer_meeting_update_flag="",$customer_meeting_delete_flag="",$near_by_me_view_flag="",$change_root_view_flag="",$change_root_insert_flag="",$change_root_update_flag="",$change_root_delete_flag="",$expense_view_flag="",$expense_insert_flag="",$expense_update_flag="",$expense_delete_flag="",$leave_view_flag="",$leave_insert_flag="",$leave_update_flag="",$leave_delete_flag="",$area_view_flag="",$area_insert_flag="",$area_update_flag="",$area_delete_flag="",$visit_view_flag="",$visit_insert_flag="",$visit_update_flag="",$visit_delete_flag="",$price_list_view_flag="",$bank_detail_view_flag="",$scheme_view_flag="",$discount_dealer_view_flag="",$discount_distributor_view_flag="",$gst_view_flag="",$visit_card_view_flag="",$traveling_view_flag="",$attendance_insert_flag="",$insentive_percentage,$image_path,$file_path)
+	 {
+		//print_r($item);exit;
+		$dup_where = "username = '".$username."' OR  phone = '".$phone."' AND isDelete=0 AND isActive=1";
+		$r = $this->db->rp_dupCheck($this->ctable,$dup_where,0);
+		
+		if($r){
+			$reply=array("ack"=>0,"developer_msg"=>"Duplicate executive","ack_msg"=>"Phone number/ Username already assigned to another user please try another!!");
+			//$this->db->rp_location("sales_executive_crud.php?mode=add");
+			return $reply;
+		}
+		
+		else
+		{
+			 $type_of_executive=$type;
+				 if($type=='sales_executive')
+				 {
+					 $type_slug='SalesExecutive';
+				 }
+				 else if($type=='sales_manager')
+				 {
+					 $type_slug='SalesManager';
+				 }
+				 else if($type=='sales_officer')
+				 {
+					 $type_slug='SalesOfficer';
+				 }
+				 else if($type=='area_sales_manager')
+				 {
+					 $type_slug='AreaSalesManager';
+				 }
+			 $adate	= date('Y-m-d H:i:s');
+				$rows 	= array(
+						"class_id",
+						"name",
+						"email",
+						"username",
+						"password",
+						"phone",
+						"address",
+						"zip",
+						"country",
+						"state",
+						"city",
+						"imei",
+						"type",
+						"regDate",
+						"sm_id",
+						"asm_id",
+						"so_id",
+						"se_id",
+						"refreshToken",
+						"isActive",
+						"executive_in_min",
+						"executive_in_max",
+						"executive_out",
+						"super_stokist_order_view_flag",
+						"super_stokist_order_insert_flag",
+						"super_stokist_order_update_flag",
+						"super_stokist_order_delete_flag",
+						"outlets_order_view_flag",
+						"outlets_order_insert_flag",
+						"outlets_order_update_flag",
+						"outlets_order_delete_flag",
+						"dealer_order_view_flag",
+						"dealer_order_insert_flag",
+						"dealer_order_update_flag",
+						"dealer_order_delete_flag",
+						"project_order_view_flag",
+						"project_order_insert_flag",
+						"project_order_update_flag",
+						"project_order_delete_flag",
+						"oem_order_view_flag",
+						"oem_order_insert_flag",
+						"oem_order_update_flag",
+						"oem_order_delete_flag",
+						"survey_customer_view_flag",
+						"survey_customer_insert_flag",
+						"survey_customer_update_flag",
+						"survey_customer_delete_flag",
+						"customer_leads_view_flag",
+						"customer_leads_insert_flag",
+						"customer_leads_update_flag",
+						"customer_leads_delete_flag",
+						"customer_view_flag",
+						"customer_insert_flag",
+						"customer_update_flag",
+						"customer_delete_flag",
+						"followup_view_flag",
+						"followup_insert_flag",
+						"followup_update_flag",
+						"followup_delete_flag",
+						"create_order_view_flag",
+						"create_order_insert_flag",
+						"create_order_update_flag",
+						"create_order_delete_flag",
+						"order_history_view_flag",
+						"order_history_insert_flag",
+						"order_history_update_flag",
+						"order_history_delete_flag",
+						"complain_view_flag",
+						"complain_insert_flag",
+						"complain_update_flag",
+						"complain_delete_flag",
+						"request_view_flag",
+						"request_insert_flag",
+						"request_update_flag",
+						"request_delete_flag",
+						"customer_meeting_view_flag",
+						"customer_meeting_insert_flag",
+						"customer_meeting_update_flag",
+						"customer_meeting_delete_flag",
+						"near_by_me_view_flag",
+						"change_root_view_flag",
+						"change_root_insert_flag",
+						"change_root_update_flag",
+						"change_root_delete_flag",
+						"expense_view_flag",
+						"expense_insert_flag",
+						"expense_update_flag",
+						"expense_delete_flag",
+						"leave_view_flag",
+						"leave_insert_flag",
+						"leave_update_flag",
+						"leave_delete_flag",
+						"area_view_flag",
+						"area_insert_flag",
+						"area_update_flag",
+						"area_delete_flag",
+						"visit_view_flag",
+						"visit_insert_flag",
+						"visit_update_flag",
+						"visit_delete_flag",
+						"price_list_view_flag",
+						"bank_detail_view_flag",
+						"scheme_view_flag",
+						"discount_dealer_view_flag",
+						"discount_distributor_view_flag",
+						"gst_view_flag",
+						"visit_card_view_flag",
+						"traveling_view_flag",	
+						"attendance_insert_flag",
+						"insentive_percentage",
+						"gst_file_path",
+						"visiting_card_file_path",
+					);
+			$values = array(
+						$class_id,
+						$name,
+						$email,
+						$username,
+						$password,
+						$phone,
+						$address,
+						$zip,
+						$country,
+						$state,
+						$city,
+						$imei,
+						$type,
+						$adate,
+						$sm_id,
+						$asm_id,
+						$so_id,
+						$se_id,
+						$refreshToken,
+						"1",
+						$executive_in_min,
+						$executive_in_max,
+						$executive_out,
+						$super_stokist_order_view_flag,
+						$super_stokist_order_insert_flag,
+						$super_stokist_order_update_flag,
+						$super_stokist_order_delete_flag,
+						$outlets_order_view_flag,
+						$outlets_order_insert_flag,
+						$outlets_order_update_flag,
+						$outlets_order_delete_flag,
+						$dealer_order_view_flag,
+						$dealer_order_insert_flag,
+						$dealer_order_update_flag,
+						$dealer_order_delete_flag,
+						$project_order_view_flag,
+						$project_order_insert_flag,
+						$project_order_update_flag,
+						$project_order_delete_flag,
+						$oem_order_view_flag,
+						$oem_order_insert_flag,
+						$oem_order_update_flag,
+						$oem_order_delete_flag,
+						$survey_customer_view_flag,
+						$survey_customer_insert_flag,
+						$survey_customer_update_flag,
+						$survey_customer_delete_flag,
+						$customer_leads_view_flag,
+						$customer_leads_insert_flag,
+						$customer_leads_update_flag,
+						$customer_leads_delete_flag,
+						$customer_view_flag,
+						$customer_insert_flag,
+						$customer_update_flag,
+						$customer_delete_flag,
+						$followup_view_flag,
+						$followup_insert_flag,
+						$followup_update_flag,
+						$followup_delete_flag,
+						$create_order_view_flag,
+						$create_order_insert_flag,
+						$create_order_update_flag,
+						$create_order_delete_flag,
+						$order_history_view_flag,
+						$order_history_insert_flag,
+						$order_history_update_flag,
+						$order_history_delete_flag,
+						$complain_view_flag,
+						$complain_insert_flag,
+						$complain_update_flag,
+						$complain_delete_flag,
+						$request_view_flag,
+						$request_insert_flag,
+						$request_update_flag,
+						$request_delete_flag,
+						$customer_meeting_view_flag,
+						$customer_meeting_insert_flag,
+						$customer_meeting_update_flag,
+						$customer_meeting_delete_flag,
+						$near_by_me_view_flag,
+						$change_root_view_flag,
+						$change_root_insert_flag,
+						$change_root_update_flag,
+						$change_root_delete_flag,
+						$expense_view_flag,
+						$expense_insert_flag,
+						$expense_update_flag,
+						$expense_delete_flag,
+						$leave_view_flag,
+						$leave_insert_flag,
+						$leave_update_flag,
+						$leave_delete_flag,
+						$area_view_flag,
+						$area_insert_flag,
+						$area_update_flag,
+						$area_delete_flag,
+						$visit_view_flag,
+						$visit_insert_flag,
+						$visit_update_flag,
+						$visit_delete_flag,
+						$price_list_view_flag,
+						$bank_detail_view_flag,
+						$scheme_view_flag,
+						$discount_dealer_view_flag,
+						$discount_distributor_view_flag,
+						$gst_view_flag,
+						$visit_card_view_flag,
+						$traveling_view_flag,
+						$attendance_insert_flag,
+						$insentive_percentage,
+						$image_path,
+						$file_path,
+					);
+					
+		 	$uid = $this->db->rp_insert($this->ctable,$values,$rows,0);
+			if($uid!=0)
+			{
+				$ack=$this->addArea($uid,$type_of_executive,$type_slug,$class_id,$item);
+				
+				$reply=array("ack"=>1,"developer_msg"=>"insert Successfully","ack_msg"=>"Success! Insert Executive Successfully.");
+				return $reply;
+			}
+			else
+			{
+				$reply=array("ack"=>0,"developer_msg"=>"Database error!!","ack_msg"=>"Failed! Insert Record Failed.");
+				return $reply;
+			}
+		}
+	 }
+//-------------------------------------------------------------------------------------------//
+//--------#Update Sales Officer Informstion------------------------------------------------//	 
+	public function UpdateSalesExecutive($executive_id,$id,$name,$email,$username,$phone,$address,$zip,$country,$state,$city,$imei,$type,$regDate,$sm_id,$asm_id,$so_id,$se_id,$class_id,$item,$refreshToken,$executive_in_min,$executive_in_max,$executive_out,$super_stokist_order_view_flag="",$super_stokist_order_insert_flag="",$super_stokist_order_update_flag="",$super_stokist_order_delete_flag="",$outlets_order_view_flag="",$outlets_order_insert_flag="",$outlets_order_update_flag="",$outlets_order_delete_flag="",$dealer_order_view_flag="",$dealer_order_insert_flag="",$dealer_order_update_flag="",$dealer_order_delete_flag="",$project_order_view_flag="",$project_order_insert_flag="",$project_order_update_flag="",$project_order_delete_flag="",$oem_order_view_flag="",$oem_order_insert_flag="",$oem_order_update_flag="",$oem_order_delete_flag="",$survey_customer_view_flag="",$survey_customer_insert_flag="",$survey_customer_update_flag="",$survey_customer_delete_flag="",$customer_leads_view_flag="",$customer_leads_insert_flag="",$customer_leads_update_flag="",$customer_leads_delete_flag="",$customer_view_flag="",$customer_insert_flag="",$customer_update_flag="",$customer_delete_flag="",$followup_view_flag="",$followup_insert_flag="",$followup_update_flag="",$followup_delete_flag="",$create_order_view_flag="",$create_order_insert_flag="",$create_order_update_flag="",$create_order_delete_flag="",$order_history_view_flag="",$order_history_insert_flag="",$order_history_update_flag="",$order_history_delete_flag="",$complain_view_flag="",$complain_insert_flag="",$complain_update_flag="",$complain_delete_flag="",$request_view_flag="",$request_insert_flag="",$request_update_flag="",$request_delete_flag="",$customer_meeting_view_flag="",$customer_meeting_insert_flag="",$customer_meeting_update_flag="",$customer_meeting_delete_flag="",$near_by_me_view_flag="",$change_root_view_flag="",$change_root_insert_flag="",$change_root_update_flag="",$change_root_delete_flag="",$expense_view_flag="",$expense_insert_flag="",$expense_update_flag="",$expense_delete_flag="",$leave_view_flag="",$leave_insert_flag="",$leave_update_flag="",$leave_delete_flag="",$area_view_flag="",$area_insert_flag="",$area_update_flag="",$area_delete_flag="",$visit_view_flag="",$visit_insert_flag="",$visit_update_flag="",$visit_delete_flag="",$price_list_view_flag="",$bank_detail_view_flag="",$scheme_view_flag="",$discount_dealer_view_flag="",$discount_distributor_view_flag="",$gst_view_flag="",$visit_card_view_flag="",$traveling_view_flag="",$attendance_insert_flag="",$insentive_percentage,$image_path,$file_path)
+	  {
+		  //echo $class_id;exit;
+		 $dup_where = " id!='".$_REQUEST['id']."' AND (username = '".$username."' OR phone = '".$phone."') AND isDelete=0 AND isActive=1";
+		
+			$r = $this->db->rp_dupCheck($this->ctable,$dup_where,0);
+			if($r > 0){
+			$reply=array("ack"=>0,"developer_msg"=>"Phone number/ Username already assigned to another user please try another!!","ack_msg"=>"Phone number/ Username already assigned to another user please try another!!");
+			return $reply;
+			}
+			else{
+				 $type_of_executive=$type;
+				 if($type=='sales_executive')
+				 {
+					 $type_slug='SalesExecutive';
+				 }
+				 else if($type=='sales_manager')
+				 {
+					 $type_slug='SalesManager';
+				 }
+				 else if($type=='sales_officer')
+				 {
+					 $type_slug='SalesOfficer';
+				 }
+				 else if($type=='area_sales_manager')
+				 {
+					 $type_slug='AreaSalesManager';
+				 }
+				 if($city=="")
+			     {
+			        $city=$this->db->rp_getValue($this->ctable,"city","id='".$_REQUEST['id']."'",0);    
+			     }
+				$rows 	= array(
+							"name"	=> $name,
+							"email"			=> $email,	
+							"username"			=> $username,	
+							//"password"			=> $password,	
+							"phone"			=> $phone,
+							"address"		=> $address,
+							"zip"			=> $zip,
+							"country"		=> $country,
+							"state"			=> $state,
+							"city"			=> $city,
+							"imei"			=> $imei,
+							"type"		=> $type,
+							"sm_id"		=> $sm_id,
+							"asm_id"		=> $asm_id,
+							"so_id"		=> $so_id,
+							"se_id"		=> $se_id,
+							"class_id"		=> $class_id,
+							"refreshToken"		=> $refreshToken,
+							"executive_in_min"		=> $executive_in_min,
+							"executive_in_max"		=> $executive_in_max,
+							"executive_out"		=> $executive_out,
+							"super_stokist_order_view_flag"  => $super_stokist_order_view_flag,
+							"super_stokist_order_insert_flag"  => $super_stokist_order_insert_flag,
+							"super_stokist_order_update_flag"  => $super_stokist_order_update_flag,
+							"super_stokist_order_delete_flag"  => $super_stokist_order_delete_flag,
+							"outlets_order_view_flag"  => $outlets_order_view_flag,
+							"outlets_order_insert_flag"  => $outlets_order_insert_flag,
+							"outlets_order_update_flag"  => $outlets_order_update_flag,
+							"outlets_order_delete_flag"  => $outlets_order_delete_flag,
+							"dealer_order_view_flag"  => $dealer_order_view_flag,
+							"dealer_order_insert_flag"  => $dealer_order_insert_flag,
+							"dealer_order_update_flag"  => $dealer_order_update_flag,
+							"dealer_order_delete_flag"  => $dealer_order_delete_flag,
+							"project_order_view_flag"  => $project_order_view_flag,
+							"project_order_insert_flag"  => $project_order_insert_flag,
+							"project_order_update_flag"  => $project_order_update_flag,
+							"project_order_delete_flag"  => $project_order_delete_flag,
+							"oem_order_view_flag"  => $oem_order_view_flag,
+							"oem_order_insert_flag"  => $oem_order_insert_flag,
+							"oem_order_update_flag"  => $oem_order_update_flag,
+							"oem_order_delete_flag"  => $oem_order_delete_flag,
+							"survey_customer_view_flag"  => $survey_customer_view_flag,
+							"survey_customer_insert_flag"  => $survey_customer_insert_flag,
+							"survey_customer_update_flag"  => $survey_customer_update_flag,
+							"survey_customer_delete_flag"  => $survey_customer_delete_flag,
+							"customer_leads_view_flag"     => $customer_leads_view_flag,
+							"customer_leads_insert_flag"     => $customer_leads_insert_flag,
+							"customer_leads_update_flag"     => $customer_leads_update_flag,
+							"customer_leads_delete_flag"     => $customer_leads_delete_flag,
+							"customer_view_flag"  => $customer_view_flag,
+							"customer_insert_flag"  => $customer_insert_flag,
+							"customer_update_flag"  => $customer_update_flag,
+							"customer_delete_flag"  => $customer_delete_flag,
+							"followup_view_flag"  => $followup_view_flag,
+							"followup_insert_flag"  => $followup_insert_flag,
+							"followup_update_flag"  => $followup_update_flag,
+							"followup_delete_flag"  => $followup_delete_flag,
+							"create_order_view_flag"  => $create_order_view_flag,
+							"create_order_insert_flag"  => $create_order_insert_flag,
+							"create_order_update_flag"  => $create_order_update_flag,
+							"create_order_delete_flag"  => $create_order_delete_flag,
+							"order_history_view_flag"  => $order_history_view_flag,
+							"order_history_insert_flag"  => $order_history_insert_flag,
+							"order_history_update_flag"  => $order_history_update_flag,
+							"order_history_delete_flag"  => $order_history_delete_flag,
+							"complain_view_flag"  => $complain_view_flag,
+							"complain_insert_flag"  => $complain_insert_flag,
+							"complain_update_flag"  => $complain_update_flag,
+							"complain_delete_flag"  => $complain_delete_flag,
+							"request_view_flag"  => $request_view_flag,
+							"request_insert_flag"  => $request_insert_flag,
+							"request_update_flag"  => $request_update_flag,
+							"request_delete_flag"  => $request_delete_flag,
+							"customer_meeting_view_flag"  => $customer_meeting_view_flag,
+							"customer_meeting_insert_flag"  => $customer_meeting_insert_flag,
+							"customer_meeting_update_flag"  => $customer_meeting_update_flag,
+							"customer_meeting_delete_flag"  => $customer_meeting_delete_flag,
+							"near_by_me_view_flag"  => $near_by_me_view_flag,
+							"change_root_view_flag"  => $change_root_view_flag,
+							"change_root_insert_flag"  => $change_root_insert_flag,
+							"change_root_update_flag"  => $change_root_update_flag,
+							"change_root_delete_flag"  => $change_root_delete_flag,
+							"expense_view_flag"  => $expense_view_flag,
+							"expense_insert_flag"  => $expense_insert_flag,
+							"expense_update_flag"  => $expense_update_flag,
+							"expense_delete_flag"  => $expense_delete_flag,
+							"leave_view_flag"  => $leave_view_flag,
+							"leave_insert_flag"  => $leave_insert_flag,
+							"leave_update_flag"  => $leave_update_flag,
+							"leave_delete_flag"  => $leave_delete_flag,
+							"area_view_flag"  => $area_view_flag,
+							"area_insert_flag"  => $area_insert_flag,
+							"area_update_flag"  => $area_update_flag,
+							"area_delete_flag"  => $area_delete_flag,
+							"visit_view_flag"  => $visit_view_flag,
+							"visit_insert_flag"  => $visit_insert_flag,
+							"visit_update_flag"  => $visit_update_flag,
+							"visit_delete_flag"  => $visit_delete_flag,
+							"price_list_view_flag"  => $price_list_view_flag,
+							"bank_detail_view_flag"  => $bank_detail_view_flag,
+							"scheme_view_flag"  => $scheme_view_flag,
+							"discount_dealer_view_flag"  => $discount_dealer_view_flag,
+							"discount_distributor_view_flag"  => $discount_distributor_view_flag,
+							"gst_view_flag"  => $gst_view_flag,
+							"visit_card_view_flag"  => $visit_card_view_flag,
+							"traveling_view_flag"  => $traveling_view_flag,
+							"attendance_insert_flag"=>$attendance_insert_flag,
+							"insentive_percentage"=>$insentive_percentage,
+							"gst_file_path"        =>$image_path,
+							"visiting_card_file_path"=>$file_path,
+					);
+				$where	= "id='".$executive_id."'";
+				$isUpdated=$this->db->rp_update($this->ctable,$rows,$where,0);
+				
+				if($isUpdated)
+				{
+					//$ack=$this->addArea($executive_id,$type_of_executive,$type_slug,$class_id,$item);
+					$reply=array("ack"=>1,"developer_msg"=>"User Update Successfull!!.","ack_msg"=>"Success! Update Executive Successfully.");
+					return $reply;
+				}
+				else
+				{
+					$reply=array("ack"=>0,"developer_msg"=>"Database error!!","ack_msg"=>"Update Failed.");
+					return $reply;
+				}
+			}	
+		}
+//--------------------------------------------------------------------------------------------------------//
+//------Add Area for Sales Officer on(sales_executive_map_area)---------------------------------------------//	
+		function addArea($executive_id,$type_of_executive,$type_slug,$class_id,$item)
+		{
+             $this->db->rp_delete($this->ctableMap,"sales_executive_id='".$executive_id."'",0);
+             foreach($item as $b)
+             {
+				$area_id=$b['area_id'];
+                $this->db->rp_insert($this->ctableMap,array($executive_id,$type_of_executive,$type_slug,$class_id,$area_id),array("sales_executive_id","executive_type","type_slug","class_id","area_id"),0);
+             }
+             return true;
+        
+       
+		}
+//-----------------------------------------------------------------------------//
+//--------#Edit Sales Officer -----------------------------------------------//		
+	public function EditSalesExecutive($detail)
+	{		
+		$where = " id='".$detail['id']."' AND isDelete=0";
+		$ctable_r = $this->db->rp_getData($this->ctable,"*",$where);
+		$ctable_d = mysqli_fetch_array($ctable_r);
+		
+		$result=array();
+		$result['name']		= htmlentities($ctable_d['name']);
+		$result['email']		= stripslashes($ctable_d['email']);
+		$result['username']		= stripslashes($ctable_d['username']);
+		$result['password']		= stripslashes($ctable_d['password']);
+		$result['phone']		= stripslashes($ctable_d['phone']);
+		$result['address']		= htmlentities($ctable_d['address']);
+		$result['zip']			= stripslashes($ctable_d['zip']);
+		$result['country']		= $ctable_d['country'];
+		$result['state'] 		= stripslashes($ctable_d['state']);
+		$result['city'] 		= stripslashes($ctable_d['city']);
+		$result['imei'] 		= stripslashes($ctable_d['imei']);
+		$result['type'] 		= stripslashes($ctable_d['type']);
+		$result['sm_id'] 		= stripslashes($ctable_d['sm_id']);
+		$result['asm_id'] 		= stripslashes($ctable_d['asm_id']);
+		$result['so_id'] 		= stripslashes($ctable_d['so_id']);
+		$result['se_id'] 		= stripslashes($ctable_d['se_id']);
+		$result['class_id'] 		= stripslashes($ctable_d['class_id']);
+		$result['refreshToken'] 		= stripslashes($ctable_d['refreshToken']);
+		$result['executive_in_min'] 		= stripslashes($ctable_d['executive_in_min']);
+		$result['executive_in_max'] 		= stripslashes($ctable_d['executive_in_max']);
+		$result['executive_out'] 		= stripslashes($ctable_d['executive_out']);
+		$result['super_stokist_order_view_flag'] 		= stripslashes($ctable_d['super_stokist_order_view_flag']);
+		$result['super_stokist_order_insert_flag'] 		= stripslashes($ctable_d['super_stokist_order_insert_flag']);
+		$result['super_stokist_order_update_flag'] 		= stripslashes($ctable_d['super_stokist_order_update_flag']);
+		$result['super_stokist_order_delete_flag'] 		= stripslashes($ctable_d['super_stokist_order_delete_flag']);
+		$result['outlets_order_view_flag'] 				= stripslashes($ctable_d['outlets_order_view_flag']);
+		$result['outlets_order_insert_flag'] 			= stripslashes($ctable_d['outlets_order_insert_flag']);
+		$result['outlets_order_update_flag'] 			= stripslashes($ctable_d['outlets_order_update_flag']);
+		$result['outlets_order_delete_flag'] 			= stripslashes($ctable_d['outlets_order_delete_flag']);
+		$result['dealer_order_view_flag'] 				= stripslashes($ctable_d['dealer_order_view_flag']);
+		$result['dealer_order_insert_flag'] 		= stripslashes($ctable_d['dealer_order_insert_flag']);
+		$result['dealer_order_update_flag'] 		= stripslashes($ctable_d['dealer_order_update_flag']);
+		$result['dealer_order_delete_flag'] 		= stripslashes($ctable_d['dealer_order_delete_flag']);
+		$result['project_order_view_flag'] 				= stripslashes($ctable_d['project_order_view_flag']);
+		$result['project_order_insert_flag'] 		= stripslashes($ctable_d['project_order_insert_flag']);
+		$result['project_order_update_flag'] 		= stripslashes($ctable_d['project_order_update_flag']);
+		$result['project_order_delete_flag'] 		= stripslashes($ctable_d['project_order_delete_flag']);
+		$result['oem_order_view_flag'] 				= stripslashes($ctable_d['oem_order_view_flag']);
+		$result['oem_order_insert_flag'] 		= stripslashes($ctable_d['oem_order_insert_flag']);
+		$result['oem_order_update_flag'] 		= stripslashes($ctable_d['oem_order_update_flag']);
+		$result['oem_order_delete_flag'] 		= stripslashes($ctable_d['oem_order_delete_flag']);
+		$result['survey_customer_view_flag'] 		= stripslashes($ctable_d['survey_customer_view_flag']);
+		$result['survey_customer_insert_flag'] 		= stripslashes($ctable_d['survey_customer_insert_flag']);
+		$result['survey_customer_update_flag'] 		= stripslashes($ctable_d['survey_customer_update_flag']);
+		$result['survey_customer_delete_flag'] 		= stripslashes($ctable_d['survey_customer_delete_flag']);
+		$result['customer_view_flag'] 		= stripslashes($ctable_d['customer_view_flag']);
+		$result['customer_insert_flag'] 		= stripslashes($ctable_d['customer_insert_flag']);
+		$result['customer_update_flag'] 		= stripslashes($ctable_d['customer_update_flag']);
+		$result['customer_delete_flag'] 		= stripslashes($ctable_d['customer_delete_flag']);
+		$result['followup_view_flag'] 		= stripslashes($ctable_d['followup_view_flag']);
+		$result['followup_insert_flag'] 		= stripslashes($ctable_d['followup_insert_flag']);
+		$result['followup_update_flag'] 		= stripslashes($ctable_d['followup_update_flag']);
+		$result['followup_delete_flag'] 		= stripslashes($ctable_d['followup_delete_flag']);
+		$result['create_order_view_flag'] 		= stripslashes($ctable_d['create_order_view_flag']);
+		$result['create_order_insert_flag'] 		= stripslashes($ctable_d['create_order_insert_flag']);
+		$result['create_order_update_flag'] 		= stripslashes($ctable_d['create_order_update_flag']);
+		$result['create_order_delete_flag'] 		= stripslashes($ctable_d['create_order_delete_flag']);
+		$result['order_history_view_flag'] 		= stripslashes($ctable_d['order_history_view_flag']);
+		$result['order_history_insert_flag'] 		= stripslashes($ctable_d['order_history_insert_flag']);
+		$result['order_history_update_flag'] 		= stripslashes($ctable_d['order_history_update_flag']);
+		$result['order_history_delete_flag'] 		= stripslashes($ctable_d['order_history_delete_flag']);
+		$result['complain_view_flag'] 		= stripslashes($ctable_d['complain_view_flag']);
+		$result['complain_insert_flag'] 		= stripslashes($ctable_d['complain_insert_flag']);
+		$result['complain_update_flag'] 		= stripslashes($ctable_d['complain_update_flag']);
+		$result['complain_delete_flag'] 		= stripslashes($ctable_d['complain_delete_flag']);
+		$result['request_view_flag'] 		= stripslashes($ctable_d['request_view_flag']);
+		$result['request_insert_flag'] 		= stripslashes($ctable_d['request_insert_flag']);
+		$result['request_update_flag'] 		= stripslashes($ctable_d['request_update_flag']);
+		$result['request_delete_flag'] 		= stripslashes($ctable_d['request_delete_flag']);
+		$result['customer_meeting_view_flag'] 		= stripslashes($ctable_d['customer_meeting_view_flag']);
+		$result['customer_meeting_insert_flag'] 		= stripslashes($ctable_d['customer_meeting_insert_flag']);
+		$result['customer_meeting_update_flag'] 		= stripslashes($ctable_d['customer_meeting_update_flag']);
+		$result['customer_meeting_delete_flag'] 		= stripslashes($ctable_d['customer_meeting_delete_flag']);
+		$result['near_by_me_view_flag'] 		= stripslashes($ctable_d['near_by_me_view_flag']);
+		$result['change_root_view_flag'] 		= stripslashes($ctable_d['change_root_view_flag']);
+		$result['change_root_insert_flag'] 		= stripslashes($ctable_d['change_root_insert_flag']);
+		$result['change_root_update_flag'] 		= stripslashes($ctable_d['change_root_update_flag']);
+		$result['change_root_delete_flag'] 		= stripslashes($ctable_d['change_root_delete_flag']);
+		$result['expense_view_flag'] 		= stripslashes($ctable_d['expense_view_flag']);
+		$result['expense_insert_flag'] 		= stripslashes($ctable_d['expense_insert_flag']);
+		$result['expense_update_flag'] 		= stripslashes($ctable_d['expense_update_flag']);
+		$result['expense_delete_flag'] 		= stripslashes($ctable_d['expense_delete_flag']);
+		$result['leave_view_flag'] 		= stripslashes($ctable_d['leave_view_flag']);
+		$result['leave_insert_flag'] 		= stripslashes($ctable_d['leave_insert_flag']);
+		$result['leave_update_flag'] 		= stripslashes($ctable_d['leave_update_flag']);
+		$result['leave_delete_flag'] 		= stripslashes($ctable_d['leave_delete_flag']);
+		$result['area_view_flag'] 		= stripslashes($ctable_d['area_view_flag']);
+		$result['area_insert_flag'] 		= stripslashes($ctable_d['area_insert_flag']);
+		$result['area_update_flag'] 		= stripslashes($ctable_d['area_update_flag']);
+		$result['area_delete_flag'] 		= stripslashes($ctable_d['area_delete_flag']);
+		$result['visit_view_flag'] 		= stripslashes($ctable_d['visit_view_flag']);
+		$result['visit_insert_flag'] 		= stripslashes($ctable_d['visit_insert_flag']);
+		$result['visit_update_flag'] 		= stripslashes($ctable_d['visit_update_flag']);
+		$result['visit_delete_flag'] 		= stripslashes($ctable_d['visit_delete_flag']);
+		$result['price_list_view_flag'] 		= stripslashes($ctable_d['price_list_view_flag']);
+		$result['bank_detail_view_flag'] 		= stripslashes($ctable_d['bank_detail_view_flag']);
+		$result['scheme_view_flag'] 		= stripslashes($ctable_d['scheme_view_flag']);
+		$result['discount_dealer_view_flag'] 		= stripslashes($ctable_d['discount_dealer_view_flag']);
+		$result['discount_distributor_view_flag'] 		= stripslashes($ctable_d['discount_distributor_view_flag']);
+		$result['gst_view_flag'] 		= stripslashes($ctable_d['gst_view_flag']);
+		$result['visit_card_view_flag'] 		= stripslashes($ctable_d['visit_card_view_flag']);
+		$result['traveling_view_flag'] 		= stripslashes($ctable_d['traveling_view_flag']);
+		$result['attendance_insert_flag'] 		= stripslashes($ctable_d['attendance_insert_flag']);
+		
+		$result['insentive_percentage'] 			= stripslashes($ctable_d['insentive_percentage']);
+		$result['image_path'] 			            = stripslashes($ctable_d['gst_file_path']);
+		$result['file_path'] 			            = stripslashes($ctable_d['visiting_card_file_path']);
+		
+		$area_id_r=$this->db->rp_getData("sales_executive_map_area","area_id","sales_executive_id='".$detail['id']."' AND isDelete=0","",0);
+		while($w=mysqli_fetch_array($area_id_r))
+		{
+			$area_id[]=$w['area_id'];
+			
+		}
+		$reply=array("ack"=>1,"developer_msg"=>"User detail fetched!!.","ack_msg"=>"Success! Update Sales Officer Successfully.","result"=>$result,"area_id"=>$area_id);
+		return $reply;
+	
+	}
+	
+	public function getsalesDetail($sales_id,$from_date,$to_date,$customer_type="")
+	{	
+		$order_date="";
+		$where = " id='".$sales_id."' AND isDelete=0";
+		$sales_type = $this->db->rp_getValue($this->ctable,"type",$where_type,0);
+		$ctable_r = $this->db->rp_getData($this->ctable,"*",$where,"",0);
+		/*if($sales_type=='sales_manager')
+		{
+			$where = "sm_id='".$sales_id."' AND isDelete=0 AND isActive=1";
+			$ctable_r = $this->db->rp_getData($this->ctable,"*",$where,"",0);
+		}
+		else if($sales_type=='area_sales_manager')
+		{
+			$where = "asm_id='".$sales_id."' AND isDelete=0 AND isActive=1";
+			$ctable_r = $this->db->rp_getData($this->ctable,"*",$where,"",0);
+		}
+		else if($sales_type=='sales_officer')
+		{
+			$where = "so_id='".$sales_id."' AND isDelete=0 AND isActive=1";
+			$ctable_r = $this->db->rp_getData($this->ctable,"*",$where,"",0);
+		}
+		*/
+		while($ctable_d = mysqli_fetch_array($ctable_r))
+		{
+			//print_r($ctable_d);
+		$result=array();
+		$result=array("id"=>$ctable_d['id'],"name"=>$ctable_d['name'],"sales_type"=>$ctable_d['type']);
+		$r[] = $result;
+		}
+		$FromDate=date('Y-m-d',strtotime($from_date));
+		$ToDate=date('Y-m-d',strtotime($to_date));
+		foreach($r as $data)
+		{
+			$result1=array();
+			$result1['id']=$data['id'];
+			$result1['name']=$data['name'];
+			$result1['sales_type']=$data['sales_type'];
+			if(!array_key_exists($data['sales_type'],$result_data))
+			{
+				$result_data[$data['sales_type']]=array("title"=>$this->sales_type_title[$data['sales_type']],'type'=>$data['sales_type'],"orders"=>array());
+			}
+			$data['amount']=$this->db->rp_getValue("orders","SUM(grand_total)","sales_id='".$result1['id']."' AND order_date>='".$FromDate."' AND order_date<='".$ToDate."' AND  customer_type='".$customer_type."'",0);
+			if($data['amount']!="")
+			{
+				$result1['amount']=$data['amount'];
+			}
+			else
+			{
+				$result1['amount']="";
+			}
+			//$result1['amount']=
+			//$result1['amount']=$data['amount'];
+			
+			$result_data[$data['sales_type']]['orders'] []= $result1;
+		}
+		foreach($result_data as $d)
+		{
+			$final_result[]=$d;
+		}
+		if(!empty($result_data))
+		{
+			$ack=array( "ack"=>1,"ack_msg"=>"Successfully Get sales Detail  !!","developer_msg"=>"You got it!!","result"=>$final_result,);
+			return $ack;
+		}
+		else
+		{
+			$ack=array( "ack"=>0,"ack_msg"=>"No Report Found !!","developer_msg"=>"No Report Found!!","result"=>$final_result,);
+			return $ack;
+		}
+	}
+				
+	public function getInquiryReport($sales_id,$from_date,$to_date)
+	{	
+		$order_date="";
+		$where_type = " id='".$sales_id."' AND isDelete=0";
+		$sales_type = $this->db->rp_getValue($this->ctable,"type",$where_type,0);
+		if($sales_type=='sales_manager')
+		{
+			$where = "sm_id='".$sales_id."' AND isDelete=0 AND isActive=1";
+			$ctable_r = $this->db->rp_getData($this->ctable,"*",$where,"",0);
+		}
+		else if($sales_type=='area_sales_manager')
+		{
+			$where = "asm_id='".$sales_id."' AND isDelete=0 AND isActive=1";
+			$ctable_r = $this->db->rp_getData($this->ctable,"*",$where);
+		}
+		else if($sales_type=='sales_officer')
+		{
+			$where = "so_id='".$sales_id."' AND isDelete=0 AND isActive=1";
+			$ctable_r = $this->db->rp_getData($this->ctable,"*",$where,"",0);
+		}
+		else
+		{
+			$ctable_r="sales_manager";
+		}
+		while($ctable_d = mysqli_fetch_array($ctable_r))
+		{
+			//print_r($ctable_d);
+		$result=array();
+		$result=array("id"=>$ctable_d['id'],"name"=>$ctable_d['name'],"sales_type"=>$ctable_d['type']);
+		$r[] = $result;
+		}
+		$FromDate=date('Y-m-d',strtotime($from_date));
+		$ToDate=date('Y-m-d',strtotime($to_date));
+		$result_data=array();
+		foreach($r as $data)
+		{
+			$result1=array();
+			$result1['id']=$data['id'];
+			$result1['name']=$data['name'];
+			$result1['sales_type']=$data['sales_type'];
+			
+			if(!array_key_exists($data['sales_type'],$result_data))
+			{
+				$result_data[$data['sales_type']]=array("title"=>$this->sales_type_title[$data['sales_type']],'type'=>$data['sales_type'],"inquiry"=>array());
+			}
+			$data['count']=$this->db->rp_getValue("no_order_inquiry","COUNT(id)","sales_executive_id='".$result1['id']."' AND created_date>='".$FromDate."' AND created_date<='".$ToDate."'",0);
+			if($data['count']!="")
+			{
+				$result1['count']=$data['count'];
+			}
+			else
+			{
+				$result1['count']="";
+			}
+			//$result1['amount']=
+			//$result1['amount']=$data['amount'];
+			
+			$result_data[$data['sales_type']]['inquiry'] []= $result1;
+		}
+		foreach($result_data as $d)
+		{
+			$final_result[]=$d;
+		}
+		if(!empty($result_data))
+		{
+			$ack=array( "ack"=>1,"ack_msg"=>"Successfully Get Inquiries  !!","developer_msg"=>"You got it!!","result"=>$final_result,);
+			return $ack;
+		}
+		else
+		{
+			$ack=array( "ack"=>0,"ack_msg"=>"No Inquiry Report Found !!","developer_msg"=>"No Inquiry Found!!","result"=>$final_result,);
+			return $ack;
+		}
+	}
+		
+		
+	
+	
+//------------------------------------------------------------------------------------//+
+//--------Delete Sales Officer------------------------------------------------------//	
+	public function SaledExecutiveDelete($detail)
+	{
+		$rows 	= array(
+		"isDelete"	=> "1"
+		);
+			$where	= "id='".$_REQUEST['id']."'";
+			$uid=$this->db->rp_update($this->ctable,$rows,$where);
+			if($uid!=0)
+			{
+				$reply=array("ack"=>1,"developer_msg"=>"deleted data.","ack_msg"=>"Success! Delete Sales Officer Successfully.");
+				return $reply;
+			}
+			else
+			{
+				$reply=array("ack"=>0,"developer_msg"=>"Database error!!","ack_msg"=>"Failed! Delete record Failed.");
+				return $reply;
+			}
+	}
+//-----------------------------------------------------------------------------------------------//
+	
+	
+	function generateActivationCode()
+	{
+		$characters='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+		$randStr="";
+		for($i=0;$i<=5;$i++)
+		{
+			$randStr=$randStr.$characters[rand(0,strlen($characters)-1)];
+		}
+		return $randStr;
+	}
+	function aj_sendSMS($number,$sms)
+	{
+		require_once('notification.class.php');
+	    $nt = new Notification();
+		$msgId="NO";
+		if($number!="")
+		{
+		   	$msgId=$nt->aj_sendSMSSecurity($number,$sms);
+			if($msgId!=0)
+			{
+				return $deliveryStatus=array("ack"=>1,"ack_msg"=>"SMS sent to ".$number." successfully");	
+			}
+			//$deliveryStatus=$nt->aj_getDeliveryReport($msgId);
+			else
+			$deliveryStatus=array("ack"=>0,"ack_msg"=>"SMS sending failed on".$number,"reason"=>"Invalid mobile number or mobile switched off or out of coverage area!!");	
+			return $deliveryStatus;			
+		}		
+		return array('ack'=>0,'ack_msg'=>"Internal Error!","developer_msg"=>"Empty Mobile Number");
+	}
+//---------------------Track Sales--------------------------------------------------//	
+	function trackSales($sales_id,$date="")
+	{
+		$count=$this->db->rp_getTotalRecord($this->ctable,"id='".$sales_id."'");
+		if($count>=1)
+		{
+			$where="sales_executive_id='".$sales_id."' AND isDelete=0";
+			if($date!="")
+			{
+				$where.=" AND DATE(date)='".date("Y-m-d",strtotime($date))."'";
+			}
+			$sales_routes=$this->db->rp_getData($this->ctableTracking,"*",$where,"date ASC",0);
+			if($sales_routes)
+			{
+				while($route=mysqli_fetch_assoc($sales_routes))
+				{
+					$result[]=array("lat"=>$route['latitude'],"lng"=>$route['longitude'],"date"=>date("d M H:i",strtotime($route['date'])),"type"=>$common_type[$route['type']],"type_slug"=>$route['type'],"icon"=>$this->pin_icon[$route['type']]);
+				}
+				$reply=array("ack"=>1,"ack_msg"=>"Sales Tracking Fetched!!","result"=>$result);
+			}
+			else
+			{
+				$reply=array("ack"=>0,"ack_msg"=>"No Route Found!!");
+			}
+			
+		}
+		else
+		{
+			$reply=array("ack"=>0,"ack_msg"=>"No Sales Found!!");
+		}
+		return $reply;
+	}
+
+	function trackSalesPin($sales_id,$date="")
+	{
+		$where = "isDelete=0";
+		if($sales_id != "" && $sales_id != 0)
+		{
+			$where.=" AND sales_executive_id='".$sales_id."'";
+		}
+		if($date!="")
+		{
+			// echo $date;exit;
+			$where.=" AND DATE(date)='".date("Y-m-d",strtotime($date))."'";
+		}
+		$sales_routes=$this->db->rp_getData($this->ctableTracking,"*",$where,"date ASC",0);
+		if($sales_routes)
+		{
+			while($route=mysqli_fetch_assoc($sales_routes))
+			{
+				// this code for status (offline/online) purpose only
+				$last_time = 0;
+				if($route['sales_executive_id']!="")
+				{
+					$where1="isDelete=0";
+					$where1 .=" AND sales_executive_id=".$route['sales_executive_id']."";
+					$where1.=" AND DATE(date)='".date("Y-m-d")."'";
+					$data_d = $this->rp_getData("salesexecutive_tracking_snapped","*",$where1,"id desc",0);
+				}
+				$data = mysqli_fetch_assoc($data_d);
+				$last_time = $data['date'];
+				if($last_time)
+				{
+					$last_time = date("G:i:s",strtotime($last_time));
+				}
+				$curr_time = date("G:i:s");
+				$sec = ACTIVE_TIME*60;
+				if(strtotime($curr_time)>strtotime($last_time)+$sec)
+				{
+					$status = "offline";
+				}
+				else
+				{
+					$status = "online";
+				}
+				// status code over here
+
+				$name = $this->rp_getValue("sales_executive","name","id = '".$route['sales_executive_id']."'",0);
+				$result[]=array("lat"=>$route['latitude'],"lng"=>$route['longitude'],"name"=>$name,"date"=>date("d M H:i",strtotime($route['date'])),"type"=>$this->db->common_type[$route['type']],"type_slug"=>$route['type'],"icon"=>$this->pin_icon[$route['type']],"status"=>$status,"mytype"=>$route['type'],"address"=>$route['app_address']);
+			}
+			$reply=array("ack"=>1,"ack_msg"=>"Sales Tracking Fetched!!","result"=>$result);
+		}
+		else
+		{
+			$reply=array("ack"=>0,"ack_msg"=>"No Route Found!!");
+		}
+		return $reply;
+	}
+	
+	function trackSalesAll($date="",$id="")
+	{
+		$where="isDelete=0";
+		if($id!="")
+		{
+			$where .=" AND sales_executive_id=".$id."";
+			$limit = "LIMIT 1";
+		}
+		if($date!="")
+		{
+			$where.=" AND DATE(date)='".date("Y-m-d",strtotime($date))."'";
+			$limit = "";
+		}
+		// $sales_routes=$this->db->rp_getData($this->ctableTracking,"*",$where,"date DSC",1);
+		$sales_routes=$this->rp_getQuery("select * from(select  * from salesexecutive_tracking_snapped WHERE ".$where." ORDER BY id DESC ".$limit.") AS x GROUP BY sales_executive_id",0);
+		while($route=mysqli_fetch_assoc($sales_routes))
+		{
+			// this code for status (offline/online) purpose only
+			$last_time = 0;
+			if($route['sales_executive_id']!="")
+			{
+				$where1="isDelete=0";
+				$where1 .=" AND sales_executive_id=".$route['sales_executive_id']."";
+				$where1.=" AND DATE(date)='".date("Y-m-d")."'";
+				$data_d = $this->rp_getData("salesexecutive_tracking_snapped","*",$where1,"id desc",0);
+			}
+			$data = mysqli_fetch_assoc($data_d);
+			$last_time = $data['date'];
+			if($last_time)
+			{
+				$last_time = date("G:i:s",strtotime($last_time));
+			}
+			$curr_time = date("G:i:s");
+			$sec = ACTIVE_TIME*60;
+			if(strtotime($curr_time)>strtotime($last_time)+$sec)
+			{
+				$status = "offline";
+			}
+			else
+			{
+				$status = "online";
+			}
+			// status code over here
+			$address=$route['app_address'];/*$this->db->getAddress($route['latitude'],$route['longitude']);*/
+			$name = $this->rp_getValue("sales_executive","name","id = '".$route['sales_executive_id']."'",0);
+			$result[]=array("lat"=>$route['latitude'],"lng"=>$route['longitude'],"name"=>$name,"date"=>date("d M h:i A",strtotime($route['date'])),"type"=>"","address"=>$address,"type_slug"=>$route['type'],"icon"=>$this->pin_icon[$route['type']],"status"=>$status);
+			// $result[]=array("lat"=>$route['latitude'],"lng"=>$route['longitude'],"name"=>$name,"date"=>date("d M h:i A",strtotime($route['date'])),"type"=>$this->db->common_type[$route['type_value']],"type_slug"=>$route['type'],"icon"=>$this->pin_icon[$route['type']],"status"=>$status);
+		}
+		if($result == "")
+		{
+			$reply=array("ack"=>0,"ack_msg"=>"No Data Available!!","result"=>$result);
+		}
+		else
+		{
+			$reply=array("ack"=>1,"ack_msg"=>"Sales Tracking Fetched!!","result"=>$result);
+		}
+		return $reply;
+	}
+	function addNoOrderInquiry($data,$file){
+		
+		if(!empty($data))
+		{
+			$Check_Customer = $this->db->rp_getTotalRecord("executive","phone='".$data['mobile_number']."' AND isDelete=0 AND isActive=1",0);
+
+			if($Check_Customer>0)
+			{
+				$reply=array( "ack"=>0,"ack_msg"=>"This Number Already Add In Customer List.Please Take Visit.","developer_msg"=>"This Number Already Add In Customer List.Please Take Visit.");
+				return $reply;
+			}
+			else
+			{
+				$dup_where = "mobile_number = '".$data['mobile_number']."' AND isDelete=0";
+				$r = $this->db->rp_dupCheck($this->ctableNoOrderInquiry,$dup_where,0);
+				if($r){
+					$reply=array("ack"=>0,"developer_msg"=>"Already Exist This Mobile Number","ack_msg"=>"Already Exist This Mobile Number");
+					return $reply;
+				}
+				else
+				{
+					$data['modify_date']=date("Y-m-d H:i:s");
+					$data['modify_track']=date("Y-m-d H:i:s");
+					$columns=array_keys($data);
+					$data_values=array_values($data);
+					$id=$this->db->rp_insert($this->ctableNoOrderInquiry,$data_values,$columns,0);
+					
+					$image_path=array();
+					if (isset($file["image_path"]) && $file["image_path"]['size']!=0)
+					{
+						$ri = $id;
+						$rt = "inquiry";
+						$tc = "inquiry";
+						$rc = "id";
+
+						for($i=0;$i<sizeof($file["image_path"]['name']);$i++)
+						{
+							$file_name = $file['image_path']['name'][$i];
+							$file_size = $file['image_path']['size'][$i];
+							$file_tmp = $file['image_path']['tmp_name'][$i];
+							$file_type = $file['image_path']['type'][$i];
+							$extension=explode(".",$file_name);
+
+							$allowed_extentions=array("jpg","jpeg","png","JPEG","JPEG","PNG");
+							$extension=$extension[sizeof($extension)-1];
+							if(!in_array($extension,$allowed_extentions))
+							{
+								$file_error=true;
+							}
+							$orignal_file_name=$extension[0];
+							if(in_array($extension,$allowed_extentions))
+							{
+								$attachment="../resource/image/";
+								move_uploaded_file($file_tmp,$attachment.$file_name);
+							}
+							$MediaTitle=$file_name;
+					    	$MediaOrignalTitle=$file_name;
+					    	$MediaFileName=$file_name;
+					    	$UploadDate=date("Y-m-d H:i:s");
+
+					    	$Values=array($MediaTitle,$MediaOrignalTitle,$MediaFileName,$extension,$UploadDate,$ri,$rt,$tc);
+					    	$Columns=array("title","orignal_title","url","ext","upload_date","reference_id","reference_table","reference_column");
+					    	$MediaID=$this->db->rp_insert("media",$Values,$Columns,0);
+					    	$image_path[] = $MediaID;
+						}
+						$image_path = implode(",", $image_path);
+						$upadateid = $this->db->rp_update($this->ctableNoOrderInquiry,array("image_path"=>$image_path),"id='".$id."'",0);
+					}
+				}
+			}
+
+			if($id!=0)
+			{
+				$followup_date = date("Y-m-d H:i:s",strtotime($_REQUEST['followup_date']));
+				$followup_description = $_REQUEST['description'];
+			    
+			    $Values=array('no_order_inquiry',$data['sales_executive_id'],'0',$id,0,$followup_description,1,$followup_date,0,1,0,0);
+
+		        $Columns=array("reference_table","user_id","visitor_id","reference_id","project_manager_id","description","through","followup_date","isDelete","isActive","next_followup_id","refrence_media_id");
+
+		        $ContentID=$this->db->rp_insert("followup",$Values,$Columns,0);
+		        $upadateid = $this->db->rp_update($this->ctableNoOrderInquiry,array("status"=>1),"id='".$id."'",0);
+
+				$reply=array("ack"=>1,"developer_msg"=>"Inquiry Successfully Submitted","ack_msg"=>"Inquiry Successfully Submitted","inserted_id"=>$id);
+				return $reply;
+			}
+			else
+			{
+				$reply=array("ack"=>0,"developer_msg"=>"No data inserted check database","ack_msg"=>"Internal Error!!ADDNOI1");
+				return $reply;
+			}
+		}
+		else
+		{
+			$reply=array("ack"=>0,"developer_msg"=>"No data found","ack_msg"=>"Internal Error!!ADDNOI1");
+			return $reply;
+		}
+	}
+	
+	function updateNoOrderInquiry($data,$id)
+	{
+		if(!empty($data))
+		{
+			$last_track=$this->db->rp_getValue($this->ctableNoOrderInquiry,"modify_track","id='".$id."'");
+			$data['modify_date']=date("Y-m-d H:i:s");
+			$data['modify_track']=$last_track."&5895;".date("Y-m-d H:i:s");
+			$this->db->rp_update($this->ctableNoOrderInquiry,$data,"id='".$id."'",0);
+			$reply=array("ack"=>1,"developer_msg"=>"Inquiry Successfully Updated","ack_msg"=>"Inquiry Successfully Updated");
+			return $reply;
+		}
+		else
+		{
+			$reply=array("ack"=>0,"developer_msg"=>"No data found","ack_msg"=>"Internal Error!! ERROR UPNOI1");
+			return $reply;
+		}
+	}
+	
+	function deleteNoOrderInquiry($id)
+	{
+		$last_track=$db->rp_getValue($this->ctableNoOrderInquiry,"modify_track","id='".$id."'");
+		$data['modify_date']=date("Y-m-d H:i:s");
+		$data['modify_track']=$last_track."&5895;".date("Y-m-d H:i:s");
+		$data['isDelete']=0;
+		$this->db->rp_update($this->ctableNoOrderInquiry,$data,"id='".$id."'");
+		$reply=array("ack"=>1,"developer_msg"=>"Inquiry Successfully Deleted","ack_msg"=>"Inquiry Successfully Deleted");
+		return $reply;
+	}
+	
+	function listNoOrderInquiry($id)
+	{
+		if($id!="")
+		{
+			$noOrderInquiryR=$db->rp_getData($this->ctableNoOrderInquiry,"*","id='".$id."'");
+			if($noOrderInquiryR)
+			{
+				$result=array();
+				while($noOrderInquiry=mysqli_fetch_assoc($noOrderInquiryR))
+				{
+					$result[]=$noOrderInquiry;
+				}
+				$reply=array("ack"=>1,"developer_msg"=>"Inquiry Get Successfully Order Inquiry","ack_msg"=>"Inquiry Successfully Fetched","result"=>$result);
+				return $reply;
+			}
+			else
+			{
+				$reply=array("ack"=>0,"developer_msg"=>"No Inquiry Found!!","ack_msg"=>"No Inquiry Found!!");
+				return $reply;
+			}
+		}
+		else
+		{
+			$reply=array("ack"=>0,"developer_msg"=>"No data found","ack_msg"=>"Internal Error!! ERROR LISTNOI1");
+			return $reply;
+		}
+	}
+	public function DownloadOrder($order_id)
+	{
+		$order_id=$this->db->rp_getValue("orders","id","id='".$order_id."'",0);
+		$uname=$this->db->rp_getValue("orders","customer_name","id='".$order_id."'",0);
+		$uname=$this->db->rp_createSlug($uname);
+		
+		if($order_id){
+			
+			$count=$this->db->rp_getTotalRecord("orders","id='".$order_id."'",0);
+			
+			if($count >0){
+				$body_url=ADMINSITEURL."customer_orders_view_new.php?order_id=".$order_id;
+
+				$d=file_get_contents($body_url);
+				$d = html_entity_decode($d);
+				$relCertFileNames = array();
+				$merge_file = array();
+				require('../bbsales_tracking/mpdf60/mpdf.php');
+				$mpdf = new mPDF('', // mode - default ''
+
+				'A4', // format - A4, for example, default ''
+
+				10,     // font size - default 0
+
+				'sans-serif',  // default font family
+
+				1,    // margin_left
+
+				1,    // margin right
+
+				10,   // margin top
+
+				5,    // margin bottom
+
+				0,    // margin header
+
+				0,    // margin footer
+
+				'P'); // L - landscape, P - portrait
+
+				/*$mpdf->use_kwt = true;*/
+		
+				/*$mpdf->autoPageBreak = false;*/
+
+				$mpdf->WriteHTML($d);
+
+				//$fileName = "orders".$order_id;
+				$date=date("d-m-Y-H-i-s");
+				$fileName = $date."-".$uname."-".$order_id;
+
+				if(!is_dir("../bbsales_tracking/pdf/orders/".$fileName)){
+
+					mkdir("../bbsales_tracking/pdf/orders/".$fileName);
+				}
+
+				$pdf_file_path	= "../bbsales_tracking/pdf/orders/".$fileName."/".$fileName.'.pdf';
+				if(file_exists($pdf_file_path)){
+
+					unlink($pdf_file_path);
+				}
+
+				$mpdf->Output($pdf_file_path);
+				$pdf_file_path;
+
+				$result=array();
+				$result['pdf']=ADMINSITEURL."pdf/orders/".$fileName."/".$fileName.'.pdf';
+
+				$reply=array("ack"=>1,"developer_msg"=>"Order Generate Successfully","ack_msg"=>"Order Generate Successfully","result"=>$result);
+				return $reply;
+			}
+			else{
+				$reply=array("ack"=>0,"developer_msg"=>"Order Not Generate!!","ack_msg"=>"Order Not Generate!!");
+				return $reply;
+			}
+		}
+		else{
+			$reply=array("ack"=>0,"developer_msg"=>"Order Id Require!!","ack_msg"=>"Order Id Require!!");
+			return $reply;
+		}
+	}
+	
+	public function UpdateSalesExecutiveProfile($detail,$file) 
+    {
+        extract($detail);
+	 	
+		$adate	= date('Y-m-d H:i:s');
+		$rows 	= array(
+				"name"    => $name,
+				"email"   => $email,
+				"address" => $address,
+				"country" => $country,
+				"state"   => $state,
+				"city"    => $city,
+			);	
+					
+		$uid = $this->db->rp_update("sales_executive",$rows,"id='".$id."'",0);
+		/*add image*/
+			$image_path=array();
+			if (isset($file["image_path"]) && $file["image_path"]['size']!=0) 
+			{
+				$ri = $id;
+				$rt = "sales_executive";
+				$tc = "sales_executive";
+				$rc = "id";
+				for($i=0;$i<sizeof($file["image_path"]['name']);$i++)
+				{
+					//print_r($file["image_path"]);
+					$file_name = $file['image_path']['name'];
+					$file_size = $file['image_path']['size'];
+					$file_tmp = $file['image_path']['tmp_name'];
+					$file_type = $file['image_path']['type'];
+					$extension=explode(".",$file_name);
+					
+					$allowed_extentions=array("jpg","jpeg","png","JPEG","JPEG","PNG");
+					$extension=$extension[sizeof($extension)-1];
+					if(!in_array($extension,$allowed_extentions))
+					{
+						$file_error=true;
+					}
+					$orignal_file_name=$extension[0];
+					if(in_array($extension,$allowed_extentions))
+					{
+						$attachment="../resource/image/";
+						move_uploaded_file($file_tmp,$attachment.$file_name);
+					}
+					$MediaTitle=$file_name;
+			    	$MediaOrignalTitle=$file_name;
+
+					$MediaFileName=$file_name;
+					// $MediaType=User::$ValidMediaType[$extension];
+					$UploadDate=date("Y-m-d H:i:s");
+					
+					// $Values=array($MediaTitle,$MediaOrignalTitle,$MediaFileName,$MediaType,$extension,$UploadDate,$ri,$rt,$tc);
+					$Values=array($MediaTitle,$MediaOrignalTitle,$MediaFileName,$extension,$UploadDate,$ri,$rt,$tc);
+					// $Columns=array("title","orignal_title","url","media_type","ext","upload_date","reference_id","reference_table","reference_column");
+					$Columns=array("title","orignal_title","url","ext","upload_date","reference_id","reference_table","reference_column");
+					$MediaID=$this->db->rp_insert("media",$Values,$Columns,0);
+
+					$image_path[] = $MediaID;
+				}
+				$image_path = implode(",", $image_path);
+				$upadateid = $this->db->rp_update($this->ctable,array("image_path"=>$image_path),"id='".$id."'",0);
+			}
+		/*add image*/
+
+		if($uid!=0)
+		{
+			$reply=array("ack"=>1,"developer_msg"=>"Update Successfully","ack_msg"=>"Success! Update Customer Successfully.");
+			return $reply;
+		}
+		else
+		{
+			$reply=array("ack"=>0,"developer_msg"=>"Database error!!","ack_msg"=>"Failed! Update Record Failed.");
+			return $reply;
+		}
+}
+}
+
+?>

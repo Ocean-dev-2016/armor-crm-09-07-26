@@ -1,0 +1,148 @@
+<?php
+include("connect.php");
+include('PHPExcel/IOFactory.php'); 
+// $file_name  = "Sales Officer Report"."_".date("d-m-Y").".xlsx";
+$file_name  = DOCUMENTLIST_EXPORT_EXCEL;
+$Where = "";
+
+// Get the total number of rows in the table
+
+if(isset($_REQUEST['searchName']) && $_REQUEST['searchName']!=""){
+  $Where .= " (
+              name like '%".$_REQUEST['searchName']."%'         
+            ) AND ";
+}
+
+if(isset($_REQUEST['doc_type']) &&  $_REQUEST['doc_type']!="")
+   {
+      $Where .= "document_type ='".$_REQUEST['doc_type']."'
+               AND ";
+   }
+   if(isset($_REQUEST['state']) &&  $_REQUEST['state']!="")
+   {
+      $Where .= "class_id ='".$_REQUEST['state']."'
+               AND ";
+   }
+
+// if(isset($_REQUEST['type']) && $_REQUEST['type']!="" && $_REQUEST['type']!=NULL)
+// {
+//   $Where .= " type = '".$_REQUEST['type']."' AND";
+// }
+
+// if(isset($_REQUEST['state']) && $_REQUEST['state']!="" && $_REQUEST['state']!=NULL)
+// {
+//   $Where .= " state = '".$_REQUEST['state']."' AND ";
+// }
+
+// if(isset($_REQUEST['city']) && $_REQUEST['city']!="" && $_REQUEST['city']!=NULL)
+// {
+//   $Where .= " city = '".$_REQUEST['city']."' AND";
+// }
+
+$Where .= " isDelete=0";
+
+$ctable1_r = $db->rp_getData("document_list","*",$Where,"id DESC",0);
+
+// Instantiate a new PHPExcel object 
+$objPHPExcel = new PHPExcel();  
+
+// Set the active Excel worksheet to sheet 0 
+$objPHPExcel->setActiveSheetIndex(0);  
+// Initialise the Excel row number 
+$rowCount = 1;  
+
+//start of printing column names as names of mysqli fields  
+$column   = 'A';
+$column1  = 'B';
+$column2  = 'C';
+// $column3  = 'D';
+// $column4  = 'E';
+// $column5  = 'F';
+// $column6  = 'G';
+
+$objPHPExcel->getActiveSheet()->setCellValue($column.$rowCount, "Sr No");
+// $objPHPExcel->getActiveSheet()->setCellValue($column1.$rowCount, "Sales Officer Type");
+$objPHPExcel->getActiveSheet()->setCellValue($column1.$rowCount, "State");
+$objPHPExcel->getActiveSheet()->setCellValue($column2.$rowCount, "Document Type");
+// $objPHPExcel->getActiveSheet()->setCellValue($column4.$rowCount, "Phone");
+// $objPHPExcel->getActiveSheet()->setCellValue($column5.$rowCount, "State");
+// $objPHPExcel->getActiveSheet()->setCellValue($column6.$rowCount, "City");
+  
+  
+  
+//end of adding column names  
+
+$rowCount = 2; 
+$count =0; 
+while($row = mysqli_fetch_assoc($ctable1_r))  
+{  
+    if($row['type']=="sales_manager")
+    {
+      $sales_executive_type="Regional Sales Manager";
+    }
+
+    if($row['type']=="area_sales_manager")
+    {
+      $sales_executive_type="Business Development Manager";
+    }
+    
+    if($row['type']=="sales_officer")
+    {
+      $sales_executive_type="Area Sales Manager";
+    }
+    
+    if($row['type']=="sales_executive")
+    {
+      $sales_executive_type="Sales Officer";
+    }
+
+  $count++;
+  $column = 'A';
+  for($j=0; $j<3;$j++)  
+  {
+    if($j==0)
+    {
+      $value = $count;
+    }
+    // else if($j==1)
+    // {
+    //   $value = $sales_executive_type;
+    // }
+    else if($j==1)
+    {
+      $value = $db->rp_getValue("class","name","id='".$row['class_id']."'");
+      
+    }
+    else if($j==2)
+    {
+      $value = $db->rp_getValue("document_type","name","id='".$row['document_type']."'");
+    }
+    else if($j==4)
+    {
+      $value = $row['phone'];
+    } 
+    else if($j==5)
+    {
+      $value = $row['state'];
+    } 
+    else if($j==6)
+    {
+      $value = $row['city'];
+    } 
+    
+    $objPHPExcel->getActiveSheet()->setCellValue($column.$rowCount, $value);
+    $column++;
+  }  
+  $rowCount++;
+}
+// Redirect output to a client’s web browser (Excel5) 
+
+header("Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+header("Content-Disposition: attachment;filename=".$file_name);
+$objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel2007');
+$objWriter->save(INQUIRY_REPORT_FILES.$file_name); 
+$file_path1 = trim(ADMINFOLDER."/inquiry_documents/".$file_name);
+$arr = array("file_path"=>$file_path1);
+require_once 'disconnect.php';
+echo json_encode($arr);
+?>

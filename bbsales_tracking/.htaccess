@@ -1,0 +1,8 @@
+RewriteOptions inherit
+
+Options +FollowSymLinks
+RewriteEngine Off
+
+ErrorDocument 404 https://crm.mahadevcasting.in/202526/bbsales_tracking/404.php
+
+php_value max_input_vars 11000

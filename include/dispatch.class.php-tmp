@@ -1,0 +1,810 @@
+<?php
+require_once ("main.class.php");
+require_once ("function.class.php");
+require_once ("class.log.php");
+require_once ("product.class.php");
+require_once ("class.system.php");
+
+class Dispatch extends Functions {
+	public $db, $log, $product;
+	public $ctable = "dispatch_detail";
+	function __construct($id = "") {
+		$db            = new Functions();
+		$conn          = $db->connect();
+		$this->db      = $db;
+		$this->log     = new Log();
+		$this->product = new Product();
+		$this->system  = new System();
+	}
+	public function InsertDispatch($detail, $item, $file) {
+		//print_r($item);
+		exit;
+		$total_qty   = 0;
+		$grand_total = 0;
+		$subtotal    = 0;
+		$total       = 0;
+		$sum         = 0;
+		$qty         = 0;
+		extract($detail);
+		$checkResult = $this->checkStockAvailability($item, $order_id);
+		if ($checkResult['isValid']) {
+
+			$order_d  = $this->db->rp_getData("orders", "*", "id='".$order_id."'", "", 0);
+			$order_r  = mysqli_fetch_assoc($order_d);
+			$order_no = $order_r['order_no'];
+			//------for Insert Order No of Customer---------//
+			$order_type = $order_r['customer_type'];
+			if ($order_type == 'super_stockist') {
+				$value       = $this->db->getlastInsertId($this->ctable);
+				$dispatch_no = SS_DISPATCH_NO.str_pad($value, 3, '0', STR_PAD_LEFT);
+			} else if ($order_type == 'dealer') {
+				$value       = $this->db->getlastInsertId($this->ctable);
+				$dispatch_no = DEALER_DISPATCH_NO.str_pad($value, 3, '0', STR_PAD_LEFT);
+			} else if ($order_type == 'outlets') {
+				$value       = $this->db->getlastInsertId($this->ctable);
+				$dispatch_no = OUTLETS_DISPATCH_NO.str_pad($value, 3, '0', STR_PAD_LEFT);
+			} else if ($order_type == 'normal_user') {
+				$value       = $this->db->getlastInsertId($this->ctable);
+				$dispatch_no = NORMAL_USER_DISPATCH_NO.str_pad($value, 3, '0', STR_PAD_LEFT);
+			} else {
+				$value       = $this->db->getlastInsertId($this->ctable);
+				$dispatch_no = NORMAL_USER_DISPATCH_NO.str_pad($value, 3, '0', STR_PAD_LEFT);
+			}
+			$dispatch_date = date('Y-m-d', strtotime($dispatch_date));
+			if ($order_r['sales_id'] == 0) {
+				$sales_name = "";
+			} else {
+				$sales_name = $this->db->rp_getValue("sales_executive", "name", "id='".$order_r['sales_id']."'");
+			}
+			//if (isset($file["LR_copy"]))
+			/*if (true)
+			{*/
+			/*$allowedExts1 = array("jpg","jpeg","png","gif","JPG","JPEG");
+			$temp1 = explode(".", $file["LR_copy"]["name"]);
+			$extension1 = end($temp1);
+
+			$fileName_document 	= $this->db->clean($file["LR_copy"]["name"]);
+			if($fileName_document!="")
+			{
+			$fileSize 	= round($file["LR_copy"]["size"]); // BYTES
+			$adate 		= date('Y-m-d H:i:m');
+
+			$extension1	= end(explode(".", $fileName_document));
+			$proof_document	= '_LRcopy_Document_'.substr(sha1(time()), 0, 6).".".$extension1;
+			$filePath1 	=LRCOPY_DOCUMENTS.$proof_document;
+			move_uploaded_file($file['LR_copy']['tmp_name'], $filePath1);
+			}
+			else
+			{
+			$proof_document="";
+			}*/
+			//----Insert Data In Orders Table ----------------//
+
+			/*$order_r['transport_through'] = (isset($order_r['transport_through']) && $order_r['transport_through']!="")?$order_r['transport_through']:"";
+			$order_r['transport_name'] = (isset($order_r['transport_name']) && $order_r['transport_name']!="")?$order_r['transport_name']:"";*/
+			$adate = date('Y-m-d');
+			$rows  = array(
+				"order_id",
+				"order_no",
+				"dispatch_no",
+				"dispatch_date",
+				//"LR_copy",
+				"remark",
+				"sales_id",
+				"customer_id",
+				"sales_name",
+				"customer_name",
+				"company_name",
+				"contact_number",
+				"address",
+				"city",
+				"state",
+				"country",
+				"email",
+				"order_type",
+				"cash_discount",
+				"expected_dispatch_date",
+				"transport_through",
+				"transport_name",
+				"billing_address",
+				"shipping_address",
+				"vendor_code",
+				"tendor_code",
+				"warehouse_id",
+			);
+			$values = array(
+				$order_id,
+				$order_no,
+				$dispatch_no,
+				$dispatch_date,
+				//$proof_document,
+				$remark,
+				$order_r['sales_id'],
+				$order_r['customer_id'],
+				$sales_name,
+				$order_r['customer_name'],
+				$order_r['company_name'],
+				$order_r['contact_number'],
+				$this->db->clean($order_r['address']),
+				$order_r['city'],
+				$order_r['state'],
+				$order_r['country'],
+				isset($order_r['email'])?$order_r['email']:"",
+				$order_r['customer_type'],
+				$order_r['cash_discount'],
+				date('Y-m-d', strtotime($expected_dispatch_date)),
+				$transport_through,
+				$transport_name,
+				$this->db->clean($order_r['billing_address']),
+				$this->db->clean($order_r['shipping_address']),
+				$order_r['vendor_code'],
+				$order_r['tendor_code'],
+				$warehouse_id,
+			);
+
+			/*log entry*/
+			$module_name     = "Dispatch";
+			$flag            = "Web";
+			$log_description = $module_name." ".$dispatch_no." Created By ".$_SESSION[SITE_SESS.'SESS_NAME']." ON ".date("Y-m-d H:i:s");
+			/*log entry*/
+
+			$dispatch_id = $this->db->rp_insert($this->ctable, $values, $rows, 0, $log_description, $flag, $module_name, "", $order_r['customer_id']);
+			//}
+			if ($dispatch_id != 0) {
+				// ---------Insert Order Product Item------------------------------------//
+
+				if (!empty($item)) {
+					$order_qty                  = 0;
+					$order_cash_discount_amount = 0;
+					$order_taxable              = 0;
+					$order_igst_amount          = 0;
+					$order_cgst_amount          = 0;
+					$order_sgst_amount          = 0;
+					$order_discount_amount      = 0;
+					$order_subtotal             = 0;
+					$order_grandtotal           = 0;
+					foreach ($item as $key => $i) {
+						//print_r($i);
+						if ($i['qty'] != 0 && $i['free_item'] == 1) {
+							$order_items_detail = $this->db->rp_getData("order_product_item", "*", "order_id='".$order_id."' AND pro_id='".$i['product_id']."' AND weight_id='".$i['weight_id']."' AND id='".$i['order_item_id']."'", "", 0);
+							//$order_items_detail=$this->db->rp_getData("order_product_item","*","order_id='".$order_id."' AND pro_id='".$i['product_id']."' AND weight_id='".$i['weight_id']."' AND pro_description='".$i['pro_description']."'","",0);
+							//$order_items_detail=$this->db->rp_getData("order_product_item","*","order_id='".$order_id."' AND pro_id='".$i['product_id']."' AND weight_id='".$i['weight_id']."'","",0);
+							if ($order_items_detail) {
+								$order_items_detail   = mysqli_fetch_assoc($order_items_detail);
+								$pro_id               = $order_items_detail['pro_id'];
+								$pro_name             = html_entity_decode(addslashes($order_items_detail['pro_name']));
+								$pro_description      = html_entity_decode(addslashes($i['pro_description']));
+								$weight_id            = $order_items_detail['weight_id'];
+								$order_id             = $order_items_detail['order_id'];
+								$qty                  = $i['qty'];
+								$inner_size           = $order_items_detail['inner_size'];
+								$box_qty              = $i['qty']/$inner_size;
+								$box_qty              = (isset($box_qty) && $box_qty != "")?$box_qty:0;
+								$unitprice            = $order_items_detail['unitprice'];
+								$original_price       = $order_items_detail['original_price'];
+								$totalprice           = $this->db->rp_round($i['qty']*$unitprice, 2);
+								$discount             = $order_items_detail['discount'];
+								$discount_amount      = $this->db->rp_round(($original_price*$discount)/100, 2);
+								$taxable              = $totalprice;
+								$cash_discount        = $order_items_detail['cash_discount'];
+								$cash_discount_amount = $this->db->rp_round($taxable*$cash_discount/100, 2);
+								$subtotal             = $this->db->rp_round($taxable-$cash_discount_amount, 2);
+								$igst_tax             = 0;
+								$igst_tax_amount      = 0;
+								$cgst_tax             = 0;
+								$cgst_tax_amount      = 0;
+								$sgst_tax             = 0;
+								$sgst_tax_amount      = 0;
+
+								if ($order_r['igst_amount'] != 0) {
+									if ($order_r['state'] == 'Gujarat') {
+										$cgst_tax        = $order_items_detail['cgst_tax'];
+										$sgst_tax        = $order_items_detail['sgst_tax'];
+										$sgst_tax_amount = $this->db->rp_round($subtotal*$sgst_tax/100, 2);
+										$cgst_tax_amount = $this->db->rp_round($subtotal*$cgst_tax/100, 2);
+									} else {
+										$igst_tax = $order_items_detail['igst_tax'];
+										// $igst_tax_amount=$this->db->rp_round($subtotal*$igst_tax/100,2);
+										$igst_tax_amount = $order_r['igst_amount'];
+									}
+								} else {
+									$cgst_tax        = 0;
+									$sgst_tax        = 0;
+									$sgst_tax_amount = 0;
+									$cgst_tax_amount = 0;
+									$igst_tax        = 0;
+									$igst_tax_amount = 0;
+								}
+
+								$grandtotal = $this->db->rp_round($subtotal+$igst_tax_amount+$cgst_tax_amount+$sgst_tax_amount, 2);
+								$adate      = date('Y-m-d H:i:s');
+								$rows       = array(
+									"order_id", "dispatch_id", "pro_id",
+									"weight_id", "pro_name", "pro_description", "qty",
+									"unitprice", "original_price", "totalprice", "discount",
+									"discount_amount", "taxable",
+									"cash_discount", "cash_discount_amount",
+									"subtotal",
+									"cgst_tax", "cgst_tax_amount",
+									"sgst_tax", "sgst_tax_amount",
+									"igst_tax", "igst_tax_amount",
+									"dispatch_date",
+									"box_qty",
+									"inner_size",
+									"grand_total", "dispatch_item_type"
+								);
+								$values = array(
+									$order_id, $dispatch_id, $pro_id,
+									$weight_id, $pro_name, $pro_description, $qty,
+									$unitprice, $original_price, $totalprice, $discount,
+									$discount_amount, $taxable,
+									$cash_discount, $cash_discount_amount,
+									$subtotal,
+									$cgst_tax, $cgst_tax_amount,
+									$sgst_tax, $sgst_tax_amount,
+									$igst_tax, $igst_tax_amount,
+									$dispatch_date,
+									$box_qty,
+									$inner_size,
+									$grandtotal, 1
+								);
+
+								$order_qty += $qty;
+								$order_cash_discount_amount += $cash_discount_amount;
+								$order_taxable += $taxable;
+								$order_igst_amount += $igst_tax_amount;
+								$order_cgst_amount += $cgst_tax_amount;
+								$order_sgst_amount += $sgst_tax_amount;
+								$order_discount_amount += $discount_amount;
+								$order_subtotal += $subtotal;
+								$order_grandtotal += $grandtotal;
+
+								$items[]          = htmlentities(addslashes($order_items_detail['pro_name'])." X ".$i['qty']);
+								$dispatch_item_id = $this->db->rp_insert("dispatch_item", $values, $rows, 0);
+								if ($dispatch_item_id != 0) {
+									$current_stock       = $this->db->rp_getValue("product_weight_price", "stock_qty", "product_id='".$i['product_id']."' AND weight_id='".$i['weight_id']."'");
+									$remaining_stock_qty = $current_stock-$qty;
+									$this->db->rp_update("product_weight_price", array("stock_qty" => $remaining_stock_qty), "product_id='".$i['product_id']."' AND weight_id='".$i['weight_id']."'", 0);
+								}
+							}
+						} else {
+							// echo "hello4";
+							exit;
+							$pro_id          = $i['product_id'];
+							$pro_name        = html_entity_decode(addslashes($this->db->rp_getValue("product", "name", "id='".$i['product_id']."'", 0)));
+							$pro_description = html_entity_decode(addslashes($i['pro_description']));
+							$weight_id       = $i['weight_id'];
+							$order_id        = $order_id;
+							$qty             = $i['qty'];
+							$inner_size      = $this->db->rp_getValue("product_weight_price", "inner_size", "product_id='".$i['product_id']."' AND weight_id='".$i['weight_id']."'");
+							$box_qty         = $i['qty']/$inner_size;
+							$box_qty         = (isset($box_qty) && $box_qty != "")?$box_qty:0;
+
+							$unitprice            = 0;
+							$original_price       = 0;
+							$totalprice           = 0;
+							$discount             = 0;
+							$discount_amount      = 0;
+							$taxable              = $totalprice;
+							$cash_discount        = 0;
+							$cash_discount_amount = 0;
+							$subtotal             = 0;
+							$igst_tax             = 0;
+							$igst_tax_amount      = 0;
+							$cgst_tax             = 0;
+							$cgst_tax_amount      = 0;
+							$sgst_tax             = 0;
+							$sgst_tax_amount      = 0;
+
+							if ($order_r['state'] == 'Gujarat') {
+								$cgst_tax        = 0;
+								$sgst_tax        = 0;
+								$sgst_tax_amount = 0;
+								$cgst_tax_amount = 0;
+
+							} else {
+								$igst_tax        = 0;
+								$igst_tax_amount = 0;
+							}
+							$grandtotal = 0;
+							$adate      = date('Y-m-d H:i:s');
+							$rows       = array(
+								"order_id", "dispatch_id", "pro_id",
+								"weight_id", "pro_name", "pro_description", "qty",
+								"unitprice", "original_price", "totalprice", "discount",
+								"discount_amount", "taxable",
+								"cash_discount", "cash_discount_amount",
+								"subtotal",
+								"cgst_tax", "cgst_tax_amount",
+								"sgst_tax", "sgst_tax_amount",
+								"igst_tax", "igst_tax_amount",
+								"dispatch_date",
+								"box_qty",
+								"inner_size",
+								"grand_total", "dispatch_item_type"
+							);
+							$values = array(
+								$order_id, $dispatch_id, $pro_id,
+								$weight_id, $pro_name, $pro_description, $qty,
+								$unitprice, $original_price, $totalprice, $discount,
+								$discount_amount, $taxable,
+								$cash_discount, $cash_discount_amount,
+								$subtotal,
+								$cgst_tax, $cgst_tax_amount,
+								$sgst_tax, $sgst_tax_amount,
+								$igst_tax, $igst_tax_amount,
+								$dispatch_date,
+								$box_qty,
+								$inner_size,
+								$grandtotal, 0
+							);
+
+							$order_qty += $qty;
+							$order_cash_discount_amount += $cash_discount_amount;
+							$order_taxable += $taxable;
+							$order_igst_amount += $igst_tax_amount;
+							$order_cgst_amount += $cgst_tax_amount;
+							$order_sgst_amount += $sgst_tax_amount;
+							$order_discount_amount += $discount_amount;
+							$order_subtotal += $subtotal;
+							$order_grandtotal += $grandtotal;
+
+							$items[]          = htmlentities(addslashes($order_items_detail['pro_name'])." X ".$i['qty']);
+							$dispatch_item_id = $this->db->rp_insert("dispatch_item", $values, $rows, 0);
+							if ($dispatch_item_id != 0) {
+								$current_stock       = $this->db->rp_getValue("product_weight_price", "stock_qty", "product_id='".$i['product_id']."' AND weight_id='".$i['weight_id']."'");
+								$remaining_stock_qty = $current_stock-$qty;
+								$this->db->rp_update("product_weight_price", array("stock_qty" => $remaining_stock_qty), "product_id='".$i['product_id']."' AND weight_id='".$i['weight_id']."'", 0);
+							}
+						}
+					}
+					$this->updateStatus($order_id);
+					// Final total calculations
+					$order_total_rounded_grandtotal = round($order_grandtotal);
+					if ($order_total_rounded_grandtotal > $order_grandtotal) {
+						$order_total_roundoff = $this->db->rp_round($order_total_rounded_grandtotal-$order_grandtotal, 2);
+					} else {
+						$order_total_roundoff = $this->db->rp_round($order_grandtotal-$order_total_rounded_grandtotal, 2);
+					}
+
+					$rows = array(
+						"dispatch_qty"         => $order_qty,
+						"grand_total"          => $order_grandtotal,
+						"remaining_amount"     => $order_total_rounded_grandtotal,
+						"cash_discount_amount" => $order_cash_discount_amount,
+						"discount_amount"      => $order_discount_amount,
+						"round_off"            => $order_total_roundoff,
+						"igst_amount"          => $order_igst_amount,
+						"cgst_amount"          => $order_cgst_amount,
+						"sgst_amount"          => $order_sgst_amount,
+						"taxable"              => $order_taxable,
+						"subtotal"             => $order_subtotal,
+						"grand_total_rounded"  => $order_total_rounded_grandtotal,
+					);
+					$where = "id='".$dispatch_id."'";
+					$order = $this->db->rp_update($this->ctable, $rows, $where, 0);
+
+					/*add transaction entry*/
+					// comment on 09-04-2021 by dhaval (add this code to invoice approve)
+					// $this->addDispatchPayment( $dispatch_id );
+					/*add transaction entry*/
+
+					//////// Send Notification
+					if ($order_r['customer_type'] == 'normal_user') {
+						$notification_title       = "Order <b>".$order_no."</b> Dispatched";
+						$notification_description = "Dispatch No.<b>".$dispatch_no."</b><br/>Items:<br/>";
+						$notification_description .= addslashes(implode("<br/>", $items));
+
+						///////////////////////// Send Notification ///////////////////////
+
+						$title_description = $notification_description;
+						$notification      = $this->system->setNotification(0, $order_r['customer_id'], $notification_title, 4, "Dispatch Message", $title_description, "", "", $dispatch_date, $dispatch_id, "dispatch_detail", 'customer');
+						//print_r($notification);
+						exit;
+
+						$no_details = $this->db->rp_getData("notification", "*", "id='".$notification."'");
+						if ($no_details) {
+							$no_details        = mysqli_fetch_assoc($no_details);
+							$notification_data = $no_details;
+						}
+						$data = $notification_data;
+
+						$refresh_tokens = $this->db->rp_getData("refresh_token", "refresh_token", "user_id='".$order_r['customer_id']."'", "", 0);
+
+						if ($refresh_tokens) {
+							$tokens = array();
+							while ($refresh_token = mysqli_fetch_assoc($refresh_tokens)) {
+								$tokens[] = $refresh_token['refresh_token'];
+							}
+							//$result=$this->db->send_notification($data,$tokens,2);
+							//print_r($result);
+							exit;
+						}
+					} else {
+						$notification_title       = "Order <b>".$order_no."</b> Dispatched";
+						$notification_description = "Dispatch No.<b>".$dispatch_no."</b><br/>Items:<br/>";
+						$notification_description .= addslashes(implode("<br/>", $items));
+
+						///////////////////////// Send Notification ///////////////////////
+
+						$title_description = $notification_description;
+						$notification      = $this->system->setNotification(0, $order_r['customer_id'], $notification_title, 4, "Dispatch Message", $title_description, "", "", $dispatch_date, $dispatch_id, "dispatch_detail", $order_r['customer_type']);
+						//print_r($notification);
+						exit;
+
+						$no_details = $this->db->rp_getData("notification", "*", "id='".$notification."'");
+						if ($no_details) {
+							$no_details        = mysqli_fetch_assoc($no_details);
+							$notification_data = $no_details;
+						}
+						$data = $notification_data;
+
+						$refresh_tokens = $this->db->rp_getData("sales_executive", "refreshToken", "id='".$order_r['sales_id']."'", "", 0);
+
+						if ($refresh_tokens) {
+							$tokens = array();
+							while ($refresh_token = mysqli_fetch_assoc($refresh_tokens)) {
+								$tokens[] = $refresh_token['refreshToken'];
+							}
+							//$result=$this->db->send_notification($data,$tokens);
+							//print_r($result);
+							exit;
+						}
+					}
+
+					$reply = array("ack" => 1, "developer_msg" => "Dispatch Item  Added.", "ack_msg" => "Success! Dispatch Item Successfully .", "type" => $order_id, "dispatch_id" => $dispatch_id);
+					return $reply;
+
+				}
+
+				$reply = array("ack" => 1, "developer_msg" => "Dispatch Item  Added.", "ack_msg" => "Success! Dispatch Item  Successfully.", "dispatch_id" => $dispatch_id);
+				return $reply;
+			} else {
+				$reply = array("ack" => 0, "developer_msg" => "Database error!!", "ack_msg" => "Dispatch Item added Failed.");
+				return $reply;
+			}
+		} else {
+			$reply = array("ack" => 0, "developer_msg" => "Stock Error!!", "ack_msg" => "Some item not available in stock.<br/>".implode("<br/>", $checkResult['error']));
+			return $reply;
+		}
+	}
+
+	/*public function UpdateProductItem($detail,$item)
+	{
+	$total_qty=0;
+	$grand_total=0;
+	$sum=0;
+	extract($detail);
+	//------------Update Order Product Item----------------------//
+	$this->db->rp_delete("order_product_item","order_id='".$_REQUEST['id']."'",0);
+	$order_id=$_REQUEST['id'];
+	for($i=0;$i<sizeof($item);$i++)
+	{
+
+	$current_item=$item[$i];
+	$total=$current_item['price']*$current_item['qty'];
+	$adate	= date('Y-m-d H:i:s');
+	$price=$current_item['price'];
+	$rows 	= array(
+	"order_id",
+	"pro_id",
+	"weight_id",
+	"pro_name",
+	"pro_qty",
+	"unitprice",
+	"totalprice",
+	"adate",
+	"isDelete"
+	);
+	$values = array(
+	$order_id,
+	$current_item['product_id'],
+	$current_item['weight_id'],
+	$current_item['pro_name'],
+	$current_item['qty'],
+	$price,
+	$total,
+	$adate,
+	$isDelete
+	);
+	$total_final+=$total;
+	$item_id = $this->db->rp_insert("order_product_item",$values,$rows,0);
+
+	$total_qty+=$current_item['qty'];	//}
+	}
+
+	// Final total calculations
+
+	$total=$total_final;
+
+	$rows 	= array(
+	"total_qty"				=>$total_qty,
+	"total_amount"          => $total,
+	"grand_total"			=> $total,
+	);
+	$where	= "id='".$order_id."'";
+	$orderUpdated=$this->db->rp_update($this->ctable,$rows,$where,0);
+	if($orderUpdated)
+	{
+	$reply=array("ack"=>1,"developer_msg"=>"Dispatch Item Updated.","ack_msg"=>"Success! Dispatch Item Update Successfully.","type"=>$order_id);
+	return $reply;
+	}
+	else
+	{
+
+	$reply=array("ack"=>0,"developer_msg"=>"Dispatch Item    Updated Failed.","ack_msg"=>"failed! Dispatch Item  Updated Failed!!");
+	return $reply;
+
+	}
+
+
+	}*/
+
+	//-------------Get order Detail----------------//
+	public function GetOrder($detail) {
+
+		$where    = " id='".$detail['id']."' AND isDelete=0";
+		$ctable_r = $this->db->rp_getData($this->ctable, "*", $where, 0);
+		$ctable_d = mysqli_fetch_array($ctable_r);
+
+		$result                 = array();
+		$result['total_amount'] = htmlentities($ctable_d['total_amount']);
+		$result['total_qty']    = htmlentities($ctable_d['total_qty']);
+		$result['grand_total']  = htmlentities($ctable_d['grand_total']);
+		// Purchase Item
+
+		$reply = array("ack" => 1, "developer_msg" => "Product Item detail fetched!!.", "ack_msg" => "Success! Product Item Edit Successfully.", "result" => $result);
+		return $reply;
+
+	}
+	//------------get All ordered Product Item------------------//
+	public function GetOrderItems($detail) {
+		$where       = "order_id='".$detail['id']."' AND isDelete=0";
+		$ctable_item = $this->db->rp_getData("order_product_item", "*", $where, "", 0);
+		if ($ctable_item) {
+			while ($ctable_item_d = mysqli_fetch_array($ctable_item)) {
+				$result_item                 = array();
+				$result_item['product_id']   = htmlentities($ctable_item_d['pro_id']);
+				$result_item['weight_id']    = htmlentities($ctable_item_d['weight_id']);
+				$result_item['product_name'] = htmlentities($ctable_item_d['pro_name']);
+				//$result_item['product_code']	= htmlentities($ctable_item_d['product_code']);
+				$result_item['qty']           = htmlentities($ctable_item_d['pro_qty']);
+				$result_item['product_price'] = $this->db->rp_num(htmlentities($ctable_item_d['unitprice']));
+				$result_item['product_total'] = $this->db->rp_num(htmlentities($ctable_item_d['totalprice']));
+				$result[]                     = $result_item;
+			}
+			$reply = array("ack" => 1, "developer_msg" => "Product Item detail fetched!!.", "ack_msg" => "Success! Update Product Item Successfully.", "result" => $result);
+			return $reply;
+		} else {
+			$reply = array("ack" => 0, "developer_msg" => "Update not fetched!!.", "ack_msg" => "Success! Update Failed");
+			return $reply;
+		}
+	}
+	//------------------Delete Order Also Delete product item-----------------	//
+	public function DeleteDispatch($detail) {
+		$rows = array(
+			"isDelete" => "1"
+		);
+		$where = "id='".$_REQUEST['id']."'";
+		/*log entry*/
+		$customer_id     = $this->db->rp_getValue("dispatch_detail", "customer_id", "id='".$_REQUEST['id']."'");
+		$dispatch_no     = $this->db->rp_getValue("dispatch_detail", "dispatch_no", "id='".$_REQUEST['id']."'");
+		$module_name     = "Dispatch";
+		$flag            = "Web";
+		$log_description = $module_name." ".$dispatch_no." Deleted By ".$_SESSION[SITE_SESS.'SESS_NAME']." ON ".date("Y-m-d H:i:s");
+		/*log entry*/
+		$where_item   = "dispatch_id='".$_REQUEST['id']."'";
+		$isUpdated_id = $this->db->rp_update($this->ctable, $rows, $where, 0, $log_description, $flag, $module_name, "", $customer_id);
+		$id           = $this->db->rp_update("dispatch_item", $rows, $where_item);
+		if ($isUpdated_id) {
+			$dispatch_d = $this->db->rp_getData("dispatch_item", "*", "dispatch_id='".$_REQUEST['id']."'", "", 0);
+			while ($dispatch_r = mysqli_fetch_array($dispatch_d)) {
+				$pro_id    = $dispatch_r['pro_id'];
+				$weight_id = $dispatch_r['weight_id'];
+				$qty       = $dispatch_r['qty'];
+				$order_id  = $dispatch_r['order_id'];
+
+				$remaining_qty = $this->db->rp_getValue("order_product_item", "remaining_qty", "pro_id='".$pro_id."' AND weight_id='".$weight_id."' AND order_id='".$order_id."'", 0);
+
+				$final_remaining_qty = ($remaining_qty)+($qty);
+
+				$dispatch_qty = $this->db->rp_getValue("order_product_item", "dispatched_qty", "pro_id='".$pro_id."' AND weight_id='".$weight_id."' AND order_id='".$order_id."'", 0);
+
+				$final_dispatch_qty = ($dispatch_qty)-($qty);
+
+				$rows = array(
+					"remaining_qty"  => $final_remaining_qty,
+					"dispatched_qty" => $final_dispatch_qty,
+					"status"         => 0,
+				);
+				$where             = "order_id='".$order_id."' AND pro_id='".$pro_id."' AND weight_id='".$weight_id."'";
+				$orderItemUpdated  = $this->db->rp_update("order_product_item", $rows, $where, 0);
+				$OrderStatusUpdate = $this->db->rp_update("orders", array("status" => 1), "id='".$order_id."'", 0);
+
+				/* update product stock qty(-)*/
+				//update stock qty(-) of product when Delete dispatch
+				$all_order_items_with_pid = $this->db->rp_getData("product_weight_price", "*", "product_id='".$pro_id."' AND weight_id='".$weight_id."'", "id ASC", 0);
+				$receive_qty              = $qty;
+				if ($all_order_items_with_pid) {
+					$current_order_item = mysqli_fetch_assoc($all_order_items_with_pid);
+					$product_qty        = $current_order_item['stock_qty'];
+					if ($receive_qty > 0) {
+						$new_receive_qty     = $product_qty+$receive_qty;
+						$row                 = array("stock_qty" => $new_receive_qty);
+						$update_dispatch_qty = $this->db->rp_update("product_weight_price", $row, "product_id='".$pro_id."' AND weight_id='".$weight_id."'", 0);
+					} else {
+						break;
+					}
+				}
+				/*END update product stock qty*/
+
+			}
+			$reply = array("ack" => 1, "developer_msg" => "deleted Dispatch.", "ack_msg" => "Success! Delete Dispatch Successfully.", "type" => $_REQUEST['id']);
+			return $reply;
+		} else {
+			$reply = array("ack" => 0, "developer_msg" => "Database error!!", "ack_msg" => "Failed! Delete Dispatch Failed.");
+			return $reply;
+		}
+	}
+
+	public function updateStatus($order_id) {
+		$order_items = $this->db->rp_getData("order_product_item", "*", "order_id='".$order_id."'", "", 0);
+		if ($order_items) {
+			$order_status = 2;
+			while ($order_item = mysqli_fetch_assoc($order_items)) {
+				$how_much_dispatched = $this->db->rp_getValue("dispatch_item", "SUM(qty)", "order_id='".$order_id."' AND pro_id='".$order_item['pro_id']."' AND weight_id='".$order_item['weight_id']."' AND isDelete=0");
+
+				$ordered_qty   = $order_item['pro_qty'];
+				$remaining_qty = $ordered_qty-$how_much_dispatched;
+
+				if ($remaining_qty > 0) {
+					$order_status = 4;
+					$item_status  = 4;
+				} else {
+					$item_status = 1;
+				}
+
+				$this->db->rp_update("order_product_item", array("remaining_qty" => $remaining_qty, " dispatched_qty" => $how_much_dispatched, "status" => $item_status), "id='".$order_item['id']."'", 0);
+			}
+			$this->db->rp_update("orders", array("status" => $order_status), "id='".$order_id."'");
+		} else {
+			return 0;
+		}
+
+	}
+	public function checkStockAvailability($item, $order_id) {
+
+		$isValid = true;
+		$error   = array();
+		foreach ($item as $key => $i) {
+			$where = "order_id='".$order_id."' AND pro_id='".$i['product_id']."' AND weight_id='".$i['weight_id']."' AND isDelete=0";
+
+			$order_item = $this->db->rp_getData("order_product_item", "*", $where, "", 0);
+			$order_item = mysqli_fetch_assoc($order_item);
+			if ($order_item) {
+				$item_name           = $order_item['pro_name'];
+				$old_outwarded_stock = $this->db->rp_getValue("dispatch_item", "qty", "order_id='".$order_item['order_id']."' AND pro_id='".$order_item['pro_id']."' AND weight_id='".$order_item['weight_id']."'", 0);
+				if ($old_outwarded_stock != "") {
+					$old_outwarded_stock = floatval($old_outwarded_stock);
+				} else {
+					$old_outwarded_stock = 0;
+				}
+
+				$current_stock = $this->db->rp_getValue("product_weight_price", "stock_qty", "product_id='".$order_item['pro_id']."' AND weight_id='".$order_item['weight_id']."'", 0);
+
+				$new_stock = $current_stock+$old_outwarded_stock-$i['qty'];
+
+				if ($new_stock < 0) {
+					$isValid = false;
+					$error[] = "Product ".$item_name." not available in stock.";
+				}
+			} else {
+				/*$isValid=false;
+			$error[]="Some item edited in Orders try again";*/
+			}
+		}
+		return array("isValid" => $isValid, "error" => $error);
+	}
+
+	/////// service Functions  //////////////
+	public function GetDispatchDetail($detail) {
+		extract($detail);
+		$dispatch_detail = $this->db->rp_getData($this->ctable, "*", "id='".$dispatch_id."' AND isDelete=0");
+		if ($dispatch_detail) {
+			$dispatch_detail                  = mysqli_fetch_assoc($dispatch_detail);
+			$dispatch_detail['dispatch_date'] = ($dispatch_detail['dispatch_date'] != "0000-00-00")?date('d-m-Y', strtotime($dispatch_detail['dispatch_date'])):"";
+			$dispatch_items                   = $this->db->rp_getData("dispatch_item", "*", "dispatch_id='".$dispatch_id."'");
+			if ($dispatch_items) {
+				while ($dispatch_item = mysqli_fetch_assoc($dispatch_items)) {
+					$result[] = $dispatch_item;
+				}
+			}
+			$dispatch_detail['item'] = $result;
+			$result                  = $dispatch_detail;
+			$reply                   = array("ack" => 1, "ack_msg" => "Dispatch Found", "result" => $result);
+		} else {
+			$reply = array("ack" => 0, "ack_msg" => "Dispatch Not Found");
+		}
+		return $reply;
+	}
+	public function GetDispatchOrderDetail($detail) {
+		extract($detail);
+		$dispatch_details = $this->db->rp_getData($this->ctable, "*", "order_id='".$order_id."' AND isDelete=0");
+		if ($dispatch_details) {
+			while ($dispatch_detail = mysqli_fetch_assoc($dispatch_details)) {
+				$dispatch_detail['dispatch_date'] = ($dispatch_detail['dispatch_date'] != "0000-00-00")?date('d-m-Y', strtotime($dispatch_detail['dispatch_date'])):"";
+				$result[]                         = $dispatch_detail;
+			}
+			$reply = array("ack" => 1, "ack_msg" => "Dispatch Found", "result" => $result);
+		} else {
+			$reply = array("ack" => 0, "ack_msg" => "Dispatch Not Found");
+		}
+		return $reply;
+	}
+
+	public function addDispatchPayment($id) {
+		$dispatch_detailDetail = $this->rp_getData("dispatch_detail", "*", "id='".$id."'", "", 0);
+		if ($dispatch_detailDetail) {
+			$Data_d      = mysqli_fetch_assoc($dispatch_detailDetail);
+			$account_id  = $this->db->rp_getValue("account", "id", "cid='".$Data_d['customer_id']."'", 0);
+			$account_no  = $this->db->rp_getValue("account", "acc_no", "cid='".$Data_d['customer_id']."'", 0);
+			$description = "dispatch_detail Payment Of dispatch_detail No is :#".$Data_d['dispatch_no']." Amount of ".$Data_d['grand_total_rounded']." RS";
+			$isCheck     = $this->db->rp_getTotalRecord("account_transaction", "isDelete=0 AND reference_table='dispatch_detail' AND reference_id='".$id."'", 0);
+			if ($isCheck > 0) {
+				$insert = $this->db->rp_update("account_transaction", array("cid" => $Data_d['customer_id'], "account_id" => $account_id, "account_no" => $account_no, "amount" => $Data_d['grand_total_rounded'], "debit" => (-$Data_d['grand_total_rounded']), "description" => $description), "isDelete=0 AND reference_table='dispatch_detail' AND reference_id='".$id."'", 0);
+			} else {
+				$row1 = array(
+					"reference_table",
+					"reference_id",
+					"cid",
+					"account_id",
+					"account_no",
+					"amount",
+					"debit",
+					"type",
+					"description",
+					"payment_date"
+				);
+				$value1 = array(
+					'dispatch_detail',
+					$id,
+					$Data_d['customer_id'],
+					$account_id,
+					$account_no,
+					$Data_d['grand_total_rounded'],
+					(-$Data_d['grand_total_rounded']),
+					'2',
+					$description,
+					date('Y-m-d')
+				);
+				$insert = $this->db->rp_insert("account_transaction", $value1, $row1, 0);
+			}
+			if ($insert) {
+				$result = array("ack" => 1, "ack_msg" => "Dispatch Detail Payment Add Successfully");
+			} else {
+				$result = array("ack" => 1, "ack_msg" => "Dispatch Detail Payment Payment Not Add");
+			}
+		} else {
+			$result = array("ack" => 1, "ack_msg" => "Dispatch Detail Payment Not Found");
+		}
+		return $result;
+	}
+
+	function getLimit($limit = array()) {
+		$limit = $this->db->getLimit();
+		if (!empty($limit) && array_key_exists("ul", $limit)) {
+			$ul = $limit['ul'];
+			if (array_key_exists("ll", $limit) && $limit['ll'] != "") {
+				$ll = $limit['ll'];
+			} else {
+				$ll = "18446744073709551615";
+			}
+			$limit_string = "".$ul.",".$ll;
+			return $limit_string;
+		} else {
+			return "";
+		}
+	}
+
+}
+?>

@@ -1,0 +1,573 @@
+/* here you can put your own css to customize and override the theme */
+body{
+  text-transform: uppercase!important;
+}
+.big-font{
+	font-size: 75px;
+	padding: 0px;
+	margin:0px;
+}
+.tile-view-title{
+    margin-top: 0;
+    margin-bottom: 5px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    word-wrap: break-word;
+    width: 60%!important;
+    white-space: nowrap;
+    font-size:14px;
+}
+.detail-view-title{
+   /* margin-top: 0;
+    margin-bottom: 5px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    word-wrap: break-word;
+    width: 60%!important;
+    white-space: nowrap;*/
+    font-size:14px;
+}
+.open-task{
+  cursor:pointer;
+}
+/*PEN STYLES*/
+@import url(https://fonts.googleapis.com/css?family=Open+Sans:400,700|Roboto:400,700);
+.blog-card {
+  transition: height 0.3s ease;
+  -webkit-transition: height 0.3s ease;
+  background: #fff;
+  border-radius: 3px;
+  box-shadow: 0 3px 7px -3px rgba(0, 0, 0, 0.3);
+  margin: 0 auto 1.6%;
+  overflow: hidden;
+  position: relative;
+  font-size: 14px;
+  line-height: 1.45em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  border: 1px solid #eee;
+  margin: 12px 0px;
+}
+.blog-card:hover .details {
+  left: 0;
+}
+.blog-card:hover.alt .details {
+  right: 0;
+}
+.blog-card.alt .details {
+  right: -100%;
+  left: inherit;
+}
+.blog-card .photo {
+  height: 200px;
+  position: relative;
+}
+.blog-card .photo.photo1 {
+  background: url("http://i62.tinypic.com/34oq4o0.jpg") center no-repeat;
+  background-size: 180px!important;
+}
+.blog-card .photo.photo2 {
+  background: url("http://i60.tinypic.com/xeiv79.jpg") center no-repeat;
+  background-size: cover;
+}
+.blog-card .details {
+  transition: all 0.3s ease;
+  -webkit-transition: all 0.3s ease;
+  background: rgba(0, 0, 0, 0.6);
+  box-sizing: border-box;
+  color: #fff;
+  font-family: "Open Sans";
+  list-style: none;
+  margin: 0;
+  padding: 10px 15px;
+  height: 200px;
+  /*POSITION*/
+  position: absolute;
+  top: 0;
+  left: -100%;
+}
+.blog-card .details > li {
+  padding: 3px 0;
+}
+.blog-card .details li:before, .blog-card .details .tags ul:before {
+  font-family: FontAwesome;
+  margin-right: 10px;
+  vertical-align: middle;
+}
+.blog-card .details .author:before {
+  content: "\f007";
+}
+.blog-card .details .date:before {
+  content: "\f133";
+}
+.blog-card .details .tags ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.blog-card .details .tags ul:before {
+  content: "\f02b";
+}
+.blog-card .details .tags li {
+  display: inline-block;
+  margin-right: 3px;
+}
+.blog-card .details a {
+  color: inherit;
+  border-bottom: 1px dotted;
+}
+.blog-card .details a:hover {
+  color: #75D13B;
+}
+.blog-card .description {
+  padding: 10px;
+  box-sizing: border-box;
+  position: relative;
+  height: 100%;
+  padding-right: 5px;
+  padding-bottom: 10px;
+}
+.blog-card .description h1 {
+  font-family: "Roboto";
+  line-height: 1em;
+  margin: 0 0 10px 0;
+  font-size: 18px;
+  font-weight: bold;
+}
+.blog-card .description h2 {
+  color: #9b9b9b;
+  font-family: "Open Sans";
+  line-height: 1.2em;
+  text-transform: uppercase;
+  font-size: 1em;
+  font-weight: 400;
+  margin: 1.2% 0;
+}
+.blog-card .description p {
+  position: relative;
+  margin: 0;
+  padding-top: 20px;
+  font-size: 12px;
+  width: 100%; 
+  overflow: hidden;
+  text-overflow: clip; 
+}
+.blog-card .description p:after {
+  content: "";
+  background: #75D13B;
+  height: 6px;
+  width: 40px;
+  /*POSITION*/
+  position: absolute;
+  top: 6px;
+  left: 0;
+}
+.blog-card .description a.more {
+  color: #000;
+  margin-bottom: 10px;
+  float: right;
+
+}
+.blog-card a{
+  color:#000;
+  text-decoration: none;
+}
+.blog-card a:hover{
+  color:#000;
+  text-decoration: none;
+}
+.blog-card .description a.more:after {
+  transition: all 0.3s ease;
+  -webkit-transition: all 0.3s ease;
+  content: "\f061";
+  font-family: FontAwesome;
+  margin-left: -10px;
+  opacity: 0;
+  vertical-align: middle;
+}
+.blog-card .description a.more:hover:after {
+  margin-left: 5px;
+  opacity: 1;
+}
+
+@media screen and (min-width: 600px) {
+  .blog-card {
+    height: 162px;
+    max-width: auto;
+  }
+  .blog-card:hover .photo {
+    -webkit-transform: rotate(5deg) scale(1.3);
+            transform: rotate(5deg) scale(1.3);
+  }
+  .blog-card:hover.alt .photo {
+    -webkit-transform: rotate(-5deg) scale(1.3);
+            transform: rotate(-5deg) scale(1.3);
+  }
+  .blog-card.alt .details {
+    padding-left: 30px;
+  }
+  .blog-card.alt .description {
+    float: right;
+  }
+  .blog-card.alt .description:before {
+    -webkit-transform: skewX(5deg);
+            transform: skewX(5deg);
+    right: -15px;
+    left: inherit;
+  }
+  .blog-card.alt .photo {
+    float: right;
+  }
+  .blog-card .photo {
+    transition: all 0.5s ease;
+    -webkit-transition: all 0.5s ease;
+    float: left;
+    height: 100%;
+    width: 40%;
+  }
+  .blog-card .details {
+    width: 40%;
+  }
+  .blog-card .description {
+    float: left;
+    width: 60%;
+    z-index: 0;
+  }
+  .blog-card .description:before {
+    -webkit-transform: skewX(-5deg);
+            transform: skewX(-5deg);
+    content: "";
+    background: #fff;
+    width: 100%;
+    z-index: -1;
+    /*POSITION*/
+    position: absolute;
+    left: -15px;
+    top: 0;
+    bottom: 0;
+  }
+}
+
+
+
+
+
+
+
+
+.task-container{
+  width: 100%;
+  min-height: 800px;
+}
+.task-container .col-sm-2{
+  padding-left: 1px;
+  padding-right: 1px;
+  width:20%;
+
+}
+.task-stage
+{
+  min-height: 800px;
+  height: 100%;
+  background: #dadde1;
+}
+.task-title{
+  padding: 10px;
+  /*font-size: 22px;*/
+  font-size: 16px;
+  border-radius: 0px;
+  background-color: #060606;
+  color:#FFF;
+  min-height: 80px;
+  line-height: 1;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+
+}
+.btn-task{
+  background-color: #FFF;
+  border-radius: 19px!important;
+  font-size: 12px;
+  padding: 4px 8px; 
+  margin-top: 5px;
+  float: right;
+  color:#000;
+}
+.task-body{
+  height: 100%;
+  list-style: none;
+  padding: 0px;
+  min-height: 150px;
+}
+.task-card{
+  border:1px solid #d9d7d7;
+  border-left: 4px solid;
+  margin:10px!important;
+  background-color: #FFF;
+  border-radius: 15px;
+  min-height: 110px;
+}
+.task-card-title{
+  padding: 5px;
+  font-size: 13px;
+  border-radius: 15px;
+  color:#000;
+  line-height: 1;
+  text-transform:uppercase;
+  padding-left: 5px;
+  font-weight: bold; 
+}
+.task-card-title > .btn-task-card-more{
+  color:#000;
+}
+.task-card-title .dropdown{
+  float: right;
+  text-transform:none!important;
+  font-weight: 100!important; 
+}
+.task-card-body{
+  padding: 5px 5px 30px 5px;
+  
+}
+.task-card-body > .task-card-description{
+  text-transform: uppercase;
+  padding-top: 10px;
+  padding-bottom: 5px;
+  margin-bottom: 5px;
+  border-bottom:1px dashed black;
+  margin-top: 0px;
+  word-wrap: break-word;
+  text-overflow:ellipsis;;
+  overflow: hidden;
+  max-height: 80px;
+}
+.btn-task-card-more{
+  font-size: 12px;
+  padding: 2px 2px; 
+  float: right;
+  color:#000;
+  font-weight: 100;
+}
+.btn-task-card-more:hover{
+  color:#000;
+}
+.ui-droppable-active{
+  background:#dd7!important; 
+}
+.task-card-notes{
+  list-style: none;
+  margin-left: 0px;
+  padding-left: 0px;
+}
+.task-card-notes >li{
+  border-bottom: 1px solid #B9B0B0; 
+}
+.task-card-notes p{
+  margin: 0px;
+  margin-bottom: 20px;
+  word-wrap: break-word; 
+  text-transform: uppercase; 
+}
+.task-card-notes .time{
+  float:right;
+  font-size:10px;
+  color:#333333;
+}
+.task-card-body .extra
+{
+  width:100%;
+  float: left;
+}
+.task-card-body .rating{
+  float: left;
+}
+
+.task-card-body .author{
+  float: right;
+  font-size:12px;
+  color:#333333; 
+}
+
+.author ::before{
+  content:"-"!important;
+}
+
+
+
+
+
+/*
+ * Row with equal height columns
+ * --------------------------------------------------
+ */
+.row-eq-height {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display:         flex;
+  margin-left: 0px;
+  margin-right: 0px;
+}
+
+/*
+ * Styles copied from the Grid example to make grid rows & columns visible.
+ */
+.container {
+}
+
+h4 {
+  margin-top: 25px;
+}
+
+[class*="col-"] {
+}
+
+/*
+ * Callout styles copied from Bootstrap's main docs.
+ */
+/* Common styles for all types */
+.bs-callout {
+  padding: 20px;
+  margin: 20px 0;
+  border-left: 3px solid #eee;
+}
+.bs-callout h4 {
+  margin-top: 0;
+  margin-bottom: 5px;
+}
+.bs-callout p:last-child {
+  margin-bottom: 0;
+}
+.bs-callout code {
+  background-color: #fff;
+  border-radius: 3px;
+}
+/* Variations */
+.bs-callout-danger {
+  background-color: #fdf7f7;
+  border-color: #d9534f;
+}
+.bs-callout-danger h4 {
+  color: #d9534f;
+}
+.bs-callout-warning {
+  background-color: #fcf8f2;
+  border-color: #f0ad4e;
+}
+.bs-callout-warning h4 {
+  color: #f0ad4e;
+}
+.bs-callout-info {
+  background-color: #f4f8fa;
+  border-color: #5bc0de;
+}
+.bs-callout-info h4 {
+  color: #5bc0de;
+}
+
+
+.toggle.btn {
+    min-width: 75px!important;
+    min-height: 34px;
+}
+
+.portlet-body .page-breadcrumb{
+  margin-bottom: 0px!important;
+}
+.modal-body .page-breadcrumb{
+  margin-bottom: 0px!important;
+}
+.mt-element-list .list-simple.mt-list-container ul > .mt-list-item > .list-item-content
+{
+  padding-left: 25px;
+  padding-right: 0px;
+}
+.mt-element-list .list-simple.mt-list-container ul > .mt-list-item > .list-item-content > h3
+{
+  font-size: 14px;
+}
+
+
+
+/*Global Navigation Changes*/
+.page-content-white .page-title
+{
+  margin:0px!important;
+  background: #FFF;
+  padding: 8px;
+  font-size:18px;
+  margin-bottom: 10px!important;
+}
+
+
+
+
+ /* The snackbar - position it at the bottom and in the middle of the screen */
+#snackbar {
+    visibility: hidden; /* Hidden by default. Visible on click */
+    min-width: 100px; /* Set a default minimum width */
+    margin-left: -125px; /* Divide value of min-width by 2 */
+    background-color: #333; /* Black background color */
+    color: #fff; /* White text color */
+    text-align: center; /* Centered text */
+    border-radius: 2px; /* Rounded borders */
+    padding: 5px; /* Padding */
+    position: fixed; /* Sit on top of the screen */
+    z-index: 1; /* Add a z-index if needed */
+    right: 0%; /* Center the snackbar */
+    bottom: 10px; /* 30px from the bottom */
+    font-size: 12px;
+}
+
+/* Show the snackbar when clicking on a button (class added with JavaScript) */
+#snackbar.show {
+    visibility: visible; /* Show the snackbar */
+
+/* Add animation: Take 0.5 seconds to fade in and out the snackbar.
+However, delay the fade out process for 2.5 seconds */
+    -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
+    animation: fadein 0.5s, fadeout 0.5s 2.5s;
+}
+
+/* Animations to fade the snackbar in and out */
+@-webkit-keyframes fadein {
+    from {bottom: 0; opacity: 0;}
+    to {bottom: 10px; opacity: 1;}
+}
+
+@keyframes fadein {
+    from {bottom: 0; opacity: 0;}
+    to {bottom: 10px; opacity: 1;}
+}
+
+@-webkit-keyframes fadeout {
+    from {bottom: 10px; opacity: 1;}
+    to {bottom: 0; opacity: 0;}
+}
+
+@keyframes fadeout {
+    from {bottom: 10px; opacity: 1;}
+    to {bottom: 0; opacity: 0;}
+} 
+
+#document_container .fa-folder
+{
+  color:#f8d777;
+}
+#document_container .mt-card-name
+{
+  color:#000;
+}
+.ui-droppable-active,.ui-state-default {
+  border:none!important;
+  background: transparent!important;
+   
+}
+div.ui-droppable-active .mt-card-item{
+  background-color: #e5f3ff!important;
+  border:none;
+}
+div.ui-state-default .mt-card-item{
+  background-color: #e5f3ff!important;
+}
