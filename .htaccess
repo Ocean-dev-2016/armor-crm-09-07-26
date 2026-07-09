@@ -1,0 +1,10 @@
+# Force PHP 5.6 for MilesWeb / CloudLinux (alt-php56)
+# Upload this file to live subdomain root: armor-crm.oceanhub.co.in
+<IfModule mime_module>
+  AddHandler application/x-httpd-alt-php56___lsphp .php
+</IfModule>
+
+# Fallback if above handler name differs on server
+<IfModule lsapi_module>
+  AddHandler application/x-httpd-alt-php56___lsphp .php
+</IfModule>
