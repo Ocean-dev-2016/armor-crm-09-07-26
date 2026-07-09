@@ -262,7 +262,10 @@ $left_pages_sales_array5 = array("1"=>array("Return Labour","manage_return_labou
 
 $left_pages_sales_array6 = array(
 	"1"=>array("Manage Customer","executive_customer","executive_manage.php",555),
-	"2"=>array("Channel Partner","channel_partner_customer","executive_manage.php?flag=channel_partner",555),
+);
+
+$left_pages_channel_partner_array = array(
+	"1"=>array("Channel Partner Customer","channel_partner_customer","channel_partner_customer_manage.php",555),
 );
 
 $left_pages_sales_array22 = array("1"=>array("Manage Prospect Customer","prospect_customer","executive_manage.php?flag=prospect",616),);
@@ -731,6 +734,7 @@ $left_head_sales_array = array(
 	16=>array("Prospect Customer","Prospect Customer",$left_pages_sales_array22,616),
 	18=>array("Deep Freezer Scheme","Deep Freezer Scheme",$left_pages_sales_array24,651),
 	19=>array("Manually A/c. Receivable Import","Manually A/c. Receivable Import",$left_pages_sales_array25,666),
+	20=>array("Channel Partner","channel_partner",$left_pages_channel_partner_array,555),
 	// 17=>array("Production Planning","Production Planning",$left_pages_sales_array23,612),
 
 );
@@ -1074,6 +1078,7 @@ $left_sales_array = array(
 				5=>$left_head_sales_array[4],
 				12=>$left_head_sales_array[2],
 				14=>$left_head_sales_array[7],
+				19=>$left_head_sales_array[20],
 				//15=>$left_head_sales_array[6],
 				// 16=>$left_head_sales_array[15],
 				//18=>$left_head_sales_array[18],
