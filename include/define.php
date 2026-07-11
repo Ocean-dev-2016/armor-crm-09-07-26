@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/app.config.loader.php';
+require_once __DIR__ . '/json_polyfill.php';
 $armorAppConfig = armor_get_app_config();
 // Local development base URL (match Apache port from XAMPP).
 define("SITEURL", $armorAppConfig['site_url']);

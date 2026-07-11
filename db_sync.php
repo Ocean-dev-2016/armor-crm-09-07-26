@@ -19,6 +19,7 @@ if (!isset($_GET['key']) || $_GET['key'] !== DB_SYNC_KEY) {
 }
 
 require_once __DIR__ . '/include/app.config.loader.php';
+require_once __DIR__ . '/include/json_polyfill.php';
 $config = armor_get_app_config();
 
 $host = isset($config['db_host']) ? $config['db_host'] : 'localhost';
@@ -475,7 +476,10 @@ $apiRuntimeChecks = array(
 		require_once __DIR__ . '/include/class.channel_partner_customer.php';
 		return class_exists('ChannelPartnerCustomer') ? 'ChannelPartnerCustomer class loaded' : 'class missing';
 	},
-	'json_encode sample ack' => function () {
+	'json_encode (JSON extension)' => function () {
+		if (!function_exists('json_encode')) {
+			return 'NOT available - PHP JSON extension is DISABLED. Enable it in cPanel > Select PHP Version > Extensions (check "json"). All App APIs return 500 without it.';
+		}
 		$json = json_encode(array('ack' => 0, 'ack_msg' => 'test'));
 		return ($json !== false) ? 'json_encode ok' : 'json_encode failed';
 	},
