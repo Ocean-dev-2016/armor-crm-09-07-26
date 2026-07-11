@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 define('DB_SYNC_KEY', 'armor_cp_sync_2026');
-define('DB_SYNC_VERSION', '2026.07.10.2');
+define('DB_SYNC_VERSION', '2026.07.11.1');
 
 if (!isset($_GET['key']) || $_GET['key'] !== DB_SYNC_KEY) {
 	header('HTTP/1.1 403 Forbidden');
@@ -444,6 +444,59 @@ if (db_sync_table_exists($conn, 'api_table')) {
 } else {
 	$allReady = false;
 	db_sync_log('FAIL', 'MISSING: table api_table');
+}
+
+db_sync_log('INFO', '--- API Runtime Checks ---');
+
+$apiKeyCountRes = mysqli_query($conn, "SELECT COUNT(*) AS total FROM `api_key_table` WHERE api_key='1226' AND isDelete=0");
+if ($apiKeyCountRes) {
+	$apiKeyCountRow = mysqli_fetch_assoc($apiKeyCountRes);
+	if ((int) $apiKeyCountRow['total'] > 0) {
+		db_sync_log('CHECK', 'READY: api_key_table contains key 1226');
+	} else {
+		$allReady = false;
+		db_sync_log('FAIL', 'MISSING: api_key_table key 1226 (App APIs will reject all requests)');
+	}
+} else {
+	$allReady = false;
+	db_sync_log('FAIL', 'Could not verify api_key_table: ' . mysqli_error($conn));
+}
+
+$apiRuntimeChecks = array(
+	'function.class.php' => function () {
+		require_once __DIR__ . '/include/function.class.php';
+		return class_exists('Functions') ? 'Functions class loaded' : 'Functions class missing';
+	},
+	'class.executive.php' => function () {
+		require_once __DIR__ . '/include/class.executive.php';
+		return class_exists('Executive') ? 'Executive class loaded' : 'Executive class missing';
+	},
+	'class.channel_partner_customer.php' => function () {
+		require_once __DIR__ . '/include/class.channel_partner_customer.php';
+		return class_exists('ChannelPartnerCustomer') ? 'ChannelPartnerCustomer class loaded' : 'class missing';
+	},
+	'json_encode sample ack' => function () {
+		$json = json_encode(array('ack' => 0, 'ack_msg' => 'test'));
+		return ($json !== false) ? 'json_encode ok' : 'json_encode failed';
+	},
+	'mysql_real_escape_string' => function () {
+		return function_exists('mysql_real_escape_string') ? 'available (legacy)' : 'NOT available (use mysqli only)';
+	},
+);
+
+foreach ($apiRuntimeChecks as $label => $callback) {
+	try {
+		$detail = $callback();
+		if (strpos($detail, 'NOT available') !== false || strpos($detail, 'missing') !== false || strpos($detail, 'failed') !== false) {
+			db_sync_log('FAIL', 'API runtime: ' . $label . ' -> ' . $detail);
+			$allReady = false;
+		} else {
+			db_sync_log('CHECK', 'API runtime: ' . $label . ' -> ' . $detail);
+		}
+	} catch (Exception $e) {
+		$allReady = false;
+		db_sync_log('FAIL', 'API runtime: ' . $label . ' -> ' . $e->getMessage());
+	}
 }
 
 if ($allReady) {

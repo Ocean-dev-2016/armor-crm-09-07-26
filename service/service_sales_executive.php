@@ -97,7 +97,7 @@ if ($is_valid_api_key) {
 				// device info new
 
 				// for master password logic 
-				$id1 = $db->rp_getValue(CTABLE_ADMIN, "id", "username='" . mysql_real_escape_string($_REQUEST['username']) . "' and password='" . md5(mysql_real_escape_string($_REQUEST['password'])) . "'");
+				$id1 = $db->rp_getValue(CTABLE_ADMIN, "id", "username='" . $db->clean($_REQUEST['username']) . "' and password='" . md5($db->clean($_REQUEST['password'])) . "'");
 				if ($id1 == -1) {
 					$cehckids = " username='" . $_REQUEST['username'] . "'";
 				} else {
