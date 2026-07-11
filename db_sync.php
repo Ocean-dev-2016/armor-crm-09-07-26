@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 define('DB_SYNC_KEY', 'armor_cp_sync_2026');
-define('DB_SYNC_VERSION', '2026.07.11.1');
+define('DB_SYNC_VERSION', '2026.07.11.2');
 
 if (!isset($_GET['key']) || $_GET['key'] !== DB_SYNC_KEY) {
 	header('HTTP/1.1 403 Forbidden');
@@ -491,7 +491,10 @@ $apiRuntimeChecks = array(
 foreach ($apiRuntimeChecks as $label => $callback) {
 	try {
 		$detail = $callback();
-		if (strpos($detail, 'NOT available') !== false || strpos($detail, 'missing') !== false || strpos($detail, 'failed') !== false) {
+		$isMysqlLegacyInfo = ($label === 'mysql_real_escape_string' && strpos($detail, 'NOT available') !== false);
+		if ($isMysqlLegacyInfo) {
+			db_sync_log('INFO', 'API runtime: ' . $label . ' -> ' . $detail . ' (expected on PHP 5.6+ with mysqli; CRM uses $db->clean())');
+		} elseif (strpos($detail, 'NOT available') !== false || strpos($detail, 'missing') !== false || strpos($detail, 'failed') !== false) {
 			db_sync_log('FAIL', 'API runtime: ' . $label . ' -> ' . $detail);
 			$allReady = false;
 		} else {
