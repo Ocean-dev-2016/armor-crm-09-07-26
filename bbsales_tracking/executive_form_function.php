@@ -481,8 +481,11 @@ if (isset($_REQUEST['submit']) && isset($_REQUEST['mode']) && $_REQUEST['mode'] 
 				$result = $ack['result'][0];
 				//$db->addSuccessMessage("Executive successfully saved!!");
 				$db->addSuccessMessage("Customer successfully saved !!");
-				$db->rp_location("executive_manage.php?flag=" . $flag . "&back_request_url=" . "$mobile_no1");
-				// $db->rp_location("executive_manage.php?flag=".$flag);
+				if ($channel_partner_flag == 1) {
+					$db->rp_location("executive_manage.php?flag=channel_partner&back_request_url=" . $mobile_no1);
+				} else {
+					$db->rp_location("executive_manage.php?flag=" . $flag . "&back_request_url=" . "$mobile_no1");
+				}
 			} else {
 				$db->addErrorMessage("Form submission failed Try again!!");
 				$db->addErrorMessage($ack['ack_msg']);
@@ -665,7 +668,9 @@ if (isset($_REQUEST['submit']) && isset($_REQUEST['mode']) && $_REQUEST['mode'] 
 					$result['inquiry_status_slug'] = intval($result['inquiry_status_slug']) + 1;
 					$result = $ack['result'][0];
 					$db->addSuccessMessage("Customer successfully updated!!");
-					if ($flag == "prospect") {
+					if ($channel_partner_flag == 1 || $flag == "channel_partner") {
+						$db->rp_location("executive_manage.php?flag=channel_partner");
+					} else if ($flag == "prospect") {
 						$db->rp_location("executive_manage.php?flag=" . $flag);
 					} else {
 						$db->rp_location("executive_manage.php");

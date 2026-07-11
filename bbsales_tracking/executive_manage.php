@@ -20,6 +20,9 @@ if (isset($_REQUEST['flag']) && $_REQUEST['flag'] == "prospect") {
 }
 $main_page 	= $ctable;
 if (isset($_REQUEST['flag']) && $_REQUEST['flag'] == "channel_partner") {
+	$main_page = "channel_partner";
+}
+if (isset($_REQUEST['flag']) && $_REQUEST['flag'] == "channel_partner") {
 	$page = "channel_partner_customer";
 } else if (!isset($_REQUEST['flag']) || $_REQUEST['flag'] == "") {
 	$page = "executive_customer";
@@ -27,7 +30,15 @@ if (isset($_REQUEST['flag']) && $_REQUEST['flag'] == "channel_partner") {
 	$page = "manage_" . $ctable;
 }
 $page_title = "Manage " . $ctable1;
-$page_hierarchy = array(array("link" => "", "title" => "Sales & Marketing"), array("link" => $ctable . "_manage.php", "title" => "Manage " . $ctable1));
+if (isset($_REQUEST['flag']) && $_REQUEST['flag'] == "channel_partner") {
+	$page_hierarchy = array(
+		array("link" => "", "title" => "Sales & Marketing"),
+		array("link" => "executive_manage.php?flag=channel_partner", "title" => "Channel Partner"),
+		array("link" => "executive_manage.php?flag=channel_partner", "title" => "Manage Channel Partner")
+	);
+} else {
+	$page_hierarchy = array(array("link" => "", "title" => "Sales & Marketing"), array("link" => $ctable . "_manage.php", "title" => "Manage " . $ctable1));
+}
 $back_request_url = $_REQUEST['back_request_url'];
 include("connect.php");
 // echo ADMINSITEURL."task_info_print.php?id=".$cid."&type=".$type;
@@ -1137,14 +1148,24 @@ include("connect.php");
 		function del_conf(id) {
 			var r = confirm("Are you sure you want to delete?");
 			if (r) {
-				window.location.href = '<?php echo $ctable; ?>_crud.php?mode=delete&id=' + id;
+				var flag = '<?= isset($_REQUEST['flag']) ? $_REQUEST['flag'] : '' ?>';
+				var url = '<?php echo $ctable; ?>_crud.php?mode=delete&id=' + id;
+				if (flag) {
+					url += '&flag=' + encodeURIComponent(flag);
+				}
+				window.location.href = url;
 			}
 		}
 
 		function change_to_customer(id) {
 			var r = confirm("Are you sure you want to convert this prospect customer into customer?");
 			if (r) {
-				window.location.href = '<?php echo $ctable; ?>_crud.php?mode=change_to_customer&id=' + id;
+				var flag = '<?= isset($_REQUEST['flag']) ? $_REQUEST['flag'] : '' ?>';
+				var url = '<?php echo $ctable; ?>_crud.php?mode=change_to_customer&id=' + id;
+				if (flag) {
+					url += '&flag=' + encodeURIComponent(flag);
+				}
+				window.location.href = url;
 			}
 		}
 

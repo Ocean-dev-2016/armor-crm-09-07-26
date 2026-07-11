@@ -24,6 +24,7 @@ if (isset($_REQUEST['flag']) && $_REQUEST['flag'] == "") {
 	$ctable_where .= "customer_flag=1 AND ";
 } else if (isset($_REQUEST['flag']) && $_REQUEST['flag'] == "channel_partner") {
 	$ctable_where .= "customer_flag=0 AND channel_partner_flag=1 AND ";
+	$isFillter = true;
 }
 
 if (isset($_REQUEST['searchName']) && $_REQUEST['searchName'] != "") {

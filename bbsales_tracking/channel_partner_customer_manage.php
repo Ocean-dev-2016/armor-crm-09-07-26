@@ -105,22 +105,24 @@ function loadDataTable() {
 		"bAutoWidth": false,
 		"aoColumns": [
 			{ "sWidth": "5%" },
-			{ "sWidth": "14%" },
-			{ "sWidth": "14%" },
-			{ "sWidth": "12%" },
+			{ "sWidth": "15%" },
+			{ "sWidth": "15%" },
+			{ "sWidth": "13%" },
+			{ "sWidth": "11%" },
+			{ "sWidth": "11%" },
 			{ "sWidth": "10%" },
 			{ "sWidth": "10%" },
-			{ "sWidth": "9%" },
-			{ "sWidth": "9%" },
-			{ "sWidth": "8%" },
-			{ "sWidth": "9%", "bSortable": false }
+			{ "sWidth": "10%", "bSortable": false }
 		]
 	});
 }
 function displayRecords(numRecords) {
 	searchName = encodeURIComponent(($("#searchName").val() || "").trim());
 	$("#results").html("");
-	$("#results").load(data_url + "?show=" + numRecords + "&searchName=" + searchName, function() {
+	$("#results").load(data_url + "?show=" + numRecords + "&searchName=" + searchName, function(response, status) {
+		if (status === "error") {
+			$("#results").html('<div class="alert alert-danger">Failed to load listing. Please run db_sync.php on live server.</div>');
+		}
 		loadDataTable();
 	});
 	$("#results").on("click", ".paging_simple_numbers a", function(e) {

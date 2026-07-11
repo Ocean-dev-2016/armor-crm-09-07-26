@@ -14,6 +14,158 @@ class ChannelPartnerCustomer extends Functions
 		$this->db = $db;
 	}
 
+	private function ensureTableReady()
+	{
+		if (!$this->db->tableExists($this->ctable)) {
+			return array("ack" => 0, "developer_msg" => "Table missing", "ack_msg" => "Database table not found. Please run db_sync.php?key=armor_cp_sync_2026 once.");
+		}
+		return array("ack" => 1);
+	}
+
+	public function GetChannelPartnerList()
+	{
+		$tableCheck = $this->ensureTableReady();
+		if ($tableCheck['ack'] != 1) {
+			return $tableCheck;
+		}
+
+		$result = array();
+		$cp_r = $this->db->rp_getData(
+			"executive",
+			"id, company_name, cname, mobile_no1",
+			"channel_partner_flag=1 AND customer_flag=0 AND isDelete=0",
+			"company_name ASC",
+			0
+		);
+		if ($cp_r) {
+			while ($cp_d = mysqli_fetch_assoc($cp_r)) {
+				$label = trim($cp_d['company_name']);
+				if ($cp_d['cname'] != "") {
+					$label .= " - " . $cp_d['cname'];
+				}
+				if ($cp_d['mobile_no1'] != "") {
+					$label .= " (" . $cp_d['mobile_no1'] . ")";
+				}
+				$result[] = array(
+					"id" => (int) $cp_d['id'],
+					"company_name" => $cp_d['company_name'],
+					"person_name" => $cp_d['cname'],
+					"mobile_no" => $cp_d['mobile_no1'],
+					"display_name" => $label,
+				);
+			}
+		}
+
+		return array(
+			"ack" => 1,
+			"developer_msg" => "Fetched",
+			"ack_msg" => "Channel Partner list fetched successfully.",
+			"result" => $result,
+		);
+	}
+
+	public function GetChannelPartnerCustomerList($detail)
+	{
+		$tableCheck = $this->ensureTableReady();
+		if ($tableCheck['ack'] != 1) {
+			return $tableCheck;
+		}
+
+		$channel_partner_id = isset($detail['channel_partner_id']) ? (int) $detail['channel_partner_id'] : 0;
+		$search_name = isset($detail['search_name']) ? $detail['search_name'] : "";
+		$ul = isset($detail['ul']) ? (int) $detail['ul'] : 0;
+		$ll = isset($detail['ll']) ? (int) $detail['ll'] : 50;
+		if ($ll <= 0) {
+			$ll = 50;
+		}
+
+		$where = "isDelete=0";
+		if ($channel_partner_id > 0) {
+			$where .= " AND channel_partner_id='" . $channel_partner_id . "'";
+		}
+		if ($search_name != "") {
+			$search = $this->db->clean($search_name);
+			$where .= " AND (
+				company_name LIKE '%" . $search . "%' OR
+				person_name LIKE '%" . $search . "%' OR
+				mobile_no LIKE '%" . $search . "%' OR
+				email LIKE '%" . $search . "%'
+			)";
+		}
+
+		$limit = "id DESC LIMIT " . $ul . "," . $ll;
+		$result = array();
+		$list_r = $this->db->rp_getData($this->ctable, "*", $where, $limit, 0);
+		if ($list_r) {
+			while ($row = mysqli_fetch_assoc($list_r)) {
+				$cp_name = "-";
+				if (!empty($row['channel_partner_id'])) {
+					$cp_name = $this->db->rp_getValue("executive", "company_name", "id='" . (int) $row['channel_partner_id'] . "'", 0);
+					if ($cp_name == "") {
+						$cp_name = $this->db->rp_getValue("executive", "cname", "id='" . (int) $row['channel_partner_id'] . "'", 0);
+					}
+				}
+				$result[] = array(
+					"id" => (int) $row['id'],
+					"channel_partner_id" => (int) $row['channel_partner_id'],
+					"channel_partner_name" => $cp_name,
+					"company_name" => $row['company_name'],
+					"person_name" => $row['person_name'],
+					"mobile_no" => $row['mobile_no'],
+					"email" => $row['email'],
+					"gst" => $row['gst'],
+					"country" => $row['country'],
+					"state" => $row['state'],
+					"city" => $row['city'],
+					"pincode" => $row['pincode'],
+				);
+			}
+		}
+
+		$total = $this->db->rp_getTotalRecord($this->ctable, $where);
+		return array(
+			"ack" => 1,
+			"developer_msg" => "Fetched",
+			"ack_msg" => "Channel Partner Customer list fetched successfully.",
+			"total" => (int) $total,
+			"result" => $result,
+		);
+	}
+
+	public function GetChannelPartnerCustomerDetail($detail)
+	{
+		$tableCheck = $this->ensureTableReady();
+		if ($tableCheck['ack'] != 1) {
+			return $tableCheck;
+		}
+		if (empty($detail['id'])) {
+			return array("ack" => 0, "ack_msg" => "Customer id is required.");
+		}
+		return $this->GetEditDataChannelPartnerCustomer($detail);
+	}
+
+	private function validateRequiredFields($detail, $is_update = false)
+	{
+		$required = array(
+			'channel_partner_id' => 'Channel Partner',
+			'company_name' => 'Customer Name',
+			'person_name' => 'Person Name',
+			'mobile_no' => 'Mobile No',
+			'country' => 'Country',
+			'state' => 'State',
+			'city' => 'City',
+		);
+		if ($is_update) {
+			$required['id'] = 'Customer id';
+		}
+		foreach ($required as $field => $label) {
+			if (!isset($detail[$field]) || trim($detail[$field]) === '') {
+				return array("ack" => 0, "ack_msg" => "Please enter " . $label . ".");
+			}
+		}
+		return array("ack" => 1);
+	}
+
 	private function validateChannelPartnerId($channel_partner_id)
 	{
 		if (empty($channel_partner_id) || (int) $channel_partner_id <= 0) {
@@ -31,6 +183,16 @@ class ChannelPartnerCustomer extends Functions
 
 	public function InsertChannelPartnerCustomer($detail)
 	{
+		$tableCheck = $this->ensureTableReady();
+		if ($tableCheck['ack'] != 1) {
+			return $tableCheck;
+		}
+
+		$fieldCheck = $this->validateRequiredFields($detail);
+		if ($fieldCheck['ack'] != 1) {
+			return $fieldCheck;
+		}
+
 		extract($detail);
 
 		$cpCheck = $this->validateChannelPartnerId($channel_partner_id);
@@ -74,7 +236,7 @@ class ChannelPartnerCustomer extends Functions
 
 		$uid = $this->db->rp_insert($this->ctable, $values, $rows, 0);
 		if ($uid != 0) {
-			return array("ack" => 1, "developer_msg" => "Inserted", "ack_msg" => "Channel Partner Customer added successfully.");
+			return array("ack" => 1, "developer_msg" => "Inserted", "ack_msg" => "Channel Partner Customer added successfully.", "inserted_id" => $uid);
 		}
 
 		return array("ack" => 0, "developer_msg" => "Insert failed", "ack_msg" => "Failed to add Channel Partner Customer. Please run db_sync.php once.");
@@ -82,6 +244,16 @@ class ChannelPartnerCustomer extends Functions
 
 	public function UpdateChannelPartnerCustomer($detail)
 	{
+		$tableCheck = $this->ensureTableReady();
+		if ($tableCheck['ack'] != 1) {
+			return $tableCheck;
+		}
+
+		$fieldCheck = $this->validateRequiredFields($detail, true);
+		if ($fieldCheck['ack'] != 1) {
+			return $fieldCheck;
+		}
+
 		extract($detail);
 
 		$cpCheck = $this->validateChannelPartnerId($channel_partner_id);
@@ -149,9 +321,18 @@ class ChannelPartnerCustomer extends Functions
 
 	public function DeleteChannelPartnerCustomer($detail)
 	{
+		$tableCheck = $this->ensureTableReady();
+		if ($tableCheck['ack'] != 1) {
+			return $tableCheck;
+		}
+		if (empty($detail['id'])) {
+			return array("ack" => 0, "ack_msg" => "Customer id is required.");
+		}
+
+		extract($detail);
 		$rows = array("isDelete" => "1", "modified_date" => date('Y-m-d H:i:s'));
-		$where = "id='" . $detail['id'] . "'";
-		$uid = $this->db->rp_update($this->ctable, $rows, $where);
+		$where = "id='" . $id . "' AND isDelete=0";
+		$uid = $this->db->rp_update($this->ctable, $rows, $where, 0);
 
 		if ($uid != 0) {
 			return array("ack" => 1, "developer_msg" => "Deleted", "ack_msg" => "Channel Partner Customer deleted successfully.");

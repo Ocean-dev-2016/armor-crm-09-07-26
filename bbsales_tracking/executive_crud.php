@@ -143,12 +143,9 @@ if (isset($_REQUEST['id']) && $_REQUEST['id'] > 0 && $_REQUEST['mode'] == "isAct
 	);
 	$where	= "id='" . $_REQUEST['id'] . "'";
 	$db->rp_update($ctable, $rows, $where);
-	if($_REQUEST['flag']=="prospect")
-	{
-		$db->rp_location("executive_manage.php?flag=prospect");
-	}
-	else
-	{
+	if (isset($_REQUEST['flag']) && $_REQUEST['flag'] != "") {
+		$db->rp_location("executive_manage.php?flag=" . $_REQUEST['flag']);
+	} else {
 		$db->rp_location("executive_manage.php");
 	}
 }

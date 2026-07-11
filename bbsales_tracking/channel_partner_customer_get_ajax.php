@@ -18,6 +18,12 @@ if (isset($_REQUEST['searchName']) && $_REQUEST['searchName'] != "") {
 
 $ctable_where .= " isDelete='0'";
 
+if (!$db->tableExists($ctable)) {
+	echo '<div class="alert alert-danger">Database table not found. Please run <strong>db_sync.php?key=armor_cp_sync_2026</strong> once, then refresh this page.</div>';
+	require_once("disconnect.php");
+	exit;
+}
+
 $item_per_page = ($_REQUEST["show"] <> "" && is_numeric($_REQUEST["show"])) ? intval($_REQUEST["show"]) : 10;
 
 if (isset($_REQUEST["page"])) {
@@ -46,12 +52,11 @@ $ctable_r = $db->rp_getData($ctable, "*", $ctable_where, "id DESC limit $page_po
 			<th>State</th>
 			<th>City</th>
 			<th>Pincode</th>
-			<th>Created At</th>
 		</tr>
 	</thead>
 	<tbody>
 	<?php
-	if ($ctable_r) {
+	if ($ctable_r && mysqli_num_rows($ctable_r) > 0) {
 		while ($ctable_d = mysqli_fetch_array($ctable_r)) {
 			$cp_name = "-";
 			if (!empty($ctable_d['channel_partner_id'])) {
@@ -95,13 +100,15 @@ $ctable_r = $db->rp_getData($ctable, "*", $ctable_where, "id DESC limit $page_po
 			<td><?php echo htmlentities($ctable_d['state']); ?></td>
 			<td><?php echo htmlentities($ctable_d['city']); ?></td>
 			<td><?php echo htmlentities($ctable_d['pincode']); ?></td>
-			<td><?php
-				$created_on = !empty($ctable_d['created_date']) ? $ctable_d['created_date'] : $ctable_d['created_at'];
-				echo ($created_on != "") ? date('d-m-Y H:i', strtotime($created_on)) : "-";
-			?></td>
 		</tr>
 	<?php
 		}
+	} else {
+	?>
+		<tr>
+			<td colspan="9" style="text-align:center;">No Channel Partner Customer found.</td>
+		</tr>
+	<?php
 	}
 	?>
 	</tbody>

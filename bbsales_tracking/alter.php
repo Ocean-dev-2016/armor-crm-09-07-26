@@ -405,6 +405,6 @@ UPDATE 1sales_executive SET customer_insert_flag = 0, customer_update_flag = 0, 
 09-07-2026
 ALTER TABLE `executive` ADD `channel_partner_flag` TINYINT NOT NULL DEFAULT 0 AFTER `turnover_year`;
 
-// Channel Partner Customer module (09-07-2026)
-// Run db_sync.php on live: db_sync.php?key=armor_cp_sync_2026
-// Version 2026.07.09.4 — table, channel_partner_id, country/state/city, audit columns, executive.channel_partner_flag
+// Channel Partner Customer module — run on live after deploy:
+// https://armor-crm.oceanhub.co.in/db_sync.php?key=armor_cp_sync_2026
+// Creates: channel_partner_customer table, executive.channel_partner_flag, page_table URLs, api_table 223-228

@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 define('DB_SYNC_KEY', 'armor_cp_sync_2026');
-define('DB_SYNC_VERSION', '2026.07.09.4');
+define('DB_SYNC_VERSION', '2026.07.10.2');
 
 if (!isset($_GET['key']) || $_GET['key'] !== DB_SYNC_KEY) {
 	header('HTTP/1.1 403 Forbidden');
@@ -174,7 +174,30 @@ function db_sync_append_page_urls($conn, $pageId, $newUrls)
 }
 
 db_sync_log('INFO', '--- Armor CRM DB Sync v' . DB_SYNC_VERSION . ' ---');
-db_sync_log('INFO', 'Changes: executive.channel_partner_flag, channel_partner_customer table + all columns (country/state/city/channel_partner_id/audit), indexes, page URLs');
+db_sync_log('INFO', 'Changes: executive.channel_partner_flag, channel_partner_customer table + APIs 223-228');
+
+function db_sync_register_api_if_missing($conn, $id, $slug, $title, $url)
+{
+	if (!db_sync_table_exists($conn, 'api_table')) {
+		db_sync_log('SKIP', 'api_table not found — skip API id=' . $id);
+		return false;
+	}
+	$id = (int) $id;
+	$res = mysqli_query($conn, "SELECT id FROM `api_table` WHERE `id`={$id} AND `isDelete`=0 LIMIT 1");
+	if ($res && mysqli_num_rows($res) > 0) {
+		db_sync_log('SKIP', 'api_table id=' . $id . ' (' . $slug . ') already exists');
+		return true;
+	}
+	$slugEsc = mysqli_real_escape_string($conn, $slug);
+	$titleEsc = mysqli_real_escape_string($conn, $title);
+	$urlEsc = mysqli_real_escape_string($conn, $url);
+	$descEsc = mysqli_real_escape_string($conn, '<p>' . $title . '</p>');
+	$now = date('Y-m-d H:i:s');
+	$sql = "INSERT INTO `api_table` (`id`,`api_slug`,`api_title`,`api_description`,`api_url`,`author`,`last_modification_date`,`isDelete`,`created_by`,`created_by_type`,`created_date`)
+		VALUES ({$id},'{$slugEsc}','{$titleEsc}','{$descEsc}','{$urlEsc}','Armor CRM','{$now}',0,1,0,'{$now}')";
+	return db_sync_run_query($conn, $sql, 'Register API id=' . $id . ' ' . $slug);
+}
+
 
 /* ------------------------------------------------------------------
  * STEP 1 — Create main table if not exists
@@ -288,6 +311,26 @@ db_sync_append_page_urls($conn, 555, array(
 ));
 
 /* ------------------------------------------------------------------
+ * STEP 5b — Register Channel Partner Customer mobile APIs (223-228)
+ * ------------------------------------------------------------------ */
+$cpApiBase = 'service_genral.php?key=1226';
+db_sync_register_api_if_missing($conn, 223, 'get_channel_partner_list', 'Get Channel Partner List', $cpApiBase . '&s=223');
+db_sync_register_api_if_missing($conn, 224, 'get_channel_partner_customer_list', 'Get Channel Partner Customer List', $cpApiBase . '&s=224&channel_partner_id=&search_name=&ul=0&ll=50');
+db_sync_register_api_if_missing($conn, 225, 'add_channel_partner_customer', 'Add Channel Partner Customer', $cpApiBase . '&s=225&channel_partner_id=&company_name=&person_name=&mobile_no=&email=&gst=&country=India&state=&city=&pincode=');
+db_sync_register_api_if_missing($conn, 226, 'update_channel_partner_customer', 'Update Channel Partner Customer', $cpApiBase . '&s=226&id=&channel_partner_id=&company_name=&person_name=&mobile_no=&email=&gst=&country=&state=&city=&pincode=');
+db_sync_register_api_if_missing($conn, 227, 'delete_channel_partner_customer', 'Delete Channel Partner Customer', $cpApiBase . '&s=227&id=');
+db_sync_register_api_if_missing($conn, 228, 'get_channel_partner_customer_detail', 'Get Channel Partner Customer Detail', $cpApiBase . '&s=228&id=');
+
+$requiredCpApis = array(
+	223 => 'get_channel_partner_list',
+	224 => 'get_channel_partner_customer_list',
+	225 => 'add_channel_partner_customer',
+	226 => 'update_channel_partner_customer',
+	227 => 'delete_channel_partner_customer',
+	228 => 'get_channel_partner_customer_detail',
+);
+
+/* ------------------------------------------------------------------
  * STEP 6 — Final verification (every run)
  * ------------------------------------------------------------------ */
 $requiredExecutiveColumns = array('channel_partner_flag');
@@ -379,6 +422,30 @@ if (!db_sync_table_exists($conn, 'channel_partner_customer')) {
 	}
 }
 
+if (db_sync_table_exists($conn, 'api_table')) {
+	db_sync_log('INFO', '--- API Registration Verification (223-228) ---');
+	foreach ($requiredCpApis as $apiId => $apiSlug) {
+		$apiId = (int) $apiId;
+		$apiSlugEsc = mysqli_real_escape_string($conn, $apiSlug);
+		$apiRes = mysqli_query($conn, "SELECT id, api_slug FROM `api_table` WHERE `id`={$apiId} AND `isDelete`=0 LIMIT 1");
+		if ($apiRes && mysqli_num_rows($apiRes) > 0) {
+			$apiRow = mysqli_fetch_assoc($apiRes);
+			if ($apiRow['api_slug'] === $apiSlug) {
+				db_sync_log('CHECK', 'READY: api_table id=' . $apiId . ' (' . $apiSlug . ')');
+			} else {
+				$allReady = false;
+				db_sync_log('FAIL', 'api_table id=' . $apiId . ' exists but slug mismatch (found: ' . $apiRow['api_slug'] . ')');
+			}
+		} else {
+			$allReady = false;
+			db_sync_log('FAIL', 'MISSING: api_table id=' . $apiId . ' (' . $apiSlug . ')');
+		}
+	}
+} else {
+	$allReady = false;
+	db_sync_log('FAIL', 'MISSING: table api_table');
+}
+
 if ($allReady) {
 	db_sync_log('INFO', 'RESULT: Database is READY for Channel Partner Customer module.');
 } else {
@@ -439,7 +506,23 @@ $environment = isset($config['environment']) ? $config['environment'] : 'unknown
 				</li>
 			<?php } ?>
 		</ul>
-		<p><strong>Live use:</strong> Run this URL after every deploy until status shows <span class="ready">READY</span>.</p>
+		<p><strong>Live deploy steps:</strong></p>
+		<ol>
+			<li>Upload all PHP/code files to live server</li>
+			<li>Open this URL in browser:<br>
+				<code>https://armor-crm.oceanhub.co.in/db_sync.php?key=armor_cp_sync_2026</code>
+			</li>
+			<li>Wait until status shows <span class="ready">READY</span> and FAIL = 0</li>
+			<li>Test Channel Partner Customer web page + App APIs (#223-#228)</li>
+		</ol>
+		<p><strong>This sync creates/updates:</strong></p>
+		<ul>
+			<li>Table <code>channel_partner_customer</code> (+ all columns &amp; indexes)</li>
+			<li>Column <code>executive.channel_partner_flag</code></li>
+			<li>Page URLs in <code>page_table</code> id=555</li>
+			<li>APIs in <code>api_table</code> id 223, 224, 225, 226, 227, 228</li>
+		</ul>
+		<p><strong>Safe:</strong> Idempotent — run multiple times; existing data is not deleted.</p>
 		<p><strong>Security:</strong> Delete <code>db_sync.php</code> from live after final READY confirmation.</p>
 	</div>
 </body>

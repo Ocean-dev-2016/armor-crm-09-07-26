@@ -15,6 +15,114 @@ class Executive extends Functions
 		$conn = $db->connect();
 		$this->db = $db;
 	}
+
+	function executiveDupWhere($mobile, $client_code, $exclude_id = '', $company_name = '')
+	{
+		$dup_parts = array();
+		if ($mobile != "") {
+			$dup_parts[] = "mobile_no1 = '" . $mobile . "'";
+		}
+		if ($client_code != "") {
+			$dup_parts[] = "client_code = '" . $client_code . "'";
+		}
+		if (empty($dup_parts)) {
+			return "";
+		}
+		$where = "(" . implode(" OR ", $dup_parts) . ") AND isDelete=0";
+		if ($company_name != "") {
+			$where .= " AND company_name = '" . $company_name . "'";
+		}
+		if ($exclude_id != "") {
+			$where .= " AND id != '" . (int)$exclude_id . "'";
+		}
+		return $where;
+	}
+
+	function executiveDupWhereForUpdate($mobile, $client_code, $executive_id, $original_mobile, $original_client_code, $company_name = '')
+	{
+		return $this->executiveDupWhere($mobile, $client_code, $executive_id, $company_name);
+	}
+
+	function getStateClientCodePrefix($state, $class_id = '')
+	{
+		$state_map = array(
+			'gujarat' => 'GJ',
+			'maharashtra' => 'MH',
+			'madhya pradesh' => 'MP',
+			'rajasthan' => 'RJ',
+			'karnataka' => 'KA',
+			'tamil nadu' => 'TN',
+			'uttar pradesh' => 'UP',
+			'west bengal' => 'WB',
+			'andhra pradesh' => 'AP',
+			'telangana' => 'TS',
+			'kerala' => 'KL',
+			'punjab' => 'PB',
+			'haryana' => 'HR',
+			'bihar' => 'BR',
+			'odisha' => 'OD',
+			'chhattisgarh' => 'CG',
+			'goa' => 'GA',
+			'delhi' => 'DL',
+		);
+
+		$state_key = strtolower(trim($state));
+		if ($state_key != '' && isset($state_map[$state_key])) {
+			return $state_map[$state_key];
+		}
+
+		if ($class_id != '') {
+			$slug = strtolower(trim($this->db->rp_getValue("class", "slug", "id='" . (int)$class_id . "' AND isDelete=0", 0)));
+			if ($slug != '' && isset($state_map[$slug])) {
+				return $state_map[$slug];
+			}
+			$class_name = strtolower(trim($this->db->rp_getValue("class", "name", "id='" . (int)$class_id . "' AND isDelete=0", 0)));
+			if ($class_name != '' && isset($state_map[$class_name])) {
+				return $state_map[$class_name];
+			}
+		}
+
+		return '';
+	}
+
+	function resolveClassIdFromState($state, $class_id = '')
+	{
+		if ($class_id != '' && $class_id != '0') {
+			return $class_id;
+		}
+		if ($state == '') {
+			return $class_id;
+		}
+		$resolved = $this->db->rp_getValue("class", "id", "name LIKE '%" . $this->db->clean($state) . "%' AND isDelete=0", 0);
+		return ($resolved !== false && $resolved !== '') ? $resolved : $class_id;
+	}
+
+	function generateClientCode($state, $class_id = '', $type_of_company = '')
+	{
+		$prefix = $this->getStateClientCodePrefix($state, $class_id);
+		$code = '';
+		$client_code = '';
+
+		if ($prefix != '') {
+			$state_clean = $this->db->clean($state);
+			$where = "isDelete=0 AND state LIKE '%" . $state_clean . "%' AND client_code REGEXP '^" . $prefix . "[0-9]+$' ORDER BY id DESC LIMIT 1";
+			$last_code = $this->db->rp_getValue("executive", "client_code", $where, 0);
+			if ($last_code && preg_match('/^' . preg_quote($prefix, '/') . '(\d+)$/', $last_code, $matches)) {
+				$code = (int)$matches[1] + 1;
+			} else {
+				$code = 1;
+			}
+			$client_code = $prefix . $code;
+		} elseif ($type_of_company != '') {
+			$prefix = $this->db->rp_getValue("company_master", "prefix", "id='" . (int)$type_of_company . "' AND isDelete=0", 0);
+			$last_insert_ids = $this->db->rp_getValue("executive", "MAX(`client_code_sr_by_type`)", "type_of_company='" . (int)$type_of_company . "' AND isDelete=0", 0);
+			$code = str_pad(((int)$last_insert_ids + 1), 4, '0', STR_PAD_LEFT);
+			$client_code = $prefix . $code;
+		}
+
+		return array("client_code" => $client_code, "client_code_sr_by_type" => $code);
+	}
+
 	//-------#Insert Executive Detail------------------------------//	
 
 	/*insert executive in admin*/
@@ -38,10 +146,16 @@ class Executive extends Functions
 
 		// $dup_where = "(mobile_no1 = '" . $mobile_no1 . "' AND company_name = '".$company_name."') AND isDelete=0";
 		// $dup_where = " (mobile_no1 = '" . $mobile_no1 . "' OR client_code = '" . $client_code . "') AND company_name = '" . $company_name . "' AND isDelete=0";
-		$dup_where = "(mobile_no1 = '" . $mobile_no1 . "' OR client_code = '" . $client_code . "') AND isDelete=0";
+		$class_id = $this->resolveClassIdFromState($state, $class_id);
+		if ($client_code == "") {
+			$generated = $this->generateClientCode($state, $class_id, $type_of_company);
+			$client_code = $generated['client_code'];
+			$client_code_sr_by_type = $generated['client_code_sr_by_type'];
+		}
+		$dup_where = $this->executiveDupWhere($mobile_no1, $client_code);
 
 		if ($type == "") {
-			$r = $this->db->rp_dupCheck($this->ctable, $dup_where, 0);
+			$r = ($dup_where != "") ? $this->db->rp_dupCheck($this->ctable, $dup_where, 0) : 0;
 		} else {
 			$r = false;
 		}
@@ -472,7 +586,12 @@ class Executive extends Functions
 				$reply = array("ack" => 1, "developer_msg" => "insert Successfully", "ack_msg" => "Success! Insert Customer Successfully.", "inserted_id" => $uid, "areas" => $ack['areas']);
 				return $reply;
 			} else {
-				$reply = array("ack" => 0, "developer_msg" => "Database error!!", "ack_msg" => "Failed! Insert Record Failed.");
+				$dbError = isset($this->db->myconn) ? mysqli_error($this->db->myconn) : '';
+				$reply = array(
+					"ack" => 0,
+					"developer_msg" => "Database error!!" . ($dbError != '' ? " " . $dbError : ""),
+					"ack_msg" => "Failed! Insert Record Failed."
+				);
 				return $reply;
 			}
 		}
@@ -490,25 +609,22 @@ class Executive extends Functions
 
 		//$lastInsertId=$this->db->rp_getTotalRecord("executive","isDelete=0 AND zone='".$zone."'",0);  
 
+		$class_id = $this->resolveClassIdFromState($state, $class_id);
 		if (empty($detail['client_code'])) {
-			$lastInsertIds = $this->db->rp_getValue("executive", "MAX(`client_code`)", "type_of_company='" . $type_of_company . "' AND isDelete=0", 0);
-			$client_code_prefix = $this->db->rp_getValue("company_master", "prefix", "id='" . $type_of_company . "' AND isDelete=0", 0);
-
-			$lastInsertId = substr($lastInsertIds, 4);
-			$code = str_pad(($lastInsertId + 1), 4, '0', STR_PAD_LEFT);
-
-			$client_code = $client_code_prefix . ($code);
+			$generated = $this->generateClientCode($state, $class_id, $type_of_company);
+			$client_code = $generated['client_code'];
+			$code = $generated['client_code_sr_by_type'];
 		} else {
-			$code = "";
+			$code = isset($detail['client_code_sr_by_type']) ? $detail['client_code_sr_by_type'] : "";
 		}
 
 
 		//$dup_where = "phone = '" . $phone . "' AND isDelete=0";
 		//$dup_where = "(gst = '" . $gst_no . "' AND client_code = '" . $client_code . "') AND isDelete=0";
 		// $dup_where = "(mobile_no1 = '" . $mobile_number . "' AND company_name='".$company_name."') AND isDelete=0";
-		$dup_where = " (mobile_no1 = '" . $mobile_number . "' OR client_code = '" . $client_code . "') AND company_name = '" . $company_name . "' AND isDelete=0";
+		$dup_where = $this->executiveDupWhere($mobile_number, $client_code, '', $company_name);
 		if ($type == "") {
-			$r = $this->db->rp_dupCheck($this->ctable, $dup_where, 0);
+			$r = ($dup_where != "") ? $this->db->rp_dupCheck($this->ctable, $dup_where, 0) : 0;
 		} else {
 			$r = false;
 		}
@@ -603,6 +719,7 @@ class Executive extends Functions
 				"client_code_sr_by_type",
 				"top_category_id",
 				"customer_flag",
+				"channel_partner_flag",
 				"type_of_company",
 				"booking_place",
 				"transport_by_id",
@@ -649,6 +766,7 @@ class Executive extends Functions
 				$code,
 				$top_category_id,
 				$customer_flag,
+				(isset($channel_partner_flag) && $channel_partner_flag == 1) ? '1' : '0',
 				$type_of_company,
 				$booking_place,
 				$transport_by_id,
@@ -658,6 +776,12 @@ class Executive extends Functions
 				$turnover,
 				$turnover_year,
 			);
+			$values = array_map(function ($value) {
+				if ($value === null || $value === false) {
+					return '';
+				}
+				return (string) $value;
+			}, $values);
 
 			// echo "<pre>"; print_r($rows); 
 			// </br>
@@ -784,7 +908,12 @@ class Executive extends Functions
 				$reply = array("ack" => 1, "developer_msg" => "insert Successfully", "ack_msg" => "Success! Insert Customer Successfully.", "inserted_id" => $uid, "areas" => $ack['areas']);
 				return $reply;
 			} else {
-				$reply = array("ack" => 0, "developer_msg" => "Database error!!", "ack_msg" => "Failed! Insert Record Failed.");
+				$dbError = isset($this->db->myconn) ? mysqli_error($this->db->myconn) : '';
+				$reply = array(
+					"ack" => 0,
+					"developer_msg" => "Database error!!" . ($dbError != '' ? " " . $dbError : ""),
+					"ack_msg" => "Failed! Insert Record Failed."
+				);
 				return $reply;
 			}
 		}
@@ -806,8 +935,8 @@ class Executive extends Functions
 		//$dup_where = "(gst = '" . $gst . "' AND client_code = '".$client_code."') AND isDelete=0 AND id!='".$_REQUEST['id']."'";
 		// $dup_where = "(mobile_no1 = '" . $mobile_no1 . "' AND company_name ='".$company_name."') AND isDelete=0 AND id!='".$_REQUEST['id']."'";
 		// $dup_where = " (mobile_no1 = '" . $mobile_no1 . "' OR client_code = '" . $client_code . "') AND company_name = '" . $company_name . "' AND isDelete=0 AND id!='" . $_REQUEST['id'] . "'";
-		$dup_where = " (mobile_no1 = '" . $mobile_no1 . "' OR client_code = '" . $client_code . "') AND isDelete=0 AND id!='" . $_REQUEST['id'] . "'";
-		$r = $this->db->rp_dupCheck($this->ctable, $dup_where, 0);
+		$dup_where = $this->executiveDupWhere($mobile_no1, $client_code, $executive_id);
+		$r = ($dup_where != "") ? $this->db->rp_dupCheck($this->ctable, $dup_where, 0) : 0;
 		//echo $r;exit;
 		if ($r > 0) {
 			$reply = array("ack" => 0, "developer_msg" => "Mobile number OR Client Code already Exists in another customer!! Please Check.", "ack_msg" => "A mobile number or client code already exists, or the company name is already associated with another customer. Please check.");
@@ -1121,8 +1250,8 @@ class Executive extends Functions
 		//$dup_where = "(gst = '" . $gst . "' AND phone = '" . $phone . "' OR client_code = '".$client_code."') AND isDelete=0 AND id!='".$_REQUEST['id']."'";
 		//$dup_where = "(gst = '" . $gst . "' AND client_code = '".$client_code."') AND isDelete=0 AND id!='".$_REQUEST['id']."'";
 		// $dup_where = "(mobile_no1 = '" . $mobile_number . "' AND company_name='".$company_name."') AND isDelete=0 AND id!='".$_REQUEST['id']."'";
-		$dup_where = " (mobile_no1 = '" . $mobile_number . "' OR client_code = '" . $client_code . "') AND company_name = '" . $company_name . "' AND isDelete=0 AND id != '" . $_REQUEST['id'] . "' ";
-		$r = $this->db->rp_dupCheck($this->ctable, $dup_where, 0);
+		$dup_where = $this->executiveDupWhere($mobile_number, $client_code, $id, $company_name);
+		$r = ($dup_where != "") ? $this->db->rp_dupCheck($this->ctable, $dup_where, 0) : 0;
 		// $r=0;
 		//echo $r;exit;
 
@@ -1220,6 +1349,7 @@ class Executive extends Functions
 				"purchasing_from"		=> $purchasing_from,
 				"turnover"		=> $turnover,
 				"turnover_year"		=> $turnover_year,
+				"channel_partner_flag" => (isset($channel_partner_flag) && $channel_partner_flag == 1) ? 1 : 0,
 
 
 			);

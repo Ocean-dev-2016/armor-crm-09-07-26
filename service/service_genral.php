@@ -891,6 +891,7 @@ if ($is_valid_api_key) {
 			$detail['id']	 =  isset($_REQUEST['id']) ? $db->clean($_REQUEST['id']) : "";
 			$detail['type_of_executive']	 = isset($_REQUEST['type_of_executive']) ? $db->clean($_REQUEST['type_of_executive']) : "";
 			$detail['customer_flag']	 = isset($_REQUEST['customer_flag']) ? $db->clean($_REQUEST['customer_flag']) : "0";
+			$detail['channel_partner_flag'] = isset($_REQUEST['channel_partner_flag']) ? $db->clean($_REQUEST['channel_partner_flag']) : "0";
 			$detail['sales_id']			 = isset($_REQUEST['sales_id']) ? $db->clean($_REQUEST['sales_id']) : "";
 			// $detail['sales_id'];exit();
 			$detail['company_name']		 = isset($_REQUEST['company_name']) ? $db->clean($_REQUEST['company_name']) : "";
@@ -909,6 +910,12 @@ if ($is_valid_api_key) {
 			$detail['city']	     		 = isset($_REQUEST['city']) ? $db->clean($_REQUEST['city']) : "";
 			$detail['main_city']	     		 = isset($_REQUEST['main_city']) ? $db->clean($_REQUEST['main_city']) : "";
 			$detail['class_id']	     	 = isset($_REQUEST['class_id']) ? $db->clean($_REQUEST['class_id']) : "";
+			if ($detail['class_id'] == "" && $detail['state'] != "") {
+				$detail['class_id'] = $db->rp_getValue("class", "id", "name LIKE '%" . $db->clean($detail['state']) . "%' AND isDelete=0", 0);
+				if ($detail['class_id'] === false) {
+					$detail['class_id'] = "";
+				}
+			}
 
 			$detail['area_id']	     	 = isset($_REQUEST['area_id']) ? $db->clean($_REQUEST['area_id']) : "";
 
@@ -945,6 +952,10 @@ if ($is_valid_api_key) {
 
 				$detail['area_id'] = $db->rp_getValue("area", "id", " class_id='" . $detail['class_id'] . "' AND city_id='" . $city_id . "' AND name LIKE '%" . strtolower(trim($detail['main_city'])) . "%'", 0);
 			}
+			if ($detail['area_id'] === false || $detail['area_id'] === null) {
+				$detail['area_id'] = "";
+			}
+			$detail['type'] = isset($_REQUEST['type']) ? $db->clean($_REQUEST['type']) : "";
 			/* Added Code By DINESH */
 
 			/* All top category assign in customer */
@@ -4279,6 +4290,69 @@ if ($is_valid_api_key) {
 				);
 			}
 
+			$db->printJSON($ack);
+		} else if ($service == "get_channel_partner_list" || $service == 223) {
+			require_once('../include/class.channel_partner_customer.php');
+			$objCP = new ChannelPartnerCustomer();
+			$ack = $objCP->GetChannelPartnerList();
+			$db->printJSON($ack);
+		} else if ($service == "get_channel_partner_customer_list" || $service == 224) {
+			require_once('../include/class.channel_partner_customer.php');
+			$objCP = new ChannelPartnerCustomer();
+			$detail = array(
+				'channel_partner_id' => isset($_REQUEST['channel_partner_id']) ? $db->clean($_REQUEST['channel_partner_id']) : "",
+				'search_name' => isset($_REQUEST['search_name']) ? $db->clean($_REQUEST['search_name']) : "",
+				'ul' => isset($_REQUEST['ul']) ? $db->clean($_REQUEST['ul']) : "0",
+				'll' => isset($_REQUEST['ll']) ? $db->clean($_REQUEST['ll']) : "50",
+			);
+			$ack = $objCP->GetChannelPartnerCustomerList($detail);
+			$db->printJSON($ack);
+		} else if ($service == "get_channel_partner_customer_detail" || $service == 228) {
+			require_once('../include/class.channel_partner_customer.php');
+			$objCP = new ChannelPartnerCustomer();
+			$detail = array('id' => isset($_REQUEST['id']) ? $db->clean($_REQUEST['id']) : "");
+			$ack = $objCP->GetChannelPartnerCustomerDetail($detail);
+			$db->printJSON($ack);
+		} else if ($service == "add_channel_partner_customer" || $service == 225) {
+			require_once('../include/class.channel_partner_customer.php');
+			$objCP = new ChannelPartnerCustomer();
+			$detail = array(
+				'channel_partner_id' => isset($_REQUEST['channel_partner_id']) ? $db->clean($_REQUEST['channel_partner_id']) : "",
+				'company_name' => isset($_REQUEST['company_name']) ? $db->clean($_REQUEST['company_name']) : "",
+				'person_name' => isset($_REQUEST['person_name']) ? $db->clean($_REQUEST['person_name']) : "",
+				'mobile_no' => isset($_REQUEST['mobile_no']) ? $db->clean($_REQUEST['mobile_no']) : "",
+				'email' => isset($_REQUEST['email']) ? $db->clean($_REQUEST['email']) : "",
+				'gst' => isset($_REQUEST['gst']) ? $db->clean($_REQUEST['gst']) : "",
+				'country' => isset($_REQUEST['country']) ? $db->clean($_REQUEST['country']) : "",
+				'state' => isset($_REQUEST['state']) ? $db->clean($_REQUEST['state']) : "",
+				'city' => isset($_REQUEST['city']) ? $db->clean($_REQUEST['city']) : "",
+				'pincode' => isset($_REQUEST['pincode']) ? $db->clean($_REQUEST['pincode']) : "",
+			);
+			$ack = $objCP->InsertChannelPartnerCustomer($detail);
+			$db->printJSON($ack);
+		} else if ($service == "update_channel_partner_customer" || $service == 226) {
+			require_once('../include/class.channel_partner_customer.php');
+			$objCP = new ChannelPartnerCustomer();
+			$detail = array(
+				'id' => isset($_REQUEST['id']) ? $db->clean($_REQUEST['id']) : "",
+				'channel_partner_id' => isset($_REQUEST['channel_partner_id']) ? $db->clean($_REQUEST['channel_partner_id']) : "",
+				'company_name' => isset($_REQUEST['company_name']) ? $db->clean($_REQUEST['company_name']) : "",
+				'person_name' => isset($_REQUEST['person_name']) ? $db->clean($_REQUEST['person_name']) : "",
+				'mobile_no' => isset($_REQUEST['mobile_no']) ? $db->clean($_REQUEST['mobile_no']) : "",
+				'email' => isset($_REQUEST['email']) ? $db->clean($_REQUEST['email']) : "",
+				'gst' => isset($_REQUEST['gst']) ? $db->clean($_REQUEST['gst']) : "",
+				'country' => isset($_REQUEST['country']) ? $db->clean($_REQUEST['country']) : "",
+				'state' => isset($_REQUEST['state']) ? $db->clean($_REQUEST['state']) : "",
+				'city' => isset($_REQUEST['city']) ? $db->clean($_REQUEST['city']) : "",
+				'pincode' => isset($_REQUEST['pincode']) ? $db->clean($_REQUEST['pincode']) : "",
+			);
+			$ack = $objCP->UpdateChannelPartnerCustomer($detail);
+			$db->printJSON($ack);
+		} else if ($service == "delete_channel_partner_customer" || $service == 227) {
+			require_once('../include/class.channel_partner_customer.php');
+			$objCP = new ChannelPartnerCustomer();
+			$detail = array('id' => isset($_REQUEST['id']) ? $db->clean($_REQUEST['id']) : "");
+			$ack = $objCP->DeleteChannelPartnerCustomer($detail);
 			$db->printJSON($ack);
 		} else if ($service == "old_get_banner") {
 			$sales_id	= isset($_REQUEST['sales_id']) ? $db->clean($_REQUEST['sales_id']) : "";

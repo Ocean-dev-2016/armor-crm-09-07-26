@@ -26,8 +26,6 @@ $state = "";
 $city = "";
 $pincode = "";
 $channel_partner_id = "";
-$created_at = "";
-$updated_at = "";
 
 $country_r = $db->rp_getData("country", "*", "isDelete=0", "name ASC", 0);
 $channel_partner_r = $db->rp_getData(
@@ -274,22 +272,6 @@ if (isset($_REQUEST['id']) && $_REQUEST['id'] > 0 && $_REQUEST['mode'] == "delet
 											</div>
 										</div>
 									</div>
-									<?php if (isset($_REQUEST['mode']) && $_REQUEST['mode'] == 'edit') { ?>
-									<div class="row">
-										<div class="col-md-6">
-											<div class="form-group">
-												<label>Created At</label>
-												<input type="text" class="form-control" value="<?php echo $created_at; ?>" readonly>
-											</div>
-										</div>
-										<div class="col-md-6">
-											<div class="form-group">
-												<label>Updated At</label>
-												<input type="text" class="form-control" value="<?php echo $updated_at; ?>" readonly>
-											</div>
-										</div>
-									</div>
-									<?php } ?>
 								</div>
 								<div class="form-actions">
 									<button type="submit" name="submit" class="btn green">Submit</button>
