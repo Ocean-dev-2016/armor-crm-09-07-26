@@ -1862,165 +1862,167 @@ class Executive extends Functions
 
 	public function GetDealer($detail)
 	{
-		// echo "<pre>";
-		// print_r($detail);exit();
 		extract($detail);
 		$result = array();
 		$customer_id = array();
 		$sales_area_id = array();
+		$executive_id = array();
 		$searchName = isset($_REQUEST['searchName']) ? $_REQUEST['searchName'] : "";
 		$limit = $this->getLimit();
 		$where = "isDelete=0 AND isActive=1 ";
+		$new_sales_id = "";
+		$get_sales_type = "";
+		// Top roles (MD / Regional Sales Manager etc.) should see all customers like web Manage Customer — type + location filter only
+		$see_all_sales_types = array('sales_manager', 'dispatch_sales_manager');
+		$see_all_customers = false;
 
 		if ($sales_id != "") {
-			// For upper chain
 			$WhereCondition = "isDelete=0 AND isActive=1 ";
 			$check_id = $sales_id;
 			$get_sales_type = $this->db->rp_getValue("sales_executive", "type", "isDelete=0 AND id='" . $check_id . "'", 0);
-			// echo $get_sales_type;exit;
-			/* if ($get_sales_type == "sales_manager") {
-	            $key = "sm_id";
-	            $WhereCondition .= ' AND ' . $key . '=' . $check_id;
-	        } else if ($get_sales_type == "area_sales_manager") {
-	            $key = "asm_id";
-	            $WhereCondition .= ' AND ' . $key . '=' . $check_id;
-	        } else if ($get_sales_type == "sales_officer") {
-	            $key = "so_id";
-	            $WhereCondition .= ' AND ' . $key . '=' . $check_id;
-	        } else if ($get_sales_type == "sales_executive") {
-	            $key = "se_id";
-	            $WhereCondition .= ' AND ' . $key . '=' . $check_id;
-	        } else if ($get_sales_type == "service_executive") {
-	            $key = "id";
-	            $WhereCondition .= ' AND ' . $key . '=' . $check_id;
-	        }*/
+			$see_all_customers = in_array($get_sales_type, $see_all_sales_types, true);
 
-			if ($get_sales_type == "sales_manager") {
-				$key = "sm_id";
-				$WhereCondition .= ' AND ' . $key . '=' . $check_id;
-			} else if ($get_sales_type == "area_sales_manager") {
-				$key = "asm_id";
-				$WhereCondition .= ' AND ' . $key . '=' . $check_id;
-			} else if ($get_sales_type == "sales_officer") {
-				$key = "so_id";
-				$WhereCondition .= ' AND ' . $key . '=' . $check_id;
-			} else if ($get_sales_type == "sales_executive") {
-				$key = "se_id";
-				$WhereCondition .= ' AND ' . $key . '=' . $check_id;
-			} else if ($get_sales_type == "area_manager") {
-				$key = "se_id";
-				$WhereCondition .= ' AND ' . $key . '=' . $check_id;
-			}
-
-			$data = $this->db->rp_getData("sales_executive", "id", $WhereCondition, "", 0);
-
-			$SALEID1 = array();
-			if ($data) {
-				while ($data_d = mysqli_fetch_assoc($data)) {
-					$SALEID1[] = $data_d['id'];
+			if (!$see_all_customers) {
+				if ($get_sales_type == "sales_manager") {
+					$key = "sm_id";
+					$WhereCondition .= ' AND ' . $key . '=' . $check_id;
+				} else if ($get_sales_type == "area_sales_manager") {
+					$key = "asm_id";
+					$WhereCondition .= ' AND ' . $key . '=' . $check_id;
+				} else if ($get_sales_type == "sales_officer") {
+					$key = "so_id";
+					$WhereCondition .= ' AND ' . $key . '=' . $check_id;
+				} else if ($get_sales_type == "sales_executive") {
+					$key = "se_id";
+					$WhereCondition .= ' AND ' . $key . '=' . $check_id;
+				} else if ($get_sales_type == "area_manager") {
+					$key = "se_id";
+					$WhereCondition .= ' AND ' . $key . '=' . $check_id;
 				}
-			}
 
-			$SALEID1 = implode(",", $SALEID1);
-			if ($SALEID1) {
-				$new_sales_id = $SALEID1 . ',' . $sales_id;
+				$data = $this->db->rp_getData("sales_executive", "id", $WhereCondition, "", 0);
+
+				$SALEID1 = array();
+				if ($data) {
+					while ($data_d = mysqli_fetch_assoc($data)) {
+						$SALEID1[] = $data_d['id'];
+					}
+				}
+
+				$SALEID1 = implode(",", $SALEID1);
+				if ($SALEID1) {
+					$new_sales_id = $SALEID1 . ',' . $sales_id;
+				} else {
+					$new_sales_id = $sales_id;
+				}
 			} else {
 				$new_sales_id = $sales_id;
 			}
+		}
 
-			// $where .= " AND seid IN (".$sales_id.")";
-		}
-		// echo $new_sales_id;
-
-		if ($area_id != "") {
-			$where1 = "sales_executive_id=" . $sales_id . " AND class_id='" . $class_id . "'  AND isDelete=0 AND isActive=1 AND city_id='" . $city_id . "' AND area_id='" . $area_id . "'";
-		} else if ($city_id != "") {
-			$where1 = "sales_executive_id=" . $sales_id . " AND city_id='" . $city_id . "' AND class_id='" . $class_id . "'  AND isDelete=0 AND isActive=1";
-		} else if ($class_id != "") {
-			$where1 = "sales_executive_id=" . $sales_id . " AND class_id='" . $class_id . "'  AND isDelete=0 AND isActive=1";
-		}
-		/*else{
-	        $where1 = "sales_executive_id=" . $sales_id . " AND isDelete=0 AND isActive=1";
-	    }*/
-		if ($area_id != "" || $class_id != "") {
-			$sales_area_r = $this->db->rp_getData("sales_executive_map_area", "area_id", $where1, "", 0);
-			while ($sales_area_d = mysqli_fetch_assoc($sales_area_r)) {
-				$sales_area_id[] = $sales_area_d['area_id'];
-			}
-		}
-		// print_r($sales_area_id);exit;
 		if ($detail['superstokist_id'] != "") {
 			$where .= " AND super_stockist_id= " . $detail['superstokist_id'];
 		}
 
-		//search 
 		if ($searchName != "") {
-			$where .= "AND (company_name like '%" . $searchName . "%' OR cname like '%" . $searchName . "%' OR phone  LIKE '%" . $searchName . "%' OR zip LIKE '%" . $searchName . "%' OR client_code LIKE '%" . $searchName . "%')";
+			$where .= " AND (company_name like '%" . $searchName . "%' OR cname like '%" . $searchName . "%' OR phone  LIKE '%" . $searchName . "%' OR zip LIKE '%" . $searchName . "%' OR client_code LIKE '%" . $searchName . "%')";
 		}
 		if ($type != "") {
-			$where .= " AND type_of_executive=" . $type;
+			$where .= " AND type_of_executive='" . $this->db->clean($type) . "'";
 		}
 		if ($customer_flag != "") {
 			$where .= " AND customer_flag=" . $customer_flag;
 		}
-
-		// print_r($sales_area_id);exit;
-		if (!empty($sales_area_id)) {
-			$area_ids = implode(",", $sales_area_id);
-
-			if ($area_id == "") {
-				$outlet_area_r = $this->db->rp_getData("executive_map_area", "DISTINCT(executive_id)", "area_id IN (" . $area_ids . ") AND isDelete=0", "", 0);
-			} else {
-				$outlet_area_r = $this->db->rp_getData("executive_map_area", "*", "class_id=" . $class_id . " AND area_id = '" . $area_id . "' AND isDelete=0", "", 0);
-			}
-
-			while ($outlet_area_d = mysqli_fetch_assoc($outlet_area_r)) {
-				$executive_id[] = $outlet_area_d['executive_id'];
-			}
-
-			if (!empty($executive_id)) {
-				$executive_id = array_unique($executive_id);
-				$ids = implode(",", $executive_id);
-				/*if ($area_id != "" || $class_id != "") 
-	            {
-	                $where .= " AND id IN (" . $ids . ") ";
-	            }
-	            else
-	            {
-	                $where .= " AND ( id IN (" . $ids . ") AND  seid = '' OR seid = ".$sales_id.") ";
-	            }*/
-
-				/**
-				 * @dinesh
-				 * mane mara class area na customer show tase but je customer ma sales executive selected nay hoy ava customer
-				 * OR else hu je customer ma as sales_id selected hoy and mari lower chain ni sales_id selected hoy e customer show thase
-				 */
-				// echo $is_class_area_filter;exit;
-				if ($is_class_area_filter == '1') {
-					// exit("sad");
-					$where .= " AND id IN (" . $ids . ") ";
-				} else {
-					// exit("sadd");
-					$where .= " AND ((id IN (" . $ids . ") AND seid='' ) OR seid IN (" . $new_sales_id . "))";
-				}
-			} else {
-				if ($sales_id != "") {
-					$where .= " AND seid IN (" . $new_sales_id . ") ";
-				}
-			}
-		} else {
-			if ($sales_id != "") {
-				$where .= " AND seid IN (" . $new_sales_id . ") ";
-			}
-		}
-
 		if ($type_of_company != "") {
 			$where .= " AND type_of_company=" . $type_of_company;
 		}
-		// echo $where;exit;
+
+		if ($see_all_customers) {
+			// MD / top manager: same as web — all customers of selected type, filtered by class/city/area (not by seid chain)
+			$mapWhere = "";
+			if ($area_id != "" && $class_id != "") {
+				$mapWhere = "class_id='" . $class_id . "' AND area_id='" . $area_id . "' AND isDelete=0";
+				if ($city_id != "") {
+					$mapWhere .= " AND city_id='" . $city_id . "'";
+				}
+			} else if ($city_id != "" && $class_id != "") {
+				$mapWhere = "class_id='" . $class_id . "' AND city_id='" . $city_id . "' AND isDelete=0";
+			} else if ($class_id != "") {
+				$mapWhere = "class_id='" . $class_id . "' AND isDelete=0";
+			}
+
+			if ($mapWhere != "") {
+				$outlet_area_r = $this->db->rp_getData("executive_map_area", "DISTINCT(executive_id)", $mapWhere, "", 0);
+				if ($outlet_area_r) {
+					while ($outlet_area_d = mysqli_fetch_assoc($outlet_area_r)) {
+						$executive_id[] = $outlet_area_d['executive_id'];
+					}
+				}
+				if (!empty($executive_id)) {
+					$executive_id = array_unique($executive_id);
+					$ids = implode(",", $executive_id);
+					$where .= " AND id IN (" . $ids . ")";
+				} else if ($class_id != "") {
+					// fallback: customers tagged with this class on executive row
+					$where .= " AND class_id='" . $class_id . "'";
+				}
+			}
+		} else {
+			if ($area_id != "") {
+				$where1 = "sales_executive_id=" . $sales_id . " AND class_id='" . $class_id . "'  AND isDelete=0 AND isActive=1 AND city_id='" . $city_id . "' AND area_id='" . $area_id . "'";
+			} else if ($city_id != "") {
+				$where1 = "sales_executive_id=" . $sales_id . " AND city_id='" . $city_id . "' AND class_id='" . $class_id . "'  AND isDelete=0 AND isActive=1";
+			} else if ($class_id != "") {
+				$where1 = "sales_executive_id=" . $sales_id . " AND class_id='" . $class_id . "'  AND isDelete=0 AND isActive=1";
+			} else {
+				$where1 = "";
+			}
+
+			if (($area_id != "" || $class_id != "") && $where1 != "") {
+				$sales_area_r = $this->db->rp_getData("sales_executive_map_area", "area_id", $where1, "", 0);
+				if ($sales_area_r) {
+					while ($sales_area_d = mysqli_fetch_assoc($sales_area_r)) {
+						$sales_area_id[] = $sales_area_d['area_id'];
+					}
+				}
+			}
+
+			if (!empty($sales_area_id)) {
+				$area_ids = implode(",", $sales_area_id);
+
+				if ($area_id == "") {
+					$outlet_area_r = $this->db->rp_getData("executive_map_area", "DISTINCT(executive_id)", "area_id IN (" . $area_ids . ") AND isDelete=0", "", 0);
+				} else {
+					$outlet_area_r = $this->db->rp_getData("executive_map_area", "*", "class_id=" . $class_id . " AND area_id = '" . $area_id . "' AND isDelete=0", "", 0);
+				}
+
+				if ($outlet_area_r) {
+					while ($outlet_area_d = mysqli_fetch_assoc($outlet_area_r)) {
+						$executive_id[] = $outlet_area_d['executive_id'];
+					}
+				}
+
+				if (!empty($executive_id)) {
+					$executive_id = array_unique($executive_id);
+					$ids = implode(",", $executive_id);
+					if ($is_class_area_filter == '1') {
+						$where .= " AND id IN (" . $ids . ") ";
+					} else {
+						$where .= " AND ((id IN (" . $ids . ") AND seid='' ) OR seid IN (" . $new_sales_id . "))";
+					}
+				} else {
+					if ($sales_id != "" && $new_sales_id != "") {
+						$where .= " AND seid IN (" . $new_sales_id . ") ";
+					}
+				}
+			} else {
+				if ($sales_id != "" && $new_sales_id != "") {
+					$where .= " AND seid IN (" . $new_sales_id . ") ";
+				}
+			}
+		}
 
 		$data = $this->db->rp_getData('executive', "*", $where, "company_name ASC", 0, $limit);
-		//$data  = $this->db->rp_getData('executive', "*", $where, "created_date DESC", 0, $limit);
 		$customer_flag_array = array("0" => "Customer", "1" => "Prospect Customer");
 		if ($data) {
 			while ($r = mysqli_fetch_assoc($data)) {

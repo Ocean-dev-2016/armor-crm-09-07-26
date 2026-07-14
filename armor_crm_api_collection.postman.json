@@ -10910,61 +10910,75 @@
                                     "type": "text"
                                 },
                                 {
-                                    "key": "cid",
-                                    "value": "1",
-                                    "type": "text"
-                                },
-                                {
-                                    "key": "type",
-                                    "value": "dealer",
-                                    "type": "text"
-                                },
-                                {
-                                    "key": "class_id",
-                                    "value": "1",
-                                    "type": "text"
-                                },
-                                {
-                                    "key": "area_id",
-                                    "value": "1",
-                                    "type": "text",
-                                    "description": "CRM Route ID; auto-resolved from main_city if empty"
-                                },
-                                {
-                                    "key": "city_id",
-                                    "value": "1",
-                                    "type": "text"
-                                },
-                                {
                                     "key": "sales_id",
                                     "value": "1",
                                     "type": "text",
-                                    "description": "Sales Person / executive seid"
+                                    "description": "Required. Use login (#2) result.id"
                                 },
                                 {
-                                    "key": "dealer_id",
-                                    "value": "1",
-                                    "type": "text"
+                                    "key": "class_id",
+                                    "value": "12",
+                                    "type": "text",
+                                    "description": "Required for list. Gujarat=12 (from get_class #5)"
                                 },
                                 {
-                                    "key": "superstokist_id",
-                                    "value": "1",
-                                    "type": "text"
+                                    "key": "type",
+                                    "value": "7",
+                                    "type": "text",
+                                    "description": "Customer type id from #111: 4=Govt Office, 7=Customer, 9=MEP, 10=Builder, 11=Brand Approval"
                                 },
                                 {
                                     "key": "customer_flag",
                                     "value": "0",
-                                    "type": "text"
+                                    "type": "text",
+                                    "description": "0=Customer, 1=Prospect"
+                                },
+                                {
+                                    "key": "area_id",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Optional. Leave empty for full class list",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "city_id",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Optional",
+                                    "disabled": true
                                 },
                                 {
                                     "key": "company_id",
-                                    "value": "1",
-                                    "type": "text"
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Optional company_master filter",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "cid",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "ONLY for single customer detail. Do NOT send for list (if set, list mode is skipped)",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "dealer_id",
+                                    "value": "",
+                                    "type": "text",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "superstokist_id",
+                                    "value": "",
+                                    "type": "text",
+                                    "disabled": true
                                 },
                                 {
                                     "key": "is_class_area_filter",
-                                    "value": "sample",
-                                    "type": "text"
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Optional 0/1. Do not send word sample",
+                                    "disabled": true
                                 }
                             ]
                         },
@@ -10978,7 +10992,7 @@
                                 "service_sales_executive.php"
                             ]
                         },
-                        "description": "**API Code:** 78\n\n**Slug:** get_dealer\n\n**Service (s):** 78\n\nGet delare depandes on class_id ,area_id\n\n**Parameters from backend code:** cid, type, class_id, area_id, city_id, sales_id, dealer_id, superstokist_id, customer_flag, company_id, is_class_area_filter"
+                        "description": "**API Code:** 78\n\n**Slug:** get_dealer\n\n**Service (s):** 78\n\nApp Customer list screen API.\n\n**LIST mode (default):** send sales_id + class_id (+ type). Do NOT send cid.\n\n**DETAIL mode:** send cid only (single customer by id).\n\n**type values (#111):** 4=Government Office, 7=Customer, 9=MEP Consultant, 10=Builder, 11=Brand Approval Visit\n\n**Important:** Old collection samples (cid=1, type=dealer, superstokist_id=1, is_class_area_filter=sample) cause wrong path / empty / 500. Use the checked fields only.\n\n**Also upload** fixed `include/class.executive.php` (mysqli_fetch_assoc) if list still returns 500 when data exists."
                     },
                     "response": []
                 },
