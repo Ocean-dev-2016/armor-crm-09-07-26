@@ -2083,7 +2083,7 @@ class Executive extends Functions
 				} else {
 					$first_area = $this->db->rp_getData("executive_map_area", "area_id", "executive_id='" . $r['id'] . "'", "id ASC LIMIT 1", 0);
 					if ($first_area) {
-						$first_area = mysql_fetch_assoc($first_area);
+						$first_area = mysqli_fetch_assoc($first_area);
 						$first_area = $first_area['area_id'];
 					}
 					$r['area_id'] = $first_area;
