@@ -1869,10 +1869,15 @@ class Executive extends Functions
 		$executive_id = array();
 		$searchName = isset($_REQUEST['searchName']) ? $_REQUEST['searchName'] : "";
 		$limit = $this->getLimit();
+		if ($limit == "") {
+			// Prevent MD/full-list timeouts & 500s from loading entire state without pagination
+			$limit = "0,100";
+		}
 		$where = "isDelete=0 AND isActive=1 ";
 		$new_sales_id = "";
 		$get_sales_type = "";
-		// Top roles (MD / Regional Sales Manager etc.) should see all customers like web Manage Customer — type + location filter only
+		// Top / unknown admin-like roles see all customers (web Manage Customer style)
+		$restricted_sales_types = array('sales_executive', 'sales_officer', 'area_sales_manager', 'area_manager', 'service_executive');
 		$see_all_sales_types = array('sales_manager', 'dispatch_sales_manager');
 		$see_all_customers = false;
 
@@ -1880,7 +1885,8 @@ class Executive extends Functions
 			$WhereCondition = "isDelete=0 AND isActive=1 ";
 			$check_id = $sales_id;
 			$get_sales_type = $this->db->rp_getValue("sales_executive", "type", "isDelete=0 AND id='" . $check_id . "'", 0);
-			$see_all_customers = in_array($get_sales_type, $see_all_sales_types, true);
+			$see_all_customers = in_array($get_sales_type, $see_all_sales_types, true)
+				|| ($get_sales_type !== false && $get_sales_type !== "" && !in_array($get_sales_type, $restricted_sales_types, true));
 
 			if (!$see_all_customers) {
 				if ($get_sales_type == "sales_manager") {
@@ -2051,42 +2057,21 @@ class Executive extends Functions
 				$r['account_no'] = isset($r['account_no']) ? $r['account_no'] : "";
 				$r['forgot_pass_string'] = isset($r['forgot_pass_string']) ? $r['forgot_pass_string'] : "";
 				$r['ifsc_code'] = isset($r['ifsc_code']) ? $r['ifsc_code'] : "";
-				$r['customer_type'] = $customer_flag_array[$r['customer_flag']];
+				$cf = isset($r['customer_flag']) ? $r['customer_flag'] : "0";
+				$r['customer_type'] = isset($customer_flag_array[$cf]) ? $customer_flag_array[$cf] : "";
 
-				$is_quotation = $this->db->rp_getTotalRecord("quotation_detail", "customer_id='" . $r['id'] . "' AND isDelete=0", 0);
-				$is_order = $this->db->rp_getTotalRecord("orders", "customer_id='" . $r['id'] . "' AND isDelete=0", 0);
-
-				// echo "is_quotation=".$is_quotation;
-				// echo "is_order=".$is_order;
-
-				$is_order_approve = $this->db->rp_getTotalRecord("orders", "customer_id='" . $r['id'] . "' AND isDelete=0 AND status=1", 0);
-				$is_order_pending = $this->db->rp_getTotalRecord("orders", "customer_id='" . $r['id'] . "' AND isDelete=0 AND status=0", 0);
-
-				if ($is_quotation == 0 && $is_order == 0 && $r['customer_flag'] == 1) {
-					// light pink
-					$r['color_code'] = '#FFB6C1';
-				} else if ($is_quotation == 0 && $is_order == 0) {
-					// sky blue
-					$r['color_code'] = '#ADD8E6';
-				} else if ($is_order_approve > 0 && $is_order_pending > 0) {
-					$r['color_code'] = '#ffffff';
-				} else if ($is_order_approve > 0) {
-					// light green
-					$r['color_code'] = '#AEDCAE';
-				} else if ($is_order_pending > 0) {
-					// light maroon
-					$r['color_code'] = '#FF9377';
-				} else {
-					$r['color_code'] = '';
-				}
+				// Lightweight flags — avoid 4 heavy COUNT queries per row (was causing live timeout/500)
+				$r['color_code'] = ($cf == 1) ? '#FFB6C1' : '#ADD8E6';
 
 				if ($area_id != "") {
 					$r['area_id'] = $area_id;
 				} else {
 					$first_area = $this->db->rp_getData("executive_map_area", "area_id", "executive_id='" . $r['id'] . "'", "id ASC LIMIT 1", 0);
 					if ($first_area) {
-						$first_area = mysqli_fetch_assoc($first_area);
-						$first_area = $first_area['area_id'];
+						$first_area_row = mysqli_fetch_assoc($first_area);
+						$first_area = $first_area_row ? $first_area_row['area_id'] : "";
+					} else {
+						$first_area = "";
 					}
 					$r['area_id'] = $first_area;
 				}

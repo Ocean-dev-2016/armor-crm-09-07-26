@@ -2581,19 +2581,20 @@ class Functions extends Database
 
 	function toUpperCaseAssocArray($arr)
 	{
-	    foreach ($arr as $key => $val) {
-	        if (is_array($val)) {
-	            // Recursive call for nested arrays
-	            $arr[$key] = $this->toUpperCaseAssocArray($val);
-	        } elseif (is_string($val)) {
-	            // Skip URLs
-	            if (strpos($val, 'http://') !== 0 && strpos($val, 'https://') !== 0 && strpos($val, 'ftp://') !== 0) {
-	                // Use mb_strtoupper for UTF-8 safe conversion
-	                $arr[$key] = mb_strtoupper($val, 'UTF-8');
-	            }
-	        }
-	    }
-	    return $arr;
+		if (!is_array($arr)) {
+			return $arr;
+		}
+		$hasMb = function_exists('mb_strtoupper');
+		foreach ($arr as $key => $val) {
+			if (is_array($val)) {
+				$arr[$key] = $this->toUpperCaseAssocArray($val);
+			} elseif (is_string($val)) {
+				if (strpos($val, 'http://') !== 0 && strpos($val, 'https://') !== 0 && strpos($val, 'ftp://') !== 0) {
+					$arr[$key] = $hasMb ? mb_strtoupper($val, 'UTF-8') : strtoupper($val);
+				}
+			}
+		}
+		return $arr;
 	}
 
 }
