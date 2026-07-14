@@ -32,7 +32,7 @@ class ChannelPartnerCustomer extends Functions
 		$result = array();
 		$cp_r = $this->db->rp_getData(
 			"executive",
-			"id, company_name, cname, mobile_no1",
+			"*",
 			"channel_partner_flag=1 AND customer_flag=0 AND isDelete=0",
 			"company_name ASC",
 			0
@@ -46,11 +46,33 @@ class ChannelPartnerCustomer extends Functions
 				if ($cp_d['mobile_no1'] != "") {
 					$label .= " (" . $cp_d['mobile_no1'] . ")";
 				}
+				$type_name = $this->db->rp_getValue("customer_type", "name", "id='" . $cp_d['type_of_executive'] . "' AND isDelete=0", 0);
+				$company_type_name = $this->db->rp_getValue("company_master", "name", "id='" . $cp_d['type_of_company'] . "' AND isDelete=0", 0);
+				$price_list_name = $this->db->rp_getValue("price_list", "pricelist_name", "id='" . $cp_d['price_list_id'] . "' AND isDelete=0", 0);
+				$sales_person_name = $this->db->rp_getValue("sales_executive", "name", "id='" . $cp_d['seid'] . "' AND isDelete=0", 0);
+
 				$result[] = array(
 					"id" => (int) $cp_d['id'],
 					"company_name" => $cp_d['company_name'],
 					"person_name" => $cp_d['cname'],
 					"mobile_no" => $cp_d['mobile_no1'],
+					"phone" => $cp_d['phone'],
+					"email" => $cp_d['email'],
+					"gst" => $cp_d['gst'],
+					"client_code" => $cp_d['client_code'],
+					"state" => $cp_d['state'],
+					"city" => $cp_d['city'],
+					"main_city" => $cp_d['main_city'],
+					"pincode" => $cp_d['zip'],
+					"address" => $cp_d['address'],
+					"type_of_executive" => $cp_d['type_of_executive'],
+					"customer_type_name" => $type_name ? $type_name : "",
+					"type_of_company" => $cp_d['type_of_company'],
+					"type_of_company_name" => $company_type_name ? $company_type_name : "",
+					"price_list_id" => $cp_d['price_list_id'],
+					"price_list_name" => $price_list_name ? $price_list_name : "",
+					"sales_id" => $cp_d['seid'],
+					"sales_person_name" => $sales_person_name ? $sales_person_name : "",
 					"display_name" => $label,
 				);
 			}
@@ -60,6 +82,7 @@ class ChannelPartnerCustomer extends Functions
 			"ack" => 1,
 			"developer_msg" => "Fetched",
 			"ack_msg" => "Channel Partner list fetched successfully.",
+			"total" => count($result),
 			"result" => $result,
 		);
 	}
