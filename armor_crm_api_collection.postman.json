@@ -1714,12 +1714,74 @@
                                 {
                                     "key": "key",
                                     "value": "1226",
-                                    "type": "text"
+                                    "type": "text",
+                                    "description": "API key"
                                 },
                                 {
                                     "key": "s",
                                     "value": "225",
-                                    "type": "text"
+                                    "type": "text",
+                                    "description": "add_channel_partner_customer"
+                                },
+                                {
+                                    "key": "channel_partner_id",
+                                    "value": "12212",
+                                    "type": "text",
+                                    "description": "Required. From API #223 result.id (Select Channel Partner)"
+                                },
+                                {
+                                    "key": "company_name",
+                                    "value": "Test CP Customer Firm",
+                                    "type": "text",
+                                    "description": "Required. Customer Name / Firm Name"
+                                },
+                                {
+                                    "key": "person_name",
+                                    "value": "Ramesh Patel",
+                                    "type": "text",
+                                    "description": "Required. Person Name"
+                                },
+                                {
+                                    "key": "mobile_no",
+                                    "value": "9876501234",
+                                    "type": "text",
+                                    "description": "Required. Mobile No"
+                                },
+                                {
+                                    "key": "email",
+                                    "value": "ramesh@example.com",
+                                    "type": "text",
+                                    "description": "Optional"
+                                },
+                                {
+                                    "key": "gst",
+                                    "value": "24AAAAA0000A1Z5",
+                                    "type": "text",
+                                    "description": "Optional"
+                                },
+                                {
+                                    "key": "country",
+                                    "value": "India",
+                                    "type": "text",
+                                    "description": "Required"
+                                },
+                                {
+                                    "key": "state",
+                                    "value": "Gujarat",
+                                    "type": "text",
+                                    "description": "Required"
+                                },
+                                {
+                                    "key": "city",
+                                    "value": "Rajkot",
+                                    "type": "text",
+                                    "description": "Required"
+                                },
+                                {
+                                    "key": "pincode",
+                                    "value": "360001",
+                                    "type": "text",
+                                    "description": "Optional"
                                 }
                             ]
                         },
@@ -1733,7 +1795,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 225\n\n**Slug:** add_channel_partner_customer\n\n**Service (s):** 225\n\nAdd Channel Partner Customer\n\n**Channel Partner Customer APIs (223-228) — same as web CRM form:**\n| Web Field | API Parameter |\n|-----------|---------------|\n| Select Channel Partner | channel_partner_id |\n| Customer Name | company_name |\n| Person Name | person_name |\n| Mobile No | mobile_no |\n| Email | email |\n| GST | gst |\n| Country | country |\n| State | state |\n| City | city |\n| Pincode | pincode |\n| Edit/Delete id | id |\n"
+                        "description": "**API Code:** 225\n\n**Slug:** add_channel_partner_customer\n\n**Service (s):** 225\n\nAdd Channel Partner Customer (web Channel Partner Customer module).\n\n**Required:** channel_partner_id, company_name, person_name, mobile_no, country, state, city\n\n**Optional:** email, gst, pincode\n\n**Get channel_partner_id from:** API #223\n\n**Flow:** #223 list CP → #225 add customer → #224 verify list"
                     },
                     "response": []
                 },
@@ -2872,6 +2934,12 @@
                                     "key": "s",
                                     "value": "227",
                                     "type": "text"
+                                },
+                                {
+                                    "key": "id",
+                                    "value": "1",
+                                    "type": "text",
+                                    "description": "Required. channel_partner_customer.id"
                                 }
                             ]
                         },
@@ -2885,7 +2953,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 227\n\n**Slug:** delete_channel_partner_customer\n\n**Service (s):** 227\n\nDelete Channel Partner Customer\n\n**Channel Partner Customer APIs (223-228) — same as web CRM form:**\n| Web Field | API Parameter |\n|-----------|---------------|\n| Select Channel Partner | channel_partner_id |\n| Customer Name | company_name |\n| Person Name | person_name |\n| Mobile No | mobile_no |\n| Email | email |\n| GST | gst |\n| Country | country |\n| State | state |\n| City | city |\n| Pincode | pincode |\n| Edit/Delete id | id |\n"
+                        "description": "**API Code:** 227\n\n**Slug:** delete_channel_partner_customer\n\nSoft-delete Channel Partner Customer.\n\n**Required:** id"
                     },
                     "response": []
                 },
@@ -3452,6 +3520,12 @@
                                     "key": "s",
                                     "value": "228",
                                     "type": "text"
+                                },
+                                {
+                                    "key": "id",
+                                    "value": "1",
+                                    "type": "text",
+                                    "description": "Required. channel_partner_customer.id from API #224"
                                 }
                             ]
                         },
@@ -3465,7 +3539,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 228\n\n**Slug:** get_channel_partner_customer_detail\n\n**Service (s):** 228\n\nGet Channel Partner Customer Detail\n\n**Channel Partner Customer APIs (223-228) — same as web CRM form:**\n| Web Field | API Parameter |\n|-----------|---------------|\n| Select Channel Partner | channel_partner_id |\n| Customer Name | company_name |\n| Person Name | person_name |\n| Mobile No | mobile_no |\n| Email | email |\n| GST | gst |\n| Country | country |\n| State | state |\n| City | city |\n| Pincode | pincode |\n| Edit/Delete id | id |\n"
+                        "description": "**API Code:** 228\n\n**Slug:** get_channel_partner_customer_detail\n\nLoad one CP Customer for edit form.\n\n**Required:** id"
                     },
                     "response": []
                 },
@@ -3486,6 +3560,30 @@
                                     "key": "s",
                                     "value": "224",
                                     "type": "text"
+                                },
+                                {
+                                    "key": "channel_partner_id",
+                                    "value": "12212",
+                                    "type": "text",
+                                    "description": "Optional filter. From API #223. Empty = all CP customers"
+                                },
+                                {
+                                    "key": "search_name",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Optional search by company/person/mobile/email"
+                                },
+                                {
+                                    "key": "ul",
+                                    "value": "0",
+                                    "type": "text",
+                                    "description": "Offset start"
+                                },
+                                {
+                                    "key": "ll",
+                                    "value": "50",
+                                    "type": "text",
+                                    "description": "Page size limit"
                                 }
                             ]
                         },
@@ -3499,7 +3597,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 224\n\n**Slug:** get_channel_partner_customer_list\n\n**Service (s):** 224\n\nGet Channel Partner Customer List\n\n**Channel Partner Customer APIs (223-228) — same as web CRM form:**\n| Web Field | API Parameter |\n|-----------|---------------|\n| Select Channel Partner | channel_partner_id |\n| Customer Name | company_name |\n| Person Name | person_name |\n| Mobile No | mobile_no |\n| Email | email |\n| GST | gst |\n| Country | country |\n| State | state |\n| City | city |\n| Pincode | pincode |\n| Edit/Delete id | id |\n"
+                        "description": "**API Code:** 224\n\n**Slug:** get_channel_partner_customer_list\n\nList customers under Channel Partner (table: channel_partner_customer).\n\n**Params:** channel_partner_id (optional), search_name, ul, ll"
                     },
                     "response": []
                 },
@@ -6206,6 +6304,69 @@
                                     "key": "s",
                                     "value": "226",
                                     "type": "text"
+                                },
+                                {
+                                    "key": "id",
+                                    "value": "1",
+                                    "type": "text",
+                                    "description": "Required. channel_partner_customer.id"
+                                },
+                                {
+                                    "key": "channel_partner_id",
+                                    "value": "12212",
+                                    "type": "text",
+                                    "description": "Required. From API #223"
+                                },
+                                {
+                                    "key": "company_name",
+                                    "value": "Updated CP Customer Firm",
+                                    "type": "text",
+                                    "description": "Required"
+                                },
+                                {
+                                    "key": "person_name",
+                                    "value": "Ramesh Patel",
+                                    "type": "text",
+                                    "description": "Required"
+                                },
+                                {
+                                    "key": "mobile_no",
+                                    "value": "9876501234",
+                                    "type": "text",
+                                    "description": "Required"
+                                },
+                                {
+                                    "key": "email",
+                                    "value": "ramesh@example.com",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "gst",
+                                    "value": "24AAAAA0000A1Z5",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "country",
+                                    "value": "India",
+                                    "type": "text",
+                                    "description": "Required"
+                                },
+                                {
+                                    "key": "state",
+                                    "value": "Gujarat",
+                                    "type": "text",
+                                    "description": "Required"
+                                },
+                                {
+                                    "key": "city",
+                                    "value": "Rajkot",
+                                    "type": "text",
+                                    "description": "Required"
+                                },
+                                {
+                                    "key": "pincode",
+                                    "value": "360001",
+                                    "type": "text"
                                 }
                             ]
                         },
@@ -6219,7 +6380,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 226\n\n**Slug:** update_channel_partner_customer\n\n**Service (s):** 226\n\nUpdate Channel Partner Customer\n\n**Channel Partner Customer APIs (223-228) — same as web CRM form:**\n| Web Field | API Parameter |\n|-----------|---------------|\n| Select Channel Partner | channel_partner_id |\n| Customer Name | company_name |\n| Person Name | person_name |\n| Mobile No | mobile_no |\n| Email | email |\n| GST | gst |\n| Country | country |\n| State | state |\n| City | city |\n| Pincode | pincode |\n| Edit/Delete id | id |\n"
+                        "description": "**API Code:** 226\n\n**Slug:** update_channel_partner_customer\n\nUpdate Channel Partner Customer.\n\n**Required:** id, channel_partner_id, company_name, person_name, mobile_no, country, state, city"
                     },
                     "response": []
                 },
