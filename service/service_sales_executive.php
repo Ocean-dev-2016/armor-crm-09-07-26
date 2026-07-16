@@ -1452,6 +1452,7 @@ if ($is_valid_api_key) {
 			$p = new Product();
 			$expense_category_id = isset($_REQUEST['expense_category_id']) ? $db->clean($_REQUEST['expense_category_id']) : "";
 			$expense_subcategory_id = isset($_REQUEST['expense_subcategory_id']) ? $db->clean($_REQUEST['expense_subcategory_id']) : "";
+			$expense_claim_type = isset($_REQUEST['expense_claim_type']) ? $db->clean($_REQUEST['expense_claim_type']) : "";
 			if ($sales_executive_id	= (isset($_REQUEST['sales_executive_id']) && $_REQUEST['sales_executive_id'] != "") ? $_REQUEST['sales_executive_id'] : "") {
 				// AND expense_status=1
 				$ctable_where .= "sales_executive_id='" . $sales_executive_id . "' AND isDelete=0 AND isActive=1 AND expense_status!=2 ";
@@ -1474,6 +1475,11 @@ if ($is_valid_api_key) {
 				if ($expense_subcategory_id != "") {
 					$ctable_where .= " AND subcategory_id='" . $expense_subcategory_id . "'";
 					$ctable_where1 .= " AND subcategory_id='" . $expense_subcategory_id . "'";
+				}
+
+				if ($expense_claim_type != "") {
+					$ctable_where .= " AND expense_claim_type='" . $expense_claim_type . "'";
+					$ctable_where1 .= " AND expense_claim_type='" . $expense_claim_type . "'";
 				}
 
 				if (($_REQUEST['ToDate'] == "") && ($_REQUEST['FromDate'] == "")) {
@@ -2345,6 +2351,32 @@ if ($is_valid_api_key) {
 					"ack_msg" => "Location not get",
 					"developer_msg" => "Inquiry ID required!!",
 				);
+				$db->printJSON($ack);
+			}
+		} else if ($service == "add_advance_expense" || $service == 230) {
+			if (isset($_REQUEST['sales_executive_id']) && isset($_REQUEST['category_id']) && isset($_REQUEST['total'])) {
+				$detail['sales_executive_id'] = $db->clean($_REQUEST['sales_executive_id']);
+				$detail['category_id'] = $db->clean($_REQUEST['category_id']);
+				$detail['total'] = $db->clean($_REQUEST['total']);
+				$detail['remark'] = isset($_REQUEST['remark']) ? $db->clean($_REQUEST['remark']) : "";
+				$detail['entry_flag'] = isset($_REQUEST['entry_flag']) ? $db->clean($_REQUEST['entry_flag']) : "5";
+				$detail['expense_date'] = date('Y-m-d H:i:s');
+
+				$reply = $objExpense->InsertAdvanceExpense($detail, $_FILES);
+				if ($reply['ack'] == 1) {
+					$result = $db->rp_getData("expense", "*", "id='" . $reply['inserted_id'] . "'", "", 0);
+					$r = mysqli_fetch_assoc($result);
+					$r['username'] = $db->rp_getValue("sales_executive", "username", "id='" . $r['sales_executive_id'] . "'", 0);
+					$r['category_name'] = $db->rp_getValue("expence_category", "name", "id='" . $r['category_id'] . "'", 0);
+					$r['expense_date'] = date('d-m-Y', strtotime($r['expense_date']));
+					$r['created_date'] = date('d-m-Y H:i:s', strtotime($r['created_date']));
+					$ack = array("ack" => 1, "ack_msg" => "Advance Expense Added Successfully!!", "developer_msg" => "Advance expense inserted", "result" => $r);
+					$db->printJSON($ack);
+				} else {
+					$db->printJSON($reply);
+				}
+			} else {
+				$ack = array("ack" => 0, "ack_msg" => "sales_executive_id, category_id and total are required!!", "developer_msg" => "Required params missing for add_advance_expense");
 				$db->printJSON($ack);
 			}
 		}

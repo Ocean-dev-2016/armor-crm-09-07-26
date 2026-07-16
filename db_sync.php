@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 define('DB_SYNC_KEY', 'armor_cp_sync_2026');
-define('DB_SYNC_VERSION', '2026.07.11.2');
+define('DB_SYNC_VERSION', '2026.07.16.1');
 
 if (!isset($_GET['key']) || $_GET['key'] !== DB_SYNC_KEY) {
 	header('HTTP/1.1 403 Forbidden');
@@ -175,7 +175,7 @@ function db_sync_append_page_urls($conn, $pageId, $newUrls)
 }
 
 db_sync_log('INFO', '--- Armor CRM DB Sync v' . DB_SYNC_VERSION . ' ---');
-db_sync_log('INFO', 'Changes: executive.channel_partner_flag, channel_partner_customer table + APIs 223-228');
+db_sync_log('INFO', 'Changes: executive.channel_partner_flag, channel_partner_customer table + APIs 223-228, Advance Expense APIs 229-230');
 
 function db_sync_register_api_if_missing($conn, $id, $slug, $title, $url)
 {
@@ -332,6 +332,34 @@ $requiredCpApis = array(
 );
 
 /* ------------------------------------------------------------------
+ * STEP 5c — Advance Expense (expense_claim_type + APIs 229-230)
+ * ------------------------------------------------------------------ */
+db_sync_add_column_if_missing(
+	$conn,
+	'expence_category',
+	'expense_claim_type',
+	"tinyint(1) NOT NULL DEFAULT 1 COMMENT '1=Regular, 2=Advance'",
+	array('name', 'image_path')
+);
+db_sync_add_column_if_missing(
+	$conn,
+	'expense',
+	'expense_claim_type',
+	"tinyint(1) NOT NULL DEFAULT 1 COMMENT '1=Regular, 2=Advance'",
+	array('expense_type', 'category_id', 'subcategory_id')
+);
+
+$visitApiBase = 'service_visit.php?key=1226';
+db_sync_register_api_if_missing($conn, 229, 'get_expense_claim_type', 'Get Expense Claim Type', $visitApiBase . '&s=229');
+$seApiBase = 'service_sales_executive.php?key=1226';
+db_sync_register_api_if_missing($conn, 230, 'add_advance_expense', 'Add Advance Expense', $seApiBase . '&s=230&sales_executive_id=&category_id=&total=&remark=');
+
+$requiredAdvanceApis = array(
+	229 => 'get_expense_claim_type',
+	230 => 'add_advance_expense',
+);
+
+/* ------------------------------------------------------------------
  * STEP 6 — Final verification (every run)
  * ------------------------------------------------------------------ */
 $requiredExecutiveColumns = array('channel_partner_flag');
@@ -441,6 +469,37 @@ if (db_sync_table_exists($conn, 'api_table')) {
 			$allReady = false;
 			db_sync_log('FAIL', 'MISSING: api_table id=' . $apiId . ' (' . $apiSlug . ')');
 		}
+	}
+
+	db_sync_log('INFO', '--- API Registration Verification (229-230 Advance Expense) ---');
+	foreach ($requiredAdvanceApis as $apiId => $apiSlug) {
+		$apiId = (int) $apiId;
+		$apiRes = mysqli_query($conn, "SELECT id, api_slug FROM `api_table` WHERE `id`={$apiId} AND `isDelete`=0 LIMIT 1");
+		if ($apiRes && mysqli_num_rows($apiRes) > 0) {
+			$apiRow = mysqli_fetch_assoc($apiRes);
+			if ($apiRow['api_slug'] === $apiSlug) {
+				db_sync_log('CHECK', 'READY: api_table id=' . $apiId . ' (' . $apiSlug . ')');
+			} else {
+				$allReady = false;
+				db_sync_log('FAIL', 'api_table id=' . $apiId . ' exists but slug mismatch (found: ' . $apiRow['api_slug'] . ')');
+			}
+		} else {
+			$allReady = false;
+			db_sync_log('FAIL', 'MISSING: api_table id=' . $apiId . ' (' . $apiSlug . ')');
+		}
+	}
+
+	if (db_sync_column_exists($conn, 'expence_category', 'expense_claim_type')) {
+		db_sync_log('CHECK', 'READY: expence_category.expense_claim_type');
+	} else {
+		$allReady = false;
+		db_sync_log('FAIL', 'MISSING: expence_category.expense_claim_type');
+	}
+	if (db_sync_column_exists($conn, 'expense', 'expense_claim_type')) {
+		db_sync_log('CHECK', 'READY: expense.expense_claim_type');
+	} else {
+		$allReady = false;
+		db_sync_log('FAIL', 'MISSING: expense.expense_claim_type');
 	}
 } else {
 	$allReady = false;

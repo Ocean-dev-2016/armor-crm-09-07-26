@@ -13294,6 +13294,12 @@
                                     "key": "s",
                                     "value": "77",
                                     "type": "text"
+                                },
+                                {
+                                    "key": "expense_claim_type",
+                                    "value": "2",
+                                    "type": "text",
+                                    "description": "1=Regular Expense categories, 2=Advance Expense categories. Leave empty for all."
                                 }
                             ]
                         },
@@ -13307,7 +13313,107 @@
                                 "service_visit.php"
                             ]
                         },
-                        "description": "**API Code:** 77\n\n**Slug:** get_expence_category\n\n**Service (s):** 77\n\nget expence category"
+                        "description": "**API Code:** 77\n\n**Slug:** get_expence_category\n\n**Service (s):** 77\n\nGet expense category list.\n\n**Parameters:** expense_claim_type (optional) — 1=Regular, 2=Advance"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "get_expense_claim_type  (#229)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "229",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_visit.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_visit.php"
+                            ]
+                        },
+                        "description": "**API Code:** 229\n\n**Slug:** get_expense_claim_type\n\n**Service (s):** 229\n\nReturns Select Expense Type modal options: Regular Expense (1) and Advance Expense (2)."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "add_advance_expense  (#230)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "230",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "sales_executive_id",
+                                    "value": "3",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "category_id",
+                                    "value": "1",
+                                    "type": "text",
+                                    "description": "Must be expense_claim_type=2 category from API #77"
+                                },
+                                {
+                                    "key": "total",
+                                    "value": "500",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "remark",
+                                    "value": "Test advance expense",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "entry_flag",
+                                    "value": "5",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "image_path",
+                                    "type": "file",
+                                    "src": [],
+                                    "description": "Optional receipt image"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_sales_executive.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_sales_executive.php"
+                            ]
+                        },
+                        "description": "**API Code:** 230\n\n**Slug:** add_advance_expense\n\n**Service (s):** 230\n\nSubmit Advance Expense (no subcategory).\n\n**Required:** sales_executive_id, category_id (advance type), total\n**Optional:** remark, image_path, entry_flag"
                     },
                     "response": []
                 },

@@ -264,18 +264,39 @@ if ($is_valid_api_key) {
 			}
 		} else if ($service == 'get_expence_category' || $service == 77) {
 			$visit = array();
-			$expence_category = $db->rp_getData("expence_category", "id,name", "isDelete=0 AND isActive=1");
+			$where = "isDelete=0 AND isActive=1";
+			$expense_claim_type = isset($_REQUEST['expense_claim_type']) ? $db->clean($_REQUEST['expense_claim_type']) : "";
+			if ($expense_claim_type !== "") {
+				$where .= " AND expense_claim_type='" . $expense_claim_type . "'";
+			}
+			$selectFields = "id,name,expense_claim_type";
+			$expence_category = $db->rp_getData("expence_category", $selectFields, $where);
 			if ($expence_category) {
 				while ($visit_d = mysqli_fetch_assoc($expence_category)) {
+					if (!isset($visit_d['expense_claim_type'])) {
+						$visit_d['expense_claim_type'] = "1";
+					}
 					$visit[] = $visit_d;
 				}
 			}
 
-			if (!empty($expence_category)) {
+			if (!empty($visit)) {
 				$reply = array("ack" => 1, "developer_msg" => "Expence Category Get successfully!!", "ack_msg" => "Expence Category Get successfully!!", "result" => $visit);
 			} else {
 				$reply = array("ack" => 0, "developer_msg" => "Expence Category Not Get!!", "ack_msg" => "Expence Category Not Get!!");
 			}
+			echo json_encode($reply);
+		} else if ($service == 'get_expense_claim_type' || $service == 229) {
+			$claimTypes = array(
+				array("id" => "1", "name" => "Regular Expense"),
+				array("id" => "2", "name" => "Advance Expense"),
+			);
+			$reply = array(
+				"ack" => 1,
+				"developer_msg" => "Expense claim type list fetched successfully!!",
+				"ack_msg" => "Expense claim type list fetched successfully!!",
+				"result" => $claimTypes,
+			);
 			echo json_encode($reply);
 		} else if ($service == 'get_expence_subcategory' || $service == 108) {
 			$type_array = array("1" => "General", "2" => "Kilometer", "3" => "Food");

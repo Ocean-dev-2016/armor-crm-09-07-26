@@ -778,7 +778,105 @@ class Expense extends Functions
 
 		}
 
-	} 
+	}
+
+	public function InsertAdvanceExpense($detail, $file)
+	{
+		extract($detail);
+
+		if ($sales_executive_id == "" || $category_id == "" || $total == "") {
+			return array("ack" => 0, "developer_msg" => "Required fields missing", "ack_msg" => "sales_executive_id, category_id and total are required.");
+		}
+
+		$categoryWhere = "id='" . $category_id . "' AND isDelete=0 AND isActive=1";
+		$categoryClaimType = $this->db->rp_getValue("expence_category", "expense_claim_type", $categoryWhere, 0);
+		if ($categoryClaimType === false || $categoryClaimType === "") {
+			return array("ack" => 0, "developer_msg" => "Invalid category", "ack_msg" => "Expense category not found.");
+		}
+		if ($categoryClaimType != "2") {
+			return array("ack" => 0, "developer_msg" => "Category is not advance type", "ack_msg" => "Please select a valid Advance Expense category.");
+		}
+
+		$expense_date = isset($expense_date) && $expense_date != "" ? date('Y-m-d', strtotime($expense_date)) : date('Y-m-d');
+		$image_path = "";
+		if (isset($file["image_path"]) && !empty($file["image_path"]["name"])) {
+			$allowedExts = array("jpg", "jpeg", "png", "gif", "JPG", "JPEG", "PNG");
+			if (is_array($file["image_path"]["name"])) {
+				$fileName = $this->db->clean($file["image_path"]["name"][0]);
+				$fileTmp = $file["image_path"]["tmp_name"][0];
+			} else {
+				$fileName = $this->db->clean($file["image_path"]["name"]);
+				$fileTmp = $file["image_path"]["tmp_name"];
+			}
+			if ($fileName != "") {
+				$extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+				if (in_array($extension, $allowedExts)) {
+					$attachment = "../resource/image/";
+					move_uploaded_file($fileTmp, $attachment . $fileName);
+					$Values = array($fileName, $fileName, $fileName, $extension, date("Y-m-d H:i:s"), 0, "expense", "expense");
+					$Columns = array("title", "orignal_title", "url", "ext", "upload_date", "reference_id", "reference_table", "reference_column");
+					$MediaID = $this->db->rp_insert("media", $Values, $Columns, 0);
+					if ($MediaID) {
+						$image_path = $MediaID;
+					}
+				}
+			}
+		}
+
+		$rows = array(
+			"sales_executive_id",
+			"category_id",
+			"subcategory_id",
+			"expense_type",
+			"expense_claim_type",
+			"expense_date",
+			"image_path",
+			"start_kilometer",
+			"end_kilometer",
+			"total_kilometer",
+			"fix_amount",
+			"total",
+			"remark",
+			"isDelete",
+			"isActive",
+			"entry_flag",
+		);
+		$values = array(
+			$sales_executive_id,
+			$category_id,
+			0,
+			1,
+			2,
+			$expense_date,
+			$image_path,
+			0,
+			0,
+			0,
+			0,
+			$total,
+			$remark,
+			0,
+			1,
+			$entry_flag,
+		);
+
+		$inserted_id = $this->db->rp_insert($this->ctable, $values, $rows, 0);
+		if ($inserted_id) {
+			if ($image_path != "") {
+				$this->db->rp_update("media", array("reference_id" => $inserted_id), "id='" . $image_path . "'", 0);
+				$this->db->rp_update($this->ctable, array("image_path" => $image_path), "id='" . $inserted_id . "'", 0);
+			}
+
+			$expence_category_nm = $this->db->rp_getValue("expence_category", "name", "id='" . $category_id . "'", 0);
+			$expense_by_name = $this->db->rp_getValue("sales_executive", "name", "id=" . $sales_executive_id . "");
+			$notification_description = "Your advance " . $expence_category_nm . " for date " . date("d-m-Y", strtotime($expense_date)) . " has been added by " . $expense_by_name;
+			$this->objPushNotification->commonNotification($sales_executive_id, $inserted_id, "expense", "Advance Expense Added", $notification_description, "sales_executive", "expense");
+
+			return array("ack" => 1, "developer_msg" => "Advance Expense Added.", "ack_msg" => "Success! Advance Expense Added Successfully.", "inserted_id" => $inserted_id);
+		}
+
+		return array("ack" => 0, "developer_msg" => "Database error!!", "ack_msg" => "Failed! Advance Expense Insert Failed.");
+	}
 
 }
 
