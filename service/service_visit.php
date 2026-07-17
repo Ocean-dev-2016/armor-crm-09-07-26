@@ -298,6 +298,100 @@ if ($is_valid_api_key) {
 				"result" => $claimTypes,
 			);
 			echo json_encode($reply);
+		} else if ($service == 'get_visit_remark_reason' || $service == 231) {
+			/*
+			 * Visit End — Select Remark / Reason
+			 * action_type guide for Android:
+			 *   none            = select only, no further UI
+			 *   select_reason   = show child reasons list
+			 *   need_approval   = open Types of Approval screen (API #232)
+			 *   open_remark_box = open free-text Remark Box (code F)
+			 *   consultant_form = Fill Detail for Consultant (C1)
+			 *   open_form       = Open Form (E1)
+			 */
+			$remarkReasons = array(
+				array(
+					"code" => "A",
+					"name" => "OLD CUSTOMER VISIT",
+					"display_name" => "(A) OLD CUSTOMER VISIT",
+					"action_type" => "select_reason",
+					"reasons" => array(
+						array("code" => "A1", "name" => "Next Week Order", "action_type" => "none"),
+						array("code" => "A2", "name" => "Next Month Order", "action_type" => "none"),
+					),
+				),
+				array(
+					"code" => "B",
+					"name" => "PAYMENT COLLECTION VISIT",
+					"display_name" => "(B) PAYMENT COLLECTION VISIT",
+					"action_type" => "select_reason",
+					"reasons" => array(
+						array("code" => "B1", "name" => "Payment Collection With Order", "action_type" => "none"),
+					),
+				),
+				array(
+					"code" => "C",
+					"name" => "NEED APPROVAL",
+					"display_name" => "(C) NEED APPROVAL",
+					"action_type" => "need_approval",
+					"reasons" => array(
+						array("code" => "C1", "name" => "Fill Detail for Consultant", "action_type" => "consultant_form"),
+					),
+				),
+				array(
+					"code" => "D",
+					"name" => "NEW CUSTOMER",
+					"display_name" => "(D) NEW CUSTOMER",
+					"action_type" => "select_reason",
+					"reasons" => array(
+						array("code" => "D1", "name" => "Next Week Order", "action_type" => "none"),
+						array("code" => "D2", "name" => "Next Month Order", "action_type" => "none"),
+					),
+				),
+				array(
+					"code" => "E",
+					"name" => "HIGH RATE",
+					"display_name" => "(E) HIGH RATE",
+					"action_type" => "select_reason",
+					"reasons" => array(
+						array("code" => "E1", "name" => "Open Form", "action_type" => "open_form"),
+					),
+				),
+				array(
+					"code" => "F",
+					"name" => "SHORT NOTE",
+					"display_name" => "(F) SHORT NOTE",
+					"action_type" => "open_remark_box",
+					"reasons" => array(),
+				),
+				array(
+					"code" => "G",
+					"name" => "CALL TO ORDER",
+					"display_name" => "(G) CALL TO ORDER",
+					"action_type" => "none",
+					"reasons" => array(),
+				),
+			);
+			$reply = array(
+				"ack" => 1,
+				"developer_msg" => "Visit remark / reason list fetched successfully!!",
+				"ack_msg" => "Visit remark / reason list fetched successfully!!",
+				"result" => $remarkReasons,
+			);
+			echo json_encode($reply);
+		} else if ($service == 'get_visit_approval_type' || $service == 232) {
+			/* Types of Approval — show after Need Approval (C) is selected */
+			$approvalTypes = array(
+				array("id" => "1", "name" => "Private Consultant", "display_name" => "Private Consultant"),
+				array("id" => "2", "name" => "Government Consultant", "display_name" => "Government Consultant"),
+			);
+			$reply = array(
+				"ack" => 1,
+				"developer_msg" => "Visit approval type list fetched successfully!!",
+				"ack_msg" => "Visit approval type list fetched successfully!!",
+				"result" => $approvalTypes,
+			);
+			echo json_encode($reply);
 		} else if ($service == 'get_expence_subcategory' || $service == 108) {
 			$type_array = array("1" => "General", "2" => "Kilometer", "3" => "Food");
 			$expense_subcat = array();
@@ -372,6 +466,9 @@ if ($is_valid_api_key) {
 			$detail['stop_latitude'] 		= isset($_REQUEST['stop_latitude']) ? $db->clean($_REQUEST['stop_latitude']) : "";
 			$detail['stop_longitude'] 		= isset($_REQUEST['stop_longitude']) ? $db->clean($_REQUEST['stop_longitude']) : "";
 			$detail['stop_remark'] 			= isset($_REQUEST['stop_remark']) ? $db->clean($_REQUEST['stop_remark']) : "";
+			$detail['remark_code'] 			= isset($_REQUEST['remark_code']) ? strtoupper($db->clean($_REQUEST['remark_code'])) : "";
+			$detail['reason_code'] 			= isset($_REQUEST['reason_code']) ? strtoupper($db->clean($_REQUEST['reason_code'])) : "";
+			$detail['approval_type'] 		= isset($_REQUEST['approval_type']) ? $db->clean($_REQUEST['approval_type']) : "";
 			$detail['stop_app_address'] 	= isset($_REQUEST['stop_app_address']) ? $db->clean($_REQUEST['stop_app_address']) : "";
 			$detail['stop_date_time'] 		= date("Y-m-d H:i");
 			$detail['customer_id'] 			= isset($_REQUEST['customer_id']) ? $db->clean($_REQUEST['customer_id']) : "";
@@ -392,6 +489,15 @@ if ($is_valid_api_key) {
 
 			if (empty($detail['name']) || empty($detail['mobile_no']) || empty($detail['email_id']) || empty($detail['designation_id'])) {
 				$reply = ['ack' => 0, "ack_msg" => "Customer Person Name, Customer Person Mobile No, Customer Person Email ID, Customer Person Designation are mandatory please fill up first. "];
+				echo json_encode($reply);
+			} else if ($detail['remark_code'] == "") {
+				$reply = ['ack' => 0, "ack_msg" => "Please select Remark / Reason."];
+				echo json_encode($reply);
+			} else if ($detail['remark_code'] == "F" && $detail['stop_remark'] == "") {
+				$reply = ['ack' => 0, "ack_msg" => "Please enter Short Note remark."];
+				echo json_encode($reply);
+			} else if ($detail['remark_code'] == "C" && $detail['approval_type'] == "") {
+				$reply = ['ack' => 0, "ack_msg" => "Please select Type of Approval."];
 				echo json_encode($reply);
 			} else {
 				$reply = $objVisit->UpdateVisit($detail, $_FILES);

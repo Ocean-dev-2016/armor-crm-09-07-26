@@ -185,6 +185,48 @@ class Visit extends Functions
 			$reference_table = "";
 		}
 
+		$remark_code = isset($remark_code) ? strtoupper(trim($remark_code)) : "";
+		$reason_code = isset($reason_code) ? strtoupper(trim($reason_code)) : "";
+		$approval_type = isset($approval_type) ? trim($approval_type) : "";
+
+		$remarkNameMap = array(
+			"A" => "OLD CUSTOMER VISIT",
+			"B" => "PAYMENT COLLECTION VISIT",
+			"C" => "NEED APPROVAL",
+			"D" => "NEW CUSTOMER",
+			"E" => "HIGH RATE",
+			"F" => "SHORT NOTE",
+			"G" => "CALL TO ORDER",
+		);
+		$reasonNameMap = array(
+			"A1" => "Next Week Order",
+			"A2" => "Next Month Order",
+			"B1" => "Payment Collection With Order",
+			"C1" => "Fill Detail for Consultant",
+			"D1" => "Next Week Order",
+			"D2" => "Next Month Order",
+			"E1" => "Open Form",
+		);
+		$approvalNameMap = array(
+			"1" => "Private Consultant",
+			"2" => "Government Consultant",
+		);
+
+		/* Build readable stop_remark for reports when not Short Note (F) */
+		if ($remark_code != "" && $remark_code != "F") {
+			$composed = "(" . $remark_code . ") " . (isset($remarkNameMap[$remark_code]) ? $remarkNameMap[$remark_code] : $remark_code);
+			if ($reason_code != "" && isset($reasonNameMap[$reason_code])) {
+				$composed .= " - " . $reason_code . ": " . $reasonNameMap[$reason_code];
+			} else if ($reason_code != "") {
+				$composed .= " - " . $reason_code;
+			}
+			if ($remark_code == "C" && $approval_type != "") {
+				$approvalLabel = isset($approvalNameMap[$approval_type]) ? $approvalNameMap[$approval_type] : $approval_type;
+				$composed .= " | Approval: " . $approvalLabel;
+			}
+			$stop_remark = $composed;
+		}
+
 		$rows 	= array(
 			"user_id"      => $user_id,
 			"customer_id"  => $customer_id,
@@ -193,6 +235,9 @@ class Visit extends Functions
 			"stop_longitude"    => $stop_longitude,
 			"stop_app_address"  => $stop_app_address,
 			"stop_remark"       => $stop_remark,
+			"remark_code"       => $remark_code,
+			"reason_code"       => $reason_code,
+			"approval_type"     => $approval_type,
 			"stop_date_time"    => $stop_date_time,
 			"visit_type"       => $visit_type,
 			"reference_table"  => $reference_table,

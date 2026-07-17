@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 define('DB_SYNC_KEY', 'armor_cp_sync_2026');
-define('DB_SYNC_VERSION', '2026.07.16.1');
+define('DB_SYNC_VERSION', '2026.07.17.1');
 
 if (!isset($_GET['key']) || $_GET['key'] !== DB_SYNC_KEY) {
 	header('HTTP/1.1 403 Forbidden');
@@ -175,7 +175,7 @@ function db_sync_append_page_urls($conn, $pageId, $newUrls)
 }
 
 db_sync_log('INFO', '--- Armor CRM DB Sync v' . DB_SYNC_VERSION . ' ---');
-db_sync_log('INFO', 'Changes: executive.channel_partner_flag, channel_partner_customer table + APIs 223-228, Advance Expense APIs 229-230');
+db_sync_log('INFO', 'Changes: executive.channel_partner_flag, channel_partner_customer table + APIs 223-228, Advance Expense APIs 229-230, Visit Remark/Reason APIs 231-232');
 
 function db_sync_register_api_if_missing($conn, $id, $slug, $title, $url)
 {
@@ -360,6 +360,39 @@ $requiredAdvanceApis = array(
 );
 
 /* ------------------------------------------------------------------
+ * STEP 5d — Visit End Remark / Reason (visit columns + APIs 231-232)
+ * ------------------------------------------------------------------ */
+db_sync_add_column_if_missing(
+	$conn,
+	'visit',
+	'remark_code',
+	"varchar(10) NOT NULL DEFAULT '' COMMENT 'Visit end remark code A-G'",
+	array('stop_remark')
+);
+db_sync_add_column_if_missing(
+	$conn,
+	'visit',
+	'reason_code',
+	"varchar(10) NOT NULL DEFAULT '' COMMENT 'Visit end reason code e.g. A1,B1,C1'",
+	array('remark_code', 'stop_remark')
+);
+db_sync_add_column_if_missing(
+	$conn,
+	'visit',
+	'approval_type',
+	"varchar(10) NOT NULL DEFAULT '' COMMENT '1=Private Consultant, 2=Government Consultant'",
+	array('reason_code', 'remark_code', 'stop_remark')
+);
+
+db_sync_register_api_if_missing($conn, 231, 'get_visit_remark_reason', 'Get Visit Remark Reason', $visitApiBase . '&s=231');
+db_sync_register_api_if_missing($conn, 232, 'get_visit_approval_type', 'Get Visit Approval Type', $visitApiBase . '&s=232');
+
+$requiredVisitRemarkApis = array(
+	231 => 'get_visit_remark_reason',
+	232 => 'get_visit_approval_type',
+);
+
+/* ------------------------------------------------------------------
  * STEP 6 — Final verification (every run)
  * ------------------------------------------------------------------ */
 $requiredExecutiveColumns = array('channel_partner_flag');
@@ -486,6 +519,33 @@ if (db_sync_table_exists($conn, 'api_table')) {
 		} else {
 			$allReady = false;
 			db_sync_log('FAIL', 'MISSING: api_table id=' . $apiId . ' (' . $apiSlug . ')');
+		}
+	}
+
+	db_sync_log('INFO', '--- API Registration Verification (231-232 Visit Remark/Reason) ---');
+	foreach ($requiredVisitRemarkApis as $apiId => $apiSlug) {
+		$apiId = (int) $apiId;
+		$apiRes = mysqli_query($conn, "SELECT id, api_slug FROM `api_table` WHERE `id`={$apiId} AND `isDelete`=0 LIMIT 1");
+		if ($apiRes && mysqli_num_rows($apiRes) > 0) {
+			$apiRow = mysqli_fetch_assoc($apiRes);
+			if ($apiRow['api_slug'] === $apiSlug) {
+				db_sync_log('CHECK', 'READY: api_table id=' . $apiId . ' (' . $apiSlug . ')');
+			} else {
+				$allReady = false;
+				db_sync_log('FAIL', 'api_table id=' . $apiId . ' exists but slug mismatch (found: ' . $apiRow['api_slug'] . ')');
+			}
+		} else {
+			$allReady = false;
+			db_sync_log('FAIL', 'MISSING: api_table id=' . $apiId . ' (' . $apiSlug . ')');
+		}
+	}
+
+	foreach (array('remark_code', 'reason_code', 'approval_type') as $visitCol) {
+		if (db_sync_column_exists($conn, 'visit', $visitCol)) {
+			db_sync_log('CHECK', 'READY: visit.' . $visitCol);
+		} else {
+			$allReady = false;
+			db_sync_log('FAIL', 'MISSING: visit.' . $visitCol);
 		}
 	}
 
@@ -640,6 +700,8 @@ $environment = isset($config['environment']) ? $config['environment'] : 'unknown
 			<li>Column <code>executive.channel_partner_flag</code></li>
 			<li>Page URLs in <code>page_table</code> id=555</li>
 			<li>APIs in <code>api_table</code> id 223, 224, 225, 226, 227, 228</li>
+			<li>Advance Expense APIs 229-230 + <code>expense_claim_type</code> columns</li>
+			<li>Visit Remark/Reason APIs 231-232 + <code>visit.remark_code</code>, <code>reason_code</code>, <code>approval_type</code></li>
 		</ul>
 		<p><strong>Safe:</strong> Idempotent — run multiple times; existing data is not deleted.</p>
 		<p><strong>Security:</strong> Delete <code>db_sync.php</code> from live after final READY confirmation.</p>

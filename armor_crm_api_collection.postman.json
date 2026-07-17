@@ -13052,7 +13052,7 @@
             ]
         },
         {
-            "name": "service_visit.php (9)",
+            "name": "service_visit.php (Visit + Remark/Reason)",
             "item": [
                 {
                     "name": "Add visit  (#75)",
@@ -13571,8 +13571,27 @@
                                 },
                                 {
                                     "key": "stop_remark",
-                                    "value": "sample",
-                                    "type": "text"
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Required ONLY when remark_code=F (Short Note). Free-text remark box. For other codes leave empty — server builds stop_remark from remark/reason."
+                                },
+                                {
+                                    "key": "remark_code",
+                                    "value": "A",
+                                    "type": "text",
+                                    "description": "Required. A-G from get_visit_remark_reason (#231)"
+                                },
+                                {
+                                    "key": "reason_code",
+                                    "value": "A1",
+                                    "type": "text",
+                                    "description": "Optional/required based on remark. e.g. A1,A2,B1,C1,D1,D2,E1"
+                                },
+                                {
+                                    "key": "approval_type",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Required when remark_code=C. 1=Private Consultant, 2=Government Consultant (API #232)"
                                 },
                                 {
                                     "key": "stop_app_address",
@@ -13667,7 +13686,75 @@
                                 "service_visit.php"
                             ]
                         },
-                        "description": "**API Code:** 122\n\n**Slug:** update_visit\n\n**Service (s):** 122\n\nupdate visit\n\n**Parameters from backend code:** id, user_id, customer_id, stop_latitude, stop_longitude, stop_remark, stop_app_address, inquiry_id, visit_type, visit_stop_flag, product_name, firm_name, client_name, contact_number, name, mobile_no, email_id, designation_id, latitude, longitude, remark"
+                        "description": "**API Code:** 122\n\n**Slug:** update_visit\n\n**Service (s):** 122\n\nStop / update visit (Visit End).\n\n**OLD free-text Visit Remark removed** — use Remark/Reason selection instead:\n- Call **#231 get_visit_remark_reason** for Select Remark/Reason list\n- If code **C** (Need Approval) → call **#232 get_visit_approval_type** and send `approval_type`\n- If code **F** (Short Note) → open Remark Box and send text in `stop_remark`\n\n**Parameters:** id, user_id, customer_id, stop_latitude, stop_longitude, remark_code (required), reason_code, approval_type, stop_remark (F only), stop_app_address, inquiry_id, visit_type, visit_stop_flag, product_name, firm_name, client_name, contact_number, name, mobile_no, email_id, designation_id, latitude, longitude, remark, image"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "get_visit_remark_reason  (#231)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "231",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_visit.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_visit.php"
+                            ]
+                        },
+                        "description": "**API Code:** 231\n\n**Slug:** get_visit_remark_reason\n\n**Service (s):** 231\n\nVisit End — Select Remark / Reason list (codes A–G) with child reasons.\n\n**Android action_type:**\n- `select_reason` → show child reasons\n- `need_approval` → open Types of Approval (API #232) — code C\n- `open_remark_box` → open free-text Remark Box — code F\n- `consultant_form` → Fill Detail for Consultant — C1\n- `open_form` → Open Form — E1\n- `none` → no further UI\n\n**No extra parameters.**"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "get_visit_approval_type  (#232)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "232",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_visit.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_visit.php"
+                            ]
+                        },
+                        "description": "**API Code:** 232\n\n**Slug:** get_visit_approval_type\n\n**Service (s):** 232\n\nTypes of Approval — call when user selects Need Approval (remark_code=C).\n\n**Result:**\n1 = Private Consultant\n2 = Government Consultant\n\nSend selected `id` as `approval_type` in update_visit (#122).\n\n**No extra parameters.**"
                     },
                     "response": []
                 },
