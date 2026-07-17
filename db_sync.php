@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 define('DB_SYNC_KEY', 'armor_cp_sync_2026');
-define('DB_SYNC_VERSION', '2026.07.17.1');
+define('DB_SYNC_VERSION', '2026.07.17.3');
 
 if (!isset($_GET['key']) || $_GET['key'] !== DB_SYNC_KEY) {
 	header('HTTP/1.1 403 Forbidden');
@@ -383,6 +383,13 @@ db_sync_add_column_if_missing(
 	"varchar(10) NOT NULL DEFAULT '' COMMENT '1=Private Consultant, 2=Government Consultant'",
 	array('reason_code', 'remark_code', 'stop_remark')
 );
+db_sync_add_column_if_missing(
+	$conn,
+	'visit',
+	'visit_followup_id',
+	"int(11) NOT NULL DEFAULT 0 COMMENT 'Auto-created followup.id for Visit Stop Short Note'",
+	array('approval_type', 'reason_code', 'remark_code')
+);
 
 db_sync_register_api_if_missing($conn, 231, 'get_visit_remark_reason', 'Get Visit Remark Reason', $visitApiBase . '&s=231');
 db_sync_register_api_if_missing($conn, 232, 'get_visit_approval_type', 'Get Visit Approval Type', $visitApiBase . '&s=232');
@@ -390,6 +397,88 @@ db_sync_register_api_if_missing($conn, 232, 'get_visit_approval_type', 'Get Visi
 $requiredVisitRemarkApis = array(
 	231 => 'get_visit_remark_reason',
 	232 => 'get_visit_approval_type',
+);
+
+/* ------------------------------------------------------------------
+ * STEP 5e — Visit End C1/C2 Consultant Form + E1 High Rate Form tables
+ * ------------------------------------------------------------------ */
+$createConsultantFormSql = "CREATE TABLE IF NOT EXISTS `visit_consultant_form` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`visit_id` int(11) NOT NULL DEFAULT 0,
+	`user_id` int(11) NOT NULL DEFAULT 0,
+	`customer_id` int(11) NOT NULL DEFAULT 0,
+	`inquiry_id` int(11) NOT NULL DEFAULT 0,
+	`reason_code` varchar(10) NOT NULL DEFAULT '' COMMENT 'C1 or C2',
+	`approval_type` varchar(10) NOT NULL DEFAULT '' COMMENT '1=Private, 2=Government',
+	`consultant_type` varchar(20) NOT NULL DEFAULT '' COMMENT 'private / government',
+	`form_title` varchar(100) NOT NULL DEFAULT '',
+	`firm_name` varchar(255) NOT NULL DEFAULT '',
+	`address` text,
+	`city` varchar(100) NOT NULL DEFAULT '',
+	`state` varchar(100) NOT NULL DEFAULT '',
+	`pincode` varchar(20) NOT NULL DEFAULT '',
+	`contact_person` varchar(255) NOT NULL DEFAULT '',
+	`mobile` varchar(30) NOT NULL DEFAULT '',
+	`email` varchar(255) NOT NULL DEFAULT '',
+	`followup_id` int(11) NOT NULL DEFAULT 0,
+	`created_date` datetime DEFAULT NULL,
+	`isActive` tinyint(1) NOT NULL DEFAULT 1,
+	`isDelete` tinyint(1) NOT NULL DEFAULT 0,
+	PRIMARY KEY (`id`),
+	KEY `idx_vcf_visit` (`visit_id`),
+	KEY `idx_vcf_user` (`user_id`),
+	KEY `idx_vcf_delete` (`isDelete`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8";
+db_sync_run_query($conn, $createConsultantFormSql, 'Create table visit_consultant_form (if not exists)');
+
+$createHighRateFormSql = "CREATE TABLE IF NOT EXISTS `visit_high_rate_form` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`visit_id` int(11) NOT NULL DEFAULT 0,
+	`user_id` int(11) NOT NULL DEFAULT 0,
+	`customer_id` int(11) NOT NULL DEFAULT 0,
+	`inquiry_id` int(11) NOT NULL DEFAULT 0,
+	`reason_code` varchar(10) NOT NULL DEFAULT 'E1',
+	`customer_name` varchar(255) NOT NULL DEFAULT '',
+	`followup_id` int(11) NOT NULL DEFAULT 0,
+	`created_date` datetime DEFAULT NULL,
+	`isActive` tinyint(1) NOT NULL DEFAULT 1,
+	`isDelete` tinyint(1) NOT NULL DEFAULT 0,
+	PRIMARY KEY (`id`),
+	KEY `idx_vhrf_visit` (`visit_id`),
+	KEY `idx_vhrf_user` (`user_id`),
+	KEY `idx_vhrf_delete` (`isDelete`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8";
+db_sync_run_query($conn, $createHighRateFormSql, 'Create table visit_high_rate_form (if not exists)');
+
+$createHighRateItemSql = "CREATE TABLE IF NOT EXISTS `visit_high_rate_form_item` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`high_rate_form_id` int(11) NOT NULL DEFAULT 0,
+	`visit_id` int(11) NOT NULL DEFAULT 0,
+	`product_name` varchar(255) NOT NULL DEFAULT '',
+	`given_rate` varchar(50) NOT NULL DEFAULT '',
+	`qty` varchar(50) NOT NULL DEFAULT '',
+	`customer_rate` varchar(50) NOT NULL DEFAULT '',
+	`sort_order` int(11) NOT NULL DEFAULT 0,
+	`isDelete` tinyint(1) NOT NULL DEFAULT 0,
+	PRIMARY KEY (`id`),
+	KEY `idx_vhrfi_form` (`high_rate_form_id`),
+	KEY `idx_vhrfi_visit` (`visit_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8";
+db_sync_run_query($conn, $createHighRateItemSql, 'Create table visit_high_rate_form_item (if not exists)');
+
+db_sync_add_column_if_missing(
+	$conn,
+	'visit',
+	'consultant_form_id',
+	"int(11) NOT NULL DEFAULT 0 COMMENT 'FK visit_consultant_form.id for C1/C2'",
+	array('visit_followup_id', 'approval_type')
+);
+db_sync_add_column_if_missing(
+	$conn,
+	'visit',
+	'high_rate_form_id',
+	"int(11) NOT NULL DEFAULT 0 COMMENT 'FK visit_high_rate_form.id for E1'",
+	array('consultant_form_id', 'visit_followup_id')
 );
 
 /* ------------------------------------------------------------------
@@ -540,12 +629,21 @@ if (db_sync_table_exists($conn, 'api_table')) {
 		}
 	}
 
-	foreach (array('remark_code', 'reason_code', 'approval_type') as $visitCol) {
+	foreach (array('remark_code', 'reason_code', 'approval_type', 'visit_followup_id', 'consultant_form_id', 'high_rate_form_id') as $visitCol) {
 		if (db_sync_column_exists($conn, 'visit', $visitCol)) {
 			db_sync_log('CHECK', 'READY: visit.' . $visitCol);
 		} else {
 			$allReady = false;
 			db_sync_log('FAIL', 'MISSING: visit.' . $visitCol);
+		}
+	}
+
+	foreach (array('visit_consultant_form', 'visit_high_rate_form', 'visit_high_rate_form_item') as $formTable) {
+		if (db_sync_table_exists($conn, $formTable)) {
+			db_sync_log('CHECK', 'READY: table ' . $formTable);
+		} else {
+			$allReady = false;
+			db_sync_log('FAIL', 'MISSING: table ' . $formTable);
 		}
 	}
 
@@ -626,7 +724,7 @@ foreach ($apiRuntimeChecks as $label => $callback) {
 }
 
 if ($allReady) {
-	db_sync_log('INFO', 'RESULT: Database is READY for Channel Partner Customer module.');
+	db_sync_log('INFO', 'RESULT: Database is READY for Armor CRM updates.');
 } else {
 	db_sync_log('FAIL', 'RESULT: Some DB objects are still missing. Re-run this page after fixing errors.');
 }
@@ -701,7 +799,8 @@ $environment = isset($config['environment']) ? $config['environment'] : 'unknown
 			<li>Page URLs in <code>page_table</code> id=555</li>
 			<li>APIs in <code>api_table</code> id 223, 224, 225, 226, 227, 228</li>
 			<li>Advance Expense APIs 229-230 + <code>expense_claim_type</code> columns</li>
-			<li>Visit Remark/Reason APIs 231-232 + <code>visit.remark_code</code>, <code>reason_code</code>, <code>approval_type</code></li>
+			<li>Visit Remark/Reason APIs 231-232 + <code>visit.remark_code</code>, <code>reason_code</code>, <code>approval_type</code>, <code>visit_followup_id</code></li>
+			<li>Visit forms: <code>visit_consultant_form</code> (C1/C2), <code>visit_high_rate_form</code> + <code>visit_high_rate_form_item</code> (E1)</li>
 		</ul>
 		<p><strong>Safe:</strong> Idempotent — run multiple times; existing data is not deleted.</p>
 		<p><strong>Security:</strong> Delete <code>db_sync.php</code> from live after final READY confirmation.</p>

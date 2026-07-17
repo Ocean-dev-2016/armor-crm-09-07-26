@@ -314,6 +314,10 @@ $ctable_r = $db->rp_getData($ctable,"*",$ctable_where,"followup_date DESC limit 
                     {
                         $slug="Whatsapp";
                     }
+                    else if($ctable_d['through']=='5')
+                    {
+                        $slug="Visit";
+                    }
                     echo $slug;
                     ?>
                     </td>             

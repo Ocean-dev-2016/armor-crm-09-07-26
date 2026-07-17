@@ -174,7 +174,7 @@ $ctable_r = $db->rp_getData($ctable, "*", $ctable_where, "id DESC", 0);
 			<th>Visit Start <br /> Address</th>
 			<th>Visit Start <br /> Image</th>
 			<th>Visit Start <br /> Time</th>
-			<th>Visit Stop <br /> Remark</th>
+			<th>Visit Stop <br /> Remark / Reason</th>
 			<th>Visit Stop <br /> Address</th>
 			<th>Visit Stop <br /> Image</th>
 			<th>Visit Stop <br /> Time</th>

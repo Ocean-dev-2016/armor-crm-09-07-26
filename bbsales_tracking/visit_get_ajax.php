@@ -353,7 +353,7 @@ $ctable_r = $db->rp_getData($ctable, "*", $ctable_where, "id DESC limit $page_po
 					<th>Visit Start <br /> Location Map</th>
 					<th>Visit Start <br /> Image</th>
 					<th>Visit Start <br /> Time</th>
-					<th>Visit Stop <br /> Remark</th>
+					<th>Visit Stop <br /> Remark / Reason</th>
 					<th>Visit Stop <br /> Location Map</th>
 					<th>Visit Stop <br /> Image</th>
 					<th>Visit Stop <br /> Time</th>
@@ -596,7 +596,14 @@ $ctable_r = $db->rp_getData($ctable, "*", $ctable_where, "id DESC limit $page_po
 
 
 							if ($ctable_d['visit_stop_flag'] == "3") {
-								$followp = $db->rp_getValue("followup", "id", "visitor_id='" . $ctable_d['customer_id'] . "' AND reference_id='" . $ctable_d['inquiry_id'] . "' AND DATE(created_date)='" . date('Y-m-d', strtotime($ctable_d['stop_date_time'])) . "' AND user_id=" . $ctable_d['user_id'], 0);
+								if (isset($ctable_d['visit_followup_id']) && $ctable_d['visit_followup_id'] != "" && $ctable_d['visit_followup_id'] != "0") {
+									$followp = $ctable_d['visit_followup_id'];
+								} else {
+									$followp = $db->rp_getValue("followup", "id", "visitor_id='" . $ctable_d['customer_id'] . "' AND reference_id='" . $ctable_d['inquiry_id'] . "' AND DATE(created_date)='" . date('Y-m-d', strtotime($ctable_d['stop_date_time'])) . "' AND user_id=" . $ctable_d['user_id'], 0);
+									if ($followp == "" && $ctable_d['customer_id'] != "" && $ctable_d['customer_id'] != "0") {
+										$followp = $db->rp_getValue("followup", "id", "(visitor_id='" . $ctable_d['customer_id'] . "' OR reference_id='" . $ctable_d['customer_id'] . "') AND DATE(created_date)='" . date('Y-m-d', strtotime($ctable_d['stop_date_time'])) . "' AND user_id='" . $ctable_d['user_id'] . "' AND isDelete=0", 0);
+									}
+								}
 							}
 							if ($followp == "" && $ctable_d['visit_stop_flag'] == "3") {
 								$style = "style='background-color: #f1acac;'";

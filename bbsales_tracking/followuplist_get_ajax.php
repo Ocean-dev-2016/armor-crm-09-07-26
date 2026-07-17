@@ -350,6 +350,7 @@ if ($isFillter) {
                         <option value="2" <?= ("2" == $_REQUEST['through']) ? "selected" : ""; ?>>sms</option>
                         <option value="3" <?= ("3" == $_REQUEST['through']) ? "selected" : ""; ?>>email</option>
                         <option value="4" <?= ("4" == $_REQUEST['through']) ? "selected" : ""; ?>>Whatsapp</option>
+                        <option value="5" <?= ("5" == $_REQUEST['through']) ? "selected" : ""; ?>>Visit</option>
                     </select>
                 </th>
                 <th></th>
@@ -559,6 +560,10 @@ if ($isFillter) {
                                     $slug = "sms";
                                 } else if ($ctable_d['through'] == '3') {
                                     $slug = "email";
+                                } else if ($ctable_d['through'] == '4') {
+                                    $slug = "Whatsapp";
+                                } else if ($ctable_d['through'] == '5') {
+                                    $slug = "Visit";
                                 }
 
                                 echo $slug;

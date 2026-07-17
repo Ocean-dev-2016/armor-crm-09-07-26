@@ -304,11 +304,16 @@ if ($is_valid_api_key) {
 			 * action_type guide for Android:
 			 *   none            = select only, no further UI
 			 *   select_reason   = show child reasons list
-			 *   need_approval   = open Types of Approval screen (API #232)
 			 *   open_remark_box = open free-text Remark Box (code F)
-			 *   consultant_form = Fill Detail for Consultant (C1)
-			 *   open_form       = Open Form (E1)
+			 *   consultant_form = open consultant form (C1 Private / C2 Government)
+			 *   open_form       = High Rate Form (E1)
+			 * On Visit End (#122) every selected remark creates a Follow-up.
+			 * C1/C2/E1 also require form submit + backend store.
 			 */
+			$privateForm = $objVisit->getConsultantFormFields("C1");
+			$govForm = $objVisit->getConsultantFormFields("C2");
+			$highRateForm = $objVisit->getHighRateFormFields();
+
 			$remarkReasons = array(
 				array(
 					"code" => "A",
@@ -333,9 +338,26 @@ if ($is_valid_api_key) {
 					"code" => "C",
 					"name" => "NEED APPROVAL",
 					"display_name" => "(C) NEED APPROVAL",
-					"action_type" => "need_approval",
+					"action_type" => "select_reason",
 					"reasons" => array(
-						array("code" => "C1", "name" => "Fill Detail for Consultant", "action_type" => "consultant_form"),
+						array(
+							"code" => "C1",
+							"name" => "Private Consultant",
+							"display_name" => "(C1) Private Consultant",
+							"action_type" => "consultant_form",
+							"consultant_type" => "private",
+							"approval_type" => "1",
+							"form" => $privateForm,
+						),
+						array(
+							"code" => "C2",
+							"name" => "Government Consultant",
+							"display_name" => "(C2) Government Consultant",
+							"action_type" => "consultant_form",
+							"consultant_type" => "government",
+							"approval_type" => "2",
+							"form" => $govForm,
+						),
 					),
 				),
 				array(
@@ -354,7 +376,12 @@ if ($is_valid_api_key) {
 					"display_name" => "(E) HIGH RATE",
 					"action_type" => "select_reason",
 					"reasons" => array(
-						array("code" => "E1", "name" => "Open Form", "action_type" => "open_form"),
+						array(
+							"code" => "E1",
+							"name" => "High Rate Form",
+							"action_type" => "open_form",
+							"form" => $highRateForm,
+						),
 					),
 				),
 				array(
@@ -469,6 +496,13 @@ if ($is_valid_api_key) {
 			$detail['remark_code'] 			= isset($_REQUEST['remark_code']) ? strtoupper($db->clean($_REQUEST['remark_code'])) : "";
 			$detail['reason_code'] 			= isset($_REQUEST['reason_code']) ? strtoupper($db->clean($_REQUEST['reason_code'])) : "";
 			$detail['approval_type'] 		= isset($_REQUEST['approval_type']) ? $db->clean($_REQUEST['approval_type']) : "";
+			if ($detail['remark_code'] == "C" && $detail['approval_type'] == "") {
+				if ($detail['reason_code'] == "C1") {
+					$detail['approval_type'] = "1";
+				} else if ($detail['reason_code'] == "C2") {
+					$detail['approval_type'] = "2";
+				}
+			}
 			$detail['stop_app_address'] 	= isset($_REQUEST['stop_app_address']) ? $db->clean($_REQUEST['stop_app_address']) : "";
 			$detail['stop_date_time'] 		= date("Y-m-d H:i");
 			$detail['customer_id'] 			= isset($_REQUEST['customer_id']) ? $db->clean($_REQUEST['customer_id']) : "";
@@ -484,6 +518,49 @@ if ($is_valid_api_key) {
 			$detail['email_id'] 			= isset($_REQUEST['email_id']) ? $db->clean($_REQUEST['email_id']) : "";
 			$detail['designation_id'] 			= isset($_REQUEST['designation_id']) ? $db->clean($_REQUEST['designation_id']) : "";
 
+			/* C1/C2 Private / Government Consultant Detail form fields */
+			$detail['consultant_firm_name'] = isset($_REQUEST['consultant_firm_name']) ? $db->clean($_REQUEST['consultant_firm_name']) : "";
+			$detail['consultant_address'] = isset($_REQUEST['consultant_address']) ? $db->clean($_REQUEST['consultant_address']) : "";
+			$detail['consultant_city'] = isset($_REQUEST['consultant_city']) ? $db->clean($_REQUEST['consultant_city']) : "";
+			$detail['consultant_state'] = isset($_REQUEST['consultant_state']) ? $db->clean($_REQUEST['consultant_state']) : "";
+			$detail['consultant_pincode'] = isset($_REQUEST['consultant_pincode']) ? $db->clean($_REQUEST['consultant_pincode']) : "";
+			$detail['consultant_contact_person'] = isset($_REQUEST['consultant_contact_person']) ? $db->clean($_REQUEST['consultant_contact_person']) : "";
+			$detail['consultant_mobile'] = isset($_REQUEST['consultant_mobile']) ? $db->clean($_REQUEST['consultant_mobile']) : "";
+			$detail['consultant_email'] = isset($_REQUEST['consultant_email']) ? $db->clean($_REQUEST['consultant_email']) : "";
+			if (isset($_REQUEST['consultant_form']) && $_REQUEST['consultant_form'] != "") {
+				$consultantFormJson = json_decode($_REQUEST['consultant_form'], true);
+				if (is_array($consultantFormJson)) {
+					if ($detail['consultant_firm_name'] == "" && isset($consultantFormJson['firm_name'])) {
+						$detail['consultant_firm_name'] = $db->clean($consultantFormJson['firm_name']);
+					}
+					if ($detail['consultant_address'] == "" && isset($consultantFormJson['address'])) {
+						$detail['consultant_address'] = $db->clean($consultantFormJson['address']);
+					}
+					if ($detail['consultant_city'] == "" && isset($consultantFormJson['city'])) {
+						$detail['consultant_city'] = $db->clean($consultantFormJson['city']);
+					}
+					if ($detail['consultant_state'] == "" && isset($consultantFormJson['state'])) {
+						$detail['consultant_state'] = $db->clean($consultantFormJson['state']);
+					}
+					if ($detail['consultant_pincode'] == "" && isset($consultantFormJson['pincode'])) {
+						$detail['consultant_pincode'] = $db->clean($consultantFormJson['pincode']);
+					}
+					if ($detail['consultant_contact_person'] == "" && isset($consultantFormJson['contact_person'])) {
+						$detail['consultant_contact_person'] = $db->clean($consultantFormJson['contact_person']);
+					}
+					if ($detail['consultant_mobile'] == "" && isset($consultantFormJson['mobile'])) {
+						$detail['consultant_mobile'] = $db->clean($consultantFormJson['mobile']);
+					}
+					if ($detail['consultant_email'] == "" && isset($consultantFormJson['email'])) {
+						$detail['consultant_email'] = $db->clean($consultantFormJson['email']);
+					}
+				}
+			}
+
+			/* E1 High Rate Analysis form fields */
+			$detail['high_rate_customer_name'] = isset($_REQUEST['high_rate_customer_name']) ? $db->clean($_REQUEST['high_rate_customer_name']) : "";
+			$detail['high_rate_items'] = isset($_REQUEST['high_rate_items']) ? $_REQUEST['high_rate_items'] : "";
+
 			/*if(isset($_REQUEST['customer_id']) && $_REQUEST['customer_id']!=null)
 				{*/
 
@@ -496,8 +573,25 @@ if ($is_valid_api_key) {
 			} else if ($detail['remark_code'] == "F" && $detail['stop_remark'] == "") {
 				$reply = ['ack' => 0, "ack_msg" => "Please enter Short Note remark."];
 				echo json_encode($reply);
-			} else if ($detail['remark_code'] == "C" && $detail['approval_type'] == "") {
-				$reply = ['ack' => 0, "ack_msg" => "Please select Type of Approval."];
+			} else if ($detail['remark_code'] == "C" && !in_array($detail['reason_code'], array("C1", "C2"))) {
+				$reply = ['ack' => 0, "ack_msg" => "Please select Private Consultant or Government Consultant."];
+				echo json_encode($reply);
+			} else if ($detail['remark_code'] == "C" && (
+				$detail['consultant_firm_name'] == "" ||
+				$detail['consultant_address'] == "" ||
+				$detail['consultant_city'] == "" ||
+				$detail['consultant_state'] == "" ||
+				$detail['consultant_pincode'] == "" ||
+				$detail['consultant_contact_person'] == "" ||
+				$detail['consultant_mobile'] == ""
+			)) {
+				$reply = ['ack' => 0, "ack_msg" => "Please fill Consultant Detail form (Firm Name, Address, City, State, Pincode, Contact Person, Mo)."];
+				echo json_encode($reply);
+			} else if ($detail['remark_code'] == "E" && $detail['reason_code'] != "E1") {
+				$reply = ['ack' => 0, "ack_msg" => "Please select High Rate Form."];
+				echo json_encode($reply);
+			} else if ($detail['remark_code'] == "E" && $detail['high_rate_customer_name'] == "") {
+				$reply = ['ack' => 0, "ack_msg" => "Please fill High Rate Analysis form (Customer name)."];
 				echo json_encode($reply);
 			} else {
 				$reply = $objVisit->UpdateVisit($detail, $_FILES);

@@ -301,7 +301,7 @@ background-color: #e5e5e5 !important;position: sticky;top: 0; z-index: 1;
 					<th class="fix-th1">Visit Start <br/> Address</th>
 					<th class="fix-th1">Visit Start <br/> Image</th>
 					<th class="fix-th1">Visit Start <br/> Time</th>
-					<th class="fix-th1">Visit Stop <br/> Remark</th>
+					<th class="fix-th1">Visit Stop <br/> Remark / Reason</th>
 					<th class="fix-th1">Visit Stop <br/> Location Map</th>
 					<th class="fix-th1">Visit Stop <br/> Address</th>
 					<th class="fix-th1">Visit Stop <br/> Image</th>
@@ -489,7 +489,14 @@ background-color: #e5e5e5 !important;position: sticky;top: 0; z-index: 1;
 
 
 								if($ctable_d['visit_stop_flag']=="3"){
-									$followp=$db->rp_getValue("followup","id","visitor_id='".$ctable_d['customer_id']."' AND reference_id='".$ctable_d['inquiry_id']."' AND DATE(created_date)='".date('Y-m-d',strtotime($ctable_d['stop_date_time']))."' AND user_id=".$ctable_d['user_id'],0);
+									if(isset($ctable_d['visit_followup_id']) && $ctable_d['visit_followup_id']!="" && $ctable_d['visit_followup_id']!="0"){
+										$followp=$ctable_d['visit_followup_id'];
+									}else{
+										$followp=$db->rp_getValue("followup","id","visitor_id='".$ctable_d['customer_id']."' AND reference_id='".$ctable_d['inquiry_id']."' AND DATE(created_date)='".date('Y-m-d',strtotime($ctable_d['stop_date_time']))."' AND user_id=".$ctable_d['user_id'],0);
+										if($followp=="" && $ctable_d['customer_id']!="" && $ctable_d['customer_id']!="0"){
+											$followp=$db->rp_getValue("followup","id","(visitor_id='".$ctable_d['customer_id']."' OR reference_id='".$ctable_d['customer_id']."') AND DATE(created_date)='".date('Y-m-d',strtotime($ctable_d['stop_date_time']))."' AND user_id='".$ctable_d['user_id']."' AND isDelete=0",0);
+										}
+									}
 								}
 								if($followp=="" && $ctable_d['visit_stop_flag']=="3"){
 										$style = "style='background-color: #f1acac;'";

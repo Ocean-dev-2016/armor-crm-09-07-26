@@ -322,7 +322,14 @@ while ($row = mysqli_fetch_array($ctable1_r)) {
 
 
       if ($row['visit_stop_flag'] == "3") {
-        $followp = $db->rp_getValue("followup", "id", "visitor_id='" . $row['customer_id'] . "' AND reference_id='" . $row['inquiry_id'] . "' AND DATE(created_date)='" . date('Y-m-d', strtotime($row['stop_date_time'])) . "' AND user_id=" . $row['user_id'], 0);
+        if (isset($row['visit_followup_id']) && $row['visit_followup_id'] != "" && $row['visit_followup_id'] != "0") {
+          $followp = $row['visit_followup_id'];
+        } else {
+          $followp = $db->rp_getValue("followup", "id", "visitor_id='" . $row['customer_id'] . "' AND reference_id='" . $row['inquiry_id'] . "' AND DATE(created_date)='" . date('Y-m-d', strtotime($row['stop_date_time'])) . "' AND user_id=" . $row['user_id'], 0);
+          if ($followp == "" && $row['customer_id'] != "" && $row['customer_id'] != "0") {
+            $followp = $db->rp_getValue("followup", "id", "(visitor_id='" . $row['customer_id'] . "' OR reference_id='" . $row['customer_id'] . "') AND DATE(created_date)='" . date('Y-m-d', strtotime($row['stop_date_time'])) . "' AND user_id='" . $row['user_id'] . "' AND isDelete=0", 0);
+          }
+        }
       }
       if ($followp == "" && $row['visit_stop_flag'] == "3") {
         $style = "style='background-color: #f1acac;'";
