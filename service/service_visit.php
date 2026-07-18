@@ -42,7 +42,9 @@ if ($is_valid_api_key) {
 			$detail['flag'] 			= isset($_REQUEST['flag']) ? $db->clean($_REQUEST['flag']) : "";
 			$detail['type_of_company'] 			= isset($_REQUEST['company_id']) ? $db->clean($_REQUEST['company_id']) : "";
 
-			$count = $db->rp_getTotalRecord("visit", "user_id='" . $detail['user_id'] . "' AND DATE(stop_date_time)=0000-00-00 AND DATE(start_date_time)!=0000-00-00 AND isDelete=0", 0);
+			/* Open/pending visit = started but not stopped */
+			$pendingWhere = "user_id='" . $detail['user_id'] . "' AND isDelete=0 AND start_date_time IS NOT NULL AND start_date_time!='0000-00-00 00:00:00' AND (stop_date_time IS NULL OR stop_date_time='0000-00-00 00:00:00' OR stop_date_time='')";
+			$count = $db->rp_getTotalRecord("visit", $pendingWhere, 0);
 
 			if ($count == 0) {
 				if ($detail['flag'] != '1') {
@@ -51,23 +53,50 @@ if ($is_valid_api_key) {
 					$reply = array("ack" => 1);
 				}
 			} else {
-				$reply = array("ack" => 0, "developer_msg" => "Other visit alredy started", "ack_msg" => "Your Other Visit Is Already Started Please Stop That First");
+				$pendingVisit = array();
+				$pending_r = $db->rp_getData("visit", "id,customer_id,inquiry_id,start_date_time,app_address,purpose_id,visit_type", $pendingWhere, "id DESC", 0, "1");
+				if ($pending_r) {
+					$pendingVisit = mysqli_fetch_assoc($pending_r);
+					if ($pendingVisit) {
+						$pendingVisit['is_pending'] = "1";
+					}
+				}
+				$reply = array(
+					"ack" => 0,
+					"developer_msg" => "Other visit already started",
+					"ack_msg" => "Your Other Visit Is Already Started Please Stop That First",
+					"pending_visit_id" => isset($pendingVisit['id']) ? (string) $pendingVisit['id'] : "",
+					"pending_visit" => $pendingVisit,
+				);
 			}
 			echo json_encode($reply);
 		} else if ($service == 'get_visit' || $service == 76) {
 			$system = new System();
 			$limit = $system->getLimit();
 			$visit = array();
+			$Where = "";
 			$user_id = isset($_REQUEST['user_id']) ? $db->clean($_REQUEST['user_id']) : "";
 			$customer_id = isset($_REQUEST['customer_id']) ? $db->clean($_REQUEST['customer_id']) : "";
 			$visit_no = isset($_REQUEST['visit_no']) ? $db->clean($_REQUEST['visit_no']) : "";
 			$type_of_company = isset($_REQUEST['company_id']) ? $db->clean($_REQUEST['company_id']) : "";
 
-			if (isset($_REQUEST['ToDate']) && $_REQUEST['ToDate'] != "" && $_REQUEST['ToDate'] != NULL) {
+			/* Ignore Postman/placeholder sample values so list is not filtered to empty */
+			$invalidPlaceholders = array("sample", "undefined", "null", "NULL", "0");
+			if (in_array($customer_id, $invalidPlaceholders, true)) {
+				$customer_id = "";
+			}
+			if (in_array($visit_no, $invalidPlaceholders, true) || !is_numeric($visit_no)) {
+				$visit_no = "";
+			}
+			if (in_array($type_of_company, $invalidPlaceholders, true)) {
+				$type_of_company = "";
+			}
+
+			if (isset($_REQUEST['ToDate']) && $_REQUEST['ToDate'] != "" && $_REQUEST['ToDate'] != NULL && !in_array($_REQUEST['ToDate'], $invalidPlaceholders, true)) {
 				$Where .= " DATE(created_date) <= '" . date("Y-m-d", strtotime($_REQUEST['ToDate'])) . "' AND";
 			}
 
-			if (isset($_REQUEST['FromDate']) && $_REQUEST['FromDate'] != "" && $_REQUEST['FromDate'] != NULL) {
+			if (isset($_REQUEST['FromDate']) && $_REQUEST['FromDate'] != "" && $_REQUEST['FromDate'] != NULL && !in_array($_REQUEST['FromDate'], $invalidPlaceholders, true)) {
 				$Where .= " DATE(created_date) >= '" . date("Y-m-d", strtotime($_REQUEST['FromDate'])) . "' AND ";
 			}
 
@@ -251,7 +280,7 @@ if ($is_valid_api_key) {
 						$visit[] = $visit_d;
 					}
 				}
-				if (!empty($visit_data)) {
+				if (!empty($visit)) {
 					$visitToUppercase = $db->toUpperCaseAssocArray($visit);
 					$reply = array("ack" => 1, "developer_msg" => "Visit Detail Get successfully!!", "ack_msg" => "Visit Detail Get successfully!!", "result" => $visitToUppercase);
 				} else {

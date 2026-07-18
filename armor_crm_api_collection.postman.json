@@ -13438,32 +13438,38 @@
                                 {
                                     "key": "user_id",
                                     "value": "1",
-                                    "type": "text"
+                                    "type": "text",
+                                    "description": "Required. Sales executive id"
                                 },
                                 {
                                     "key": "customer_id",
-                                    "value": "1",
-                                    "type": "text"
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Optional. Leave empty to list all visits for user_id. Do NOT send sample."
                                 },
                                 {
                                     "key": "visit_no",
-                                    "value": "sample",
-                                    "type": "text"
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Optional. Visit id only (numeric). Leave empty for list. sample/non-numeric is ignored."
                                 },
                                 {
                                     "key": "company_id",
-                                    "value": "1",
-                                    "type": "text"
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Optional type_of_company filter. Leave empty for all."
                                 },
                                 {
                                     "key": "ToDate",
-                                    "value": "2025-12-31",
-                                    "type": "text"
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Optional end date Y-m-d. Leave empty for no date filter."
                                 },
                                 {
                                     "key": "FromDate",
-                                    "value": "2025-01-01",
-                                    "type": "text"
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Optional start date Y-m-d. Leave empty for no date filter."
                                 }
                             ]
                         },
@@ -13477,7 +13483,7 @@
                                 "service_visit.php"
                             ]
                         },
-                        "description": "**API Code:** 76\n\n**Slug:** get_visit\n\n**Service (s):** 76\n\nget visitor\n\n**Parameters from backend code:** user_id, customer_id, visit_no, company_id, ToDate, FromDate"
+                        "description": "**API Code:** 76\n\n**Slug:** get_visit\n\n**Service (s):** 76\n\nGet visit list for sales user.\n\n**Important:**\n- Send only `user_id` to get list (old + new)\n- Leave `customer_id`, `visit_no`, `company_id`, dates empty unless filtering\n- `visit_no` must be numeric visit id — `sample` is ignored\n- Pending/open visits have `is_pending=1` (stop_date_time empty)\n\n**Parameters:** user_id (required), customer_id, visit_no, company_id, ToDate, FromDate, ul, ll"
                     },
                     "response": []
                 },
