@@ -187,8 +187,12 @@ if (isset($_REQUEST['customer_id']) && $_REQUEST['customer_id'] != "" && $_REQUE
 }
 // echo $_REQUEST['type']
 if (isset($_REQUEST['type']) && $_REQUEST['type'] != "" && $_REQUEST['type'] != NULL && $_REQUEST['type'] != undefined) {
-	if ($_REQUEST['type'] != 100) {
-		$ctable_where .= " AND customer_type = '" . $_REQUEST['type'] . "' ";
+	if ($_REQUEST['type'] == "channel_partner") {
+		$ctable_where .= " AND channel_partner_order_flag=1 ";
+		$type = $_REQUEST['type'];
+		$disabled = "disabled";
+	} else if ($_REQUEST['type'] != 100) {
+		$ctable_where .= " AND customer_type = '" . $_REQUEST['type'] . "' AND (channel_partner_order_flag=0 OR channel_partner_order_flag IS NULL) ";
 		$type = $_REQUEST['type'];
 		$disabled = "disabled";
 	}
@@ -660,7 +664,7 @@ $orders_status = array(/*"-1"=>"Add to Cart",*/"-2" => "Disapproved", "" => "Wai
 								?>
 							</td>
 							<td><?php echo ++$count; ?></td>
-							<td><span class="text-success"><a href="order_viewer.php?order_id=<?= $ctable_d['id'] ?>"><?php echo stripslashes($ctable_d['order_no']); ?></a></span></td>
+							<td><span class="text-success"><a href="order_viewer.php?order_id=<?= $ctable_d['id'] ?>"><?php echo stripslashes($ctable_d['order_no']); ?></a></span><?php if (!empty($ctable_d['channel_partner_order_flag']) && $ctable_d['channel_partner_order_flag'] == 1) { ?> <span class="label label-info">Channel Partner</span><?php } ?></td>
 							<td><?php echo $get_approved_by_name ?></td>
 							<?php
 							if ($_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 11) {
@@ -735,7 +739,13 @@ $orders_status = array(/*"-1"=>"Add to Cart",*/"-2" => "Disapproved", "" => "Wai
 										}
 										echo stripslashes($slug); ?>
 					</td> -->
-							<td><?php echo $customer_type = $db->rp_getValue("customer_type", "name", "id='" . $ctable_d['customer_type'] . "'"); ?></td>
+							<td><?php
+								if (!empty($ctable_d['channel_partner_order_flag']) && $ctable_d['channel_partner_order_flag'] == 1) {
+									echo "Channel Partner";
+								} else {
+									echo $customer_type = $db->rp_getValue("customer_type", "name", "id='" . $ctable_d['customer_type'] . "'");
+								}
+							?></td>
 							<td align="right"><?php echo stripslashes(CURR . $db->rp_num(round($ctable_d['grand_total']))); ?></td>
 							<?php
 							if ($lr_right['view_flag'] == 1 || $_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0) {

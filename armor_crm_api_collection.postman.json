@@ -13820,7 +13820,111 @@
                                 "service_visit.php"
                             ]
                         },
-                        "description": "**API Code:** 232\n\n**Slug:** get_visit_approval_type\n\n**Service (s):** 232\n\nLegacy compatibility API only. New Android flow does not need this request because API #231 directly returns C1 Private Consultant and C2 Government Consultant.\n\n**No extra parameters.**"
+                        "description": "**API Code:** 232\n\n**Slug:** get_visit_approval_type\n\n**Service (s):** 232\n\nTypes of Approval list:\n- id=1 Private Consultant\n- id=2 Government Consultant\n\nPrefer using C1/C2 from API #231. This API is optional for the Types of Approval screen.\n\n**No extra parameters.**"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "save_visit_consultant_form  (#233)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "233",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "visit_id",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Active visit id"
+                                },
+                                {
+                                    "key": "user_id",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "customer_id",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "approval_type",
+                                    "value": "1",
+                                    "type": "text",
+                                    "description": "1=Private Consultant, 2=Government Consultant"
+                                },
+                                {
+                                    "key": "reason_code",
+                                    "value": "C1",
+                                    "type": "text",
+                                    "description": "C1 or C2 (optional if approval_type sent)"
+                                },
+                                {
+                                    "key": "firm_name",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "address",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "city",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "state",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "pincode",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "contact_person",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "mobile",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Mo — also accepts key: mo"
+                                },
+                                {
+                                    "key": "email",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Mail ID — also accepts key: mail_id"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_visit.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_visit.php"
+                            ]
+                        },
+                        "description": "**API Code:** 233\n\n**Slug:** save_visit_consultant_form\n\n**Service (s):** 233\n\nSave Consultant Detail form (App SAVE AND NEXT).\n\n**App flow:**\n1. Types of Approval → Private / Government (`approval_type` 1 or 2, or `reason_code` C1/C2)\n2. Show Consultant Detail form (App UI)\n3. Call **#233** on SAVE AND NEXT\n4. Later call **#122 update_visit** to end visit (form already saved)\n\n**Required:** visit_id, user_id, approval_type OR reason_code, firm_name, address, city, state, pincode, contact_person, mobile\n\n**Optional:** customer_id, inquiry_id, email / mail_id\n\n**Aliases accepted:** mo→mobile, mail_id→email, consultant_* field names\n\n**Success response:** ack=1, consultant_form_id, reason_code, approval_type, result"
                     },
                     "response": []
                 },

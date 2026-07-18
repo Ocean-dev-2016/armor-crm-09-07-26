@@ -5,6 +5,11 @@ $ctable1 	= "Orders";
 $main_page 	= $ctable;
 $page 		= "manage_".$ctable;
 $page_title = "Order History";
+if (isset($_REQUEST['type']) && $_REQUEST['type'] == "channel_partner") {
+	$page_title = "Channel Partner Order";
+} else if (isset($_REQUEST['type']) && $_REQUEST['type'] == "100") {
+	$page_title = "All Orders";
+}
 $page_hierarchy=array(array("link"=>"","title"=>"Sales & Marketing"),array("link"=>"dealer_orders_manage.php","title"=>$page_title));
 include("connect.php");
 // echo "<pre>";

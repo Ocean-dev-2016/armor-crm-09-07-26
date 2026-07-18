@@ -149,90 +149,17 @@ $ctableAPK        = "application_info";
 						if ($db->checkUserPermission(565, $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'], 'view')) {
 							$check_id = $_SESSION[SITE_SESS . 'REFERANCE_ID'];
 							$get_customer_type = $db->rp_getValue("executive", "type_of_executive", "isDelete=0 AND id='" . $check_id . "'", 0);
-						?>
-							<?php
 							if ($get_customer_type == 1 || $_SESSION[SITE_SESS . 'REFERANCE_TYPE'] != 3) {
-							?>
+						?>
 								<li class="">
 									<a href="dealer_orders_manage.php?type=100" id="mntp_order20"><i class="icon-list"></i>All Orders</a>
-									<!-- <script>
-								document.getElementById("mntp_order11").setAttribute("href", "dealer_orders_manage.php?type=7")
-							</script> -->
-								</li>
-								<!-- <li class="">
-							<a href="dealer_orders_manage.php?type=1" id="mntp_order11"><i class="icon-list"></i>CP Orders</a>
-							<script>
-								document.getElementById("mntp_order11").setAttribute("href", "dealer_orders_manage.php?type=1")
-							</script>
-						</li> -->
-							<?php
-							}
-							?>
-							<?php
-							/*if($get_customer_type!=3 || $_SESSION[SITE_SESS.'REFERANCE_TYPE']!=3)
-						{ */
-							?>
-							<!-- <li class="">
-							<a href="dealer_orders_manage.php?type=2" id="mntp_order12"><i class="icon-list"></i>Dealer Orders</a>
-							<script>
-								document.getElementById("mntp_order12").setAttribute("href", "dealer_orders_manage.php?type=2")
-							</script>
-						</li> -->
-							<?php
-							//	}
-							?>
-							<?php
-							/*if($get_customer_type!=1 || $_SESSION[SITE_SESS.'REFERANCE_TYPE']!=3)
-						{ 
-						?>
-						<li class="">
-							<a href="dealer_orders_manage.php?type=3" id="mntp_order13"><i class="icon-list"></i>Sub Dealer Orders</a>
-							<script>
-								document.getElementById("mntp_order13").setAttribute("href", "dealer_orders_manage.php?type=3")
-							</script>
-						</li>
-						<?php 
-						}*/
-							if ($_SESSION[SITE_SESS . 'REFERANCE_TYPE'] != 3) {
-							?>
-								<li class="">
-									<a href="dealer_orders_manage.php?type=4" id="mntp_order14"><i class="icon-list"></i> Government Office Orders</a>
-									<script>
-										document.getElementById("mntp_order14").setAttribute("href", "dealer_orders_manage.php?type=4")
-									</script>
-								</li>
-								<!-- <li class="">
-							<a href="dealer_orders_manage.php?type=6" id="mntp_order15"><i class="icon-list"></i> Trader Orders</a>
-							<script>
-								document.getElementById("mntp_order15").setAttribute("href", "dealer_orders_manage.php?type=6")
-							</script>
-						</li> -->
-								<li class="">
-									<a href="dealer_orders_manage.php?type=7" id="mntp_order15"><i class="icon-list"></i> Customer Orders</a>
-									<script>
-										document.getElementById("mntp_order15").setAttribute("href", "dealer_orders_manage.php?type=6")
-									</script>
 								</li>
 								<li class="">
-									<a href="dealer_orders_manage.php?type=9" id="mntp_order15"><i class="icon-list"></i> MEP Consultant Orders</a>
-									<script>
-										document.getElementById("mntp_order15").setAttribute("href", "dealer_orders_manage.php?type=6")
-									</script>
-								</li>
-								<li class="">
-									<a href="dealer_orders_manage.php?type=10" id="mntp_order15"><i class="icon-list"></i> Builder Orders</a>
-									<script>
-										document.getElementById("mntp_order15").setAttribute("href", "dealer_orders_manage.php?type=6")
-									</script>
-								</li>
-								<li class="">
-									<a href="dealer_orders_manage.php?type=11" id="mntp_order15"><i class="icon-list"></i> Brand Approval Visit Orders</a>
-									<script>
-										document.getElementById("mntp_order15").setAttribute("href", "dealer_orders_manage.php?type=6")
-									</script>
+									<a href="dealer_orders_manage.php?type=channel_partner" id="mntp_order_cp"><i class="icon-list"></i>Channel Partner Orders</a>
 								</li>
 						<?php
 							}
+							/* Hidden: Government Office / Customer / MEP / Builder / Brand Approval Visit Orders */
 						}
 						?>
 					</ul>

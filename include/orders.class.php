@@ -1177,6 +1177,21 @@ class Order extends Functions
 					$order_no = OUTLETS_ORDER_NO . str_pad($order_no, 2, '0', STR_PAD_LEFT);
 				}
 
+				$channel_partner_order_flag = 0;
+				if ((isset($_REQUEST['c_type']) && $_REQUEST['c_type'] == 'channel_partner')
+					|| (isset($detail['channel_partner_order_flag']) && $detail['channel_partner_order_flag'] == 1)
+					|| (isset($customer_r['channel_partner_flag']) && $customer_r['channel_partner_flag'] == 1)
+				) {
+					$channel_partner_order_flag = 1;
+				}
+
+				/* Only include flag column when it exists (avoids insert fail before db_sync) */
+				$has_cp_order_flag = false;
+				$cp_col_check = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `orders` LIKE 'channel_partner_order_flag'");
+				if ($cp_col_check && mysqli_num_rows($cp_col_check) > 0) {
+					$has_cp_order_flag = true;
+				}
+
 				$created_date	= date('Y-m-d H:i:s');
 				$order_date	= isset($detail['order_date']) ? $detail['order_date'] : date("Y-m-d");
 				$rows 	= array(
@@ -1267,6 +1282,11 @@ class Order extends Functions
 					($detail['booking_pincode']) ? $detail['booking_pincode'] : "",
 					($detail['max_dispatch_date']) ? $detail['max_dispatch_date'] : "",
 				);
+				if ($has_cp_order_flag) {
+					/* Insert after customer_type */
+					array_splice($rows, 9, 0, array("channel_partner_order_flag"));
+					array_splice($values, 9, 0, array($channel_partner_order_flag));
+				}
 
 				/*log entry*/
 				$module_name = "Order";
@@ -1276,6 +1296,9 @@ class Order extends Functions
 
 				$order_id = $this->db->rp_insert("orders", $values, $rows, 0, $log_description, $flag, $module_name, "", $customer_r['id']);
 				if ($order_id != 0) {
+					if ($has_cp_order_flag && $channel_partner_order_flag == 1) {
+						$this->db->rp_update("orders", array("channel_partner_order_flag" => 1), "id='" . $order_id . "'", 0);
+					}
 					// covert prospect customer into customer
 					if ($customer_r['customer_flag'] == 1) {
 						$this->db->rp_update("executive", array("customer_flag" => 0, "customer_flag_change_date" => date('Y-m-d H:i:s')), "id='" . $customer_r['id'] . "'", 0);
@@ -1496,11 +1519,12 @@ class Order extends Functions
 							return $reply;
 						}
 					} else {
-						$reply = array("ack" => 0, "developer_msg" => "Request Generated With Error Product Not Found ", "ack_msg" => "Request Generated With Error");
+						$reply = array("ack" => 0, "developer_msg" => "Request Generated With Error Product Not Found ", "ack_msg" => "Please add at least one product.");
 						return $reply;
 					}
 				} else {
-					$reply = array("ack" => 0, "developer_msg" => "Request Not Generated", "ack_msg" => "Request Generated With Error");
+					$db_err = @mysqli_error($this->db->myconn);
+					$reply = array("ack" => 0, "developer_msg" => "Request Not Generated: " . $db_err, "ack_msg" => "Order save failed. Please run db_sync and try again.");
 					return $reply;
 				}
 			}

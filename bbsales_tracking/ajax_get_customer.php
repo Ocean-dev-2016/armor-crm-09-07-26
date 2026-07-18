@@ -10,7 +10,15 @@ if (!isset($customer_id) || empty($customer_id) || $customer_id == "") {
     $customer_id      = $_POST["customer_id"];
 }
 
-$where = "type_of_executive ='" . $customer_type . "' AND isDelete=0";
+$channel_partner_order = (isset($_POST["channel_partner_order"]) && $_POST["channel_partner_order"] == "1") ? 1 : 0;
+$is_channel_partner = ($channel_partner_order == 1);
+
+if ($is_channel_partner) {
+    /* Channel Partner Order: only CP executives of selected customer type */
+    $where = "channel_partner_flag=1 AND customer_flag=0 AND isDelete=0 AND type_of_executive='" . $customer_type . "'";
+} else {
+    $where = "type_of_executive ='" . $customer_type . "' AND isDelete=0";
+}
 
 if ($_POST["companytype"] != "" && isset($_POST["companytype"])) {
     $where .= " AND type_of_company = " . $_POST["companytype"];
@@ -43,9 +51,9 @@ if ($_SESSION[SITE_SESS . 'REFERANCE_TYPE'] == 3) // customer and its chain wise
 }
 
 $customer_r = $db->rp_getData("executive", "*", $where, "company_name ASC", 0);
-if (mysqli_num_rows($customer_r) > 0) {
+if ($customer_r && mysqli_num_rows($customer_r) > 0) {
 ?>
-    <option value="">Select Customer</option>
+    <option value=""><?= $is_channel_partner ? 'Select Channel Partner' : 'Select Customer'; ?></option>
     <?php
     $customer_flag_array = array("0" => "C", "1" => "P");
     while ($customer_d = mysqli_fetch_array($customer_r)) {
@@ -101,7 +109,7 @@ if (mysqli_num_rows($customer_r) > 0) {
     }
 } else {
     ?>
-    <option value="">Select Customer</option>
+    <option value=""><?= $is_channel_partner ? 'Select Channel Partner' : 'Select Customer'; ?></option>
 <?php
 }
 

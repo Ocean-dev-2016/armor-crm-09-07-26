@@ -32,6 +32,9 @@
 	if (isset($_REQUEST['submit'])) {
 		// echo "<pre>";
 		// print_r($_REQUEST);die;
+		$item = array();
+		$detail = array();
+		$detail['order_id'] = isset($_REQUEST['order_id']) ? $db->clean($_REQUEST['order_id']) : "";
 		$quotation_id = $db->rp_getValue('orders', 'quotation_id', "id=".$_REQUEST['id']." AND customer_id=".$_REQUEST['edit_customer_id'], 0);
 		$isActive					= 1;
 		$detail['isDelete']			= 0;
@@ -147,6 +150,7 @@
 			$detail['type_of_company']	= isset($_REQUEST['type_of_company'])?$db->clean($_REQUEST['type_of_company']):"";
 			$detail['terms_condition_id']	= isset($_REQUEST['terms_condition_id'])?$db->clean($_REQUEST['terms_condition_id']):"";
 			$detail['max_dispatch_date']		= date('Y-m-d', strtotime($_REQUEST['max_dispatch_date']));
+			$detail['channel_partner_order_flag'] = (isset($_REQUEST['c_type']) && $_REQUEST['c_type'] == 'channel_partner') ? 1 : ((isset($_REQUEST['channel_partner_order_flag']) && $_REQUEST['channel_partner_order_flag'] == 1) ? 1 : 0);
 
 		 
 
@@ -409,6 +413,8 @@
 					</div>
 					<!-- Employee ID-->
 					<form role="form" action="" method="post" onSubmit="return check_form();">
+						<input type="hidden" name="c_type" id="c_type" value="<?= htmlspecialchars($c_type); ?>">
+						<input type="hidden" name="channel_partner_order_flag" id="channel_partner_order_flag" value="<?= ($c_type == 'channel_partner') ? '1' : '0'; ?>">
 						<div class="row">
 						<div class="col-md-12">
 						<div class="portlet box blue">
@@ -458,20 +464,21 @@
 												</div>
 												<div class="form-group">
 													<?php
-														if ((!empty($c_type) || $_REQUEST['mode'] == "edit") && $c_type != 100){
+														$is_channel_partner_order = ($c_type == 'channel_partner');
+														if ((!empty($c_type) || $_REQUEST['mode'] == "edit") && $c_type != 100 && !$is_channel_partner_order){
 															$disabled_customer = "disabled";
 														} else {
 															$disabled_customer = "";
 														}
 													?>
 													<label>Select Customer Type<code>*</code></label>
-													<select class="form-control" <?php if($c_type == 100){ echo 'onChange="getCustomer()"'; } ?> <?php echo $disabled_customer; ?> id="customer_type" name="customer_type">
+													<select class="form-control" onChange="getCustomer()" <?php echo $disabled_customer; ?> id="customer_type" name="customer_type">
 														<option value="">Select Customer Type</option>
 														<?php
 															$cust_R = $db->rp_getData("customer_type", "name,id", "isDelete=0");
 															if ($cust_R) 
 															{
-																if (!empty($c_type)) {
+																if (!empty($c_type) && $c_type != 'channel_partner' && $c_type != 100) {
 															        $customer_type = $c_type;
 															    }
 																while ($C = mysqli_fetch_assoc($cust_R)) 
@@ -486,7 +493,7 @@
 													<p class="help-block"></p>
 												</div>
 												<div class="form-group">
-												    <label>Select Customer<code>*</code></label>
+												    <label><?= $is_channel_partner_order ? 'Select Channel Partner' : 'Select Customer'; ?><code>*</code></label>
 												    <?php
 														if ($_REQUEST['mode'] == "edit") {
 													?>
@@ -494,8 +501,8 @@
 												    <?php
 														}
 													?>
-												    <select  class="form-control customer_id_s" name="customer_id" placeholder="Select Customer" id="customer_id"   type="text" <?php echo $disabled; ?> onChange="getCategory(this.value)">
-															<option value="">Select Customer</option>
+												    <select  class="form-control customer_id_s" name="customer_id" placeholder="<?= $is_channel_partner_order ? 'Select Channel Partner' : 'Select Customer'; ?>" id="customer_id"   type="text" <?php echo $disabled; ?> onChange="getCategory(this.value)">
+															<option value=""><?= $is_channel_partner_order ? 'Select Channel Partner' : 'Select Customer'; ?></option>
 															<?php
 														if ($_REQUEST['mode'] == "edit"){
 																	$customers = $db->rp_getData("executive", "*", "isDelete=0 AND id='".$customer_id."'");
@@ -1785,15 +1792,27 @@
 			{
 
 			   	var cus_id = '<?= $customer_id ?>';
+				var form_c_type = '<?= $c_type ?>';
 				customer_type = $("#customer_type").val();
 				var type_of_company = $("#type_of_company").val();
+				if (customer_type == "" || customer_type == null) {
+					$('#customer_id').select2('destroy');
+					$('#customer_id').html('<option value=""><?= ($c_type == 'channel_partner') ? 'Select Channel Partner' : 'Select Customer'; ?></option>');
+					$('#customer_id').select2();
+					return;
+				}
 				// alert(type_of_company);
 				// alert(ctype);
 				// $('#customer_id').select2("val", "");
 				$.ajax({
 					type: "post",
 					url: "ajax_get_customer.php",
-					data: "customer_type=" + customer_type + "&companytype=" + type_of_company + "&selected_value=" + id,
+					data: {
+						customer_type: customer_type,
+						companytype: type_of_company,
+						selected_value: id,
+						channel_partner_order: (form_c_type == 'channel_partner') ? 1 : 0
+					},
 					beforeSend: function() {
 					// $(".transCover").fadeIn(800);
 					$("#loading-modal").modal('show');
@@ -2678,7 +2697,7 @@
 							isValid = false;
 						}
 						if ($("#customer_id").val() == "" || $("#customer_id").val().split(" ").join("") == "") {
-							vd = aj.error('customer_id', "Please Select Customer.", "add_error");
+							vd = aj.error('customer_id', "<?= ($c_type == 'channel_partner') ? 'Please Select Channel Partner.' : 'Please Select Customer.'; ?>", "add_error");
 							isValid = false;
 						}
 						if ($("#order_date").val() == "" || $("#order_date").val().split(" ").join("") == "") {
@@ -2774,12 +2793,14 @@
 
 			$(document).ready(function() {
 				var oid = '<?= $_REQUEST['order_id'] ?>';
+				var form_c_type = '<?= $c_type ?>';
 				if(mode=='add' && oid!="")
 				{ 
 					//getCategory('<?= $customer_id ?>');
 					getCustomer('<?= $customer_type ?>','<?= $customer_id ?>');
 					getTransportname('<?= $transport_through ?>','<?= $transport_name ?>');
 				}
+				/* Channel Partner order: load partners only after Customer Type is selected via onChange */
 				recalculateRow();
 				recalculateFinalValues();
 				$("#datatable_1").on('click', '.delete', function() {

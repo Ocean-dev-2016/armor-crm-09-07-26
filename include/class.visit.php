@@ -417,23 +417,35 @@ class Visit extends Functions
 
 			/* C1 Private / C2 Government Consultant Detail form */
 			if (($reason_code == "C1" || $reason_code == "C2") && $remark_code == "C") {
-				$consultantFormId = $this->saveVisitConsultantForm(array(
-					"visit_id" => $id,
-					"user_id" => $user_id,
-					"customer_id" => $customer_id,
-					"inquiry_id" => $inquiry_id,
-					"reason_code" => $reason_code,
-					"approval_type" => $approval_type,
-					"followup_id" => $followupId,
-					"firm_name" => isset($consultant_firm_name) ? $consultant_firm_name : (isset($firm_name) ? $firm_name : ""),
-					"address" => isset($consultant_address) ? $consultant_address : "",
-					"city" => isset($consultant_city) ? $consultant_city : "",
-					"state" => isset($consultant_state) ? $consultant_state : "",
-					"pincode" => isset($consultant_pincode) ? $consultant_pincode : "",
-					"contact_person" => isset($consultant_contact_person) ? $consultant_contact_person : "",
-					"mobile" => isset($consultant_mobile) ? $consultant_mobile : "",
-					"email" => isset($consultant_email) ? $consultant_email : "",
-				));
+				$hasConsultantPayload = (
+					(isset($consultant_firm_name) && trim($consultant_firm_name) != "") ||
+					(isset($consultant_address) && trim($consultant_address) != "") ||
+					(isset($consultant_mobile) && trim($consultant_mobile) != "")
+				);
+				if ($hasConsultantPayload) {
+					$consultantFormId = $this->saveVisitConsultantForm(array(
+						"visit_id" => $id,
+						"user_id" => $user_id,
+						"customer_id" => $customer_id,
+						"inquiry_id" => $inquiry_id,
+						"reason_code" => $reason_code,
+						"approval_type" => $approval_type,
+						"followup_id" => $followupId,
+						"firm_name" => isset($consultant_firm_name) ? $consultant_firm_name : (isset($firm_name) ? $firm_name : ""),
+						"address" => isset($consultant_address) ? $consultant_address : "",
+						"city" => isset($consultant_city) ? $consultant_city : "",
+						"state" => isset($consultant_state) ? $consultant_state : "",
+						"pincode" => isset($consultant_pincode) ? $consultant_pincode : "",
+						"contact_person" => isset($consultant_contact_person) ? $consultant_contact_person : "",
+						"mobile" => isset($consultant_mobile) ? $consultant_mobile : "",
+						"email" => isset($consultant_email) ? $consultant_email : "",
+					));
+				} else {
+					$consultantFormId = $this->db->rp_getValue($this->ctable, "consultant_form_id", "id='" . $id . "'", 0);
+					if ($consultantFormId && $followupId) {
+						$this->db->rp_update("visit_consultant_form", array("followup_id" => $followupId), "id='" . $consultantFormId . "'", 0);
+					}
+				}
 			}
 
 			/* E1 High Rate Analysis form */
@@ -548,76 +560,164 @@ class Visit extends Functions
 			return "";
 		}
 
+		$reasonCode = isset($data['reason_code']) ? strtoupper($data['reason_code']) : "C1";
+		$approvalType = isset($data['approval_type']) ? $data['approval_type'] : (($reasonCode == "C2") ? "2" : "1");
+		if ($approvalType == "2") {
+			$reasonCode = "C2";
+		} else if ($approvalType == "1") {
+			$reasonCode = "C1";
+		}
+		$consultantType = ($reasonCode == "C2") ? "government" : "private";
+		$formTitle = ($reasonCode == "C2") ? "Government Consultant Detail" : "Private Consultant Detail";
+
+		$rowData = array(
+			"visit_id" => $visitId,
+			"user_id" => isset($data['user_id']) ? $data['user_id'] : 0,
+			"customer_id" => isset($data['customer_id']) ? $data['customer_id'] : 0,
+			"inquiry_id" => isset($data['inquiry_id']) ? $data['inquiry_id'] : 0,
+			"reason_code" => $reasonCode,
+			"approval_type" => $approvalType,
+			"consultant_type" => $consultantType,
+			"form_title" => $formTitle,
+			"firm_name" => isset($data['firm_name']) ? $data['firm_name'] : "",
+			"address" => isset($data['address']) ? $data['address'] : "",
+			"city" => isset($data['city']) ? $data['city'] : "",
+			"state" => isset($data['state']) ? $data['state'] : "",
+			"pincode" => isset($data['pincode']) ? $data['pincode'] : "",
+			"contact_person" => isset($data['contact_person']) ? $data['contact_person'] : "",
+			"mobile" => isset($data['mobile']) ? $data['mobile'] : "",
+			"email" => isset($data['email']) ? $data['email'] : "",
+			"followup_id" => isset($data['followup_id']) ? $data['followup_id'] : 0,
+			"isActive" => 1,
+			"isDelete" => 0,
+		);
+
 		$existingId = $this->db->rp_getValue("visit_consultant_form", "id", "visit_id='" . $visitId . "' AND isDelete=0", 0);
 		if ($existingId != "" && $existingId != "0") {
+			$this->db->rp_update("visit_consultant_form", $rowData, "id='" . $existingId . "'", 0);
 			$this->db->rp_update(
 				$this->ctable,
-				array("consultant_form_id" => $existingId),
+				array(
+					"consultant_form_id" => $existingId,
+					"approval_type" => $approvalType,
+					"reason_code" => $reasonCode,
+					"remark_code" => "C",
+				),
 				"id='" . $visitId . "'",
 				0
 			);
 			return $existingId;
 		}
 
-		$reasonCode = isset($data['reason_code']) ? strtoupper($data['reason_code']) : "C1";
-		$approvalType = isset($data['approval_type']) ? $data['approval_type'] : (($reasonCode == "C2") ? "2" : "1");
-		$consultantType = ($reasonCode == "C2") ? "government" : "private";
-		$formTitle = ($reasonCode == "C2") ? "Government Consultant Detail" : "Private Consultant Detail";
-
-		$columns = array(
-			"visit_id",
-			"user_id",
-			"customer_id",
-			"inquiry_id",
-			"reason_code",
-			"approval_type",
-			"consultant_type",
-			"form_title",
-			"firm_name",
-			"address",
-			"city",
-			"state",
-			"pincode",
-			"contact_person",
-			"mobile",
-			"email",
-			"followup_id",
-			"created_date",
-			"isActive",
-			"isDelete",
-		);
-		$values = array(
-			$visitId,
-			isset($data['user_id']) ? $data['user_id'] : 0,
-			isset($data['customer_id']) ? $data['customer_id'] : 0,
-			isset($data['inquiry_id']) ? $data['inquiry_id'] : 0,
-			$reasonCode,
-			$approvalType,
-			$consultantType,
-			$formTitle,
-			isset($data['firm_name']) ? $data['firm_name'] : "",
-			isset($data['address']) ? $data['address'] : "",
-			isset($data['city']) ? $data['city'] : "",
-			isset($data['state']) ? $data['state'] : "",
-			isset($data['pincode']) ? $data['pincode'] : "",
-			isset($data['contact_person']) ? $data['contact_person'] : "",
-			isset($data['mobile']) ? $data['mobile'] : "",
-			isset($data['email']) ? $data['email'] : "",
-			isset($data['followup_id']) ? $data['followup_id'] : 0,
-			date("Y-m-d H:i:s"),
-			1,
-			0,
-		);
+		$rowData["created_date"] = date("Y-m-d H:i:s");
+		$columns = array_keys($rowData);
+		$values = array_values($rowData);
 		$formId = $this->db->rp_insert("visit_consultant_form", $values, $columns, 0);
 		if ($formId) {
 			$this->db->rp_update(
 				$this->ctable,
-				array("consultant_form_id" => $formId),
+				array(
+					"consultant_form_id" => $formId,
+					"approval_type" => $approvalType,
+					"reason_code" => $reasonCode,
+					"remark_code" => "C",
+				),
 				"id='" . $visitId . "'",
 				0
 			);
 		}
 		return $formId ? $formId : "";
+	}
+
+	/**
+	 * Public API helper — Save / Update Consultant Detail form (C1 Private / C2 Government)
+	 * Used by Android SAVE AND NEXT button.
+	 */
+	public function SaveConsultantDetailForm($detail)
+	{
+		$visitId = isset($detail['visit_id']) ? $detail['visit_id'] : "";
+		$userId = isset($detail['user_id']) ? $detail['user_id'] : "";
+		if ($visitId == "" || $visitId == "0") {
+			return array("ack" => 0, "ack_msg" => "Visit id is required.", "developer_msg" => "visit_id missing");
+		}
+		if ($userId == "" || $userId == "0") {
+			return array("ack" => 0, "ack_msg" => "User id is required.", "developer_msg" => "user_id missing");
+		}
+
+		$visitExists = $this->db->rp_getTotalRecord($this->ctable, "id='" . $visitId . "' AND isDelete=0", 0);
+		if ($visitExists == 0) {
+			return array("ack" => 0, "ack_msg" => "Visit not found.", "developer_msg" => "Invalid visit_id");
+		}
+
+		$firmName = isset($detail['firm_name']) ? trim($detail['firm_name']) : "";
+		$address = isset($detail['address']) ? trim($detail['address']) : "";
+		$city = isset($detail['city']) ? trim($detail['city']) : "";
+		$state = isset($detail['state']) ? trim($detail['state']) : "";
+		$pincode = isset($detail['pincode']) ? trim($detail['pincode']) : "";
+		$contactPerson = isset($detail['contact_person']) ? trim($detail['contact_person']) : "";
+		$mobile = isset($detail['mobile']) ? trim($detail['mobile']) : "";
+		$email = isset($detail['email']) ? trim($detail['email']) : "";
+
+		if ($firmName == "" || $address == "" || $city == "" || $state == "" || $pincode == "" || $contactPerson == "" || $mobile == "") {
+			return array(
+				"ack" => 0,
+				"ack_msg" => "Please fill Firm Name, Address, City, State, Pincode, Contact Person, Mo.",
+				"developer_msg" => "Required consultant form fields missing",
+			);
+		}
+
+		$approvalType = isset($detail['approval_type']) ? trim($detail['approval_type']) : "";
+		$reasonCode = isset($detail['reason_code']) ? strtoupper(trim($detail['reason_code'])) : "";
+		if ($reasonCode == "" && $approvalType != "") {
+			$reasonCode = ($approvalType == "2") ? "C2" : "C1";
+		}
+		if ($approvalType == "" && $reasonCode != "") {
+			$approvalType = ($reasonCode == "C2") ? "2" : "1";
+		}
+		if ($reasonCode == "" || !in_array($reasonCode, array("C1", "C2"))) {
+			return array(
+				"ack" => 0,
+				"ack_msg" => "Please select Private Consultant or Government Consultant.",
+				"developer_msg" => "approval_type / reason_code required",
+			);
+		}
+
+		$formId = $this->saveVisitConsultantForm(array(
+			"visit_id" => $visitId,
+			"user_id" => $userId,
+			"customer_id" => isset($detail['customer_id']) ? $detail['customer_id'] : 0,
+			"inquiry_id" => isset($detail['inquiry_id']) ? $detail['inquiry_id'] : 0,
+			"reason_code" => $reasonCode,
+			"approval_type" => $approvalType,
+			"firm_name" => $firmName,
+			"address" => $address,
+			"city" => $city,
+			"state" => $state,
+			"pincode" => $pincode,
+			"contact_person" => $contactPerson,
+			"mobile" => $mobile,
+			"email" => $email,
+		));
+
+		if ($formId == "" || $formId == "0") {
+			return array("ack" => 0, "ack_msg" => "Consultant Detail save failed.", "developer_msg" => "Insert/Update failed");
+		}
+
+		$formRow = array();
+		$formRes = $this->db->rp_getData("visit_consultant_form", "*", "id='" . $formId . "' AND isDelete=0", "", 0);
+		if ($formRes) {
+			$formRow = mysqli_fetch_assoc($formRes);
+		}
+
+		return array(
+			"ack" => 1,
+			"ack_msg" => "Consultant Detail saved successfully.",
+			"developer_msg" => "Consultant Detail saved successfully.",
+			"consultant_form_id" => (string) $formId,
+			"reason_code" => $reasonCode,
+			"approval_type" => (string) $approvalType,
+			"result" => $formRow,
+		);
 	}
 
 	private function saveVisitHighRateForm($data)

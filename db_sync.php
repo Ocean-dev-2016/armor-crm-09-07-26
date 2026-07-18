@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 define('DB_SYNC_KEY', 'armor_cp_sync_2026');
-define('DB_SYNC_VERSION', '2026.07.17.3');
+define('DB_SYNC_VERSION', '2026.07.18.2');
 
 if (!isset($_GET['key']) || $_GET['key'] !== DB_SYNC_KEY) {
 	header('HTTP/1.1 403 Forbidden');
@@ -175,7 +175,7 @@ function db_sync_append_page_urls($conn, $pageId, $newUrls)
 }
 
 db_sync_log('INFO', '--- Armor CRM DB Sync v' . DB_SYNC_VERSION . ' ---');
-db_sync_log('INFO', 'Changes: executive.channel_partner_flag, channel_partner_customer table + APIs 223-228, Advance Expense APIs 229-230, Visit Remark/Reason APIs 231-232');
+db_sync_log('INFO', 'Changes: executive.channel_partner_flag, channel_partner_customer table + APIs 223-228, Advance Expense APIs 229-230, Visit Remark/Reason APIs 231-233');
 
 function db_sync_register_api_if_missing($conn, $id, $slug, $title, $url)
 {
@@ -393,10 +393,12 @@ db_sync_add_column_if_missing(
 
 db_sync_register_api_if_missing($conn, 231, 'get_visit_remark_reason', 'Get Visit Remark Reason', $visitApiBase . '&s=231');
 db_sync_register_api_if_missing($conn, 232, 'get_visit_approval_type', 'Get Visit Approval Type', $visitApiBase . '&s=232');
+db_sync_register_api_if_missing($conn, 233, 'save_visit_consultant_form', 'Save Visit Consultant Detail Form', $visitApiBase . '&s=233');
 
 $requiredVisitRemarkApis = array(
 	231 => 'get_visit_remark_reason',
 	232 => 'get_visit_approval_type',
+	233 => 'save_visit_consultant_form',
 );
 
 /* ------------------------------------------------------------------
@@ -479,6 +481,17 @@ db_sync_add_column_if_missing(
 	'high_rate_form_id',
 	"int(11) NOT NULL DEFAULT 0 COMMENT 'FK visit_high_rate_form.id for E1'",
 	array('consultant_form_id', 'visit_followup_id')
+);
+
+/* ------------------------------------------------------------------
+ * STEP 5f — Channel Partner Order flag on orders
+ * ------------------------------------------------------------------ */
+db_sync_add_column_if_missing(
+	$conn,
+	'orders',
+	'channel_partner_order_flag',
+	"tinyint(1) NOT NULL DEFAULT 0 COMMENT '1=Channel Partner Order, 0=Normal Order'",
+	array('customer_type', 'customer_id', 'customer_flag')
 );
 
 /* ------------------------------------------------------------------
@@ -636,6 +649,13 @@ if (db_sync_table_exists($conn, 'api_table')) {
 			$allReady = false;
 			db_sync_log('FAIL', 'MISSING: visit.' . $visitCol);
 		}
+	}
+
+	if (db_sync_column_exists($conn, 'orders', 'channel_partner_order_flag')) {
+		db_sync_log('CHECK', 'READY: orders.channel_partner_order_flag');
+	} else {
+		$allReady = false;
+		db_sync_log('FAIL', 'MISSING: orders.channel_partner_order_flag');
 	}
 
 	foreach (array('visit_consultant_form', 'visit_high_rate_form', 'visit_high_rate_form_item') as $formTable) {
@@ -799,8 +819,10 @@ $environment = isset($config['environment']) ? $config['environment'] : 'unknown
 			<li>Page URLs in <code>page_table</code> id=555</li>
 			<li>APIs in <code>api_table</code> id 223, 224, 225, 226, 227, 228</li>
 			<li>Advance Expense APIs 229-230 + <code>expense_claim_type</code> columns</li>
-			<li>Visit Remark/Reason APIs 231-232 + <code>visit.remark_code</code>, <code>reason_code</code>, <code>approval_type</code>, <code>visit_followup_id</code></li>
+			<li>Visit Remark/Reason APIs 231-233 + <code>visit.remark_code</code>, <code>reason_code</code>, <code>approval_type</code>, <code>visit_followup_id</code></li>
+			<li>API <code>#233 save_visit_consultant_form</code> — Consultant Detail SAVE AND NEXT</li>
 			<li>Visit forms: <code>visit_consultant_form</code> (C1/C2), <code>visit_high_rate_form</code> + <code>visit_high_rate_form_item</code> (E1)</li>
+			<li>Column <code>orders.channel_partner_order_flag</code> (1=Channel Partner Order)</li>
 		</ul>
 		<p><strong>Safe:</strong> Idempotent — run multiple times; existing data is not deleted.</p>
 		<p><strong>Security:</strong> Delete <code>db_sync.php</code> from live after final READY confirmation.</p>
