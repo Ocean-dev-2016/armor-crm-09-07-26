@@ -309,11 +309,8 @@ if ($is_valid_api_key) {
 			 *   open_form       = High Rate Form (E1)
 			 * On Visit End (#122) every selected remark creates a Follow-up.
 			 * C1/C2/E1 also require form submit + backend store.
+			 * C1/C2/E1 form UI is App-side only (no form schema in this API).
 			 */
-			$privateForm = $objVisit->getConsultantFormFields("C1");
-			$govForm = $objVisit->getConsultantFormFields("C2");
-			$highRateForm = $objVisit->getHighRateFormFields();
-
 			$remarkReasons = array(
 				array(
 					"code" => "A",
@@ -347,7 +344,6 @@ if ($is_valid_api_key) {
 							"action_type" => "consultant_form",
 							"consultant_type" => "private",
 							"approval_type" => "1",
-							"form" => $privateForm,
 						),
 						array(
 							"code" => "C2",
@@ -356,7 +352,6 @@ if ($is_valid_api_key) {
 							"action_type" => "consultant_form",
 							"consultant_type" => "government",
 							"approval_type" => "2",
-							"form" => $govForm,
 						),
 					),
 				),
@@ -380,7 +375,6 @@ if ($is_valid_api_key) {
 							"code" => "E1",
 							"name" => "High Rate Form",
 							"action_type" => "open_form",
-							"form" => $highRateForm,
 						),
 					),
 				),
