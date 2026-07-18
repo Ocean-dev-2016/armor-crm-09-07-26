@@ -93,11 +93,28 @@ if ($is_valid_api_key) {
 			}
 
 			if (isset($_REQUEST['ToDate']) && $_REQUEST['ToDate'] != "" && $_REQUEST['ToDate'] != NULL && !in_array($_REQUEST['ToDate'], $invalidPlaceholders, true)) {
-				$Where .= " DATE(created_date) <= '" . date("Y-m-d", strtotime($_REQUEST['ToDate'])) . "' AND";
+				$toDateVal = date("Y-m-d", strtotime($_REQUEST['ToDate']));
+			} else {
+				$toDateVal = "";
 			}
 
 			if (isset($_REQUEST['FromDate']) && $_REQUEST['FromDate'] != "" && $_REQUEST['FromDate'] != NULL && !in_array($_REQUEST['FromDate'], $invalidPlaceholders, true)) {
-				$Where .= " DATE(created_date) >= '" . date("Y-m-d", strtotime($_REQUEST['FromDate'])) . "' AND ";
+				$fromDateVal = date("Y-m-d", strtotime($_REQUEST['FromDate']));
+			} else {
+				$fromDateVal = "";
+			}
+
+			/* If App sends dates swapped (FromDate > ToDate), auto-correct */
+			if ($fromDateVal != "" && $toDateVal != "" && strtotime($fromDateVal) > strtotime($toDateVal)) {
+				$tmpDate = $fromDateVal;
+				$fromDateVal = $toDateVal;
+				$toDateVal = $tmpDate;
+			}
+			if ($toDateVal != "") {
+				$Where .= " DATE(created_date) <= '" . $toDateVal . "' AND";
+			}
+			if ($fromDateVal != "") {
+				$Where .= " DATE(created_date) >= '" . $fromDateVal . "' AND ";
 			}
 
 			if ($customer_id != "") {
@@ -114,11 +131,12 @@ if ($is_valid_api_key) {
 			}
 
 			if ($user_id) {
-				$visit_data = $db->rp_getData("visit", "*", $Where . "isDelete=0 AND isActive=1", "id DESC", 0, $limit);
+				/* Show all non-deleted visits (do not hide inactive rows from App list) */
+				$visit_data = $db->rp_getData("visit", "*", $Where . "isDelete=0", "id DESC", 0, $limit);
 				if ($visit_data) {
 					$ENTRY_FLAG = array("1" => "Admin Panel", "2" => "customer", "3" => "Web Sales", 4 => "Web Customer", 5 => "Sales App", 6 => "Customer App");
 					while ($visit_d = mysqli_fetch_assoc($visit_data)) {
-						$visit_d['stop_remark'] = htmlentities($visit_d['stop_remark']);
+						$visit_d['stop_remark'] = htmlentities(isset($visit_d['stop_remark']) ? $visit_d['stop_remark'] : "");
 						// $visit_d['customer_name'] = $db->rp_getValue("customer","name","id='".$visit_d['customer_id']."'",0);
 						$visit_d['customer_type'] = "";
 						$visit_d['client_code'] = "";
@@ -132,12 +150,16 @@ if ($is_valid_api_key) {
 						} else {
 							if ($visit_d['customer_id'] != 0) {
 								$get_customer_d = $db->rp_getData("executive", "cname,type_of_executive,client_code,customer_flag,company_name", "id='" . $visit_d['customer_id'] . "'", 0);
-								$get_customer_e = mysqli_fetch_assoc($get_customer_d);
-								$visit_d['customer_name'] = $get_customer_e['cname'];
-								$visit_d['customer_type'] = $get_customer_e['type_of_executive'];
-								$visit_d['client_code'] = $get_customer_e['client_code'];
-								$visit_d['company_name'] = $get_customer_e['company_name'];
-								$visit_d['customer_flag'] = $customer_flag_array[$get_customer_e['customer_flag']];
+								$get_customer_e = ($get_customer_d) ? mysqli_fetch_assoc($get_customer_d) : false;
+								if ($get_customer_e) {
+									$visit_d['customer_name'] = $get_customer_e['cname'];
+									$visit_d['customer_type'] = $get_customer_e['type_of_executive'];
+									$visit_d['client_code'] = $get_customer_e['client_code'];
+									$visit_d['company_name'] = $get_customer_e['company_name'];
+									$visit_d['customer_flag'] = isset($customer_flag_array[$get_customer_e['customer_flag']]) ? $customer_flag_array[$get_customer_e['customer_flag']] : "";
+								} else {
+									$visit_d['customer_name'] = "";
+								}
 							} else if ($visit_d['inquiry_id'] != 0) {
 								$visit_d['company_name'] = $db->rp_getValue("no_order_inquiry", "company_name", "id='" . $visit_d['inquiry_id'] . "'", 0);
 
@@ -237,6 +259,9 @@ if ($is_valid_api_key) {
 
 							// Formulate the Difference between two dates
 							$diff = abs($date2 - $date1);
+							$years = 0;
+							$months = 0;
+							$days = 0;
 							// To get the hour, subtract it with years,
 							// months & seconds and divide the resultant
 							// date into total seconds in a hours (60*60)
