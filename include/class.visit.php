@@ -357,6 +357,41 @@ class Visit extends Functions
 				}
 			}
 
+			/* Save/link E1 High Rate form first so Follow-up can include summary */
+			if ($reason_code == "E1" && $remark_code == "E") {
+				$highRateItems = array();
+				if (isset($high_rate_items) && $high_rate_items != "") {
+					if (is_array($high_rate_items)) {
+						$highRateItems = $high_rate_items;
+					} else {
+						$decodedItems = json_decode($high_rate_items, true);
+						if (is_array($decodedItems)) {
+							$highRateItems = $decodedItems;
+						}
+					}
+				}
+				$hasHighRatePayload = (
+					(isset($high_rate_customer_name) && trim($high_rate_customer_name) != "") ||
+					!empty($highRateItems)
+				);
+				if ($hasHighRatePayload) {
+					$highRateFormId = $this->saveVisitHighRateForm(array(
+						"visit_id" => $id,
+						"user_id" => $user_id,
+						"customer_id" => $customer_id,
+						"inquiry_id" => $inquiry_id,
+						"reason_code" => $reason_code,
+						"followup_id" => 0,
+						"customer_name" => isset($high_rate_customer_name) ? $high_rate_customer_name : "",
+						"payment_option" => isset($payment_option) ? $payment_option : (isset($high_rate_payment_option) ? $high_rate_payment_option : ""),
+						"payment_remark" => isset($payment_remark) ? $payment_remark : (isset($high_rate_payment_remark) ? $high_rate_payment_remark : ""),
+						"items" => $highRateItems,
+					));
+				} else {
+					$highRateFormId = $this->db->rp_getValue($this->ctable, "high_rate_form_id", "id='" . $id . "'", 0);
+				}
+			}
+
 			$existingFollowupId = $this->db->rp_getValue(
 				$this->ctable,
 				"visit_followup_id",
@@ -397,6 +432,10 @@ class Visit extends Functions
 						}
 					} else if ($remark_code == "E") {
 						$followupDescription = "[Visit Stop - High Rate] " . $stop_remark;
+						$highRateDetailText = $this->getHighRateFormFollowupText($id, $highRateFormId);
+						if ($highRateDetailText != "") {
+							$followupDescription .= " | " . $highRateDetailText;
+						}
 					}
 
 					$followupValues = array(
@@ -455,29 +494,9 @@ class Visit extends Functions
 				$this->db->rp_update("visit_consultant_form", array("followup_id" => $followupId), "id='" . $consultantFormId . "'", 0);
 			}
 
-			/* E1 High Rate Analysis form */
-			if ($reason_code == "E1" && $remark_code == "E") {
-				$highRateItems = array();
-				if (isset($high_rate_items) && $high_rate_items != "") {
-					if (is_array($high_rate_items)) {
-						$highRateItems = $high_rate_items;
-					} else {
-						$decodedItems = json_decode($high_rate_items, true);
-						if (is_array($decodedItems)) {
-							$highRateItems = $decodedItems;
-						}
-					}
-				}
-				$highRateFormId = $this->saveVisitHighRateForm(array(
-					"visit_id" => $id,
-					"user_id" => $user_id,
-					"customer_id" => $customer_id,
-					"inquiry_id" => $inquiry_id,
-					"reason_code" => $reason_code,
-					"followup_id" => $followupId,
-					"customer_name" => isset($high_rate_customer_name) ? $high_rate_customer_name : "",
-					"items" => $highRateItems,
-				));
+			/* Link followup_id on high rate form */
+			if ($highRateFormId != "" && $highRateFormId != "0" && $followupId != "" && $followupId != "0") {
+				$this->db->rp_update("visit_high_rate_form", array("followup_id" => $followupId), "id='" . $highRateFormId . "'", 0);
 			}
 
 			$reply = array(
@@ -572,28 +591,142 @@ class Visit extends Functions
 		return $html;
 	}
 
-	public function getHighRateProductMaster()
+	public function getHighRateProductsMaster()
 	{
 		return array(
-			"BRANCH PIPE HEAVY",
-			"HYDRANT SINGLE",
-			"REGULAR DRUM - HOS DRUM",
-			"RRL HOSE ISI",
-			"EXTINGHUISHER",
-			"HOSE BOX",
-			"2WAY 3WAY 4WAY",
-			"SPRINKLER",
-			"ALARM VALVE",
-			"DELUGE VALVE",
-			"FLEXIBLE PIPE",
-			"WATER MONITER",
-			"BUTTERFLY VALVE",
-			"NON RETURN VALVE",
-			"OFIFICE PLATE",
-			"Y STAINER",
-			"GATE VALVE",
-			"AIR RELESE VALVE",
+			array("slug" => "branch_pipe_heavy", "product_name" => "BRANCH PIPE HEAVY", "sort_order" => 1),
+			array("slug" => "hydrant_single_double", "product_name" => "HYDRANT (SINGLE / DOUBLE)", "sort_order" => 2),
+			array("slug" => "hose_reel_drom", "product_name" => "HOSE REEL DROM (REGU./ISI/MALASIYAN/BS EN 671)", "sort_order" => 3),
+			array("slug" => "rrl_hose_isi", "product_name" => "RRL HOSE ISI (TYPE - A / B / C)", "sort_order" => 4),
+			array("slug" => "extinguisher", "product_name" => "EXTINGHUISHER (CO2/ABC/FOAM)", "sort_order" => 5),
+			array("slug" => "hose_box", "product_name" => "HOSE BOX", "sort_order" => 6),
+			array("slug" => "way_2way_3way_4way", "product_name" => "2WAY / 3WAY / 4WAY", "sort_order" => 7),
+			array("slug" => "sprinkler", "product_name" => "SPRINKLER (UL / NON UL)", "sort_order" => 8),
+			array("slug" => "alarm_valve", "product_name" => "ALARM VALVE", "sort_order" => 9),
+			array("slug" => "deluge_valve", "product_name" => "DELUGE VALVE", "sort_order" => 10),
+			array("slug" => "flexible_pipe", "product_name" => "FLEXIBLE PIPE (BRAIDED / UNBRAIDED)", "sort_order" => 11),
+			array("slug" => "water_moniter", "product_name" => "WATER MONITER (NOZZLE : SS/ALU./AQUA FOAM)", "sort_order" => 12),
+			array("slug" => "butterfly_valve", "product_name" => "BUTTERFLY VALVE", "sort_order" => 13),
+			array("slug" => "non_return_valve", "product_name" => "NON RETURN VALVE (SINGLE / DOUBLE)", "sort_order" => 14),
+			array("slug" => "orifice_plate", "product_name" => "OFIFICE PLATE", "sort_order" => 15),
+			array("slug" => "y_strainer", "product_name" => "Y STAINER", "sort_order" => 16),
+			array("slug" => "gate_valve", "product_name" => "GATE VALVE", "sort_order" => 17),
+			array("slug" => "air_release_valve", "product_name" => "AIR RELESE VALVE", "sort_order" => 18),
 		);
+	}
+
+	public function getHighRateProductMaster()
+	{
+		$names = array();
+		foreach ($this->getHighRateProductsMaster() as $p) {
+			$names[] = $p['product_name'];
+		}
+		return $names;
+	}
+
+	public function getHighRateProductBySlug($slug)
+	{
+		$slug = strtolower(trim($slug));
+		foreach ($this->getHighRateProductsMaster() as $p) {
+			if ($p['slug'] === $slug) {
+				return $p;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Accept items as array OR slug-keyed object from Android.
+	 * Each row: slug (preferred) or product_name + given_rate, qty, customer_rate, remark.
+	 */
+	public function normalizeHighRateItems($items)
+	{
+		$normalized = array();
+		if (!is_array($items)) {
+			return $normalized;
+		}
+
+		/* {"branch_pipe_heavy":{"given_rate":"100",...}} */
+		$isAssoc = false;
+		foreach (array_keys($items) as $k) {
+			if (!is_numeric($k)) {
+				$isAssoc = true;
+				break;
+			}
+		}
+		if ($isAssoc) {
+			foreach ($items as $slug => $row) {
+				if (!is_array($row)) {
+					continue;
+				}
+				$row['slug'] = isset($row['slug']) ? $row['slug'] : $slug;
+				$normalized[] = $this->resolveHighRateItemRow($row);
+			}
+			return $this->filterHighRateItemRows($normalized);
+		}
+
+		foreach ($items as $row) {
+			if (!is_array($row)) {
+				continue;
+			}
+			$normalized[] = $this->resolveHighRateItemRow($row);
+		}
+		return $this->filterHighRateItemRows($normalized);
+	}
+
+	private function resolveHighRateItemRow($row)
+	{
+		$slug = isset($row['slug']) ? strtolower(trim($row['slug'])) : "";
+		$productName = isset($row['product_name']) ? trim($row['product_name']) : (isset($row['Product']) ? trim($row['Product']) : "");
+		$sortOrder = isset($row['sort_order']) ? (int) $row['sort_order'] : 0;
+
+		if ($slug != "") {
+			$master = $this->getHighRateProductBySlug($slug);
+			if ($master) {
+				$productName = $master['product_name'];
+				if ($sortOrder == 0) {
+					$sortOrder = (int) $master['sort_order'];
+				}
+			}
+		} else if ($productName != "") {
+			foreach ($this->getHighRateProductsMaster() as $master) {
+				if (strcasecmp($master['product_name'], $productName) === 0) {
+					$slug = $master['slug'];
+					if ($sortOrder == 0) {
+						$sortOrder = (int) $master['sort_order'];
+					}
+					break;
+				}
+			}
+		}
+
+		return array(
+			"slug" => $slug,
+			"product_name" => $productName,
+			"given_rate" => isset($row['given_rate']) ? $row['given_rate'] : (isset($row['Givan Rate']) ? $row['Givan Rate'] : (isset($row['Given Rate']) ? $row['Given Rate'] : "")),
+			"qty" => isset($row['qty']) ? $row['qty'] : (isset($row['Qty']) ? $row['Qty'] : ""),
+			"customer_rate" => isset($row['customer_rate']) ? $row['customer_rate'] : (isset($row['Customer rate']) ? $row['Customer rate'] : ""),
+			"remark" => isset($row['remark']) ? $row['remark'] : (isset($row['Remark']) ? $row['Remark'] : ""),
+			"sort_order" => $sortOrder,
+		);
+	}
+
+	private function filterHighRateItemRows($rows)
+	{
+		$out = array();
+		foreach ($rows as $row) {
+			if ($row['product_name'] == "" && $row['slug'] == "") {
+				continue;
+			}
+			if ($row['product_name'] == "" && $row['slug'] != "") {
+				continue;
+			}
+			$out[] = $row;
+		}
+		usort($out, function ($a, $b) {
+			return (int) $a['sort_order'] - (int) $b['sort_order'];
+		});
+		return $out;
 	}
 
 	public function getConsultantFormFields($reasonCode = "C1")
@@ -617,13 +750,15 @@ class Visit extends Functions
 	public function getHighRateFormFields()
 	{
 		$products = array();
-		foreach ($this->getHighRateProductMaster() as $index => $productName) {
+		foreach ($this->getHighRateProductsMaster() as $p) {
 			$products[] = array(
-				"product_name" => $productName,
+				"slug" => $p['slug'],
+				"product_name" => $p['product_name'],
 				"given_rate" => "",
 				"qty" => "",
 				"customer_rate" => "",
-				"sort_order" => (string) ($index + 1),
+				"remark" => "",
+				"sort_order" => (string) $p['sort_order'],
 			);
 		}
 		return array(
@@ -631,7 +766,7 @@ class Visit extends Functions
 			"fields" => array(
 				array("key" => "high_rate_customer_name", "label" => "Customer name", "type" => "text", "required" => "1"),
 			),
-			"columns" => array("Product", "Given Rate", "Qty", "Customer rate"),
+			"columns" => array("Product", "Given Rate", "Qty", "Customer rate", "Remark"),
 			"products" => $products,
 		);
 	}
@@ -810,104 +945,262 @@ class Visit extends Functions
 			return "";
 		}
 
+		$customerName = isset($data['customer_name']) ? $data['customer_name'] : "";
+		$paymentOption = isset($data['payment_option']) ? $data['payment_option'] : "";
+		$paymentRemark = isset($data['payment_remark']) ? $data['payment_remark'] : "";
+		$followupId = isset($data['followup_id']) ? $data['followup_id'] : 0;
+		$items = isset($data['items']) && is_array($data['items']) ? $data['items'] : array();
+
+		$rowData = array(
+			"visit_id" => $visitId,
+			"user_id" => isset($data['user_id']) ? $data['user_id'] : 0,
+			"customer_id" => isset($data['customer_id']) ? $data['customer_id'] : 0,
+			"inquiry_id" => isset($data['inquiry_id']) ? $data['inquiry_id'] : 0,
+			"reason_code" => isset($data['reason_code']) ? $data['reason_code'] : "E1",
+			"customer_name" => $customerName,
+			"payment_option" => $paymentOption,
+			"payment_remark" => $paymentRemark,
+			"followup_id" => $followupId,
+			"isActive" => 1,
+			"isDelete" => 0,
+		);
+
 		$existingId = $this->db->rp_getValue("visit_high_rate_form", "id", "visit_id='" . $visitId . "' AND isDelete=0", 0);
 		if ($existingId != "" && $existingId != "0") {
+			/* Update header; replace items only when payload has items */
+			$this->db->rp_update("visit_high_rate_form", $rowData, "id='" . $existingId . "'", 0);
+			if (!empty($items)) {
+				$this->db->rp_update("visit_high_rate_form_item", array("isDelete" => 1), "high_rate_form_id='" . $existingId . "'", 0);
+				$items = $this->normalizeHighRateItems($items);
+				$this->insertHighRateFormItems($existingId, $visitId, $items);
+			}
 			$this->db->rp_update(
 				$this->ctable,
-				array("high_rate_form_id" => $existingId),
+				array(
+					"high_rate_form_id" => $existingId,
+					"remark_code" => "E",
+					"reason_code" => "E1",
+				),
 				"id='" . $visitId . "'",
 				0
 			);
 			return $existingId;
 		}
 
-		$columns = array(
-			"visit_id",
-			"user_id",
-			"customer_id",
-			"inquiry_id",
-			"reason_code",
-			"customer_name",
-			"followup_id",
-			"created_date",
-			"isActive",
-			"isDelete",
-		);
-		$values = array(
-			$visitId,
-			isset($data['user_id']) ? $data['user_id'] : 0,
-			isset($data['customer_id']) ? $data['customer_id'] : 0,
-			isset($data['inquiry_id']) ? $data['inquiry_id'] : 0,
-			isset($data['reason_code']) ? $data['reason_code'] : "E1",
-			isset($data['customer_name']) ? $data['customer_name'] : "",
-			isset($data['followup_id']) ? $data['followup_id'] : 0,
-			date("Y-m-d H:i:s"),
-			1,
-			0,
-		);
+		$rowData["created_date"] = date("Y-m-d H:i:s");
+		$columns = array_keys($rowData);
+		$values = array_values($rowData);
 		$formId = $this->db->rp_insert("visit_high_rate_form", $values, $columns, 0);
 		if ($formId) {
-			$items = isset($data['items']) && is_array($data['items']) ? $data['items'] : array();
 			if (empty($items)) {
-				foreach ($this->getHighRateProductMaster() as $index => $productName) {
+				foreach ($this->getHighRateProductsMaster() as $p) {
 					$items[] = array(
-						"product_name" => $productName,
+						"slug" => $p['slug'],
+						"product_name" => $p['product_name'],
 						"given_rate" => "",
 						"qty" => "",
 						"customer_rate" => "",
-						"sort_order" => $index + 1,
+						"remark" => "",
+						"sort_order" => $p['sort_order'],
 					);
 				}
+			} else {
+				$items = $this->normalizeHighRateItems($items);
 			}
-			$sort = 0;
-			foreach ($items as $item) {
-				$sort++;
-				$productName = "";
-				$givenRate = "";
-				$qty = "";
-				$customerRate = "";
-				$itemSort = $sort;
-				if (is_array($item)) {
-					$productName = isset($item['product_name']) ? $item['product_name'] : (isset($item['Product']) ? $item['Product'] : "");
-					$givenRate = isset($item['given_rate']) ? $item['given_rate'] : (isset($item['Givan Rate']) ? $item['Givan Rate'] : "");
-					$qty = isset($item['qty']) ? $item['qty'] : (isset($item['Qty']) ? $item['Qty'] : "");
-					$customerRate = isset($item['customer_rate']) ? $item['customer_rate'] : (isset($item['Customer rate']) ? $item['Customer rate'] : "");
-					$itemSort = isset($item['sort_order']) ? $item['sort_order'] : $sort;
-				}
-				if ($productName == "") {
-					continue;
-				}
-				$itemColumns = array(
-					"high_rate_form_id",
-					"visit_id",
-					"product_name",
-					"given_rate",
-					"qty",
-					"customer_rate",
-					"sort_order",
-					"isDelete",
-				);
-				$itemValues = array(
-					$formId,
-					$visitId,
-					$productName,
-					$givenRate,
-					$qty,
-					$customerRate,
-					$itemSort,
-					0,
-				);
-				$this->db->rp_insert("visit_high_rate_form_item", $itemValues, $itemColumns, 0);
-			}
-
+			$this->insertHighRateFormItems($formId, $visitId, $items);
 			$this->db->rp_update(
 				$this->ctable,
-				array("high_rate_form_id" => $formId),
+				array(
+					"high_rate_form_id" => $formId,
+					"remark_code" => "E",
+					"reason_code" => "E1",
+				),
 				"id='" . $visitId . "'",
 				0
 			);
 		}
 		return $formId ? $formId : "";
+	}
+
+	private function insertHighRateFormItems($formId, $visitId, $items)
+	{
+		$hasSlugCol = false;
+		$colCheck = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `visit_high_rate_form_item` LIKE 'product_slug'");
+		if ($colCheck && mysqli_num_rows($colCheck) > 0) {
+			$hasSlugCol = true;
+		}
+
+		$sort = 0;
+		foreach ($items as $item) {
+			$sort++;
+			if (!is_array($item)) {
+				continue;
+			}
+			if (!isset($item['product_name']) && isset($item['slug'])) {
+				$item = $this->resolveHighRateItemRow($item);
+			}
+			$productName = isset($item['product_name']) ? $item['product_name'] : "";
+			$productSlug = isset($item['slug']) ? $item['slug'] : "";
+			$givenRate = isset($item['given_rate']) ? $item['given_rate'] : "";
+			$qty = isset($item['qty']) ? $item['qty'] : "";
+			$customerRate = isset($item['customer_rate']) ? $item['customer_rate'] : "";
+			$remark = isset($item['remark']) ? $item['remark'] : "";
+			$itemSort = isset($item['sort_order']) ? $item['sort_order'] : $sort;
+			if ($productName == "") {
+				continue;
+			}
+			$itemColumns = array(
+				"high_rate_form_id",
+				"visit_id",
+				"product_name",
+				"given_rate",
+				"qty",
+				"customer_rate",
+				"remark",
+				"sort_order",
+				"isDelete",
+			);
+			$itemValues = array(
+				$formId,
+				$visitId,
+				$productName,
+				$givenRate,
+				$qty,
+				$customerRate,
+				$remark,
+				$itemSort,
+				0,
+			);
+			if ($hasSlugCol) {
+				array_splice($itemColumns, 3, 0, array("product_slug"));
+				array_splice($itemValues, 3, 0, array($productSlug));
+			}
+			$this->db->rp_insert("visit_high_rate_form_item", $itemValues, $itemColumns, 0);
+		}
+	}
+
+	/**
+	 * Public API helper — Save / Update High Rate Analysis form (E1)
+	 * Used by Android SAVE AND NEXT button. Does not change #122 contract.
+	 */
+	public function SaveHighRateDetailForm($detail)
+	{
+		$visitId = isset($detail['visit_id']) ? $detail['visit_id'] : "";
+		$userId = isset($detail['user_id']) ? $detail['user_id'] : "";
+		if ($visitId == "" || $visitId == "0") {
+			return array("ack" => 0, "ack_msg" => "Visit id is required.", "developer_msg" => "visit_id missing");
+		}
+		if ($userId == "" || $userId == "0") {
+			return array("ack" => 0, "ack_msg" => "User id is required.", "developer_msg" => "user_id missing");
+		}
+
+		$visitExists = $this->db->rp_getTotalRecord($this->ctable, "id='" . $visitId . "' AND isDelete=0", 0);
+		if ($visitExists == 0) {
+			return array("ack" => 0, "ack_msg" => "Visit not found.", "developer_msg" => "Invalid visit_id");
+		}
+
+		$customerName = isset($detail['customer_name']) ? trim($detail['customer_name']) : "";
+		if ($customerName == "" && isset($detail['high_rate_customer_name'])) {
+			$customerName = trim($detail['high_rate_customer_name']);
+		}
+		if ($customerName == "") {
+			return array("ack" => 0, "ack_msg" => "Please enter Customer name.", "developer_msg" => "customer_name missing");
+		}
+
+		$items = array();
+		if (isset($detail['items']) && is_array($detail['items'])) {
+			$items = $this->normalizeHighRateItems($detail['items']);
+		} else if (isset($detail['high_rate_items'])) {
+			if (is_array($detail['high_rate_items'])) {
+				$items = $this->normalizeHighRateItems($detail['high_rate_items']);
+			} else if ($detail['high_rate_items'] != "") {
+				$decoded = json_decode($detail['high_rate_items'], true);
+				if (is_array($decoded)) {
+					$items = $this->normalizeHighRateItems($decoded);
+				}
+			}
+		}
+
+		$paymentOption = isset($detail['payment_option']) ? trim($detail['payment_option']) : "";
+		$paymentRemark = isset($detail['payment_remark']) ? trim($detail['payment_remark']) : "";
+
+		$formId = $this->saveVisitHighRateForm(array(
+			"visit_id" => $visitId,
+			"user_id" => $userId,
+			"customer_id" => isset($detail['customer_id']) ? $detail['customer_id'] : 0,
+			"inquiry_id" => isset($detail['inquiry_id']) ? $detail['inquiry_id'] : 0,
+			"reason_code" => "E1",
+			"customer_name" => $customerName,
+			"payment_option" => $paymentOption,
+			"payment_remark" => $paymentRemark,
+			"items" => $items,
+		));
+
+		if ($formId == "" || $formId == "0") {
+			return array("ack" => 0, "ack_msg" => "High Rate Analysis save failed.", "developer_msg" => "Insert/Update failed");
+		}
+
+		$formRow = array();
+		$formRes = $this->db->rp_getData("visit_high_rate_form", "*", "id='" . $formId . "' AND isDelete=0", "", 0);
+		if ($formRes) {
+			$formRow = mysqli_fetch_assoc($formRes);
+		}
+		$itemRows = array();
+		$itemRes = $this->db->rp_getData("visit_high_rate_form_item", "*", "high_rate_form_id='" . $formId . "' AND isDelete=0", "sort_order ASC", 0);
+		if ($itemRes) {
+			while ($ir = mysqli_fetch_assoc($itemRes)) {
+				$itemRows[] = $ir;
+			}
+		}
+		$formRow['items'] = $itemRows;
+
+		return array(
+			"ack" => 1,
+			"ack_msg" => "High Rate Analysis saved successfully.",
+			"developer_msg" => "High Rate Analysis saved successfully.",
+			"high_rate_form_id" => (string) $formId,
+			"reason_code" => "E1",
+			"result" => $formRow,
+		);
+	}
+
+	public function getHighRateFormFollowupText($visitId, $formId = "")
+	{
+		$form = null;
+		if ($formId != "" && $formId != "0") {
+			$r = $this->db->rp_getData("visit_high_rate_form", "*", "id='" . $formId . "' AND isDelete=0", "", 0);
+			if ($r) {
+				$form = mysqli_fetch_assoc($r);
+			}
+		}
+		if (!$form && $visitId != "" && $visitId != "0") {
+			$r = $this->db->rp_getData("visit_high_rate_form", "*", "visit_id='" . $visitId . "' AND isDelete=0", "id DESC", 0);
+			if ($r) {
+				$form = mysqli_fetch_assoc($r);
+			}
+		}
+		if (!$form) {
+			return "";
+		}
+		$parts = array();
+		$parts[] = "High Rate Form";
+		if (!empty($form['customer_name'])) {
+			$parts[] = "Customer: " . $form['customer_name'];
+		}
+		if (!empty($form['payment_option'])) {
+			$parts[] = "Payment: " . $form['payment_option'];
+		}
+		$filled = 0;
+		$itemRes = $this->db->rp_getData("visit_high_rate_form_item", "*", "high_rate_form_id='" . $form['id'] . "' AND isDelete=0", "sort_order ASC", 0);
+		if ($itemRes) {
+			while ($ir = mysqli_fetch_assoc($itemRes)) {
+				if ($ir['given_rate'] != "" || $ir['customer_rate'] != "" || $ir['qty'] != "") {
+					$filled++;
+				}
+			}
+		}
+		$parts[] = "Items filled: " . $filled;
+		return implode(" | ", $parts);
 	}
 
 	public function DownloadVisit($visit_id = '')

@@ -517,6 +517,66 @@ if ($is_valid_api_key) {
 
 			$reply = $objVisit->SaveConsultantDetailForm($detail);
 			echo json_encode($reply);
+		} else if ($service == 'save_visit_high_rate_form' || $service == 234) {
+			/*
+			 * SAVE AND NEXT — High Rate Analysis form (E1)
+			 * App designs fixed product list UI; backend only stores rates.
+			 * Visit End (#122) still creates Follow-up — existing #122 not changed for old clients.
+			 */
+			$detail = array();
+			$detail['visit_id'] = isset($_REQUEST['visit_id']) ? $db->clean($_REQUEST['visit_id']) : (isset($_REQUEST['id']) ? $db->clean($_REQUEST['id']) : "");
+			$detail['user_id'] = isset($_REQUEST['user_id']) ? $db->clean($_REQUEST['user_id']) : "";
+			$detail['customer_id'] = isset($_REQUEST['customer_id']) ? $db->clean($_REQUEST['customer_id']) : "";
+			$detail['inquiry_id'] = isset($_REQUEST['inquiry_id']) ? $db->clean($_REQUEST['inquiry_id']) : "";
+			$detail['customer_name'] = isset($_REQUEST['customer_name']) ? $db->clean($_REQUEST['customer_name']) : "";
+			if ($detail['customer_name'] == "" && isset($_REQUEST['high_rate_customer_name'])) {
+				$detail['customer_name'] = $db->clean($_REQUEST['high_rate_customer_name']);
+			}
+			$detail['payment_option'] = isset($_REQUEST['payment_option']) ? $db->clean($_REQUEST['payment_option']) : "";
+			if ($detail['payment_option'] == "" && isset($_REQUEST['high_rate_payment_option'])) {
+				$detail['payment_option'] = $db->clean($_REQUEST['high_rate_payment_option']);
+			}
+			$detail['payment_remark'] = isset($_REQUEST['payment_remark']) ? $db->clean($_REQUEST['payment_remark']) : "";
+			if ($detail['payment_remark'] == "" && isset($_REQUEST['high_rate_payment_remark'])) {
+				$detail['payment_remark'] = $db->clean($_REQUEST['high_rate_payment_remark']);
+			}
+
+			$itemsRaw = "";
+			if (isset($_REQUEST['items'])) {
+				$itemsRaw = $_REQUEST['items'];
+			} else if (isset($_REQUEST['high_rate_items'])) {
+				$itemsRaw = $_REQUEST['high_rate_items'];
+			}
+			if (is_array($itemsRaw)) {
+				$detail['items'] = $itemsRaw;
+			} else if ($itemsRaw != "") {
+				$decoded = json_decode($itemsRaw, true);
+				$detail['items'] = is_array($decoded) ? $decoded : array();
+			} else {
+				$detail['items'] = array();
+			}
+
+			$reply = $objVisit->SaveHighRateDetailForm($detail);
+			echo json_encode($reply);
+		} else if ($service == 'get_visit_high_rate_products' || $service == 235) {
+			/* Fixed High Rate product list with slug for Android UI binding */
+			$products = $objVisit->getHighRateProductsMaster();
+			$reply = array(
+				"ack" => 1,
+				"developer_msg" => "High Rate product list fetched successfully.",
+				"ack_msg" => "High Rate product list fetched successfully.",
+				"form_title" => "High Rate Analysis",
+				"columns" => array(
+					array("key" => "product_name", "label" => "Product"),
+					array("key" => "given_rate", "label" => "Given Rate"),
+					array("key" => "qty", "label" => "Qty"),
+					array("key" => "customer_rate", "label" => "Customer rate"),
+					array("key" => "remark", "label" => "Remark"),
+				),
+				"payment_options" => array("Advance", "30 Days"),
+				"result" => $products,
+			);
+			echo json_encode($reply);
 		} else if ($service == 'get_expence_subcategory' || $service == 108) {
 			$type_array = array("1" => "General", "2" => "Kilometer", "3" => "Food");
 			$expense_subcat = array();
@@ -696,9 +756,17 @@ if ($is_valid_api_key) {
 			} else if ($detail['remark_code'] == "E" && $detail['reason_code'] != "E1") {
 				$reply = ['ack' => 0, "ack_msg" => "Please select High Rate Form."];
 				echo json_encode($reply);
-			} else if ($detail['remark_code'] == "E" && $detail['high_rate_customer_name'] == "") {
-				$reply = ['ack' => 0, "ack_msg" => "Please fill High Rate Analysis form (Customer name)."];
-				echo json_encode($reply);
+			} else if ($detail['remark_code'] == "E") {
+				/* Allow visit end if High Rate form already saved via #234 */
+				$existingHighRateFormId = $db->rp_getValue("visit", "high_rate_form_id", "id='" . $detail['id'] . "' AND isDelete=0", 0);
+				$formAlreadySaved = ($existingHighRateFormId != "" && $existingHighRateFormId != "0");
+				if (!$formAlreadySaved && $detail['high_rate_customer_name'] == "") {
+					$reply = ['ack' => 0, "ack_msg" => "Please fill High Rate Analysis form (Customer name)."];
+					echo json_encode($reply);
+				} else {
+					$reply = $objVisit->UpdateVisit($detail, $_FILES);
+					echo json_encode($reply);
+				}
 			} else {
 				$reply = $objVisit->UpdateVisit($detail, $_FILES);
 				if ($reply['ack'] == 1) {

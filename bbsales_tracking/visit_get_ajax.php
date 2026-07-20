@@ -546,6 +546,41 @@ $ctable_r = $db->rp_getData($ctable, "*", $ctable_where, "id DESC limit $page_po
 										echo '</div>';
 									}
 								}
+								/* Show High Rate Analysis form under Visit Stop Remark */
+								if (!empty($ctable_d['high_rate_form_id']) || (!empty($ctable_d['remark_code']) && $ctable_d['remark_code'] == 'E')) {
+									$hrf = $db->rp_getData("visit_high_rate_form", "*", "visit_id='" . $ctable_d['id'] . "' AND isDelete=0", "id DESC", 0);
+									if ($hrf) {
+										$hf = mysqli_fetch_assoc($hrf);
+										echo '<div style="margin-top:6px;padding:6px;border:1px solid #ddd;background:#fff8e6;font-size:12px;line-height:1.5;">';
+										echo '<b>High Rate Analysis</b><br>';
+										echo '<b>Customer name:</b> ' . htmlspecialchars($hf['customer_name']);
+										if (!empty($hf['payment_option'])) {
+											echo ' &nbsp; <b>Payment:</b> ' . htmlspecialchars($hf['payment_option']);
+										}
+										$hri = $db->rp_getData("visit_high_rate_form_item", "*", "high_rate_form_id='" . $hf['id'] . "' AND isDelete=0", "sort_order ASC", 0);
+										if ($hri) {
+											echo '<table border="1" cellpadding="3" cellspacing="0" style="width:100%;margin-top:4px;font-size:11px;">';
+											echo '<tr style="background:#f0f0f0;"><th>Product</th><th>Given Rate</th><th>Qty</th><th>Customer rate</th><th>Remark</th></tr>';
+											while ($hi = mysqli_fetch_assoc($hri)) {
+												if ($hi['given_rate'] == "" && $hi['qty'] == "" && $hi['customer_rate'] == "" && empty($hi['remark'])) {
+													continue;
+												}
+												echo '<tr>';
+												echo '<td>' . htmlspecialchars($hi['product_name']) . '</td>';
+												echo '<td>' . htmlspecialchars($hi['given_rate']) . '</td>';
+												echo '<td>' . htmlspecialchars($hi['qty']) . '</td>';
+												echo '<td>' . htmlspecialchars($hi['customer_rate']) . '</td>';
+												echo '<td>' . htmlspecialchars(isset($hi['remark']) ? $hi['remark'] : '') . '</td>';
+												echo '</tr>';
+											}
+											echo '</table>';
+										}
+										if (!empty($ctable_d['visit_followup_id']) && $ctable_d['visit_followup_id'] != '0') {
+											echo '<br><span class="label label-info">Follow-up #' . htmlspecialchars($ctable_d['visit_followup_id']) . '</span>';
+										}
+										echo '</div>';
+									}
+								}
 							?></td>
 							<td>
 								<!-- Trigger the modal with a button -->

@@ -13929,6 +13929,78 @@
                     "response": []
                 },
                 {
+                    "name": "save_visit_high_rate_form  (#234)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "234",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "visit_id",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "user_id",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "customer_id",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "customer_name",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Required"
+                                },
+                                {
+                                    "key": "payment_option",
+                                    "value": "Advance",
+                                    "type": "text",
+                                    "description": "Advance or 30 Days"
+                                },
+                                {
+                                    "key": "payment_remark",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "items",
+                                    "value": "[{\"product_name\":\"BRANCH PIPE HEAVY\",\"given_rate\":\"100\",\"qty\":\"2\",\"customer_rate\":\"90\",\"remark\":\"\",\"sort_order\":1}]",
+                                    "type": "text",
+                                    "description": "JSON array of product rows"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_visit.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_visit.php"
+                            ]
+                        },
+                        "description": "**API Code:** 234\n\n**Slug:** save_visit_high_rate_form\n\n**Service (s):** 234\n\nSave High Rate Analysis form (E1) — App SAVE AND NEXT.\n\n**Does NOT replace #122.** Existing update_visit still works. New flow:\n1. Remark E → reason E1 → open High Rate form (App fixed UI)\n2. Call **#234** to save rates\n3. Call **#122** to end visit → Follow-up auto created\n\n**Required:** visit_id, user_id, customer_name\n**Optional:** customer_id, inquiry_id, payment_option (Advance/30 Days), payment_remark, items (JSON)\n\n**items JSON example:**\n```json\n[\n  {\"product_name\":\"BRANCH PIPE HEAVY\",\"given_rate\":\"100\",\"qty\":\"2\",\"customer_rate\":\"90\",\"remark\":\"\",\"sort_order\":1}\n]\n```\n\nAlso accepts `high_rate_customer_name` / `high_rate_items` aliases.\n\n**Success:** ack=1, high_rate_form_id, reason_code=E1, result"
+                    },
+                    "response": []
+                },
+                {
                     "name": "Visit Pdf Download  (#198)",
                     "request": {
                         "method": "POST",

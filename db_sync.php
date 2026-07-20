@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 define('DB_SYNC_KEY', 'armor_cp_sync_2026');
-define('DB_SYNC_VERSION', '2026.07.18.2');
+define('DB_SYNC_VERSION', '2026.07.20.2');
 
 if (!isset($_GET['key']) || $_GET['key'] !== DB_SYNC_KEY) {
 	header('HTTP/1.1 403 Forbidden');
@@ -175,7 +175,7 @@ function db_sync_append_page_urls($conn, $pageId, $newUrls)
 }
 
 db_sync_log('INFO', '--- Armor CRM DB Sync v' . DB_SYNC_VERSION . ' ---');
-db_sync_log('INFO', 'Changes: executive.channel_partner_flag, channel_partner_customer table + APIs 223-228, Advance Expense APIs 229-230, Visit Remark/Reason APIs 231-233');
+db_sync_log('INFO', 'Changes: executive.channel_partner_flag, channel_partner_customer table + APIs 223-228, Advance Expense APIs 229-230, Visit Remark/Reason APIs 231-235');
 
 function db_sync_register_api_if_missing($conn, $id, $slug, $title, $url)
 {
@@ -394,11 +394,15 @@ db_sync_add_column_if_missing(
 db_sync_register_api_if_missing($conn, 231, 'get_visit_remark_reason', 'Get Visit Remark Reason', $visitApiBase . '&s=231');
 db_sync_register_api_if_missing($conn, 232, 'get_visit_approval_type', 'Get Visit Approval Type', $visitApiBase . '&s=232');
 db_sync_register_api_if_missing($conn, 233, 'save_visit_consultant_form', 'Save Visit Consultant Detail Form', $visitApiBase . '&s=233');
+db_sync_register_api_if_missing($conn, 234, 'save_visit_high_rate_form', 'Save Visit High Rate Analysis Form', $visitApiBase . '&s=234');
+db_sync_register_api_if_missing($conn, 235, 'get_visit_high_rate_products', 'Get Visit High Rate Product List', $visitApiBase . '&s=235');
 
 $requiredVisitRemarkApis = array(
 	231 => 'get_visit_remark_reason',
 	232 => 'get_visit_approval_type',
 	233 => 'save_visit_consultant_form',
+	234 => 'save_visit_high_rate_form',
+	235 => 'get_visit_high_rate_products',
 );
 
 /* ------------------------------------------------------------------
@@ -441,6 +445,8 @@ $createHighRateFormSql = "CREATE TABLE IF NOT EXISTS `visit_high_rate_form` (
 	`inquiry_id` int(11) NOT NULL DEFAULT 0,
 	`reason_code` varchar(10) NOT NULL DEFAULT 'E1',
 	`customer_name` varchar(255) NOT NULL DEFAULT '',
+	`payment_option` varchar(50) NOT NULL DEFAULT '' COMMENT 'Advance / 30 Days',
+	`payment_remark` varchar(255) NOT NULL DEFAULT '',
 	`followup_id` int(11) NOT NULL DEFAULT 0,
 	`created_date` datetime DEFAULT NULL,
 	`isActive` tinyint(1) NOT NULL DEFAULT 1,
@@ -460,6 +466,7 @@ $createHighRateItemSql = "CREATE TABLE IF NOT EXISTS `visit_high_rate_form_item`
 	`given_rate` varchar(50) NOT NULL DEFAULT '',
 	`qty` varchar(50) NOT NULL DEFAULT '',
 	`customer_rate` varchar(50) NOT NULL DEFAULT '',
+	`remark` text,
 	`sort_order` int(11) NOT NULL DEFAULT 0,
 	`isDelete` tinyint(1) NOT NULL DEFAULT 0,
 	PRIMARY KEY (`id`),
@@ -467,6 +474,35 @@ $createHighRateItemSql = "CREATE TABLE IF NOT EXISTS `visit_high_rate_form_item`
 	KEY `idx_vhrfi_visit` (`visit_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8";
 db_sync_run_query($conn, $createHighRateItemSql, 'Create table visit_high_rate_form_item (if not exists)');
+
+db_sync_add_column_if_missing(
+	$conn,
+	'visit_high_rate_form',
+	'payment_option',
+	"varchar(50) NOT NULL DEFAULT '' COMMENT 'Advance / 30 Days'",
+	array('customer_name', 'reason_code')
+);
+db_sync_add_column_if_missing(
+	$conn,
+	'visit_high_rate_form',
+	'payment_remark',
+	"varchar(255) NOT NULL DEFAULT ''",
+	array('payment_option', 'customer_name')
+);
+db_sync_add_column_if_missing(
+	$conn,
+	'visit_high_rate_form_item',
+	'remark',
+	"text",
+	array('customer_rate', 'qty', 'given_rate')
+);
+db_sync_add_column_if_missing(
+	$conn,
+	'visit_high_rate_form_item',
+	'product_slug',
+	"varchar(80) NOT NULL DEFAULT '' COMMENT 'High Rate fixed product slug'",
+	array('product_name', 'visit_id')
+);
 
 db_sync_add_column_if_missing(
 	$conn,
@@ -819,8 +855,10 @@ $environment = isset($config['environment']) ? $config['environment'] : 'unknown
 			<li>Page URLs in <code>page_table</code> id=555</li>
 			<li>APIs in <code>api_table</code> id 223, 224, 225, 226, 227, 228</li>
 			<li>Advance Expense APIs 229-230 + <code>expense_claim_type</code> columns</li>
-			<li>Visit Remark/Reason APIs 231-233 + <code>visit.remark_code</code>, <code>reason_code</code>, <code>approval_type</code>, <code>visit_followup_id</code></li>
+			<li>Visit Remark/Reason APIs 231-234 + <code>visit.remark_code</code>, <code>reason_code</code>, <code>approval_type</code>, <code>visit_followup_id</code></li>
 			<li>API <code>#233 save_visit_consultant_form</code> — Consultant Detail SAVE AND NEXT</li>
+			<li>API <code>#234 save_visit_high_rate_form</code> — High Rate Analysis SAVE AND NEXT (accepts product <code>slug</code>)</li>
+			<li>API <code>#235 get_visit_high_rate_products</code> — fixed product list with slugs</li>
 			<li>Visit forms: <code>visit_consultant_form</code> (C1/C2), <code>visit_high_rate_form</code> + <code>visit_high_rate_form_item</code> (E1)</li>
 			<li>Column <code>orders.channel_partner_order_flag</code> (1=Channel Partner Order)</li>
 		</ul>

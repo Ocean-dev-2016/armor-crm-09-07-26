@@ -427,6 +427,22 @@ background-color: #e5e5e5 !important;position: sticky;top: 0; z-index: 1;
 									echo '</div>';
 								}
 							}
+							if (!empty($ctable_d['high_rate_form_id']) || (!empty($ctable_d['remark_code']) && $ctable_d['remark_code'] == 'E')) {
+								$hrf = $db->rp_getData("visit_high_rate_form", "*", "visit_id='" . $ctable_d['id'] . "' AND isDelete=0", "id DESC", 0);
+								if ($hrf) {
+									$hf = mysqli_fetch_assoc($hrf);
+									echo '<div style="margin-top:6px;padding:6px;border:1px solid #ddd;background:#fff8e6;font-size:12px;line-height:1.5;">';
+									echo '<b>High Rate Analysis</b><br>';
+									echo '<b>Customer name:</b> ' . htmlspecialchars($hf['customer_name']);
+									if (!empty($hf['payment_option'])) {
+										echo ' &nbsp; <b>Payment:</b> ' . htmlspecialchars($hf['payment_option']);
+									}
+									if (!empty($ctable_d['visit_followup_id']) && $ctable_d['visit_followup_id'] != '0') {
+										echo '<br><span class="label label-info">Follow-up #' . htmlspecialchars($ctable_d['visit_followup_id']) . '</span>';
+									}
+									echo '</div>';
+								}
+							}
 						?></td>
 						<td>
 							<!-- Trigger the modal with a button -->
