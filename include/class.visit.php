@@ -918,7 +918,12 @@ class Visit extends Functions
 		));
 
 		if ($formId == "" || $formId == "0") {
-			return array("ack" => 0, "ack_msg" => "Consultant Detail save failed.", "developer_msg" => "Insert/Update failed");
+			$dbError = $this->db->rp_getLastDbError();
+			return array(
+				"ack" => 0,
+				"ack_msg" => "Consultant Detail save failed.",
+				"developer_msg" => ($dbError != "") ? $dbError : "Insert/Update failed",
+			);
 		}
 
 		$formRow = array();
