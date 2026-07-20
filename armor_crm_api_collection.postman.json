@@ -13969,9 +13969,9 @@
                                 },
                                 {
                                     "key": "payment_option",
-                                    "value": "Advance",
+                                    "value": "0",
                                     "type": "text",
-                                    "description": "Advance or 30 Days"
+                                    "description": "0=Advance, 1=30 Days"
                                 },
                                 {
                                     "key": "payment_remark",
@@ -13980,9 +13980,9 @@
                                 },
                                 {
                                     "key": "items",
-                                    "value": "[{\"slug\":\"branch_pipe_heavy\",\"given_rate\":\"100\",\"qty\":\"2\",\"customer_rate\":\"90\",\"remark\":\"\"},{\"slug\":\"hydrant_single_double\",\"given_rate\":\"50\",\"qty\":\"1\",\"customer_rate\":\"45\",\"remark\":\"\"}]",
+                                    "value": "[{\"productName\":\"BRANCH PIPE HEAVY\",\"givenRate\":\"100\",\"qty\":\"2\",\"customerRate\":\"90\",\"remark\":\"\"},{\"productName\":\"HYDRANT (SINGLE / DOUBLE)\",\"givenRate\":\"50\",\"qty\":\"1\",\"customerRate\":\"45\",\"remark\":\"\"}]",
                                     "type": "text",
-                                    "description": "JSON array of all products (one-shot). No form_id needed."
+                                    "description": "JSON array — Android camelCase: productName, givenRate, qty, customerRate, remark. slug also accepted."
                                 }
                             ]
                         },
@@ -13996,7 +13996,7 @@
                                 "service_visit.php"
                             ]
                         },
-                        "description": "**API Code:** 234\n\n**Slug:** save_visit_high_rate_form\n\n**Service (s):** 234\n\nSave High Rate Analysis (E1) — **ONE-SHOT submit by visit_id**.\n\n**Android does NOT send `high_rate_form_id`.** Backend creates/updates form from `visit_id` and stores `high_rate_form_id` internally on item rows.\n\n**Flow:**\n1. Call **#235** to get fixed product list (slugs)\n2. User fills rates → call **#234** once with header + all items\n3. Call **#122** to end visit → Follow-up auto created\n\n**Required:** visit_id, user_id\n**Optional:** customer_id, customer_name (auto from visit customer if blank), payment_option (Advance/30 Days), payment_remark, items (JSON)\n\n**items JSON (preferred):**\n```json\n[\n  {\"slug\":\"branch_pipe_heavy\",\"given_rate\":\"100\",\"qty\":\"2\",\"customer_rate\":\"90\",\"remark\":\"\"},\n  {\"slug\":\"hydrant_single_double\",\"given_rate\":\"50\",\"qty\":\"1\",\"customer_rate\":\"45\",\"remark\":\"\"}\n]\n```\n\nAlso accepts slug-keyed object:\n```json\n{\"branch_pipe_heavy\":{\"given_rate\":\"100\",\"qty\":\"2\",\"customer_rate\":\"90\"}}\n```\n\n**Success:** ack=1, high_rate_form_id (response only), reason_code=E1, result (with items)"
+                        "description": "**API Code:** 234\n\n**Slug:** save_visit_high_rate_form\n\n**Service (s):** 234\n\nSave High Rate Analysis (E1) — **ONE-SHOT submit by visit_id**.\n\n**Android does NOT send `high_rate_form_id`.** Backend creates/updates form from `visit_id`.\n\n**Required:** visit_id, user_id, items (JSON)\n**Optional:** customer_id, customer_name, payment_option (`0`=Advance, `1`=30 Days), payment_remark\n\n**items JSON (Android camelCase):**\n```json\n[\n  {\"productName\":\"BRANCH PIPE HEAVY\",\"givenRate\":\"100\",\"qty\":\"2\",\"customerRate\":\"90\",\"remark\":\"\"},\n  {\"productName\":\"HYDRANT (SINGLE / DOUBLE)\",\"givenRate\":\"50\",\"qty\":\"1\",\"customerRate\":\"45\",\"remark\":\"\"}\n]\n```\n\nAlso accepts `slug` or snake_case keys.\n\n**Success:** ack=1, high_rate_form_id, reason_code=E1, result"
                     },
                     "response": []
                 },
@@ -14030,7 +14030,7 @@
                                 "service_visit.php"
                             ]
                         },
-                        "description": "**API Code:** 235\n\n**Slug:** get_visit_high_rate_products\n\n**Service (s):** 235\n\nFixed High Rate product list with **slug** for Android UI binding.\n\n**No required params** (only `key` + `s=235`).\n\n**Response:**\n- `ack=1`\n- `form_title`: High Rate Analysis\n- `columns`: product_name, given_rate, qty, customer_rate, remark\n- `payment_options`: Advance, 30 Days\n- `result`: array of 18 products with `slug`, `product_name`, `sort_order`\n\n**Product slugs:** branch_pipe_heavy, hydrant_single_double, hose_reel_drom, rrl_hose_isi, extinguisher, hose_box, way_2way_3way_4way, sprinkler, alarm_valve, deluge_valve, flexible_pipe, water_moniter, butterfly_valve, non_return_valve, orifice_plate, y_strainer, gate_valve, air_release_valve\n\nUse these slugs when saving via **#234** items payload."
+                        "description": "**API Code:** 235\n\n**Slug:** get_visit_high_rate_products\n\n**Service (s):** 235\n\nFixed High Rate product list for Android UI.\n\n**No required params** (only `key` + `s=235`).\n\n**Response:**\n- `columns`: productName, givenRate, qty, customerRate, remark\n- `payment_options`: [{\"value\":\"0\",\"label\":\"Advance\"},{\"value\":\"1\",\"label\":\"30 Days\"}]\n- `result`: 18 products with slug, productName, empty rate fields\n\nFill rates in App → send all rows in **#234 items** JSON with same camelCase keys.\n\n**payment_option in #234:** send `0` or `1`"
                     },
                     "response": []
                 },

@@ -615,6 +615,60 @@ class Visit extends Functions
 		);
 	}
 
+	/** payment_option: 0 = Advance, 1 = 30 Days (Android sends 0/1) */
+	public function getHighRatePaymentOptions()
+	{
+		return array(
+			array("value" => "0", "label" => "Advance"),
+			array("value" => "1", "label" => "30 Days"),
+		);
+	}
+
+	public function normalizeHighRatePaymentOption($value)
+	{
+		$value = trim((string) $value);
+		if ($value === "0" || strcasecmp($value, "Advance") === 0) {
+			return "0";
+		}
+		if ($value === "1" || strcasecmp($value, "30 Days") === 0 || strcasecmp($value, "30 days") === 0) {
+			return "1";
+		}
+		return $value;
+	}
+
+	public function getHighRatePaymentOptionLabel($value)
+	{
+		$value = $this->normalizeHighRatePaymentOption($value);
+		if ($value === "0") {
+			return "Advance";
+		}
+		if ($value === "1") {
+			return "30 Days";
+		}
+		return $value;
+	}
+
+	/** #235 — product list with Android camelCase keys */
+	public function getHighRateProductsForApi()
+	{
+		$products = array();
+		foreach ($this->getHighRateProductsMaster() as $p) {
+			$products[] = array(
+				"slug" => $p['slug'],
+				"product_name" => $p['product_name'],
+				"productName" => $p['product_name'],
+				"sort_order" => (string) $p['sort_order'],
+				"givenRate" => "",
+				"given_rate" => "",
+				"qty" => "",
+				"customerRate" => "",
+				"customer_rate" => "",
+				"remark" => "",
+			);
+		}
+		return $products;
+	}
+
 	public function getHighRateProductMaster()
 	{
 		$names = array();
@@ -677,7 +731,14 @@ class Visit extends Functions
 	private function resolveHighRateItemRow($row)
 	{
 		$slug = isset($row['slug']) ? strtolower(trim($row['slug'])) : "";
-		$productName = isset($row['product_name']) ? trim($row['product_name']) : (isset($row['Product']) ? trim($row['Product']) : "");
+		$productName = "";
+		if (isset($row['product_name'])) {
+			$productName = trim($row['product_name']);
+		} else if (isset($row['productName'])) {
+			$productName = trim($row['productName']);
+		} else if (isset($row['Product'])) {
+			$productName = trim($row['Product']);
+		}
 		$sortOrder = isset($row['sort_order']) ? (int) $row['sort_order'] : 0;
 
 		if ($slug != "") {
@@ -700,12 +761,32 @@ class Visit extends Functions
 			}
 		}
 
+		$givenRate = "";
+		if (isset($row['given_rate'])) {
+			$givenRate = $row['given_rate'];
+		} else if (isset($row['givenRate'])) {
+			$givenRate = $row['givenRate'];
+		} else if (isset($row['Givan Rate'])) {
+			$givenRate = $row['Givan Rate'];
+		} else if (isset($row['Given Rate'])) {
+			$givenRate = $row['Given Rate'];
+		}
+
+		$customerRate = "";
+		if (isset($row['customer_rate'])) {
+			$customerRate = $row['customer_rate'];
+		} else if (isset($row['customerRate'])) {
+			$customerRate = $row['customerRate'];
+		} else if (isset($row['Customer rate'])) {
+			$customerRate = $row['Customer rate'];
+		}
+
 		return array(
 			"slug" => $slug,
 			"product_name" => $productName,
-			"given_rate" => isset($row['given_rate']) ? $row['given_rate'] : (isset($row['Givan Rate']) ? $row['Givan Rate'] : (isset($row['Given Rate']) ? $row['Given Rate'] : "")),
+			"given_rate" => $givenRate,
 			"qty" => isset($row['qty']) ? $row['qty'] : (isset($row['Qty']) ? $row['Qty'] : ""),
-			"customer_rate" => isset($row['customer_rate']) ? $row['customer_rate'] : (isset($row['Customer rate']) ? $row['Customer rate'] : ""),
+			"customer_rate" => $customerRate,
 			"remark" => isset($row['remark']) ? $row['remark'] : (isset($row['Remark']) ? $row['Remark'] : ""),
 			"sort_order" => $sortOrder,
 		);
@@ -956,7 +1037,7 @@ class Visit extends Functions
 		}
 
 		$customerName = isset($data['customer_name']) ? $data['customer_name'] : "";
-		$paymentOption = isset($data['payment_option']) ? $data['payment_option'] : "";
+		$paymentOption = isset($data['payment_option']) ? $this->normalizeHighRatePaymentOption($data['payment_option']) : "";
 		$paymentRemark = isset($data['payment_remark']) ? $data['payment_remark'] : "";
 		$followupId = isset($data['followup_id']) ? $data['followup_id'] : 0;
 		$items = isset($data['items']) && is_array($data['items']) ? $data['items'] : array();
@@ -1131,7 +1212,7 @@ class Visit extends Functions
 			}
 		}
 
-		$paymentOption = isset($detail['payment_option']) ? trim($detail['payment_option']) : "";
+		$paymentOption = isset($detail['payment_option']) ? $this->normalizeHighRatePaymentOption(trim($detail['payment_option'])) : "";
 		$paymentRemark = isset($detail['payment_remark']) ? trim($detail['payment_remark']) : "";
 
 		$formId = $this->saveVisitHighRateForm(array(
@@ -1203,7 +1284,7 @@ class Visit extends Functions
 			$parts[] = "Customer: " . $form['customer_name'];
 		}
 		if (!empty($form['payment_option'])) {
-			$parts[] = "Payment: " . $form['payment_option'];
+			$parts[] = "Payment: " . $this->getHighRatePaymentOptionLabel($form['payment_option']);
 		}
 		$filled = 0;
 		$itemRes = $this->db->rp_getData("visit_high_rate_form_item", "*", "high_rate_form_id='" . $form['id'] . "' AND isDelete=0", "sort_order ASC", 0);

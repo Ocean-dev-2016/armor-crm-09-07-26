@@ -555,7 +555,13 @@ $ctable_r = $db->rp_getData($ctable, "*", $ctable_where, "id DESC limit $page_po
 										echo '<b>High Rate Analysis</b><br>';
 										echo '<b>Customer name:</b> ' . htmlspecialchars($hf['customer_name']);
 										if (!empty($hf['payment_option'])) {
-											echo ' &nbsp; <b>Payment:</b> ' . htmlspecialchars($hf['payment_option']);
+											$payLabel = $hf['payment_option'];
+											if ($payLabel === '0') {
+												$payLabel = 'Advance';
+											} else if ($payLabel === '1') {
+												$payLabel = '30 Days';
+											}
+											echo ' &nbsp; <b>Payment:</b> ' . htmlspecialchars($payLabel);
 										}
 										$hri = $db->rp_getData("visit_high_rate_form_item", "*", "high_rate_form_id='" . $hf['id'] . "' AND isDelete=0", "sort_order ASC", 0);
 										if ($hri) {

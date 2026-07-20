@@ -435,7 +435,13 @@ background-color: #e5e5e5 !important;position: sticky;top: 0; z-index: 1;
 									echo '<b>High Rate Analysis</b><br>';
 									echo '<b>Customer name:</b> ' . htmlspecialchars($hf['customer_name']);
 									if (!empty($hf['payment_option'])) {
-										echo ' &nbsp; <b>Payment:</b> ' . htmlspecialchars($hf['payment_option']);
+										$payLabel = $hf['payment_option'];
+										if ($payLabel === '0') {
+											$payLabel = 'Advance';
+										} else if ($payLabel === '1') {
+											$payLabel = '30 Days';
+										}
+										echo ' &nbsp; <b>Payment:</b> ' . htmlspecialchars($payLabel);
 									}
 									if (!empty($ctable_d['visit_followup_id']) && $ctable_d['visit_followup_id'] != '0') {
 										echo '<br><span class="label label-info">Follow-up #' . htmlspecialchars($ctable_d['visit_followup_id']) . '</span>';

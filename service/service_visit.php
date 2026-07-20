@@ -576,21 +576,21 @@ if ($is_valid_api_key) {
 			$reply = $objVisit->SaveHighRateDetailForm($detail);
 			echo json_encode($reply);
 		} else if ($service == 'get_visit_high_rate_products' || $service == 235) {
-			/* Fixed High Rate product list with slug for Android UI binding */
-			$products = $objVisit->getHighRateProductsMaster();
+			/* Fixed High Rate product list with slug + Android camelCase keys */
+			$products = $objVisit->getHighRateProductsForApi();
 			$reply = array(
 				"ack" => 1,
 				"developer_msg" => "High Rate product list fetched successfully.",
 				"ack_msg" => "High Rate product list fetched successfully.",
 				"form_title" => "High Rate Analysis",
 				"columns" => array(
-					array("key" => "product_name", "label" => "Product"),
-					array("key" => "given_rate", "label" => "Given Rate"),
+					array("key" => "productName", "label" => "Product"),
+					array("key" => "givenRate", "label" => "Given Rate"),
 					array("key" => "qty", "label" => "Qty"),
-					array("key" => "customer_rate", "label" => "Customer rate"),
+					array("key" => "customerRate", "label" => "Customer rate"),
 					array("key" => "remark", "label" => "Remark"),
 				),
-				"payment_options" => array("Advance", "30 Days"),
+				"payment_options" => $objVisit->getHighRatePaymentOptions(),
 				"result" => $products,
 			);
 			echo json_encode($reply);
