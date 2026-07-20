@@ -173,6 +173,61 @@ class Visit extends Functions
 	}
 
 
+	/**
+	 * Parse App stop_remark text into remark_code / reason_code.
+	 * Examples:
+	 *  "(E) HIGH RATE ( (E1)High Rate Form)"
+	 *  "(E) HIGH RATE - E1: High Rate Form"
+	 *  "(C) NEED APPROVAL - C1: Private Consultant"
+	 *  "(F) SHORT NOTE - some text"
+	 */
+	public function parseVisitStopRemarkCodes($stopRemark = "", $remarkCode = "", $reasonCode = "")
+	{
+		$remarkCode = strtoupper(trim((string) $remarkCode));
+		$reasonCode = strtoupper(trim((string) $reasonCode));
+		$stopRemark = trim((string) $stopRemark);
+
+		if ($stopRemark != "") {
+			if ($remarkCode == "" && preg_match('/\(([A-G])\)/i', $stopRemark, $m)) {
+				$remarkCode = strtoupper($m[1]);
+			}
+			if ($reasonCode == "" && preg_match('/\b([A-G]\d)\b/i', $stopRemark, $m)) {
+				$reasonCode = strtoupper($m[1]);
+			}
+			if ($remarkCode == "" && stripos($stopRemark, "HIGH RATE") !== false) {
+				$remarkCode = "E";
+			}
+			if ($reasonCode == "" && stripos($stopRemark, "High Rate Form") !== false) {
+				$reasonCode = "E1";
+			}
+			if ($remarkCode == "" && stripos($stopRemark, "NEED APPROVAL") !== false) {
+				$remarkCode = "C";
+			}
+			if ($reasonCode == "" && stripos($stopRemark, "Private Consultant") !== false) {
+				$reasonCode = "C1";
+			}
+			if ($reasonCode == "" && stripos($stopRemark, "Government Consultant") !== false) {
+				$reasonCode = "C2";
+			}
+			if ($remarkCode == "" && stripos($stopRemark, "SHORT NOTE") !== false) {
+				$remarkCode = "F";
+			}
+		}
+
+		/* Reason implies parent remark */
+		if ($remarkCode == "" && $reasonCode != "") {
+			$remarkCode = substr($reasonCode, 0, 1);
+		}
+		if ($reasonCode == "" && $remarkCode == "E") {
+			$reasonCode = "E1";
+		}
+
+		return array(
+			"remark_code" => $remarkCode,
+			"reason_code" => $reasonCode,
+		);
+	}
+
 	public function UpdateVisit($detail, $file)
 	{
 		// print_r($file);exit;
@@ -185,10 +240,52 @@ class Visit extends Functions
 			$reference_table = "";
 		}
 
+		$stop_remark = isset($stop_remark) ? trim($stop_remark) : "";
 		$remark_code = isset($remark_code) ? strtoupper(trim($remark_code)) : "";
 		$reason_code = isset($reason_code) ? strtoupper(trim($reason_code)) : "";
 		$approval_type = isset($approval_type) ? trim($approval_type) : "";
-		$shortNoteText = ($remark_code == "F") ? trim($stop_remark) : "";
+
+		/* App sends full text in stop_remark only — parse codes for follow-up/form logic */
+		$parsed = $this->parseVisitStopRemarkCodes($stop_remark, $remark_code, $reason_code);
+		$remark_code = $parsed['remark_code'];
+		$reason_code = $parsed['reason_code'];
+		if ($approval_type == "" && $reason_code == "C1") {
+			$approval_type = "1";
+		} else if ($approval_type == "" && $reason_code == "C2") {
+			$approval_type = "2";
+		}
+
+		/* Infer from already-saved forms when App only sent stop_remark text */
+		if (($remark_code == "" || $reason_code == "") && isset($id) && $id != "") {
+			$hrId = $this->db->rp_getValue($this->ctable, "high_rate_form_id", "id='" . $id . "'", 0);
+			if ($hrId == "" || $hrId == "0") {
+				$hrId = $this->db->rp_getValue("visit_high_rate_form", "id", "visit_id='" . $id . "' AND isDelete=0", 0);
+			}
+			if ($hrId != "" && $hrId != "0" && $hrId !== false) {
+				if ($remark_code == "") {
+					$remark_code = "E";
+				}
+				if ($reason_code == "") {
+					$reason_code = "E1";
+				}
+			}
+			$cfId = $this->db->rp_getValue($this->ctable, "consultant_form_id", "id='" . $id . "'", 0);
+			if ($cfId == "" || $cfId == "0") {
+				$cfId = $this->db->rp_getValue("visit_consultant_form", "id", "visit_id='" . $id . "' AND isDelete=0", 0);
+			}
+			if ($cfId != "" && $cfId != "0" && $cfId !== false && $remark_code == "") {
+				$remark_code = "C";
+				$cReason = $this->db->rp_getValue("visit_consultant_form", "reason_code", "id='" . $cfId . "'", 0);
+				if ($cReason != "" && $cReason !== false) {
+					$reason_code = strtoupper($cReason);
+				}
+			}
+		}
+
+		$shortNoteText = "";
+		if ($remark_code == "F") {
+			$shortNoteText = $stop_remark;
+		}
 
 		$remarkNameMap = array(
 			"A" => "OLD CUSTOMER VISIT",
@@ -209,8 +306,11 @@ class Visit extends Functions
 			"D2" => "Next Month Order",
 			"E1" => "High Rate Form",
 		);
-		/* Build one readable value used by all existing Visit web/print reports. */
-		if ($remark_code != "") {
+		/*
+		 * Primary save field = stop_remark (App display text).
+		 * Only auto-compose when App sent codes but left stop_remark empty.
+		 */
+		if ($stop_remark == "" && $remark_code != "") {
 			$composed = "(" . $remark_code . ") " . (isset($remarkNameMap[$remark_code]) ? $remarkNameMap[$remark_code] : $remark_code);
 			if ($remark_code == "F" && $shortNoteText != "") {
 				$composed .= " - " . $shortNoteText;

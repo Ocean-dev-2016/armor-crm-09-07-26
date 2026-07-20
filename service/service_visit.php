@@ -673,6 +673,13 @@ if ($is_valid_api_key) {
 			$detail['stop_remark'] 			= isset($_REQUEST['stop_remark']) ? $db->clean($_REQUEST['stop_remark']) : "";
 			$detail['remark_code'] 			= isset($_REQUEST['remark_code']) ? strtoupper($db->clean($_REQUEST['remark_code'])) : "";
 			$detail['reason_code'] 			= isset($_REQUEST['reason_code']) ? strtoupper($db->clean($_REQUEST['reason_code'])) : "";
+			/*
+			 * App form: only stop_remark (display text). remark_code/reason_code optional.
+			 * Parse codes from stop_remark e.g. "(E) HIGH RATE ( (E1)High Rate Form)"
+			 */
+			$parsedCodes = $objVisit->parseVisitStopRemarkCodes($detail['stop_remark'], $detail['remark_code'], $detail['reason_code']);
+			$detail['remark_code'] = $parsedCodes['remark_code'];
+			$detail['reason_code'] = $parsedCodes['reason_code'];
 			$detail['approval_type'] 		= isset($_REQUEST['approval_type']) ? $db->clean($_REQUEST['approval_type']) : "";
 			if ($detail['remark_code'] == "C" && $detail['approval_type'] == "") {
 				if ($detail['reason_code'] == "C1") {
@@ -750,6 +757,32 @@ if ($is_valid_api_key) {
 			$detail['payment_option'] = isset($_REQUEST['payment_option']) ? $db->clean($_REQUEST['payment_option']) : "";
 			$detail['payment_remark'] = isset($_REQUEST['payment_remark']) ? $db->clean($_REQUEST['payment_remark']) : "";
 
+			/* If App selected High Rate / Consultant but forgot stop_remark — infer from saved form */
+			if ($detail['stop_remark'] == "" && $detail['remark_code'] == "" && !empty($detail['id'])) {
+				$hrId = $db->rp_getValue("visit", "high_rate_form_id", "id='" . $detail['id'] . "' AND isDelete=0", 0);
+				if ($hrId == "" || $hrId == "0") {
+					$hrId = $db->rp_getValue("visit_high_rate_form", "id", "visit_id='" . $detail['id'] . "' AND isDelete=0", 0);
+				}
+				if ($hrId != "" && $hrId != "0" && $hrId !== false) {
+					$detail['remark_code'] = "E";
+					$detail['reason_code'] = "E1";
+					$detail['stop_remark'] = "(E) HIGH RATE - E1: High Rate Form";
+				} else {
+					$cfId = $db->rp_getValue("visit", "consultant_form_id", "id='" . $detail['id'] . "' AND isDelete=0", 0);
+					if ($cfId == "" || $cfId == "0") {
+						$cfId = $db->rp_getValue("visit_consultant_form", "id", "visit_id='" . $detail['id'] . "' AND isDelete=0", 0);
+					}
+					if ($cfId != "" && $cfId != "0" && $cfId !== false) {
+						$cReason = $db->rp_getValue("visit_consultant_form", "reason_code", "id='" . $cfId . "'", 0);
+						$detail['remark_code'] = "C";
+						$detail['reason_code'] = ($cReason != "" && $cReason !== false) ? strtoupper($cReason) : "C1";
+						$detail['stop_remark'] = ($detail['reason_code'] == "C2")
+							? "(C) NEED APPROVAL - C2: Government Consultant"
+							: "(C) NEED APPROVAL - C1: Private Consultant";
+					}
+				}
+			}
+
 			/*if(isset($_REQUEST['customer_id']) && $_REQUEST['customer_id']!=null)
 				{*/
 
@@ -759,15 +792,32 @@ if ($is_valid_api_key) {
 			} else if (empty($detail['name']) || empty($detail['mobile_no']) || empty($detail['email_id']) || empty($detail['designation_id'])) {
 				$reply = ['ack' => 0, "ack_msg" => "Customer Person Name, Customer Person Mobile No, Customer Person Email ID, Customer Person Designation are mandatory please fill up first. "];
 				echo json_encode($reply);
-			} else if ($detail['remark_code'] == "") {
+			} else if ($detail['stop_remark'] == "" && $detail['remark_code'] == "") {
+				/* Require stop_remark text from App (codes optional — parsed from stop_remark) */
 				$reply = ['ack' => 0, "ack_msg" => "Please select Remark / Reason."];
 				echo json_encode($reply);
 			} else if ($detail['remark_code'] == "F" && $detail['stop_remark'] == "") {
 				$reply = ['ack' => 0, "ack_msg" => "Please enter Short Note remark."];
 				echo json_encode($reply);
 			} else if ($detail['remark_code'] == "C" && !in_array($detail['reason_code'], array("C1", "C2"))) {
-				$reply = ['ack' => 0, "ack_msg" => "Please select Private Consultant or Government Consultant."];
-				echo json_encode($reply);
+				/* Infer C1/C2 from saved consultant form */
+				$cfId = $db->rp_getValue("visit", "consultant_form_id", "id='" . $detail['id'] . "' AND isDelete=0", 0);
+				if ($cfId == "" || $cfId == "0") {
+					$cfId = $db->rp_getValue("visit_consultant_form", "id", "visit_id='" . $detail['id'] . "' AND isDelete=0", 0);
+				}
+				if ($cfId != "" && $cfId != "0" && $cfId !== false) {
+					$cReason = $db->rp_getValue("visit_consultant_form", "reason_code", "id='" . $cfId . "'", 0);
+					if ($cReason != "" && $cReason !== false) {
+						$detail['reason_code'] = strtoupper($cReason);
+					}
+				}
+				if (!in_array($detail['reason_code'], array("C1", "C2"))) {
+					$reply = ['ack' => 0, "ack_msg" => "Please select Private Consultant or Government Consultant."];
+					echo json_encode($reply);
+				} else {
+					$reply = $objVisit->UpdateVisit($detail, $_FILES);
+					echo json_encode($reply);
+				}
 			} else if ($detail['remark_code'] == "C") {
 				/* Allow visit end if Consultant Detail already saved via #233 */
 				$existingConsultantFormId = $db->rp_getValue("visit", "consultant_form_id", "id='" . $detail['id'] . "' AND isDelete=0", 0);
@@ -791,7 +841,7 @@ if ($is_valid_api_key) {
 					$reply = $objVisit->UpdateVisit($detail, $_FILES);
 					echo json_encode($reply);
 				}
-			} else if ($detail['remark_code'] == "E" && $detail['reason_code'] != "E1") {
+			} else if ($detail['remark_code'] == "E" && $detail['reason_code'] != "" && $detail['reason_code'] != "E1") {
 				$reply = ['ack' => 0, "ack_msg" => "Please select High Rate Form."];
 				echo json_encode($reply);
 			} else if ($detail['remark_code'] == "E") {
@@ -800,6 +850,9 @@ if ($is_valid_api_key) {
 				 * → allow Stop Visit without sending form fields again.
 				 * Check visit.high_rate_form_id OR visit_high_rate_form by visit_id.
 				 */
+				if ($detail['reason_code'] == "") {
+					$detail['reason_code'] = "E1";
+				}
 				$existingHighRateFormId = $db->rp_getValue("visit", "high_rate_form_id", "id='" . $detail['id'] . "' AND isDelete=0", 0);
 				$formAlreadySaved = ($existingHighRateFormId != "" && $existingHighRateFormId != "0" && $existingHighRateFormId !== false);
 				if (!$formAlreadySaved) {
