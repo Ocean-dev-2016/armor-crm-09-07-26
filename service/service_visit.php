@@ -663,6 +663,9 @@ if ($is_valid_api_key) {
 			}
 		} else if ($service == 'update_visit' || $service == 122) {
 			$detail['id'] 			    = isset($_REQUEST['id']) ? $db->clean($_REQUEST['id']) : "";
+			if ($detail['id'] == "" && isset($_REQUEST['visit_id'])) {
+				$detail['id'] = $db->clean($_REQUEST['visit_id']);
+			}
 			$detail['user_id'] 			= isset($_REQUEST['user_id']) ? $db->clean($_REQUEST['user_id']) : "";
 			//$detail['customer_id'] 		= isset($_REQUEST['customer_id'])?$db->clean($_REQUEST['customer_id']):"";
 			$detail['stop_latitude'] 		= isset($_REQUEST['stop_latitude']) ? $db->clean($_REQUEST['stop_latitude']) : "";
@@ -685,6 +688,9 @@ if ($is_valid_api_key) {
 			$detail['visit_type'] 			= isset($_REQUEST['visit_type']) ? $db->clean($_REQUEST['visit_type']) : "";
 			$detail['visit_stop_flag'] 			= isset($_REQUEST['visit_stop_flag']) ? $db->clean($_REQUEST['visit_stop_flag']) : "";
 			$detail['product_name'] 			= isset($_REQUEST['product_name']) ? $db->clean($_REQUEST['product_name']) : "";
+			if ($detail['product_name'] == "" && isset($_REQUEST['purchasing_from'])) {
+				$detail['product_name'] = $db->clean($_REQUEST['purchasing_from']);
+			}
 			$detail['firm_name'] 			= isset($_REQUEST['firm_name']) ? $db->clean($_REQUEST['firm_name']) : "";
 			$detail['client_name'] 			= isset($_REQUEST['client_name']) ? $db->clean($_REQUEST['client_name']) : "";
 			$detail['contact_number'] 			= isset($_REQUEST['contact_number']) ? $db->clean($_REQUEST['contact_number']) : "";
@@ -734,12 +740,23 @@ if ($is_valid_api_key) {
 
 			/* E1 High Rate Analysis form fields */
 			$detail['high_rate_customer_name'] = isset($_REQUEST['high_rate_customer_name']) ? $db->clean($_REQUEST['high_rate_customer_name']) : "";
+			if ($detail['high_rate_customer_name'] == "" && isset($_REQUEST['customer_name'])) {
+				$detail['high_rate_customer_name'] = $db->clean($_REQUEST['customer_name']);
+			}
 			$detail['high_rate_items'] = isset($_REQUEST['high_rate_items']) ? $_REQUEST['high_rate_items'] : "";
+			if ($detail['high_rate_items'] == "" && isset($_REQUEST['items'])) {
+				$detail['high_rate_items'] = $_REQUEST['items'];
+			}
+			$detail['payment_option'] = isset($_REQUEST['payment_option']) ? $db->clean($_REQUEST['payment_option']) : "";
+			$detail['payment_remark'] = isset($_REQUEST['payment_remark']) ? $db->clean($_REQUEST['payment_remark']) : "";
 
 			/*if(isset($_REQUEST['customer_id']) && $_REQUEST['customer_id']!=null)
 				{*/
 
-			if (empty($detail['name']) || empty($detail['mobile_no']) || empty($detail['email_id']) || empty($detail['designation_id'])) {
+			if (empty($detail['id']) || $detail['id'] == "0") {
+				$reply = ['ack' => 0, "ack_msg" => "Visit id is required.", "developer_msg" => "id / visit_id missing"];
+				echo json_encode($reply);
+			} else if (empty($detail['name']) || empty($detail['mobile_no']) || empty($detail['email_id']) || empty($detail['designation_id'])) {
 				$reply = ['ack' => 0, "ack_msg" => "Customer Person Name, Customer Person Mobile No, Customer Person Email ID, Customer Person Designation are mandatory please fill up first. "];
 				echo json_encode($reply);
 			} else if ($detail['remark_code'] == "") {
@@ -755,6 +772,10 @@ if ($is_valid_api_key) {
 				/* Allow visit end if Consultant Detail already saved via #233 */
 				$existingConsultantFormId = $db->rp_getValue("visit", "consultant_form_id", "id='" . $detail['id'] . "' AND isDelete=0", 0);
 				$formAlreadySaved = ($existingConsultantFormId != "" && $existingConsultantFormId != "0");
+				if (!$formAlreadySaved) {
+					$existingConsultantFormId = $db->rp_getValue("visit_consultant_form", "id", "visit_id='" . $detail['id'] . "' AND isDelete=0", 0);
+					$formAlreadySaved = ($existingConsultantFormId != "" && $existingConsultantFormId != "0" && $existingConsultantFormId !== false);
+				}
 				if (!$formAlreadySaved && (
 					$detail['consultant_firm_name'] == "" ||
 					$detail['consultant_address'] == "" ||
@@ -774,11 +795,22 @@ if ($is_valid_api_key) {
 				$reply = ['ack' => 0, "ack_msg" => "Please select High Rate Form."];
 				echo json_encode($reply);
 			} else if ($detail['remark_code'] == "E") {
-				/* Allow visit end if High Rate form already saved via #234 */
+				/*
+				 * High Rate form already submitted via #234 (App shows "Selected High Rate Form is Submitted")
+				 * → allow Stop Visit without sending form fields again.
+				 * Check visit.high_rate_form_id OR visit_high_rate_form by visit_id.
+				 */
 				$existingHighRateFormId = $db->rp_getValue("visit", "high_rate_form_id", "id='" . $detail['id'] . "' AND isDelete=0", 0);
-				$formAlreadySaved = ($existingHighRateFormId != "" && $existingHighRateFormId != "0");
+				$formAlreadySaved = ($existingHighRateFormId != "" && $existingHighRateFormId != "0" && $existingHighRateFormId !== false);
+				if (!$formAlreadySaved) {
+					$existingHighRateFormId = $db->rp_getValue("visit_high_rate_form", "id", "visit_id='" . $detail['id'] . "' AND isDelete=0", 0);
+					$formAlreadySaved = ($existingHighRateFormId != "" && $existingHighRateFormId != "0" && $existingHighRateFormId !== false);
+					if ($formAlreadySaved) {
+						$db->rp_update("visit", array("high_rate_form_id" => $existingHighRateFormId), "id='" . $detail['id'] . "'", 0);
+					}
+				}
 				if (!$formAlreadySaved && $detail['high_rate_customer_name'] == "") {
-					$reply = ['ack' => 0, "ack_msg" => "Please fill High Rate Analysis form (Customer name)."];
+					$reply = ['ack' => 0, "ack_msg" => "Please fill High Rate Analysis form (Customer name).", "developer_msg" => "High Rate form not found for this visit_id. Call #234 first."];
 					echo json_encode($reply);
 				} else {
 					$reply = $objVisit->UpdateVisit($detail, $_FILES);
