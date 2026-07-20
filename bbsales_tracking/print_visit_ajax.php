@@ -309,7 +309,24 @@ $ctable_r = $db->rp_getData($ctable, "*", $ctable_where, "id DESC", 0);
 						} else {
 							echo "";
 						} ?></td>
-					<td><?php echo stripslashes($ctable_d['stop_remark']); ?></td>
+					<td><?php echo stripslashes($ctable_d['stop_remark']);
+						if (!empty($ctable_d['consultant_form_id']) || (!empty($ctable_d['remark_code']) && $ctable_d['remark_code'] == 'C')) {
+							$vcf = $db->rp_getData("visit_consultant_form", "*", "visit_id='" . $ctable_d['id'] . "' AND isDelete=0", "id DESC", 0);
+							if ($vcf) {
+								$vf = mysqli_fetch_assoc($vcf);
+								$typeLabel = (isset($vf['consultant_type']) && $vf['consultant_type'] == "government") ? "Government Consultant" : "Private Consultant";
+								echo '<br/><small><b>Consultant Detail (' . htmlspecialchars($typeLabel) . ')</b>';
+								echo ' | Firm: ' . htmlspecialchars($vf['firm_name']);
+								echo ' | Contact: ' . htmlspecialchars($vf['contact_person']);
+								echo ' | Mo: ' . htmlspecialchars($vf['mobile']);
+								if (!empty($vf['email'])) {
+									echo ' | Mail: ' . htmlspecialchars($vf['email']);
+								}
+								echo ' | ' . htmlspecialchars($vf['city']) . ', ' . htmlspecialchars($vf['state']) . ' - ' . htmlspecialchars($vf['pincode']);
+								echo '</small>';
+							}
+						}
+					?></td>
 					<!-- <td> -->
 					<!-- Trigger the modal with a button -->
 					<?php

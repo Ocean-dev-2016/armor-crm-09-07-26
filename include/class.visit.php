@@ -314,7 +314,7 @@ class Visit extends Functions
 			$upadateid = $this->db->rp_update($this->ctable, array("stop_image_path" => $image_path), "id='" . $id . "'", 0);
 		}
 
-		if ($eid != 0) {
+			if ($eid != 0) {
 			$followupCreated = false;
 			$followupId = "";
 			$consultantFormId = "";
@@ -326,6 +326,37 @@ class Visit extends Functions
 			 * E1 also stores High Rate Analysis form + product rows.
 			 * visit_followup_id / form ids prevent duplicates if Android retries #122.
 			 */
+
+			/* Save/link C1/C2 form first so Follow-up can include form details */
+			if (($reason_code == "C1" || $reason_code == "C2") && $remark_code == "C") {
+				$hasConsultantPayload = (
+					(isset($consultant_firm_name) && trim($consultant_firm_name) != "") ||
+					(isset($consultant_address) && trim($consultant_address) != "") ||
+					(isset($consultant_mobile) && trim($consultant_mobile) != "")
+				);
+				if ($hasConsultantPayload) {
+					$consultantFormId = $this->saveVisitConsultantForm(array(
+						"visit_id" => $id,
+						"user_id" => $user_id,
+						"customer_id" => $customer_id,
+						"inquiry_id" => $inquiry_id,
+						"reason_code" => $reason_code,
+						"approval_type" => $approval_type,
+						"followup_id" => 0,
+						"firm_name" => isset($consultant_firm_name) ? $consultant_firm_name : (isset($firm_name) ? $firm_name : ""),
+						"address" => isset($consultant_address) ? $consultant_address : "",
+						"city" => isset($consultant_city) ? $consultant_city : "",
+						"state" => isset($consultant_state) ? $consultant_state : "",
+						"pincode" => isset($consultant_pincode) ? $consultant_pincode : "",
+						"contact_person" => isset($consultant_contact_person) ? $consultant_contact_person : "",
+						"mobile" => isset($consultant_mobile) ? $consultant_mobile : "",
+						"email" => isset($consultant_email) ? $consultant_email : "",
+					));
+				} else {
+					$consultantFormId = $this->db->rp_getValue($this->ctable, "consultant_form_id", "id='" . $id . "'", 0);
+				}
+			}
+
 			$existingFollowupId = $this->db->rp_getValue(
 				$this->ctable,
 				"visit_followup_id",
@@ -360,6 +391,10 @@ class Visit extends Functions
 						$followupDescription = "[Visit Stop - Short Note] " . $shortNoteText;
 					} else if ($remark_code == "C") {
 						$followupDescription = "[Visit Stop - Need Approval] " . $stop_remark;
+						$consultantDetailText = $this->getConsultantFormFollowupText($id, $consultantFormId);
+						if ($consultantDetailText != "") {
+							$followupDescription .= " | " . $consultantDetailText;
+						}
 					} else if ($remark_code == "E") {
 						$followupDescription = "[Visit Stop - High Rate] " . $stop_remark;
 					}
@@ -415,37 +450,9 @@ class Visit extends Functions
 				}
 			}
 
-			/* C1 Private / C2 Government Consultant Detail form */
-			if (($reason_code == "C1" || $reason_code == "C2") && $remark_code == "C") {
-				$hasConsultantPayload = (
-					(isset($consultant_firm_name) && trim($consultant_firm_name) != "") ||
-					(isset($consultant_address) && trim($consultant_address) != "") ||
-					(isset($consultant_mobile) && trim($consultant_mobile) != "")
-				);
-				if ($hasConsultantPayload) {
-					$consultantFormId = $this->saveVisitConsultantForm(array(
-						"visit_id" => $id,
-						"user_id" => $user_id,
-						"customer_id" => $customer_id,
-						"inquiry_id" => $inquiry_id,
-						"reason_code" => $reason_code,
-						"approval_type" => $approval_type,
-						"followup_id" => $followupId,
-						"firm_name" => isset($consultant_firm_name) ? $consultant_firm_name : (isset($firm_name) ? $firm_name : ""),
-						"address" => isset($consultant_address) ? $consultant_address : "",
-						"city" => isset($consultant_city) ? $consultant_city : "",
-						"state" => isset($consultant_state) ? $consultant_state : "",
-						"pincode" => isset($consultant_pincode) ? $consultant_pincode : "",
-						"contact_person" => isset($consultant_contact_person) ? $consultant_contact_person : "",
-						"mobile" => isset($consultant_mobile) ? $consultant_mobile : "",
-						"email" => isset($consultant_email) ? $consultant_email : "",
-					));
-				} else {
-					$consultantFormId = $this->db->rp_getValue($this->ctable, "consultant_form_id", "id='" . $id . "'", 0);
-					if ($consultantFormId && $followupId) {
-						$this->db->rp_update("visit_consultant_form", array("followup_id" => $followupId), "id='" . $consultantFormId . "'", 0);
-					}
-				}
+			/* Link followup_id on consultant form */
+			if ($consultantFormId != "" && $consultantFormId != "0" && $followupId != "" && $followupId != "0") {
+				$this->db->rp_update("visit_consultant_form", array("followup_id" => $followupId), "id='" . $consultantFormId . "'", 0);
 			}
 
 			/* E1 High Rate Analysis form */
@@ -487,6 +494,82 @@ class Visit extends Functions
 			$reply = array("ack" => 0, "developer_msg" => "Database error!!", "ack_msg" => "Failed! Visit Not Update");
 			return $reply;
 		}
+	}
+
+	public function getConsultantFormFollowupText($visitId, $formId = "")
+	{
+		$form = null;
+		if ($formId != "" && $formId != "0") {
+			$r = $this->db->rp_getData("visit_consultant_form", "*", "id='" . $formId . "' AND isDelete=0", "", 0);
+			if ($r) {
+				$form = mysqli_fetch_assoc($r);
+			}
+		}
+		if (!$form && $visitId != "" && $visitId != "0") {
+			$r = $this->db->rp_getData("visit_consultant_form", "*", "visit_id='" . $visitId . "' AND isDelete=0", "id DESC", 0);
+			if ($r) {
+				$form = mysqli_fetch_assoc($r);
+			}
+		}
+		if (!$form) {
+			return "";
+		}
+		$parts = array();
+		$typeLabel = (isset($form['consultant_type']) && $form['consultant_type'] == "government") ? "Government Consultant" : "Private Consultant";
+		$parts[] = "Type: " . $typeLabel;
+		if (!empty($form['firm_name'])) {
+			$parts[] = "Firm: " . $form['firm_name'];
+		}
+		if (!empty($form['contact_person'])) {
+			$parts[] = "Contact: " . $form['contact_person'];
+		}
+		if (!empty($form['mobile'])) {
+			$parts[] = "Mo: " . $form['mobile'];
+		}
+		if (!empty($form['email'])) {
+			$parts[] = "Mail: " . $form['email'];
+		}
+		if (!empty($form['city'])) {
+			$parts[] = "City: " . $form['city'];
+		}
+		if (!empty($form['state'])) {
+			$parts[] = "State: " . $form['state'];
+		}
+		if (!empty($form['pincode'])) {
+			$parts[] = "Pincode: " . $form['pincode'];
+		}
+		if (!empty($form['address'])) {
+			$parts[] = "Address: " . $form['address'];
+		}
+		return implode(" | ", $parts);
+	}
+
+	public function getConsultantFormHtml($visitId)
+	{
+		if ($visitId == "" || $visitId == "0") {
+			return "";
+		}
+		$r = $this->db->rp_getData("visit_consultant_form", "*", "visit_id='" . $visitId . "' AND isDelete=0", "id DESC", 0);
+		if (!$r) {
+			return "";
+		}
+		$form = mysqli_fetch_assoc($r);
+		if (!$form) {
+			return "";
+		}
+		$typeLabel = (isset($form['consultant_type']) && $form['consultant_type'] == "government") ? "Government Consultant" : "Private Consultant";
+		$html = '<div style="margin-top:6px;padding:6px;border:1px solid #ddd;background:#f9f9f9;font-size:12px;line-height:1.5;">';
+		$html .= '<b>Consultant Detail (' . htmlspecialchars($typeLabel) . ')</b><br>';
+		$html .= '<b>Firm Name:</b> ' . htmlspecialchars($form['firm_name']) . '<br>';
+		$html .= '<b>Address:</b> ' . nl2br(htmlspecialchars($form['address'])) . '<br>';
+		$html .= '<b>City:</b> ' . htmlspecialchars($form['city']) . ' &nbsp; <b>State:</b> ' . htmlspecialchars($form['state']) . ' &nbsp; <b>Pincode:</b> ' . htmlspecialchars($form['pincode']) . '<br>';
+		$html .= '<b>Contact Person:</b> ' . htmlspecialchars($form['contact_person']) . '<br>';
+		$html .= '<b>Mo:</b> ' . htmlspecialchars($form['mobile']);
+		if (!empty($form['email'])) {
+			$html .= ' &nbsp; <b>Mail ID:</b> ' . htmlspecialchars($form['email']);
+		}
+		$html .= '</div>';
+		return $html;
 	}
 
 	public function getHighRateProductMaster()

@@ -405,7 +405,29 @@ background-color: #e5e5e5 !important;position: sticky;top: 0; z-index: 1;
 							?>
 						</td>
 						<td><?php if($ctable_d['start_date_time']!="0000-00-00 00:00:00"){echo date('d-m-Y h:i A',strtotime($ctable_d['start_date_time']));} else{echo "";}?></td>
-						<td><?php echo stripslashes($ctable_d['stop_remark']); ?></td>
+						<td><?php echo stripslashes($ctable_d['stop_remark']);
+							if (!empty($ctable_d['consultant_form_id']) || (!empty($ctable_d['remark_code']) && $ctable_d['remark_code'] == 'C')) {
+								$vcf = $db->rp_getData("visit_consultant_form", "*", "visit_id='" . $ctable_d['id'] . "' AND isDelete=0", "id DESC", 0);
+								if ($vcf) {
+									$vf = mysqli_fetch_assoc($vcf);
+									$typeLabel = (isset($vf['consultant_type']) && $vf['consultant_type'] == "government") ? "Government Consultant" : "Private Consultant";
+									echo '<div style="margin-top:6px;padding:6px;border:1px solid #ddd;background:#f9f9f9;font-size:12px;line-height:1.5;">';
+									echo '<b>Consultant Detail (' . htmlspecialchars($typeLabel) . ')</b><br>';
+									echo '<b>Firm Name:</b> ' . htmlspecialchars($vf['firm_name']) . '<br>';
+									echo '<b>Address:</b> ' . nl2br(htmlspecialchars($vf['address'])) . '<br>';
+									echo '<b>City:</b> ' . htmlspecialchars($vf['city']) . ' &nbsp; <b>State:</b> ' . htmlspecialchars($vf['state']) . ' &nbsp; <b>Pincode:</b> ' . htmlspecialchars($vf['pincode']) . '<br>';
+									echo '<b>Contact Person:</b> ' . htmlspecialchars($vf['contact_person']) . '<br>';
+									echo '<b>Mo:</b> ' . htmlspecialchars($vf['mobile']);
+									if (!empty($vf['email'])) {
+										echo ' &nbsp; <b>Mail ID:</b> ' . htmlspecialchars($vf['email']);
+									}
+									if (!empty($ctable_d['visit_followup_id']) && $ctable_d['visit_followup_id'] != '0') {
+										echo '<br><span class="label label-info">Follow-up #' . htmlspecialchars($ctable_d['visit_followup_id']) . '</span>';
+									}
+									echo '</div>';
+								}
+							}
+						?></td>
 						<td>
 							<!-- Trigger the modal with a button -->
 							<?php if($ctable_d['stop_longitude']!=""){
