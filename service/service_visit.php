@@ -519,9 +519,9 @@ if ($is_valid_api_key) {
 			echo json_encode($reply);
 		} else if ($service == 'save_visit_high_rate_form' || $service == 234) {
 			/*
-			 * SAVE AND NEXT — High Rate Analysis form (E1)
-			 * App designs fixed product list UI; backend only stores rates.
-			 * Visit End (#122) still creates Follow-up — existing #122 not changed for old clients.
+			 * SAVE AND NEXT — High Rate Analysis (E1) — ONE-SHOT submit by visit_id
+			 * Android does NOT send high_rate_form_id. Backend creates it from visit_id.
+			 * Send header + all product rows together in one API call.
 			 */
 			$detail = array();
 			$detail['visit_id'] = isset($_REQUEST['visit_id']) ? $db->clean($_REQUEST['visit_id']) : (isset($_REQUEST['id']) ? $db->clean($_REQUEST['id']) : "");
@@ -553,7 +553,24 @@ if ($is_valid_api_key) {
 				$decoded = json_decode($itemsRaw, true);
 				$detail['items'] = is_array($decoded) ? $decoded : array();
 			} else {
+				/* Fallback: accept per-slug fields from App, e.g. branch_pipe_heavy = {given_rate, qty...} */
 				$detail['items'] = array();
+				foreach ($objVisit->getHighRateProductsMaster() as $p) {
+					$slug = $p['slug'];
+					if (!isset($_REQUEST[$slug])) {
+						continue;
+					}
+					$row = $_REQUEST[$slug];
+					if (is_string($row)) {
+						$decodedRow = json_decode($row, true);
+						$row = is_array($decodedRow) ? $decodedRow : array();
+					}
+					if (!is_array($row)) {
+						continue;
+					}
+					$row['slug'] = $slug;
+					$detail['items'][] = $row;
+				}
 			}
 
 			$reply = $objVisit->SaveHighRateDetailForm($detail);

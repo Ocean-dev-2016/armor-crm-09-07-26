@@ -943,6 +943,11 @@ class Visit extends Functions
 		);
 	}
 
+	/**
+	 * Save High Rate form by visit_id only.
+	 * Android does NOT send high_rate_form_id — backend creates/updates it internally.
+	 * One-shot submit: header + all product rows in same call.
+	 */
 	private function saveVisitHighRateForm($data)
 	{
 		$visitId = isset($data['visit_id']) ? $data['visit_id'] : 0;
@@ -955,6 +960,9 @@ class Visit extends Functions
 		$paymentRemark = isset($data['payment_remark']) ? $data['payment_remark'] : "";
 		$followupId = isset($data['followup_id']) ? $data['followup_id'] : 0;
 		$items = isset($data['items']) && is_array($data['items']) ? $data['items'] : array();
+		if (!empty($items)) {
+			$items = $this->normalizeHighRateItems($items);
+		}
 
 		$rowData = array(
 			"visit_id" => $visitId,
@@ -970,61 +978,42 @@ class Visit extends Functions
 			"isDelete" => 0,
 		);
 
-		$existingId = $this->db->rp_getValue("visit_high_rate_form", "id", "visit_id='" . $visitId . "' AND isDelete=0", 0);
-		if ($existingId != "" && $existingId != "0") {
-			/* Update header; replace items only when payload has items */
-			$this->db->rp_update("visit_high_rate_form", $rowData, "id='" . $existingId . "'", 0);
-			if (!empty($items)) {
-				$this->db->rp_update("visit_high_rate_form_item", array("isDelete" => 1), "high_rate_form_id='" . $existingId . "'", 0);
-				$items = $this->normalizeHighRateItems($items);
-				$this->insertHighRateFormItems($existingId, $visitId, $items);
+		/* Find existing form by visit_id — never require form_id from Android */
+		$formId = $this->db->rp_getValue("visit_high_rate_form", "id", "visit_id='" . $visitId . "' AND isDelete=0", 0);
+		if ($formId != "" && $formId != "0") {
+			$this->db->rp_update("visit_high_rate_form", $rowData, "id='" . $formId . "'", 0);
+		} else {
+			$rowData["created_date"] = date("Y-m-d H:i:s");
+			$columns = array_keys($rowData);
+			$values = array_values($rowData);
+			$formId = $this->db->rp_insert("visit_high_rate_form", $values, $columns, 0);
+			if (!$formId) {
+				return "";
 			}
-			$this->db->rp_update(
-				$this->ctable,
-				array(
-					"high_rate_form_id" => $existingId,
-					"remark_code" => "E",
-					"reason_code" => "E1",
-				),
-				"id='" . $visitId . "'",
-				0
-			);
-			return $existingId;
 		}
 
-		$rowData["created_date"] = date("Y-m-d H:i:s");
-		$columns = array_keys($rowData);
-		$values = array_values($rowData);
-		$formId = $this->db->rp_insert("visit_high_rate_form", $values, $columns, 0);
-		if ($formId) {
-			if (empty($items)) {
-				foreach ($this->getHighRateProductsMaster() as $p) {
-					$items[] = array(
-						"slug" => $p['slug'],
-						"product_name" => $p['product_name'],
-						"given_rate" => "",
-						"qty" => "",
-						"customer_rate" => "",
-						"remark" => "",
-						"sort_order" => $p['sort_order'],
-					);
-				}
-			} else {
-				$items = $this->normalizeHighRateItems($items);
-			}
-			$this->insertHighRateFormItems($formId, $visitId, $items);
+		/* Replace all item rows for this visit when items sent (one-shot submit) */
+		if (!empty($items)) {
 			$this->db->rp_update(
-				$this->ctable,
-				array(
-					"high_rate_form_id" => $formId,
-					"remark_code" => "E",
-					"reason_code" => "E1",
-				),
-				"id='" . $visitId . "'",
+				"visit_high_rate_form_item",
+				array("isDelete" => 1),
+				"visit_id='" . $visitId . "' OR high_rate_form_id='" . $formId . "'",
 				0
 			);
+			$this->insertHighRateFormItems($formId, $visitId, $items);
 		}
-		return $formId ? $formId : "";
+
+		$this->db->rp_update(
+			$this->ctable,
+			array(
+				"high_rate_form_id" => $formId,
+				"remark_code" => "E",
+				"reason_code" => "E1",
+			),
+			"id='" . $visitId . "'",
+			0
+		);
+		return $formId;
 	}
 
 	private function insertHighRateFormItems($formId, $visitId, $items)
@@ -1086,7 +1075,8 @@ class Visit extends Functions
 
 	/**
 	 * Public API helper — Save / Update High Rate Analysis form (E1)
-	 * Used by Android SAVE AND NEXT button. Does not change #122 contract.
+	 * Android one-shot submit by visit_id only (NO high_rate_form_id required).
+	 * Does not change #122 contract.
 	 */
 	public function SaveHighRateDetailForm($detail)
 	{
@@ -1104,24 +1094,39 @@ class Visit extends Functions
 			return array("ack" => 0, "ack_msg" => "Visit not found.", "developer_msg" => "Invalid visit_id");
 		}
 
+		$customerId = isset($detail['customer_id']) ? $detail['customer_id'] : 0;
+		if ($customerId == "" || $customerId == "0") {
+			$customerId = $this->db->rp_getValue($this->ctable, "customer_id", "id='" . $visitId . "'", 0);
+		}
+
 		$customerName = isset($detail['customer_name']) ? trim($detail['customer_name']) : "";
 		if ($customerName == "" && isset($detail['high_rate_customer_name'])) {
 			$customerName = trim($detail['high_rate_customer_name']);
 		}
+		/* Optional: if App does not send name, use visit customer name */
+		if ($customerName == "" && $customerId != "" && $customerId != "0") {
+			$customerName = $this->db->rp_getValue("executive", "company_name", "id='" . $customerId . "' AND isDelete=0", 0);
+			if ($customerName === false || $customerName == "") {
+				$customerName = $this->db->rp_getValue("executive", "cname", "id='" . $customerId . "' AND isDelete=0", 0);
+			}
+			if ($customerName === false) {
+				$customerName = "";
+			}
+		}
 		if ($customerName == "") {
-			return array("ack" => 0, "ack_msg" => "Please enter Customer name.", "developer_msg" => "customer_name missing");
+			$customerName = "Customer";
 		}
 
 		$items = array();
 		if (isset($detail['items']) && is_array($detail['items'])) {
-			$items = $this->normalizeHighRateItems($detail['items']);
+			$items = $detail['items'];
 		} else if (isset($detail['high_rate_items'])) {
 			if (is_array($detail['high_rate_items'])) {
-				$items = $this->normalizeHighRateItems($detail['high_rate_items']);
+				$items = $detail['high_rate_items'];
 			} else if ($detail['high_rate_items'] != "") {
 				$decoded = json_decode($detail['high_rate_items'], true);
 				if (is_array($decoded)) {
-					$items = $this->normalizeHighRateItems($decoded);
+					$items = $decoded;
 				}
 			}
 		}
@@ -1132,7 +1137,7 @@ class Visit extends Functions
 		$formId = $this->saveVisitHighRateForm(array(
 			"visit_id" => $visitId,
 			"user_id" => $userId,
-			"customer_id" => isset($detail['customer_id']) ? $detail['customer_id'] : 0,
+			"customer_id" => $customerId ? $customerId : 0,
 			"inquiry_id" => isset($detail['inquiry_id']) ? $detail['inquiry_id'] : 0,
 			"reason_code" => "E1",
 			"customer_name" => $customerName,
@@ -1142,7 +1147,12 @@ class Visit extends Functions
 		));
 
 		if ($formId == "" || $formId == "0") {
-			return array("ack" => 0, "ack_msg" => "High Rate Analysis save failed.", "developer_msg" => "Insert/Update failed");
+			$dbError = $this->db->rp_getLastDbError();
+			return array(
+				"ack" => 0,
+				"ack_msg" => "High Rate Analysis save failed.",
+				"developer_msg" => ($dbError != "") ? $dbError : "Insert/Update failed",
+			);
 		}
 
 		$formRow = array();

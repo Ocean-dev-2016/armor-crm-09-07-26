@@ -13980,9 +13980,9 @@
                                 },
                                 {
                                     "key": "items",
-                                    "value": "[{\"product_name\":\"BRANCH PIPE HEAVY\",\"given_rate\":\"100\",\"qty\":\"2\",\"customer_rate\":\"90\",\"remark\":\"\",\"sort_order\":1}]",
+                                    "value": "[{\"slug\":\"branch_pipe_heavy\",\"given_rate\":\"100\",\"qty\":\"2\",\"customer_rate\":\"90\",\"remark\":\"\"},{\"slug\":\"hydrant_single_double\",\"given_rate\":\"50\",\"qty\":\"1\",\"customer_rate\":\"45\",\"remark\":\"\"}]",
                                     "type": "text",
-                                    "description": "JSON array of product rows"
+                                    "description": "JSON array of all products (one-shot). No form_id needed."
                                 }
                             ]
                         },
@@ -13996,7 +13996,7 @@
                                 "service_visit.php"
                             ]
                         },
-                        "description": "**API Code:** 234\n\n**Slug:** save_visit_high_rate_form\n\n**Service (s):** 234\n\nSave High Rate Analysis form (E1) — App SAVE AND NEXT.\n\n**Does NOT replace #122.** Existing update_visit still works. New flow:\n1. Remark E → reason E1 → open High Rate form (App fixed UI)\n2. Call **#234** to save rates\n3. Call **#122** to end visit → Follow-up auto created\n\n**Required:** visit_id, user_id, customer_name\n**Optional:** customer_id, inquiry_id, payment_option (Advance/30 Days), payment_remark, items (JSON)\n\n**items JSON example:**\n```json\n[\n  {\"product_name\":\"BRANCH PIPE HEAVY\",\"given_rate\":\"100\",\"qty\":\"2\",\"customer_rate\":\"90\",\"remark\":\"\",\"sort_order\":1}\n]\n```\n\nAlso accepts `high_rate_customer_name` / `high_rate_items` aliases.\n\n**Success:** ack=1, high_rate_form_id, reason_code=E1, result"
+                        "description": "**API Code:** 234\n\n**Slug:** save_visit_high_rate_form\n\n**Service (s):** 234\n\nSave High Rate Analysis (E1) — **ONE-SHOT submit by visit_id**.\n\n**Android does NOT send `high_rate_form_id`.** Backend creates/updates form from `visit_id` and stores `high_rate_form_id` internally on item rows.\n\n**Flow:**\n1. Call **#235** to get fixed product list (slugs)\n2. User fills rates → call **#234** once with header + all items\n3. Call **#122** to end visit → Follow-up auto created\n\n**Required:** visit_id, user_id\n**Optional:** customer_id, customer_name (auto from visit customer if blank), payment_option (Advance/30 Days), payment_remark, items (JSON)\n\n**items JSON (preferred):**\n```json\n[\n  {\"slug\":\"branch_pipe_heavy\",\"given_rate\":\"100\",\"qty\":\"2\",\"customer_rate\":\"90\",\"remark\":\"\"},\n  {\"slug\":\"hydrant_single_double\",\"given_rate\":\"50\",\"qty\":\"1\",\"customer_rate\":\"45\",\"remark\":\"\"}\n]\n```\n\nAlso accepts slug-keyed object:\n```json\n{\"branch_pipe_heavy\":{\"given_rate\":\"100\",\"qty\":\"2\",\"customer_rate\":\"90\"}}\n```\n\n**Success:** ack=1, high_rate_form_id (response only), reason_code=E1, result (with items)"
                     },
                     "response": []
                 },
