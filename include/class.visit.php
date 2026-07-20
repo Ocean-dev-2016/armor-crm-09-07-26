@@ -730,7 +730,13 @@ class Visit extends Functions
 
 	private function resolveHighRateItemRow($row)
 	{
-		$slug = isset($row['slug']) ? strtolower(trim($row['slug'])) : "";
+		$slug = "";
+		if (isset($row['slug'])) {
+			$slug = strtolower(trim($row['slug']));
+		} else if (isset($row['productSlug'])) {
+			$slug = strtolower(trim($row['productSlug']));
+		}
+
 		$productName = "";
 		if (isset($row['product_name'])) {
 			$productName = trim($row['product_name']);
@@ -741,23 +747,12 @@ class Visit extends Functions
 		}
 		$sortOrder = isset($row['sort_order']) ? (int) $row['sort_order'] : 0;
 
-		if ($slug != "") {
-			$master = $this->getHighRateProductBySlug($slug);
-			if ($master) {
-				$productName = $master['product_name'];
-				if ($sortOrder == 0) {
-					$sortOrder = (int) $master['sort_order'];
-				}
-			}
-		} else if ($productName != "") {
-			foreach ($this->getHighRateProductsMaster() as $master) {
-				if (strcasecmp($master['product_name'], $productName) === 0) {
-					$slug = $master['slug'];
-					if ($sortOrder == 0) {
-						$sortOrder = (int) $master['sort_order'];
-					}
-					break;
-				}
+		$master = $this->matchHighRateProductMaster($productName, $slug);
+		if ($master) {
+			$slug = $master['slug'];
+			$productName = $master['product_name'];
+			if ($sortOrder == 0) {
+				$sortOrder = (int) $master['sort_order'];
 			}
 		}
 
@@ -792,18 +787,77 @@ class Visit extends Functions
 		);
 	}
 
+	private function normalizeHighRateProductKey($name)
+	{
+		$name = strtoupper(trim((string) $name));
+		return preg_replace('/\s+/', '', $name);
+	}
+
+	private function matchHighRateProductMaster($productName = "", $slug = "")
+	{
+		$slug = strtolower(trim((string) $slug));
+		if ($slug != "") {
+			$master = $this->getHighRateProductBySlug($slug);
+			if ($master) {
+				return $master;
+			}
+		}
+
+		$productName = trim((string) $productName);
+		if ($productName == "") {
+			return null;
+		}
+
+		foreach ($this->getHighRateProductsMaster() as $master) {
+			if (strcasecmp($master['product_name'], $productName) === 0) {
+				return $master;
+			}
+		}
+
+		$nameKey = $this->normalizeHighRateProductKey($productName);
+		foreach ($this->getHighRateProductsMaster() as $master) {
+			if ($this->normalizeHighRateProductKey($master['product_name']) === $nameKey) {
+				return $master;
+			}
+		}
+
+		return null;
+	}
+
+	private function deleteHighRateFormItemsByVisit($visitId, $formId = "")
+	{
+		$visitId = (int) $visitId;
+		if ($visitId <= 0) {
+			return;
+		}
+		$where = "visit_id='" . $visitId . "'";
+		if ($formId != "" && $formId != "0") {
+			$where = "(visit_id='" . $visitId . "' OR high_rate_form_id='" . (int) $formId . "')";
+		}
+		@mysqli_query($this->db->myconn, "DELETE FROM `visit_high_rate_form_item` WHERE " . $where);
+	}
+
 	private function filterHighRateItemRows($rows)
 	{
-		$out = array();
+		$byKey = array();
 		foreach ($rows as $row) {
 			if ($row['product_name'] == "" && $row['slug'] == "") {
 				continue;
 			}
 			if ($row['product_name'] == "" && $row['slug'] != "") {
-				continue;
+				$master = $this->getHighRateProductBySlug($row['slug']);
+				if ($master) {
+					$row['product_name'] = $master['product_name'];
+					$row['sort_order'] = (int) $master['sort_order'];
+				} else {
+					continue;
+				}
 			}
-			$out[] = $row;
+			/* Prefer fixed master slug as unique key — same slug never twice */
+			$key = ($row['slug'] != "") ? $row['slug'] : ("name:" . $this->normalizeHighRateProductKey($row['product_name']));
+			$byKey[$key] = $row;
 		}
+		$out = array_values($byKey);
 		usort($out, function ($a, $b) {
 			return (int) $a['sort_order'] - (int) $b['sort_order'];
 		});
@@ -1025,9 +1079,9 @@ class Visit extends Functions
 	}
 
 	/**
-	 * Save High Rate form by visit_id only.
-	 * Android does NOT send high_rate_form_id — backend creates/updates it internally.
-	 * One-shot submit: header + all product rows in same call.
+	 * Save High Rate form by visit_id (+ customer_id).
+	 * Android always sends fixed 18 products (productName + slug).
+	 * Same visit_id → UPDATE existing form/items (NO duplicate 18 rows).
 	 */
 	private function saveVisitHighRateForm($data)
 	{
@@ -1036,19 +1090,28 @@ class Visit extends Functions
 			return "";
 		}
 
+		$customerId = isset($data['customer_id']) ? $data['customer_id'] : 0;
+		if ($customerId == "" || $customerId == "0") {
+			$customerId = $this->db->rp_getValue($this->ctable, "customer_id", "id='" . $visitId . "'", 0);
+			if ($customerId === false) {
+				$customerId = 0;
+			}
+		}
+
 		$customerName = isset($data['customer_name']) ? $data['customer_name'] : "";
 		$paymentOption = isset($data['payment_option']) ? $this->normalizeHighRatePaymentOption($data['payment_option']) : "";
 		$paymentRemark = isset($data['payment_remark']) ? $data['payment_remark'] : "";
 		$followupId = isset($data['followup_id']) ? $data['followup_id'] : 0;
 		$items = isset($data['items']) && is_array($data['items']) ? $data['items'] : array();
 		if (!empty($items)) {
+			/* Unique by slug — max 18 fixed products, no duplicates in same call */
 			$items = $this->normalizeHighRateItems($items);
 		}
 
 		$rowData = array(
 			"visit_id" => $visitId,
 			"user_id" => isset($data['user_id']) ? $data['user_id'] : 0,
-			"customer_id" => isset($data['customer_id']) ? $data['customer_id'] : 0,
+			"customer_id" => $customerId ? $customerId : 0,
 			"inquiry_id" => isset($data['inquiry_id']) ? $data['inquiry_id'] : 0,
 			"reason_code" => isset($data['reason_code']) ? $data['reason_code'] : "E1",
 			"customer_name" => $customerName,
@@ -1059,7 +1122,7 @@ class Visit extends Functions
 			"isDelete" => 0,
 		);
 
-		/* Find existing form by visit_id — never require form_id from Android */
+		/* Same visit_id → reuse same form (never create 2nd form for same visit) */
 		$formId = $this->db->rp_getValue("visit_high_rate_form", "id", "visit_id='" . $visitId . "' AND isDelete=0", 0);
 		if ($formId != "" && $formId != "0") {
 			$this->db->rp_update("visit_high_rate_form", $rowData, "id='" . $formId . "'", 0);
@@ -1073,15 +1136,9 @@ class Visit extends Functions
 			}
 		}
 
-		/* Replace all item rows for this visit when items sent (one-shot submit) */
+		/* Same visit_id → upsert 18 items by slug (update rates, no new duplicate set) */
 		if (!empty($items)) {
-			$this->db->rp_update(
-				"visit_high_rate_form_item",
-				array("isDelete" => 1),
-				"visit_id='" . $visitId . "' OR high_rate_form_id='" . $formId . "'",
-				0
-			);
-			$this->insertHighRateFormItems($formId, $visitId, $items);
+			$this->upsertHighRateFormItems($formId, $visitId, $items);
 		}
 
 		$this->db->rp_update(
@@ -1097,7 +1154,14 @@ class Visit extends Functions
 		return $formId;
 	}
 
-	private function insertHighRateFormItems($formId, $visitId, $items)
+	/**
+	 * Upsert items by visit_id + product_slug.
+	 * - Existing slug for this visit → UPDATE rates
+	 * - New slug → INSERT once
+	 * - Extra old rows for this visit → DELETE
+	 * Result: always max 1 row per product slug per visit (≈18 rows).
+	 */
+	private function upsertHighRateFormItems($formId, $visitId, $items)
 	{
 		$hasSlugCol = false;
 		$colCheck = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `visit_high_rate_form_item` LIKE 'product_slug'");
@@ -1105,53 +1169,92 @@ class Visit extends Functions
 			$hasSlugCol = true;
 		}
 
+		$keptIds = array();
 		$sort = 0;
 		foreach ($items as $item) {
 			$sort++;
 			if (!is_array($item)) {
 				continue;
 			}
-			if (!isset($item['product_name']) && isset($item['slug'])) {
-				$item = $this->resolveHighRateItemRow($item);
-			}
+			$item = $this->resolveHighRateItemRow($item);
 			$productName = isset($item['product_name']) ? $item['product_name'] : "";
-			$productSlug = isset($item['slug']) ? $item['slug'] : "";
+			$productSlug = isset($item['slug']) ? strtolower(trim($item['slug'])) : "";
 			$givenRate = isset($item['given_rate']) ? $item['given_rate'] : "";
 			$qty = isset($item['qty']) ? $item['qty'] : "";
 			$customerRate = isset($item['customer_rate']) ? $item['customer_rate'] : "";
 			$remark = isset($item['remark']) ? $item['remark'] : "";
-			$itemSort = isset($item['sort_order']) ? $item['sort_order'] : $sort;
+			$itemSort = isset($item['sort_order']) && (int) $item['sort_order'] > 0 ? (int) $item['sort_order'] : $sort;
+			if ($productName == "" && $productSlug == "") {
+				continue;
+			}
+			if ($productName == "" && $productSlug != "") {
+				$master = $this->getHighRateProductBySlug($productSlug);
+				if ($master) {
+					$productName = $master['product_name'];
+				}
+			}
 			if ($productName == "") {
 				continue;
 			}
-			$itemColumns = array(
-				"high_rate_form_id",
-				"visit_id",
-				"product_name",
-				"given_rate",
-				"qty",
-				"customer_rate",
-				"remark",
-				"sort_order",
-				"isDelete",
-			);
-			$itemValues = array(
-				$formId,
-				$visitId,
-				$productName,
-				$givenRate,
-				$qty,
-				$customerRate,
-				$remark,
-				$itemSort,
-				0,
+
+			$existingId = "";
+			if ($hasSlugCol && $productSlug != "") {
+				$existingId = $this->db->rp_getValue(
+					"visit_high_rate_form_item",
+					"id",
+					"visit_id='" . $visitId . "' AND product_slug='" . $this->db->clean($productSlug) . "'",
+					0
+				);
+			}
+			if (($existingId == "" || $existingId == "0" || $existingId === false) && $productName != "") {
+				$existingId = $this->db->rp_getValue(
+					"visit_high_rate_form_item",
+					"id",
+					"visit_id='" . $visitId . "' AND product_name='" . $this->db->clean($productName) . "'",
+					0
+				);
+			}
+
+			$updateData = array(
+				"high_rate_form_id" => $formId,
+				"visit_id" => $visitId,
+				"product_name" => $productName,
+				"given_rate" => $givenRate,
+				"qty" => $qty,
+				"customer_rate" => $customerRate,
+				"remark" => $remark,
+				"sort_order" => $itemSort,
+				"isDelete" => 0,
 			);
 			if ($hasSlugCol) {
-				array_splice($itemColumns, 3, 0, array("product_slug"));
-				array_splice($itemValues, 3, 0, array($productSlug));
+				$updateData["product_slug"] = $productSlug;
 			}
-			$this->db->rp_insert("visit_high_rate_form_item", $itemValues, $itemColumns, 0);
+
+			if ($existingId != "" && $existingId != "0" && $existingId !== false) {
+				$this->db->rp_update("visit_high_rate_form_item", $updateData, "id='" . $existingId . "'", 0);
+				$keptIds[] = (int) $existingId;
+			} else {
+				$itemColumns = array_keys($updateData);
+				$itemValues = array_values($updateData);
+				$newId = $this->db->rp_insert("visit_high_rate_form_item", $itemValues, $itemColumns, 0);
+				if ($newId) {
+					$keptIds[] = (int) $newId;
+				}
+			}
 		}
+
+		/* Remove leftover rows for this visit (old duplicates / products not in this submit) */
+		$whereExtra = "visit_id='" . (int) $visitId . "'";
+		if (!empty($keptIds)) {
+			$whereExtra .= " AND id NOT IN (" . implode(",", $keptIds) . ")";
+		}
+		@mysqli_query($this->db->myconn, "DELETE FROM `visit_high_rate_form_item` WHERE " . $whereExtra);
+	}
+
+	/** @deprecated kept for any old callers — redirects to upsert */
+	private function insertHighRateFormItems($formId, $visitId, $items)
+	{
+		$this->upsertHighRateFormItems($formId, $visitId, $items);
 	}
 
 	/**
