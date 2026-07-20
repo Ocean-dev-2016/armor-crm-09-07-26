@@ -14001,6 +14001,40 @@
                     "response": []
                 },
                 {
+                    "name": "get_visit_high_rate_products  (#235)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "235",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_visit.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_visit.php"
+                            ]
+                        },
+                        "description": "**API Code:** 235\n\n**Slug:** get_visit_high_rate_products\n\n**Service (s):** 235\n\nFixed High Rate product list with **slug** for Android UI binding.\n\n**No required params** (only `key` + `s=235`).\n\n**Response:**\n- `ack=1`\n- `form_title`: High Rate Analysis\n- `columns`: product_name, given_rate, qty, customer_rate, remark\n- `payment_options`: Advance, 30 Days\n- `result`: array of 18 products with `slug`, `product_name`, `sort_order`\n\n**Product slugs:** branch_pipe_heavy, hydrant_single_double, hose_reel_drom, rrl_hose_isi, extinguisher, hose_box, way_2way_3way_4way, sprinkler, alarm_valve, deluge_valve, flexible_pipe, water_moniter, butterfly_valve, non_return_valve, orifice_plate, y_strainer, gate_valve, air_release_valve\n\nUse these slugs when saving via **#234** items payload."
+                    },
+                    "response": []
+                },
+                {
                     "name": "Visit Pdf Download  (#198)",
                     "request": {
                         "method": "POST",
