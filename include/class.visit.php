@@ -353,7 +353,30 @@ class Visit extends Functions
 		$eid = $this->db->rp_update($this->ctable, $rows, $Where, 0);
 
 		$image_path = array();
-		if (isset($file["image_path"]) && $file["image_path"]['size'] != 0) {
+		/*
+		 * Android may send one file as image/image_path (scalar fields) or
+		 * multiple files as image_path[] (array fields). Normalize both forms
+		 * before counting; count()/sizeof() on a scalar is fatal on PHP 8.
+		 */
+		$visitImageUpload = null;
+		if (isset($file["image_path"]) && is_array($file["image_path"])) {
+			$visitImageUpload = $file["image_path"];
+		} else if (isset($file["image"]) && is_array($file["image"])) {
+			$visitImageUpload = $file["image"];
+		}
+		if ($visitImageUpload !== null && isset($visitImageUpload['name'])) {
+			foreach (array('name', 'size', 'tmp_name', 'type', 'error') as $uploadKey) {
+				if (isset($visitImageUpload[$uploadKey]) && !is_array($visitImageUpload[$uploadKey])) {
+					$visitImageUpload[$uploadKey] = array($visitImageUpload[$uploadKey]);
+				}
+			}
+		}
+		if (
+			$visitImageUpload !== null &&
+			isset($visitImageUpload['name']) &&
+			is_array($visitImageUpload['name']) &&
+			count($visitImageUpload['name']) > 0
+		) {
 			$ri = $id;
 			$rt = "visit";
 			$tc = "visit";
@@ -366,12 +389,17 @@ class Visit extends Functions
 				mkdir($yearlyFolderPath, 0777, true);
 			}
 
-			for ($i = 0; $i < sizeof($file["image_path"]['name']); $i++) {
+			for ($i = 0; $i < count($visitImageUpload['name']); $i++) {
+				$fileError = isset($visitImageUpload['error'][$i]) ? $visitImageUpload['error'][$i] : UPLOAD_ERR_OK;
+				$fileSize = isset($visitImageUpload['size'][$i]) ? (int) $visitImageUpload['size'][$i] : 0;
+				if ($fileError != UPLOAD_ERR_OK || $fileSize <= 0) {
+					continue;
+				}
 				//print_r($file["image_path"]);
-				$file_name =  $id . "_" . $file['image_path']['name'][$i];
-				$file_size = $file['image_path']['size'][$i];
-				$file_tmp = $file['image_path']['tmp_name'][$i];
-				$file_type = $file['image_path']['type'][$i];
+				$file_name =  $id . "_" . basename($visitImageUpload['name'][$i]);
+				$file_size = $fileSize;
+				$file_tmp = isset($visitImageUpload['tmp_name'][$i]) ? $visitImageUpload['tmp_name'][$i] : "";
+				$file_type = isset($visitImageUpload['type'][$i]) ? $visitImageUpload['type'][$i] : "";
 				$extension = explode(".", $file_name);
 
 				$allowed_extentions = array("jpg", "jpeg", "png", "JPEG", "JPEG", "PNG");
