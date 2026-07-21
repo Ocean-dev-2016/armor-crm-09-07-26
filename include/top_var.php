@@ -415,6 +415,7 @@ $left_pages_Sales_Team_reports_array19 = array("1"=>array("Target Report","Targe
 $left_pages_Sales_Team_reports_array20 = array("1"=>array("Route Variantion Reports","Route Variantion Reports","route_variation_report.php",663),);
 $left_pages_Sales_Team_reports_array21 = array("1"=>array("Sales Vs Plan Reports","Sales Vs Plan Reports","sales_vs_plan_report.php",667),);
 $left_pages_Sales_Team_reports_array22 = array("1"=>array("Consultant Approval Process Report","Consultant Approval Process Report","consultant_approval_process_report.php",668),);
+$left_pages_Sales_Team_reports_array24 = array("1"=>array("Employee Visit KRA Report","Employee Visit KRA Report","employee_visit_kra_report.php",599),);
 
 
 /*------------------------------- Sales Team Reports -------------------------------------*/
@@ -821,6 +822,7 @@ $left_head_Sales_Team_reports_array = array(
 	20=>array("Route Variantion Reports","Route Variantion Reports",$left_pages_Sales_Team_reports_array20,663),
 	21=>array("Sales Vs Plan Report","Sales Vs Plan Report",$left_pages_Sales_Team_reports_array21,667),
 	22=>array("Consultant Approval Process Report","Consultant Approval Process Report",$left_pages_Sales_Team_reports_array22,668),
+	24=>array("Employee Visit KRA Report","Employee Visit KRA Report",$left_pages_Sales_Team_reports_array24,599),
 
 	
 );
@@ -1144,6 +1146,7 @@ $left_Sales_Team_reports_array = array(
 				6=>$left_head_Sales_Team_reports_array[21],
 				7=>$left_head_Sales_Team_reports_array[22],
 				8=>$left_head_Sales_Team_reports_array[23],
+				9=>$left_head_Sales_Team_reports_array[24],
 				// 19=>$left_head_Sales_Team_reports_array[19],
 				// 20=>$left_head_Sales_Team_reports_array[20],
 				//6=>$left_head_Sales_Team_reports_array[18],

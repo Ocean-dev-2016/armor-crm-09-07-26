@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 define('DB_SYNC_KEY', 'armor_cp_sync_2026');
-define('DB_SYNC_VERSION', '2026.07.20.2');
+define('DB_SYNC_VERSION', '2026.07.21.1');
 
 if (!isset($_GET['key']) || $_GET['key'] !== DB_SYNC_KEY) {
 	header('HTTP/1.1 403 Forbidden');
@@ -175,7 +175,7 @@ function db_sync_append_page_urls($conn, $pageId, $newUrls)
 }
 
 db_sync_log('INFO', '--- Armor CRM DB Sync v' . DB_SYNC_VERSION . ' ---');
-db_sync_log('INFO', 'Changes: executive.channel_partner_flag, channel_partner_customer table + APIs 223-228, Advance Expense APIs 229-230, Visit Remark/Reason APIs 231-235');
+db_sync_log('INFO', 'Changes: Channel Partner APIs, Visit Remark APIs, and Employee Visit KRA report registration');
 
 function db_sync_register_api_if_missing($conn, $id, $slug, $title, $url)
 {
@@ -309,6 +309,13 @@ db_sync_append_page_urls($conn, 555, array(
 	'channel_partner_customer_manage.php',
 	'channel_partner_customer_crud.php',
 	'channel_partner_customer_get_ajax.php',
+));
+
+/* Employee Visit KRA reuses Visit Report page 599 permissions. */
+db_sync_append_page_urls($conn, 599, array(
+	'employee_visit_kra_report.php',
+	'employee_visit_kra_report_get_ajax.php',
+	'employee_visit_kra_report_excel.php',
 ));
 
 /* ------------------------------------------------------------------
