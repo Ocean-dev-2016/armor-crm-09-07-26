@@ -1,4 +1,39 @@
 <?php
+/*
+ * Mobile API contract: always return a JSON response body.
+ * The Android client must still null-check Retrofit body/errorBody, but this
+ * prevents PHP fatal errors from producing an empty response.
+ */
+header('Content-Type: application/json; charset=utf-8');
+ob_start();
+register_shutdown_function(function () {
+	$error = error_get_last();
+	$fatalTypes = array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR);
+	if ($error && in_array($error['type'], $fatalTypes, true)) {
+		while (ob_get_level() > 0) {
+			ob_end_clean();
+		}
+		http_response_code(200);
+		echo json_encode(array(
+			"ack" => 0,
+			"ack_msg" => "Server error. Please try again.",
+			"developer_msg" => "Visit API fatal error: " . $error['message'],
+		));
+	}
+});
+set_exception_handler(function ($exception) {
+	while (ob_get_level() > 0) {
+		ob_end_clean();
+	}
+	http_response_code(200);
+	echo json_encode(array(
+		"ack" => 0,
+		"ack_msg" => "Server error. Please try again.",
+		"developer_msg" => "Visit API exception: " . $exception->getMessage(),
+	));
+	exit;
+});
+
 // Connect to Database
 include('connect.php');
 require_once('../include/notification.class.php');
@@ -50,7 +85,12 @@ if ($is_valid_api_key) {
 				if ($detail['flag'] != '1') {
 					$reply = $objVisit->AddVisit($detail, $_FILES);
 				} else {
-					$reply = array("ack" => 1);
+					$reply = array(
+						"ack" => 1,
+						"developer_msg" => "Visit start validation successful.",
+						"ack_msg" => "Visit start validation successful.",
+						"id" => "",
+					);
 				}
 			} else {
 				$pendingVisit = array();
@@ -67,6 +107,13 @@ if ($is_valid_api_key) {
 					"ack_msg" => "Your Other Visit Is Already Started Please Stop That First",
 					"pending_visit_id" => isset($pendingVisit['id']) ? (string) $pendingVisit['id'] : "",
 					"pending_visit" => $pendingVisit,
+				);
+			}
+			if (!is_array($reply)) {
+				$reply = array(
+					"ack" => 0,
+					"developer_msg" => "Start Visit returned an invalid server response.",
+					"ack_msg" => "Unable to start visit. Please try again.",
 				);
 			}
 			echo json_encode($reply);
