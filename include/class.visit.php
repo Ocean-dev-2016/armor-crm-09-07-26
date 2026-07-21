@@ -129,19 +129,17 @@ class Visit extends Functions
 
 				if (in_array($extension, $allowed_extentions)) {
 					$attachment = $yearlyFolderPath;
-					//	compressImage($file_tmp,$attachment.$file_name,60);
-					$compressedImage = $this->db->compressImage($file_tmp, $attachment . $file_name);
-
-					if ($compressedImage) {
-						$compressedImageSize = filesize($compressedImage);
-						$compressedImageSize = $this->db->convert_filesize($compressedImageSize);
-
-						$status = 'success';
-						$statusMsg = "Image compressed successfully.";
-					} else {
-						$statusMsg = "Image compress failed!";
+					$storedImage = $attachment . $file_name;
+					/*
+					 * Camera images can exhaust PHP 5.6/GD memory after the
+					 * visit row is saved, leaving Android without a response.
+					 * The App already prepares the image, so store it directly.
+					 */
+					if (!@move_uploaded_file($file_tmp, $storedImage)) {
+						continue;
 					}
-					//move_uploaded_file($file_tmp,$attachment.$file_name);
+				} else {
+					continue;
 				}
 				$MediaTitle = $file_name;
 				$MediaOrignalTitle = $file_name;
@@ -437,18 +435,16 @@ class Visit extends Functions
 				$orignal_file_name = $extension[0];
 				if (in_array($extension, $allowed_extentions)) {
 					$attachment = $yearlyFolderPath;
-					//move_uploaded_file($file_tmp,$attachment.$file_name);
-					$compressedImage = $this->db->compressImage($file_tmp, $attachment . $file_name);
-
-					if ($compressedImage) {
-						$compressedImageSize = filesize($compressedImage);
-						$compressedImageSize = $this->db->convert_filesize($compressedImageSize);
-
-						$status = 'success';
-						$statusMsg = "Image compressed successfully.";
-					} else {
-						$statusMsg = "Image compress failed!";
+					$storedImage = $attachment . $file_name;
+					/*
+					 * Avoid a post-update GD memory fatal: it stops the visit
+					 * in DB but prevents the success JSON reaching Android.
+					 */
+					if (!@move_uploaded_file($file_tmp, $storedImage)) {
+						continue;
 					}
+				} else {
+					continue;
 				}
 				$MediaTitle = $file_name;
 				$MediaOrignalTitle = $file_name;
