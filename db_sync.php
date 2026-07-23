@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 define('DB_SYNC_KEY', 'armor_cp_sync_2026');
-define('DB_SYNC_VERSION', '2026.07.23.4');
+define('DB_SYNC_VERSION', '2026.07.23.7');
 
 if (!isset($_GET['key']) || $_GET['key'] !== DB_SYNC_KEY) {
 	header('HTTP/1.1 403 Forbidden');
@@ -175,7 +175,7 @@ function db_sync_append_page_urls($conn, $pageId, $newUrls)
 }
 
 db_sync_log('INFO', '--- Armor CRM DB Sync v' . DB_SYNC_VERSION . ' ---');
-db_sync_log('INFO', 'Changes: Channel Partner APIs, Visit Remark APIs, and Employee Visit KRA report registration');
+db_sync_log('INFO', 'Changes: Channel Partner, Expense, Visit APIs, Employee Chat module');
 
 function db_sync_register_api_if_missing($conn, $id, $slug, $title, $url)
 {
@@ -902,6 +902,90 @@ if (db_sync_table_exists($conn, 'api_table')) {
 
 db_sync_log('INFO', '--- API Runtime Checks ---');
 
+/* ------------------------------------------------------------------
+ * STEP 6 — Employee Chat (employee-to-employee)
+ * ------------------------------------------------------------------ */
+db_sync_run_query($conn, "CREATE TABLE IF NOT EXISTS `employee_chat_thread` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`user_one_id` int(11) NOT NULL DEFAULT 0 COMMENT 'dealer_distributor_network.id (smaller)',
+	`user_two_id` int(11) NOT NULL DEFAULT 0 COMMENT 'dealer_distributor_network.id (larger)',
+	`last_message_id` int(11) NOT NULL DEFAULT 0,
+	`last_message_date` datetime DEFAULT NULL,
+	`created_date` datetime DEFAULT NULL,
+	`modified_date` datetime DEFAULT NULL,
+	`isActive` tinyint(1) NOT NULL DEFAULT 1,
+	`isDelete` tinyint(1) NOT NULL DEFAULT 0,
+	PRIMARY KEY (`id`),
+	UNIQUE KEY `uk_ect_pair` (`user_one_id`,`user_two_id`),
+	KEY `idx_ect_delete` (`isDelete`),
+	KEY `idx_ect_last` (`last_message_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8", 'Create table employee_chat_thread');
+
+db_sync_run_query($conn, "CREATE TABLE IF NOT EXISTS `employee_chat_message` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`thread_id` int(11) NOT NULL DEFAULT 0,
+	`sender_id` int(11) NOT NULL DEFAULT 0 COMMENT 'dealer_distributor_network.id',
+	`message_text` text,
+	`is_read` tinyint(1) NOT NULL DEFAULT 0,
+	`read_date` datetime DEFAULT NULL,
+	`created_date` datetime DEFAULT NULL,
+	`isActive` tinyint(1) NOT NULL DEFAULT 1,
+	`isDelete` tinyint(1) NOT NULL DEFAULT 0,
+	PRIMARY KEY (`id`),
+	KEY `idx_ecm_thread` (`thread_id`),
+	KEY `idx_ecm_sender` (`sender_id`),
+	KEY `idx_ecm_unread` (`thread_id`,`is_read`,`isDelete`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8", 'Create table employee_chat_message');
+
+// page_table id=670
+$chatPageCheck = mysqli_query($conn, "SELECT id FROM page_table WHERE id=670 LIMIT 1");
+if ($chatPageCheck && mysqli_num_rows($chatPageCheck) > 0) {
+	db_sync_append_page_urls($conn, 670, array(
+		'employee_chat_manage.php',
+		'employee_chat_ajax.php',
+	));
+	db_sync_run_query($conn, "UPDATE page_table SET page_title='Employee Chat', page_slug='employee_chat', isDelete=0, isActive=1 WHERE id=670", 'Update page_table id=670 Employee Chat');
+} else {
+	$now = date('Y-m-d H:i:s');
+	$urls = 'employee_chat_manage.php,employee_chat_ajax.php';
+	db_sync_run_query($conn, "INSERT INTO page_table (id, page_title, page_slug, page_count, page_urls, isActive, isDelete, adate, created_date)
+		VALUES (670, 'Employee Chat', 'employee_chat', 0, '{$urls}', 1, 0, '{$now}', '{$now}')", 'Insert page_table id=670 Employee Chat');
+}
+
+// Seed view/insert rights for all active admin types (Super Admin already bypasses)
+$adminTypesRes = mysqli_query($conn, "SELECT id FROM admin_type WHERE isDelete=0");
+if ($adminTypesRes) {
+	while ($at = mysqli_fetch_assoc($adminTypesRes)) {
+		$aid = (int) $at['id'];
+		if ($aid === 0) {
+			continue;
+		}
+		$chk = mysqli_query($conn, "SELECT id FROM page_admin_right WHERE admin_id='{$aid}' AND page_id=670 AND isDelete=0 LIMIT 1");
+		if ($chk && mysqli_num_rows($chk) > 0) {
+			$rid = (int) mysqli_fetch_assoc($chk)['id'];
+			db_sync_run_query($conn, "UPDATE page_admin_right SET view_flag=1, insert_flag=1, update_flag=1, delete_flag=0, all_data_flag=1 WHERE id='{$rid}'", "Chat rights update admin_type {$aid}");
+		} else {
+			$now = date('Y-m-d H:i:s');
+			db_sync_run_query($conn, "INSERT INTO page_admin_right (page_id, admin_id, view_flag, insert_flag, update_flag, delete_flag, all_data_flag, personal_flag, chain_vise_flag, isDelete, created_by, created_by_type, created_date)
+				VALUES (670, {$aid}, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, '{$now}')", "Chat rights insert admin_type {$aid}");
+		}
+	}
+}
+
+if (db_sync_table_exists($conn, 'employee_chat_thread') && db_sync_table_exists($conn, 'employee_chat_message')) {
+	db_sync_log('CHECK', 'READY: employee_chat_thread + employee_chat_message');
+} else {
+	$allReady = false;
+	db_sync_log('FAIL', 'MISSING: employee chat tables');
+}
+
+$chatApiBase = 'service_employee_chat.php?key=1226';
+db_sync_register_api_if_missing($conn, 236, 'get_employee_chat_users', 'Get Employee Chat Users', $chatApiBase . '&s=236&sales_executive_id=&search=');
+db_sync_register_api_if_missing($conn, 237, 'get_employee_chat_threads', 'Get Employee Chat Threads', $chatApiBase . '&s=237&sales_executive_id=');
+db_sync_register_api_if_missing($conn, 238, 'get_employee_chat_messages', 'Get Employee Chat Messages', $chatApiBase . '&s=238&sales_executive_id=&thread_id=&after_id=0');
+db_sync_register_api_if_missing($conn, 239, 'send_employee_chat_message', 'Send Employee Chat Message', $chatApiBase . '&s=239&sales_executive_id=&thread_id=&message_text=');
+db_sync_register_api_if_missing($conn, 240, 'get_employee_chat_unread', 'Get Employee Chat Unread Count', $chatApiBase . '&s=240&sales_executive_id=');
+
 $apiKeyCountRes = mysqli_query($conn, "SELECT COUNT(*) AS total FROM `api_key_table` WHERE api_key='1226' AND isDelete=0");
 if ($apiKeyCountRes) {
 	$apiKeyCountRow = mysqli_fetch_assoc($apiKeyCountRes);
@@ -1030,6 +1114,7 @@ $environment = isset($config['environment']) ? $config['environment'] : 'unknown
 		</ol>
 		<p><strong>This sync creates/updates:</strong></p>
 		<ul>
+			<li>Employee Chat tables + page 670 + rights rights</li>
 			<li>Table <code>channel_partner_customer</code> (+ all columns &amp; indexes)</li>
 			<li>Column <code>executive.channel_partner_flag</code></li>
 			<li>Page URLs in <code>page_table</code> id=555</li>

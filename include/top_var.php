@@ -151,6 +151,8 @@ $left_pages_hr_array11 = array("1"=>array("Sales Route Planning","Leave Request"
 
 $left_pages_hr_array12 = array("1"=>array("Employee Information","Employee Information","employee_information_manage.php",658),);
 
+$left_pages_hr_array13 = array("1"=>array("Employee Chat","employee_chat","employee_chat_manage.php",670),);
+
 /*-------------------------------  Stroe -------------------------------------*/				
 
 $left_pages_store_array0 = array("1"=>array("Manage Inward Store ","inward_store_manage","inward_store_manage.php",554),);	
@@ -639,6 +641,7 @@ $left_head_hr_array = array(
 	12=>array("Employee Information","Employee Information",$left_pages_hr_array12,658),
 	13=>array("Self Analysis","Self Analysis",$left_pages_utility_array23,659),
 	14=>array("Goal Setting to Goal Achieving","Goal Setting to Goal Achieving",$left_pages_utility_array24,661),
+	15=>array("Employee Chat","Employee Chat",$left_pages_hr_array13,670),
 );
 
 /*-------------------------Left Title Store Array Starts--------------------------*/			
@@ -996,6 +999,8 @@ $left_hr_array = array(
 				8=>$left_head_hr_array[8],
 				// 9=>$left_head_hr_array[10],
 				10=>$left_head_hr_array[10],
+				// Chat moved to top menu after Sales Team Reports
+				// 15=>$left_head_hr_array[15],
 				// 11=>$left_head_hr_array[11],
 				// 12=>$left_head_hr_array[12],
 				// 13=>$left_head_hr_array[13],

@@ -594,6 +594,28 @@ $ctableAPK        = "application_info";
 				</li>
 				<!-- Sales Team Reports -->
 
+				<li class="classic-menu-dropdown <?php if (isset($main_page) && $main_page == 'employee_chat') { ?> active<?php } ?>">
+					<a href="employee_chat_manage.php">
+						Chat
+						<?php
+						$ecMenuUnread = 0;
+						if (isset($_SESSION[SITE_SESS . '_ADMIN_SESS_ID']) && (int) $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'] > 0) {
+							$ecMenuMe = (int) $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'];
+							$ecMenuR = @$db->rp_getData('employee_chat_thread', 'id', "isDelete=0 AND (user_one_id='{$ecMenuMe}' OR user_two_id='{$ecMenuMe}')", '', 0);
+							if ($ecMenuR) {
+								while ($ecMenuT = mysqli_fetch_assoc($ecMenuR)) {
+									$ecMenuUnread += (int) $db->rp_getTotalRecord('employee_chat_message', "thread_id='" . (int) $ecMenuT['id'] . "' AND sender_id!='{$ecMenuMe}' AND is_read=0 AND isDelete=0", 0);
+								}
+							}
+						}
+						if ($ecMenuUnread > 0) {
+							echo ' <span class="badge badge-danger chat-unread-count">' . (int) $ecMenuUnread . '</span>';
+						} else {
+							echo ' <span class="badge badge-danger chat-unread-count" style="display:none;">0</span>';
+						}
+						?>
+					</a>
+				</li>
 
 				<!-- 	<li class="menu-dropdown classic-menu-dropdown ">
 					<a data-hover="megamenu-dropdown" data-close-others="true" data-toggle="dropdown" href="javascript:;">
@@ -642,6 +664,24 @@ $ctableAPK        = "application_info";
 						<a target="_blank" href="https://contactkro.com/domain/rajcooler_dvb/ccdvb/dashboard.php" class="btn btn-primary" style="text-transform:none;">Exhibition</a>
 					</div>
 				</li>-->
+				<?php
+				$ecUnread = 0;
+				if (isset($_SESSION[SITE_SESS . '_ADMIN_SESS_ID']) && (int) $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'] > 0) {
+					$ecMe = (int) $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'];
+					$ecThreadR = @$db->rp_getData('employee_chat_thread', 'id', "isDelete=0 AND (user_one_id='{$ecMe}' OR user_two_id='{$ecMe}')", '', 0);
+					if ($ecThreadR) {
+						while ($ecT = mysqli_fetch_assoc($ecThreadR)) {
+							$ecUnread += (int) $db->rp_getTotalRecord('employee_chat_message', "thread_id='" . (int) $ecT['id'] . "' AND sender_id!='{$ecMe}' AND is_read=0 AND isDelete=0", 0);
+						}
+					}
+				}
+				?>
+				<li id="header_chat_bar" class="dropdown dropdown-extended dropdown-notification">
+					<a class="dropdown-toggle" href="employee_chat_manage.php" title="Employee Chat">
+						<i class="fa fa-comments"></i>
+						<span class="badge badge-default chat-unread-count" style="<?php echo ($ecUnread > 0) ? '' : 'display:none;'; ?>"><?php echo (int) $ecUnread; ?></span>
+					</a>
+				</li>
 				<?php
 				if ($_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0) {
 				?>

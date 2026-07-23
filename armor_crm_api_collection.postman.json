@@ -1,7 +1,7 @@
 {
     "info": {
         "name": "Armor Fire CRM - Full API Collection (Backend Verified)",
-        "description": "Complete API collection generated from live PHP service source code.\n\nGenerated: 2026-07-10 13:59:58\nAll requests: POST multipart/form-data\nAuth: `key` (API key) + `s` (service id or slug)\n\nEnvironments:\n- Live: https://armor-crm.oceanhub.co.in\n- Local: http://localhost:8080/armor_crm_08_07/202526\n\nSet collection variable `base_url` before testing.\nAPI key: 1226\nTotal endpoints: 226\n\nService #39 (sync_offline_customers) includes all CRM columns + channel_partner_flag.",
+        "description": "Complete API collection generated from live PHP service source code.\n\nGenerated: 2026-07-10 13:59:58\nUpdated: 2026-07-23 — Employee Chat APIs #236-#240 added\nAll requests: POST multipart/form-data\nAuth: `key` (API key) + `s` (service id or slug)\n\nEnvironments:\n- Live: https://armor-crm.oceanhub.co.in\n- Local: http://localhost:8080/armor_crm_08_07/202526\n\nSet collection variable `base_url` before testing.\nAPI key: 1226\n\nEmployee Chat folder: service_employee_chat.php (#236-#240)\nService #39 (sync_offline_customers) includes all CRM columns + channel_partner_flag.",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "item": [
@@ -14070,6 +14070,253 @@
                             ]
                         },
                         "description": "**API Code:** 198\n\n**Slug:** visit_pdf_download\n\n**Service (s):** 198\n\nVISIT VIEW PDF DOWNLOAD\n\n**Parameters from backend code:** visit_id"
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "service_employee_chat.php (Employee Chat #236-#240)",
+            "item": [
+                {
+                    "name": "get_employee_chat_users  (#236)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "236",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "sales_executive_id",
+                                    "value": "78",
+                                    "type": "text",
+                                    "description": "Logged-in SE id (Required)"
+                                },
+                                {
+                                    "key": "search",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Optional name/phone search"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_employee_chat.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_employee_chat.php"
+                            ]
+                        },
+                        "description": "**API Code:** 236\n\n**Slug:** get_employee_chat_users\n\n**Service (s):** 236\n\nEmployee list for chat.\n\n**Required:** sales_executive_id\n**Optional:** search\n\n**Response result[]:** name, peer_se_id, sales_executive_id, id, role, username, has_login"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "get_employee_chat_threads  (#237)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "237",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "sales_executive_id",
+                                    "value": "78",
+                                    "type": "text",
+                                    "description": "Logged-in SE id (Required)"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_employee_chat.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_employee_chat.php"
+                            ]
+                        },
+                        "description": "**API Code:** 237\n\n**Slug:** get_employee_chat_threads\n\n**Service (s):** 237\n\nChat list.\n\n**Required:** sales_executive_id\n\n**Response:** unread_total, result[] thread_id, peer_id, peer_name, last_message, last_message_date, unread"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "get_employee_chat_messages  (#238)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "238",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "sales_executive_id",
+                                    "value": "78",
+                                    "type": "text",
+                                    "description": "Logged-in SE id (Required)"
+                                },
+                                {
+                                    "key": "thread_id",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Existing chat id (or empty for new)"
+                                },
+                                {
+                                    "key": "peer_sales_executive_id",
+                                    "value": "7",
+                                    "type": "text",
+                                    "description": "Other SE id when thread_id empty"
+                                },
+                                {
+                                    "key": "after_id",
+                                    "value": "0",
+                                    "type": "text",
+                                    "description": "Poll last message id (0=full)"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_employee_chat.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_employee_chat.php"
+                            ]
+                        },
+                        "description": "**API Code:** 238\n\n**Slug:** get_employee_chat_messages\n\n**Service (s):** 238\n\nOpen chat / fetch / poll.\n\n**Required:** sales_executive_id\n**Open existing:** thread_id\n**Open new:** peer_sales_executive_id\n**Poll:** after_id every 3 sec\n\n**Response:** thread_id, peer_name, messages[] id,is_mine,message_text,created_date"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "send_employee_chat_message  (#239)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "239",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "sales_executive_id",
+                                    "value": "78",
+                                    "type": "text",
+                                    "description": "Logged-in SE id (Required)"
+                                },
+                                {
+                                    "key": "thread_id",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Existing thread or empty"
+                                },
+                                {
+                                    "key": "peer_sales_executive_id",
+                                    "value": "7",
+                                    "type": "text",
+                                    "description": "Required if thread_id empty"
+                                },
+                                {
+                                    "key": "message_text",
+                                    "value": "Hello",
+                                    "type": "text",
+                                    "description": "Message text (Required). Alias: message"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_employee_chat.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_employee_chat.php"
+                            ]
+                        },
+                        "description": "**API Code:** 239\n\n**Slug:** send_employee_chat_message\n\n**Service (s):** 239\n\nSend message.\n\n**Required:** sales_executive_id, message_text\n**Also:** thread_id OR peer_sales_executive_id\n\nFCM type employee_chat to peer."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "get_employee_chat_unread  (#240)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "240",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "sales_executive_id",
+                                    "value": "78",
+                                    "type": "text",
+                                    "description": "Logged-in SE id (Required)"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_employee_chat.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_employee_chat.php"
+                            ]
+                        },
+                        "description": "**API Code:** 240\n\n**Slug:** get_employee_chat_unread\n\n**Service (s):** 240\n\nUnread badge.\n\n**Required:** sales_executive_id\n\n**Response:** unread_total\n\nPoll 3-5 sec on home/menu."
                     },
                     "response": []
                 }

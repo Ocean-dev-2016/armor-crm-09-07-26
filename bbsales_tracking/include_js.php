@@ -424,3 +424,84 @@ if($remainingdate>=$lastdatedate)
 }
 ?>
 <!-- for licence expire -->
+<script type="text/javascript">
+(function () {
+	if (typeof jQuery === "undefined") return;
+	// Live chat notify on every CRM page (no refresh)
+	var lastMsgId = parseInt(localStorage.getItem('ec_last_notify_id') || '0', 10) || 0;
+	var onChatPage = (window.location.pathname.indexOf('employee_chat_manage.php') >= 0);
+
+	function updateBadges(n) {
+		n = parseInt(n, 10) || 0;
+		var $b = $(".chat-unread-count");
+		if (!$b.length) return;
+		if (n > 0) { $b.text(n).show(); } else { $b.text('0').hide(); }
+	}
+
+	function showLiveToast(msg) {
+		var title = msg.sender_name || 'New Chat';
+		var body = msg.message_text || '';
+		if (typeof toastr !== 'undefined') {
+			toastr.options = {
+				timeOut: 6000,
+				extendedTimeOut: 2000,
+				positionClass: 'toast-top-right',
+				closeButton: true,
+				onclick: function () {
+					window.location.href = 'employee_chat_manage.php';
+				}
+			};
+			toastr.info(body, title);
+		}
+		if (window.Notification && Notification.permission === 'granted') {
+			try {
+				var n = new Notification(title, { body: body, tag: 'ec-' + msg.id });
+				n.onclick = function () {
+					window.focus();
+					window.location.href = 'employee_chat_manage.php';
+				};
+			} catch (e) {}
+		}
+	}
+
+	function livePoll() {
+		$.getJSON("employee_chat_ajax.php", { mode: "live_notify", after_id: lastMsgId }, function (res) {
+			if (!res || res.ack != 1) return;
+			updateBadges(res.unread_total);
+			if (res.messages && res.messages.length) {
+				$.each(res.messages, function (i, m) {
+					if (m.id > lastMsgId) {
+						// On chat page, toast only if not currently viewing same thread actively handled there
+						if (!onChatPage || document.hidden) {
+							showLiveToast(m);
+						} else if (typeof window.EC === 'undefined' || !window.EC.threadId || window.EC.threadId != m.thread_id) {
+							showLiveToast(m);
+						}
+						lastMsgId = m.id;
+					}
+				});
+				if (res.latest_msg_id > lastMsgId) lastMsgId = res.latest_msg_id;
+				try { localStorage.setItem('ec_last_notify_id', String(lastMsgId)); } catch (e) {}
+			} else if (res.latest_msg_id && res.latest_msg_id > lastMsgId) {
+				lastMsgId = res.latest_msg_id;
+				try { localStorage.setItem('ec_last_notify_id', String(lastMsgId)); } catch (e) {}
+			}
+		});
+	}
+
+	if (window.Notification && Notification.permission === 'default') {
+		try { Notification.requestPermission(); } catch (e) {}
+	}
+
+	// First sync: set baseline without toast flood
+	$.getJSON("employee_chat_ajax.php", { mode: "live_notify", after_id: 0 }, function (res) {
+		if (!res || res.ack != 1) return;
+		updateBadges(res.unread_total);
+		if (res.latest_msg_id) {
+			lastMsgId = res.latest_msg_id;
+			try { localStorage.setItem('ec_last_notify_id', String(lastMsgId)); } catch (e) {}
+		}
+		setInterval(livePoll, 3000);
+	});
+})();
+</script>
