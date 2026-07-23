@@ -1420,6 +1420,9 @@ if ($is_valid_api_key) {
 				$detail['created_date'] = date('Y-m-d H:s:i');
 
 				$detail['entry_flag']	= isset($_REQUEST['entry_flag']) ? $db->clean($_REQUEST['entry_flag']) : "5";
+				// Regular expense from App
+				$detail['expense_claim_type'] = 1;
+				$detail['advance_expense_type'] = 0;
 
 				// $detail['remark']	= isset($_REQUEST['remark'])?$db->clean($_REQUEST['remark']):"";
 				//print_r($_FILES);exit;
@@ -2354,13 +2357,38 @@ if ($is_valid_api_key) {
 				$db->printJSON($ack);
 			}
 		} else if ($service == "add_advance_expense" || $service == 230) {
-			if (isset($_REQUEST['sales_executive_id']) && isset($_REQUEST['category_id']) && isset($_REQUEST['total'])) {
-				$detail['sales_executive_id'] = $db->clean($_REQUEST['sales_executive_id']);
-				$detail['category_id'] = $db->clean($_REQUEST['category_id']);
-				$detail['total'] = $db->clean($_REQUEST['total']);
+			// Advance: category + total + remark. Sub Category NOT required.
+			$sales_executive_id = isset($_REQUEST['sales_executive_id']) ? $db->clean($_REQUEST['sales_executive_id']) : "";
+			$category_id = isset($_REQUEST['category_id']) ? $db->clean($_REQUEST['category_id']) : "";
+			$advance_expense_type = isset($_REQUEST['advance_expense_type']) ? $db->clean($_REQUEST['advance_expense_type']) : "";
+			$total = isset($_REQUEST['total']) ? $db->clean($_REQUEST['total']) : "";
+			if ($total === "" && isset($_REQUEST['amount'])) {
+				$total = $db->clean($_REQUEST['amount']);
+			}
+
+			// Map static Advance Type 1/2 → category when category_id not sent
+			if ($category_id == "" && ($advance_expense_type == "1" || $advance_expense_type == "2")) {
+				$advNameMap = array(
+					"1" => "Advance Brand Approval Expense",
+					"2" => "Advance Travelling Expense",
+				);
+				$advName = $advNameMap[$advance_expense_type];
+				$advEsc = mysqli_real_escape_string($db->myconn, $advName);
+				$category_id = $db->rp_getValue("expence_category", "id", "name='" . $advEsc . "' AND isDelete=0 AND expense_claim_type=2", 0);
+				if (!$category_id) {
+					$category_id = $db->rp_getValue("expence_category", "id", "name LIKE 'Advance%" . ($advance_expense_type == "1" ? "Brand" : "Travell") . "%' AND isDelete=0 AND expense_claim_type=2", 0);
+				}
+			}
+
+			if ($sales_executive_id != "" && $category_id != "" && $total != "") {
+				$detail['sales_executive_id'] = $sales_executive_id;
+				$detail['category_id'] = $category_id;
+				$detail['subcategory_id'] = 0; // not required for Advance
+				$detail['total'] = $total;
 				$detail['remark'] = isset($_REQUEST['remark']) ? $db->clean($_REQUEST['remark']) : "";
 				$detail['entry_flag'] = isset($_REQUEST['entry_flag']) ? $db->clean($_REQUEST['entry_flag']) : "5";
 				$detail['expense_date'] = date('Y-m-d H:i:s');
+				$detail['advance_expense_type'] = ($advance_expense_type != "") ? $advance_expense_type : 0;
 
 				$reply = $objExpense->InsertAdvanceExpense($detail, $_FILES);
 				if ($reply['ack'] == 1) {
@@ -2370,13 +2398,14 @@ if ($is_valid_api_key) {
 					$r['category_name'] = $db->rp_getValue("expence_category", "name", "id='" . $r['category_id'] . "'", 0);
 					$r['expense_date'] = date('d-m-Y', strtotime($r['expense_date']));
 					$r['created_date'] = date('d-m-Y H:i:s', strtotime($r['created_date']));
+					$r['subcategory_required'] = "0";
 					$ack = array("ack" => 1, "ack_msg" => "Advance Expense Added Successfully!!", "developer_msg" => "Advance expense inserted", "result" => $r);
 					$db->printJSON($ack);
 				} else {
 					$db->printJSON($reply);
 				}
 			} else {
-				$ack = array("ack" => 0, "ack_msg" => "sales_executive_id, category_id and total are required!!", "developer_msg" => "Required params missing for add_advance_expense");
+				$ack = array("ack" => 0, "ack_msg" => "sales_executive_id, category_id (or advance_expense_type) and total are required!! Sub Category is not required for Advance.", "developer_msg" => "Required params missing for add_advance_expense", "subcategory_required" => "0");
 				$db->printJSON($ack);
 			}
 		}

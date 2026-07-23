@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 define('DB_SYNC_KEY', 'armor_cp_sync_2026');
-define('DB_SYNC_VERSION', '2026.07.23.3');
+define('DB_SYNC_VERSION', '2026.07.23.4');
 
 if (!isset($_GET['key']) || $_GET['key'] !== DB_SYNC_KEY) {
 	header('HTTP/1.1 403 Forbidden');
@@ -479,7 +479,37 @@ if (db_sync_table_exists($conn, 'expence_category') && db_sync_column_exists($co
 		}
 	}
 
-	/* Seed Regular OCE category if missing (matches live Regular list) */
+	/* Soft-delete duplicate misspelled Advance categories (keep clean 2 names) */
+	$keepAdvance = array(
+		'Advance Brand Approval Expense',
+		'Advance Travelling Expense',
+	);
+	$dupRes = mysqli_query($conn, "SELECT id, name FROM `expence_category` WHERE isDelete=0 AND (expense_claim_type=2 OR name LIKE 'Advance%')");
+	if ($dupRes) {
+		while ($dupRow = mysqli_fetch_assoc($dupRes)) {
+			$norm = strtolower(preg_replace('/\s+/', ' ', trim($dupRow['name'])));
+			$norm = str_replace('expence', 'expense', $norm);
+			$keep = false;
+			foreach ($keepAdvance as $keepName) {
+				if ($norm === strtolower($keepName)) {
+					// Keep exact preferred spelling only once; soft-delete other spelling variants
+					if ($dupRow['name'] === $keepName) {
+						$keep = true;
+					}
+					break;
+				}
+			}
+			if (!$keep && (strpos($norm, 'advance brand') !== false || strpos($norm, 'advance travell') !== false)) {
+				db_sync_run_query(
+					$conn,
+					"UPDATE `expence_category` SET `isDelete`=1, `isActive`=0 WHERE `id`='" . (int)$dupRow['id'] . "'",
+					"Soft-delete duplicate Advance category: " . $dupRow['name']
+				);
+			}
+		}
+	}
+
+	/* Seed Regular OCE category if missing */
 	$oceEsc = mysqli_real_escape_string($conn, 'OCE');
 	$oceCheck = mysqli_query($conn, "SELECT id, expense_claim_type FROM `expence_category` WHERE name='{$oceEsc}' AND isDelete=0 LIMIT 1");
 	if ($oceCheck && mysqli_num_rows($oceCheck) > 0) {

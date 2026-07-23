@@ -367,30 +367,61 @@ if ($is_valid_api_key) {
 			$visit = array();
 			$where = "isDelete=0 AND isActive=1";
 			$expense_claim_type = isset($_REQUEST['expense_claim_type']) ? $db->clean($_REQUEST['expense_claim_type']) : "";
-			if ($expense_claim_type !== "") {
-				$where .= " AND expense_claim_type='" . $expense_claim_type . "'";
+			if ($expense_claim_type === "" && isset($_REQUEST['claim_type'])) {
+				$expense_claim_type = $db->clean($_REQUEST['claim_type']);
 			}
+			// App Regular screen often omits claim_type — default Regular so Advance cats do not mix in
+			if ($expense_claim_type === "") {
+				$expense_claim_type = "1";
+			}
+
+			// 1 = Regular only, 2 = Advance only (App Select Expense Type)
+			$subcategoryRequired = "1";
+			if ($expense_claim_type === "1" || $expense_claim_type === 1) {
+				$where .= " AND IFNULL(expense_claim_type,1)='1' AND name NOT LIKE 'Advance%'";
+				$subcategoryRequired = "1";
+			} else if ($expense_claim_type === "2" || $expense_claim_type === 2) {
+				$where .= " AND expense_claim_type='2'";
+				$subcategoryRequired = "0";
+			}
+
 			$selectFields = "id,name,expense_claim_type";
-			$expence_category = $db->rp_getData("expence_category", $selectFields, $where);
+			$expence_category = $db->rp_getData("expence_category", $selectFields, $where, "name ASC", 0);
+			$seenNames = array();
 			if ($expence_category) {
 				while ($visit_d = mysqli_fetch_assoc($expence_category)) {
-					if (!isset($visit_d['expense_claim_type'])) {
+					if (!isset($visit_d['expense_claim_type']) || $visit_d['expense_claim_type'] === "") {
 						$visit_d['expense_claim_type'] = "1";
 					}
+					// Deduplicate Advance list (old misspelled rows)
+					$nameKey = strtolower(preg_replace('/\s+/', ' ', trim($visit_d['name'])));
+					$nameKey = str_replace('expence', 'expense', $nameKey);
+					if (isset($seenNames[$nameKey])) {
+						continue;
+					}
+					$seenNames[$nameKey] = 1;
+					$visit_d['subcategory_required'] = $subcategoryRequired;
 					$visit[] = $visit_d;
 				}
 			}
 
 			if (!empty($visit)) {
-				$reply = array("ack" => 1, "developer_msg" => "Expence Category Get successfully!!", "ack_msg" => "Expence Category Get successfully!!", "result" => $visit);
+				$reply = array(
+					"ack" => 1,
+					"developer_msg" => "Expence Category Get successfully!!",
+					"ack_msg" => "Expence Category Get successfully!!",
+					"expense_claim_type" => $expense_claim_type,
+					"subcategory_required" => $subcategoryRequired,
+					"result" => $visit
+				);
 			} else {
-				$reply = array("ack" => 0, "developer_msg" => "Expence Category Not Get!!", "ack_msg" => "Expence Category Not Get!!");
+				$reply = array("ack" => 0, "developer_msg" => "Expence Category Not Get!!", "ack_msg" => "Expence Category Not Get!!", "subcategory_required" => $subcategoryRequired);
 			}
 			echo json_encode($reply);
 		} else if ($service == 'get_expense_claim_type' || $service == 229) {
 			$claimTypes = array(
-				array("id" => "1", "name" => "Regular Expense"),
-				array("id" => "2", "name" => "Advance Expense"),
+				array("id" => "1", "name" => "Regular Expense", "subcategory_required" => "1"),
+				array("id" => "2", "name" => "Advance Expense", "subcategory_required" => "0"),
 			);
 			$reply = array(
 				"ack" => 1,
@@ -646,6 +677,23 @@ if ($is_valid_api_key) {
 			$expense_subcat = array();
 			$expense_category_id = isset($_REQUEST['expense_category_id']) ? $db->clean($_REQUEST['expense_category_id']) : "";
 			$sales_executive_id = isset($_REQUEST['sales_id']) ? $db->clean($_REQUEST['sales_id']) : "";
+
+			// Advance categories: Sub Category NOT required — return empty success
+			if ($expense_category_id != "") {
+				$catClaim = $db->rp_getValue("expence_category", "expense_claim_type", "id='" . $expense_category_id . "' AND isDelete=0", 0);
+				$catName = $db->rp_getValue("expence_category", "name", "id='" . $expense_category_id . "' AND isDelete=0", 0);
+				if ($catClaim == "2" || ($catName !== false && stripos($catName, "Advance") === 0)) {
+					$reply = array(
+						"ack" => 1,
+						"developer_msg" => "Advance expense does not require subcategory!!",
+						"ack_msg" => "Advance expense does not require subcategory!!",
+						"subcategory_required" => "0",
+						"result" => array()
+					);
+					echo json_encode($reply);
+					return;
+				}
+			}
 
 			if ($expense_category_id && $sales_executive_id) {
 				$expence_subcategory = $db->rp_getData("expence_sub_category", "id,name,expense_category_id,expense_type,image_flag,min_time,max_time,fix_amount", "expense_category_id='" . $expense_category_id . "' AND sales_executive_id='" . $sales_executive_id . "' AND slug!='bike' AND slug!='car' AND isDelete=0 AND isActive=1", "", 0);
