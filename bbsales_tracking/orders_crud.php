@@ -26,6 +26,91 @@
 	$order_no     = $db->getLastInsertId("orders");
 	$order_date = date("d-m-Y");
 
+	// Channel Partner self-order: lock customer to logged-in CP and prefill profile fields
+	$is_cp_self_order = function_exists('cp_is_channel_partner_login') && cp_is_channel_partner_login($db);
+	$cp_login_id = function_exists('cp_get_login_channel_partner_id') ? cp_get_login_channel_partner_id() : 0;
+	$cp_exec_d = array();
+	$cp_company_label = "";
+	$cp_type_label = "";
+	$cp_price_list_name = "";
+	$cp_gst_type = "";
+	if ($is_cp_self_order && $cp_login_id > 0) {
+		$c_type = 'channel_partner';
+		$_REQUEST['c_type'] = 'channel_partner';
+		$cp_r = $db->rp_getData("executive", "*", "id='" . (int) $cp_login_id . "' AND isDelete=0", "", 0);
+		if ($cp_r) {
+			$cp_exec_d = mysqli_fetch_assoc($cp_r);
+		}
+		$selected_cp_customer_id = 0;
+		if (isset($_REQUEST['cp_customer_id']) && (int) $_REQUEST['cp_customer_id'] > 0) {
+			$selected_cp_customer_id = (int) $_REQUEST['cp_customer_id'];
+		} else if (isset($_REQUEST['channel_partner_customer_id']) && (int) $_REQUEST['channel_partner_customer_id'] > 0) {
+			$selected_cp_customer_id = (int) $_REQUEST['channel_partner_customer_id'];
+		}
+		$cp_customers_r = $db->rp_getData(
+			"channel_partner_customer",
+			"*",
+			"channel_partner_id='" . (int) $cp_login_id . "' AND isDelete=0",
+			"company_name ASC",
+			0
+		);
+		if (!empty($cp_exec_d) && isset($_REQUEST['mode']) && $_REQUEST['mode'] == "add" && (!isset($_REQUEST['order_id']) || $_REQUEST['order_id'] == "")) {
+			$customer_id = (int) $cp_login_id;
+			$type_of_company = isset($cp_exec_d['type_of_company']) ? $cp_exec_d['type_of_company'] : "";
+			$customer_type = isset($cp_exec_d['type_of_executive']) ? $cp_exec_d['type_of_executive'] : "";
+			$sales_executive_id = !empty($cp_exec_d['seid']) ? $cp_exec_d['seid'] : "";
+			$name_gstin = isset($cp_exec_d['gst']) ? $cp_exec_d['gst'] : "";
+			$billing_address = !empty($cp_exec_d['billing_address']) ? $cp_exec_d['billing_address'] : (isset($cp_exec_d['address']) ? $cp_exec_d['address'] : "");
+			$shipping_address = !empty($cp_exec_d['shipping_address']) ? $cp_exec_d['shipping_address'] : $billing_address;
+			$booking_pincode = isset($cp_exec_d['zip']) ? $cp_exec_d['zip'] : "";
+			if (!empty($cp_exec_d['booking_place'])) {
+				$booking_place = $cp_exec_d['booking_place'];
+			} else {
+				$booking_place = trim((isset($cp_exec_d['main_city']) ? $cp_exec_d['main_city'] : '') . (isset($cp_exec_d['state']) && $cp_exec_d['state'] != '' ? ', ' . $cp_exec_d['state'] : ''));
+			}
+			$cash_discount = isset($cp_exec_d['cash_discount']) ? $cp_exec_d['cash_discount'] : "";
+			$additional_discount = isset($cp_exec_d['additional_discount']) ? $cp_exec_d['additional_discount'] : "";
+
+			/* Prefill delivery fields from selected end-customer when opened via Add Order link */
+			if ($selected_cp_customer_id > 0) {
+				$pre_cp_cust_r = $db->rp_getData(
+					"channel_partner_customer",
+					"*",
+					"id='" . (int) $selected_cp_customer_id . "' AND channel_partner_id='" . (int) $cp_login_id . "' AND isDelete=0",
+					"",
+					0
+				);
+				if ($pre_cp_cust_r && $pre_cp_cust = mysqli_fetch_assoc($pre_cp_cust_r)) {
+					$name_gstin = !empty($pre_cp_cust['gst']) ? $pre_cp_cust['gst'] : $name_gstin;
+					$addrParts = array_filter(array($pre_cp_cust['city'], $pre_cp_cust['state'], $pre_cp_cust['pincode'], $pre_cp_cust['country']));
+					$endAddr = implode(', ', $addrParts);
+					if ($endAddr != "") {
+						$billing_address = $endAddr;
+						$shipping_address = $endAddr;
+					}
+					$booking_place = !empty($pre_cp_cust['city']) ? ($pre_cp_cust['city'] . (!empty($pre_cp_cust['state']) ? ', ' . $pre_cp_cust['state'] : '')) : $booking_place;
+					$booking_pincode = !empty($pre_cp_cust['pincode']) ? $pre_cp_cust['pincode'] : $booking_pincode;
+				}
+			}
+		}
+		if (!empty($cp_exec_d)) {
+			$cp_company_label = $db->rp_getValue("company_master", "name", "id='" . (int) $cp_exec_d['type_of_company'] . "'", 0);
+			$cp_type_label = $db->rp_getValue("customer_type", "name", "id='" . (int) $cp_exec_d['type_of_executive'] . "'", 0);
+			$cp_price_list_name = $db->rp_getValue("price_list", "pricelist_name", "id='" . (int) $cp_exec_d['price_list_id'] . "'", 0);
+			if ($cp_price_list_name == "") {
+				$cp_price_list_name = "N/A";
+			}
+			if (defined('CLIENT_STATE') && strtolower(CLIENT_STATE) == strtolower($cp_exec_d['state'])) {
+				$cp_gst_type = "(CGST:9%,SGST:9%)";
+			} else {
+				$cp_gst_type = "(IGST:18%)";
+			}
+		}
+	} else {
+		$selected_cp_customer_id = 0;
+		$cp_customers_r = false;
+	}
+
 	// print_r($_REQUEST);exit;
 	// $invoice_no=INVOICE_NO.str_pad($order_no."/20-21", 8, '0', STR_PAD_LEFT);
 	//$order_no = OUTLETS_ORDER_NO . str_pad($order_no, 2, '0', STR_PAD_LEFT);
@@ -151,6 +236,26 @@
 			$detail['terms_condition_id']	= isset($_REQUEST['terms_condition_id'])?$db->clean($_REQUEST['terms_condition_id']):"";
 			$detail['max_dispatch_date']		= date('Y-m-d', strtotime($_REQUEST['max_dispatch_date']));
 			$detail['channel_partner_order_flag'] = (isset($_REQUEST['c_type']) && $_REQUEST['c_type'] == 'channel_partner') ? 1 : ((isset($_REQUEST['channel_partner_order_flag']) && $_REQUEST['channel_partner_order_flag'] == 1) ? 1 : 0);
+			if (function_exists('cp_is_channel_partner_login') && cp_is_channel_partner_login($db)) {
+				$detail['cid'] = (int) cp_get_login_channel_partner_id();
+				$detail['customer_id'] = (int) cp_get_login_channel_partner_id();
+				$detail['channel_partner_order_flag'] = 1;
+				$cp_end_id = isset($_REQUEST['channel_partner_customer_id']) ? (int) $_REQUEST['channel_partner_customer_id'] : 0;
+				if ($cp_end_id <= 0) {
+					$db->addErrorMessage("Please select your Customer for this order.");
+					$db->rp_location("orders_crud.php?mode=add&c_type=channel_partner");
+				}
+				$ownCpCust = $db->rp_getTotalRecord(
+					"channel_partner_customer",
+					"id='" . $cp_end_id . "' AND channel_partner_id='" . (int) cp_get_login_channel_partner_id() . "' AND isDelete=0",
+					0
+				);
+				if ($ownCpCust <= 0) {
+					$db->addErrorMessage("Invalid customer selected.");
+					$db->rp_location("orders_crud.php?mode=add&c_type=channel_partner");
+				}
+				$detail['channel_partner_customer_id'] = $cp_end_id;
+			}
 
 		 
 
@@ -444,6 +549,90 @@
 											// echo $type_of_company;die;
 											?>
 											<div class="col-md-4 col-sm-4">
+												<?php if (!empty($is_cp_self_order) && !empty($cp_exec_d)) {
+													$cpPhone = !empty($cp_exec_d['phone']) ? $cp_exec_d['phone'] : $cp_exec_d['mobile_no1'];
+													$shipAddr = !empty($cp_exec_d['shipping_address']) ? $cp_exec_d['shipping_address'] : $cp_exec_d['address'];
+													$billAddr = !empty($cp_exec_d['billing_address']) ? $cp_exec_d['billing_address'] : $cp_exec_d['address'];
+													$is_channel_partner_order = true;
+												?>
+												<div class="form-group">
+													<label>Company</label>
+													<input type="hidden" name="type_of_company" id="type_of_company" value="<?php echo htmlentities($cp_exec_d['type_of_company']); ?>">
+													<input type="text" class="form-control" value="<?php echo htmlentities($cp_company_label); ?>" readonly>
+												</div>
+												<div class="form-group">
+													<label>Customer Type</label>
+													<input type="hidden" name="customer_type" id="customer_type" value="<?php echo htmlentities($cp_exec_d['type_of_executive']); ?>">
+													<input type="text" class="form-control" value="<?php echo htmlentities($cp_type_label); ?>" readonly>
+												</div>
+												<div class="form-group">
+													<label>Channel Partner</label>
+													<?php if ($_REQUEST['mode'] == "edit") { ?>
+														<input type="hidden" name="edit_customer_id" id="edit_customer_id" value="<?php echo (int) $cp_login_id; ?>" class="customer_id_s">
+													<?php } ?>
+													<select class="form-control customer_id_s" name="customer_id" id="customer_id" onChange="getCategory(this.value)">
+														<option value="<?php echo (int) $cp_login_id; ?>" selected
+															data-phone="<?php echo htmlentities($cpPhone); ?>"
+															data-email="<?php echo htmlentities($cp_exec_d['email']); ?>"
+															data-address="<?php echo htmlentities($cp_exec_d['address']); ?>"
+															data-state="<?php echo htmlentities($cp_exec_d['state']); ?>"
+															data-cname="<?php echo htmlentities($cp_exec_d['cname']); ?>"
+															data-gstin="<?php echo htmlentities($cp_exec_d['gst']); ?>"
+															data-top_category_id="<?php echo htmlentities($cp_exec_d['top_category_id']); ?>"
+															data-price-list="<?php echo htmlentities($cp_price_list_name); ?>"
+															data-cutomer-type="<?php echo htmlentities($cp_type_label); ?>"
+															data-gst-type="<?php echo htmlentities($cp_gst_type); ?>"
+															data-c_id="<?php echo (int) $cp_login_id; ?>"
+															data-shipping-add="<?php echo htmlentities($shipAddr); ?>"
+															data-billing-add="<?php echo htmlentities($billAddr); ?>"
+															data-customer_cash_discount="<?php echo htmlentities($cp_exec_d['cash_discount']); ?>"
+															data-customer_additional_discount="<?php echo htmlentities($cp_exec_d['additional_discount']); ?>"
+															data-booking_place="<?php echo htmlentities(isset($booking_place) ? $booking_place : $cp_exec_d['booking_place']); ?>"
+															data-zip="<?php echo htmlentities($cp_exec_d['zip']); ?>"
+															data-transporter_id="<?php echo htmlentities($cp_exec_d['transporter_id']); ?>"
+															data-transport_thr="<?php echo htmlentities($cp_exec_d['transport_by_id']); ?>"
+															data-shipping_address="<?php echo htmlentities($shipAddr); ?>"
+															data-billing_address="<?php echo htmlentities($billAddr); ?>">
+															<?php echo htmlentities($cp_exec_d['company_name'] . ' - ' . $cp_exec_d['cname']); ?>
+														</option>
+													</select>
+													<p class="help-block text-muted">Pricing uses your Channel Partner account.</p>
+												</div>
+												<div class="form-group">
+													<label>Select Customer<code>*</code></label>
+													<select class="form-control" name="channel_partner_customer_id" id="channel_partner_customer_id">
+														<option value="">-- Select Customer --</option>
+														<?php
+														if ($cp_customers_r) {
+															while ($cp_cust = mysqli_fetch_assoc($cp_customers_r)) {
+																$cpCustAddr = implode(', ', array_filter(array($cp_cust['city'], $cp_cust['state'], $cp_cust['pincode'], $cp_cust['country'])));
+																$cpCustBook = trim($cp_cust['city'] . (!empty($cp_cust['state']) ? ', ' . $cp_cust['state'] : ''));
+																$sel = ((int) $selected_cp_customer_id === (int) $cp_cust['id']) ? 'selected' : '';
+																?>
+																<option value="<?php echo (int) $cp_cust['id']; ?>" <?php echo $sel; ?>
+																	data-company="<?php echo htmlentities($cp_cust['company_name']); ?>"
+																	data-person="<?php echo htmlentities($cp_cust['person_name']); ?>"
+																	data-mobile="<?php echo htmlentities($cp_cust['mobile_no']); ?>"
+																	data-email="<?php echo htmlentities($cp_cust['email']); ?>"
+																	data-gst="<?php echo htmlentities($cp_cust['gst']); ?>"
+																	data-address="<?php echo htmlentities($cpCustAddr); ?>"
+																	data-city="<?php echo htmlentities($cp_cust['city']); ?>"
+																	data-state="<?php echo htmlentities($cp_cust['state']); ?>"
+																	data-pincode="<?php echo htmlentities($cp_cust['pincode']); ?>"
+																	data-booking_place="<?php echo htmlentities($cpCustBook); ?>">
+																	<?php echo htmlentities($cp_cust['company_name'] . ' - ' . $cp_cust['person_name'] . ' (' . $cp_cust['mobile_no'] . ')'); ?>
+																</option>
+																<?php
+															}
+														}
+														?>
+													</select>
+													<p class="help-block text-success">Select your customer, then choose product to place order.</p>
+													<?php if (!$cp_customers_r) { ?>
+														<p class="help-block text-danger">No customers found. Please add customer first from <a href="channel_partner_customer_manage.php">My Customers</a>.</p>
+													<?php } ?>
+												</div>
+												<?php } else { ?>
 												<div class="form-group">
 													<label class="test">Select Company<code>*</code></label>
 													<input type="hidden" name="type_of_company" value="<?=$type_of_company?>">
@@ -609,6 +798,7 @@
 														</select>
 												    <p class="help-block"></p>
 												</div>
+												<?php } // end non-CP order customer selectors ?>
 												<!-- <div class="form-group">
 												    <label>Select Customer<code>*</code></label>
 												    <select  class="form-control customer_id_select2" name="customer_id_select2" placeholder="Select Customer" id="customer_id_select2"   type="text"  >
@@ -905,7 +1095,11 @@
 															<?php
 															if ($sales_executive_id == "" || $sales_executive_id == 0 || $sales_executive_id == NULL || empty($sales_executive_id)) 
 															{
-																$sales_executive_id = $_SESSION[SITE_SESS.'REFERANCE_ID'];
+																if (!empty($is_cp_self_order) && !empty($cp_exec_d['seid'])) {
+																	$sales_executive_id = $cp_exec_d['seid'];
+																} else {
+																	$sales_executive_id = $_SESSION[SITE_SESS.'REFERANCE_ID'];
+																}
 															}
 															
 															$sales_R = $db->rp_getData("sales_executive","id,name,phone","isDelete=0 AND isActive=1");
@@ -2685,9 +2879,11 @@
 			function check_form() {
 				$(".form-body").children().removeClass("has-error");
 				var isValid = true;
+				var isCpSelfOrder = <?= !empty($is_cp_self_order) ? 'true' : 'false'; ?>;
 				<?php 
 					if ($_REQUEST['mode'] == "add") {
 					?>
+						if (!isCpSelfOrder) {
 						if ($("#customer_type").val() == "" || $("#customer_type").val().split(" ").join("") == ""){
 							vd = aj.error('customer_type', "Please Select Customer Type", "add_error");
 							isValid = false;
@@ -2696,23 +2892,21 @@
 							vd = aj.error('type_of_company', "Please Select Company Type", "add_error");
 							isValid = false;
 						}
+						}
 						if ($("#customer_id").val() == "" || $("#customer_id").val().split(" ").join("") == "") {
 							vd = aj.error('customer_id', "<?= ($c_type == 'channel_partner') ? 'Please Select Channel Partner.' : 'Please Select Customer.'; ?>", "add_error");
 							isValid = false;
+						}
+						if (isCpSelfOrder) {
+							if ($("#channel_partner_customer_id").val() == "" || $("#channel_partner_customer_id").val() == "0") {
+								vd = aj.error('channel_partner_customer_id', "Please Select Customer.", "add_error");
+								isValid = false;
+							}
 						}
 						if ($("#order_date").val() == "" || $("#order_date").val().split(" ").join("") == "") {
 							vd = aj.error('order_date', "Please Enter Order Date.", "add_error");
 							isValid = false;
 						}
-						
-						/*if ($("#booking_place").val() == "" || $("#booking_place").val().split(" ").join("") == "") {
-							vd = aj.error('booking_place', "Please Enter Booking Place.", "add_error");
-							isValid = false;
-						}
-						if ($("#booking_pincode").val() == "" || $("#booking_pincode").val().split(" ").join("") == "") {
-							vd = aj.error('booking_pincode', "Please Enter Booking Pincode.", "add_error");
-							isValid = false;
-						}*/
 					<?php 
 					} 
 				?>
@@ -2794,7 +2988,57 @@
 			$(document).ready(function() {
 				var oid = '<?= $_REQUEST['order_id'] ?>';
 				var form_c_type = '<?= $c_type ?>';
-				if(mode=='add' && oid!="")
+				var isCpSelfOrder = <?= !empty($is_cp_self_order) ? 'true' : 'false'; ?>;
+				var cpSelfId = '<?= (int) $cp_login_id ?>';
+				if (isCpSelfOrder && mode == 'add') {
+					if ($('#customer_id').data('select2')) {
+						$('#customer_id').select2('destroy');
+					}
+					$('#customer_id').prop('disabled', true);
+					// disabled select does not post - keep value via hidden
+					if ($('#cp_customer_id_hidden').length == 0) {
+						$('<input>').attr({type:'hidden', id:'cp_customer_id_hidden', name:'customer_id', value: cpSelfId}).insertAfter('#customer_id');
+						$('#customer_id').removeAttr('name');
+					}
+					$("#customer_id").trigger('change');
+					getCategory(cpSelfId);
+					getCustomerCount(cpSelfId);
+
+					function applyCpEndCustomerFields() {
+						var $opt = $("#channel_partner_customer_id option:selected");
+						if (!$opt.length || $opt.val() == "") {
+							return;
+						}
+						var gst = $opt.data("gst") || "";
+						var address = $opt.data("address") || "";
+						var person = $opt.data("person") || "";
+						var mobile = $opt.data("mobile") || "";
+						var company = $opt.data("company") || "";
+						var bookingPlace = $opt.data("booking_place") || "";
+						var pincode = $opt.data("pincode") || "";
+						if (gst != "") {
+							$("#name_gstin").val(gst);
+						}
+						if (address != "") {
+							$("#shipping_address").val(address);
+							$("#billing_address").val(address);
+						}
+						if (bookingPlace != "") {
+							$("#booking_place").val(bookingPlace);
+						}
+						if (pincode != "") {
+							$("#booking_pincode").val(pincode);
+						}
+						$("#name").html(person);
+						$("#name_phone").html(mobile);
+						$("#name_address").html(address);
+						$("#name_value").html(company);
+					}
+					$("#channel_partner_customer_id").off("change.cpEnd").on("change.cpEnd", applyCpEndCustomerFields);
+					if ($("#channel_partner_customer_id").val() != "") {
+						applyCpEndCustomerFields();
+					}
+				} else if(mode=='add' && oid!="")
 				{ 
 					//getCategory('<?= $customer_id ?>');
 					getCustomer('<?= $customer_type ?>','<?= $customer_id ?>');

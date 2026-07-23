@@ -16,6 +16,9 @@ include("connect.php");
 require_once("../include/class.channel_partner_customer.php");
 $objCP = new ChannelPartnerCustomer();
 
+$is_cp_login = cp_is_channel_partner_login($db);
+$cp_login_id = cp_get_login_channel_partner_id();
+
 $company_name = "";
 $person_name = "";
 $mobile_no = "";
@@ -28,10 +31,15 @@ $pincode = "";
 $channel_partner_id = "";
 
 $country_r = $db->rp_getData("country", "*", "isDelete=0", "name ASC", 0);
+$cp_where = "channel_partner_flag=1 AND customer_flag=0 AND isDelete=0";
+if ($is_cp_login && $cp_login_id > 0) {
+	$cp_where .= " AND id='" . (int) $cp_login_id . "'";
+	$channel_partner_id = (int) $cp_login_id;
+}
 $channel_partner_r = $db->rp_getData(
 	"executive",
 	"id, company_name, cname, mobile_no1",
-	"channel_partner_flag=1 AND customer_flag=0 AND isDelete=0",
+	$cp_where,
 	"company_name ASC",
 	0
 );
@@ -48,6 +56,9 @@ if (isset($_REQUEST['submit'])) {
 	$detail['city'] = $db->clean($_REQUEST['city']);
 	$detail['pincode'] = $db->clean($_REQUEST['pincode']);
 	$detail['channel_partner_id'] = $db->clean($_REQUEST['channel_partner_id']);
+	if ($is_cp_login && $cp_login_id > 0) {
+		$detail['channel_partner_id'] = (int) $cp_login_id;
+	}
 
 	if (isset($_REQUEST['mode']) && $_REQUEST['mode'] == "add") {
 		if ($rights['insert_flag'] != 1) {
@@ -65,6 +76,12 @@ if (isset($_REQUEST['submit'])) {
 			$db->rp_location('access_denied.php?msg=update_access_denied');
 		}
 		$detail['id'] = $db->clean($_REQUEST['id']);
+		if ($is_cp_login && $cp_login_id > 0) {
+			$own = $db->rp_getTotalRecord($ctable, "id='" . (int) $detail['id'] . "' AND channel_partner_id='" . (int) $cp_login_id . "' AND isDelete=0", 0);
+			if ($own <= 0) {
+				$db->rp_location('access_denied.php?msg=update_access_denied');
+			}
+		}
 		$reply = $objCP->UpdateChannelPartnerCustomer($detail);
 		if ($reply['ack'] == 1) {
 			$db->addSuccessMessage($reply['ack_msg']);
@@ -79,10 +96,19 @@ if (isset($_REQUEST['id']) && $_REQUEST['id'] > 0 && $_REQUEST['mode'] == "edit"
 	if ($rights['update_flag'] != 1) {
 		$db->rp_location('access_denied.php?msg=update_access_denied');
 	}
+	if ($is_cp_login && $cp_login_id > 0) {
+		$own = $db->rp_getTotalRecord($ctable, "id='" . (int) $_REQUEST['id'] . "' AND channel_partner_id='" . (int) $cp_login_id . "' AND isDelete=0", 0);
+		if ($own <= 0) {
+			$db->rp_location('access_denied.php?msg=update_access_denied');
+		}
+	}
 	$detail = array('id' => $_REQUEST['id']);
 	$reply = $objCP->GetEditDataChannelPartnerCustomer($detail);
 	if ($reply['ack'] == 1) {
 		extract($reply['result']);
+		if ($is_cp_login && $cp_login_id > 0) {
+			$channel_partner_id = (int) $cp_login_id;
+		}
 	} else {
 		$db->addErrorMessage($reply['ack_msg']);
 	}
@@ -91,6 +117,12 @@ if (isset($_REQUEST['id']) && $_REQUEST['id'] > 0 && $_REQUEST['mode'] == "edit"
 if (isset($_REQUEST['id']) && $_REQUEST['id'] > 0 && $_REQUEST['mode'] == "delete") {
 	if ($rights['delete_flag'] != 1) {
 		$db->rp_location('access_denied.php?msg=delete_access_denied');
+	}
+	if ($is_cp_login && $cp_login_id > 0) {
+		$own = $db->rp_getTotalRecord($ctable, "id='" . (int) $_REQUEST['id'] . "' AND channel_partner_id='" . (int) $cp_login_id . "' AND isDelete=0", 0);
+		if ($own <= 0) {
+			$db->rp_location('access_denied.php?msg=delete_access_denied');
+		}
 	}
 	$detail = array('id' => $_REQUEST['id']);
 	$reply = $objCP->DeleteChannelPartnerCustomer($detail);
@@ -144,6 +176,19 @@ if (isset($_REQUEST['id']) && $_REQUEST['id'] > 0 && $_REQUEST['mode'] == "delet
 										<div class="col-md-6">
 											<div class="form-group">
 												<label>Select Channel Partner <code>*</code></label>
+												<?php if ($is_cp_login && $cp_login_id > 0) { ?>
+													<input type="hidden" name="channel_partner_id" id="channel_partner_id" value="<?php echo (int) $cp_login_id; ?>">
+													<?php
+													$cp_label = "-";
+													if ($channel_partner_r && $cp_d = mysqli_fetch_assoc($channel_partner_r)) {
+														$cp_label = trim($cp_d['company_name']);
+														if ($cp_d['cname'] != "") {
+															$cp_label .= " - " . $cp_d['cname'];
+														}
+													}
+													?>
+													<input type="text" class="form-control" value="<?php echo htmlentities($cp_label); ?>" readonly>
+												<?php } else { ?>
 												<select class="form-control input-medium" name="channel_partner_id" id="channel_partner_id" style="width:100%;">
 													<option value="">-- Select Channel Partner --</option>
 													<?php
@@ -162,6 +207,7 @@ if (isset($_REQUEST['id']) && $_REQUEST['id'] > 0 && $_REQUEST['mode'] == "delet
 													}
 													?>
 												</select>
+												<?php } ?>
 											</div>
 										</div>
 										<div class="col-md-6">

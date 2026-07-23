@@ -6,6 +6,11 @@ $ctable = "channel_partner_customer";
 $ctable1 = "Channel Partner Customer";
 
 $ctable_where = "";
+$is_cp_login = cp_is_channel_partner_login($db);
+$cp_login_id = cp_get_login_channel_partner_id();
+if ($is_cp_login && $cp_login_id > 0) {
+	$ctable_where .= " channel_partner_id='" . (int) $cp_login_id . "' AND ";
+}
 if (isset($_REQUEST['searchName']) && $_REQUEST['searchName'] != "") {
 	$search = $db->clean($_REQUEST['searchName']);
 	$ctable_where .= " (
@@ -44,7 +49,7 @@ $ctable_r = $db->rp_getData($ctable, "*", $ctable_where, "id DESC limit $page_po
 	<thead>
 		<tr>
 			<th></th>
-			<th>Channel Partner</th>
+			<?php if (!$is_cp_login) { ?><th>Channel Partner</th><?php } ?>
 			<th>Customer Name</th>
 			<th>Person Name</th>
 			<th>Mobile</th>
@@ -68,7 +73,10 @@ $ctable_r = $db->rp_getData($ctable, "*", $ctable_where, "id DESC limit $page_po
 	?>
 		<tr>
 			<td>
-				<?php if ($rights['update_flag'] == 1 || $rights['delete_flag'] == 1) { ?>
+				<?php
+				$show_cp_add_order = !empty($is_cp_login);
+				if ($rights['update_flag'] == 1 || $rights['delete_flag'] == 1 || $show_cp_add_order) {
+				?>
 				<div class="btn-group">
 					<button aria-expanded="false" data-toggle="dropdown" type="button" class="btn btn-sm blue dropdown-toggle">
 						<i class="fa fa-gear"></i>
@@ -78,6 +86,13 @@ $ctable_r = $db->rp_getData($ctable, "*", $ctable_where, "id DESC limit $page_po
 						<li>
 							<a href="channel_partner_customer_crud.php?mode=edit&id=<?php echo $ctable_d['id']; ?>">
 								<span class="text-primary"><i class="fa fa-pencil"></i> Edit</span>
+							</a>
+						</li>
+						<?php } ?>
+						<?php if ($show_cp_add_order) { ?>
+						<li>
+							<a href="orders_crud.php?mode=add&c_type=channel_partner&cp_customer_id=<?php echo (int) $ctable_d['id']; ?>">
+								<span class="text-success"><i class="fa fa-shopping-cart"></i> Add Order</span>
 							</a>
 						</li>
 						<?php } ?>
@@ -92,7 +107,7 @@ $ctable_r = $db->rp_getData($ctable, "*", $ctable_where, "id DESC limit $page_po
 				</div>
 				<?php } ?>
 			</td>
-			<td><?php echo htmlentities($cp_name); ?></td>
+			<?php if (!$is_cp_login) { ?><td><?php echo htmlentities($cp_name); ?></td><?php } ?>
 			<td><?php echo htmlentities($ctable_d['company_name']); ?></td>
 			<td><?php echo htmlentities($ctable_d['person_name']); ?></td>
 			<td><?php echo htmlentities($ctable_d['mobile_no']); ?></td>
@@ -104,9 +119,12 @@ $ctable_r = $db->rp_getData($ctable, "*", $ctable_where, "id DESC limit $page_po
 	<?php
 		}
 	} else {
+		$colCount = $is_cp_login ? 8 : 9;
 	?>
 		<tr>
-			<td colspan="9" style="text-align:center;">No Channel Partner Customer found.</td>
+			<?php for ($i = 0; $i < $colCount; $i++) { ?>
+			<td style="text-align:center;"><?php echo ($i == 0) ? 'No Channel Partner Customer found.' : '&nbsp;'; ?></td>
+			<?php } ?>
 		</tr>
 	<?php
 	}

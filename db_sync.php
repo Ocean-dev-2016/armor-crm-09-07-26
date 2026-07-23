@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 define('DB_SYNC_KEY', 'armor_cp_sync_2026');
-define('DB_SYNC_VERSION', '2026.07.21.1');
+define('DB_SYNC_VERSION', '2026.07.23.3');
 
 if (!isset($_GET['key']) || $_GET['key'] !== DB_SYNC_KEY) {
 	header('HTTP/1.1 403 Forbidden');
@@ -311,6 +311,83 @@ db_sync_append_page_urls($conn, 555, array(
 	'channel_partner_customer_get_ajax.php',
 ));
 
+db_sync_append_page_urls($conn, 650, array(
+	'channel_partner_stock_manage.php',
+	'channel_partner_stock_get_ajax.php',
+));
+
+/* ------------------------------------------------------------------
+ * STEP 5a — Seed Channel Partner (admin_type=1 / CP) portal rights
+ * Pages: 555 customers, 565 orders (personal), 650 stock (view)
+ * ------------------------------------------------------------------ */
+function db_sync_ensure_cp_page_right($conn, $adminId, $pageId, $flags)
+{
+	$adminId = (int) $adminId;
+	$pageId = (int) $pageId;
+	$check = mysqli_query($conn, "SELECT id FROM page_admin_right WHERE admin_id='{$adminId}' AND page_id='{$pageId}' AND isDelete=0 LIMIT 1");
+	if ($check && mysqli_num_rows($check) > 0) {
+		$row = mysqli_fetch_assoc($check);
+		$set = array();
+		foreach ($flags as $col => $val) {
+			$set[] = "`" . mysqli_real_escape_string($conn, $col) . "`='" . (int) $val . "'";
+		}
+		$sql = "UPDATE page_admin_right SET " . implode(',', $set) . " WHERE id='" . (int) $row['id'] . "'";
+		db_sync_run_query($conn, $sql, "Update CP rights page {$pageId} for admin_type {$adminId}");
+		return;
+	}
+	$cols = array('page_id', 'admin_id', 'isDelete', 'created_by', 'created_by_type', 'created_date');
+	$vals = array($pageId, $adminId, 0, 1, 0, "'" . date('Y-m-d H:i:s') . "'");
+	foreach ($flags as $col => $val) {
+		$cols[] = $col;
+		$vals[] = (int) $val;
+	}
+	$sql = "INSERT INTO page_admin_right (`" . implode('`,`', $cols) . "`) VALUES (" . implode(',', $vals) . ")";
+	db_sync_run_query($conn, $sql, "Insert CP rights page {$pageId} for admin_type {$adminId}");
+}
+
+$cpAdminTypeId = 0;
+$cpTypeRes = mysqli_query($conn, "SELECT id FROM admin_type WHERE (id=1 OR name='CP' OR slug='super_stockist') AND isDelete=0 ORDER BY id ASC LIMIT 1");
+if ($cpTypeRes && $cpTypeRow = mysqli_fetch_assoc($cpTypeRes)) {
+	$cpAdminTypeId = (int) $cpTypeRow['id'];
+}
+if ($cpAdminTypeId > 0) {
+	db_sync_ensure_cp_page_right($conn, $cpAdminTypeId, 555, array(
+		'view_flag' => 1,
+		'insert_flag' => 1,
+		'update_flag' => 1,
+		'delete_flag' => 1,
+		'personal_flag' => 1,
+		'chain_vise_flag' => 0,
+		'all_data_flag' => 0,
+		'export_excel_flag' => 0,
+		'print_flag' => 0,
+	));
+	db_sync_ensure_cp_page_right($conn, $cpAdminTypeId, 565, array(
+		'view_flag' => 1,
+		'insert_flag' => 1,
+		'update_flag' => 1,
+		'delete_flag' => 0,
+		'personal_flag' => 1,
+		'chain_vise_flag' => 0,
+		'all_data_flag' => 0,
+		'export_excel_flag' => 0,
+		'print_flag' => 1,
+	));
+	db_sync_ensure_cp_page_right($conn, $cpAdminTypeId, 650, array(
+		'view_flag' => 1,
+		'insert_flag' => 0,
+		'update_flag' => 0,
+		'delete_flag' => 0,
+		'personal_flag' => 1,
+		'chain_vise_flag' => 0,
+		'all_data_flag' => 0,
+		'export_excel_flag' => 0,
+		'print_flag' => 0,
+	));
+} else {
+	db_sync_log('INFO', 'CP admin_type not found; skip portal rights seed');
+}
+
 /* Employee Visit KRA reuses Visit Report page 599 permissions. */
 db_sync_append_page_urls($conn, 599, array(
 	'employee_visit_kra_report.php',
@@ -355,6 +432,13 @@ db_sync_add_column_if_missing(
 	"tinyint(1) NOT NULL DEFAULT 1 COMMENT '1=Regular, 2=Advance'",
 	array('expense_type', 'category_id', 'subcategory_id')
 );
+db_sync_add_column_if_missing(
+	$conn,
+	'expense',
+	'advance_expense_type',
+	"tinyint(1) NOT NULL DEFAULT 0 COMMENT '0=None, 1=Brand Approval, 2=Travelling'",
+	array('expense_claim_type', 'expense_type')
+);
 
 $visitApiBase = 'service_visit.php?key=1226';
 db_sync_register_api_if_missing($conn, 229, 'get_expense_claim_type', 'Get Expense Claim Type', $visitApiBase . '&s=229');
@@ -365,6 +449,58 @@ $requiredAdvanceApis = array(
 	229 => 'get_expense_claim_type',
 	230 => 'add_advance_expense',
 );
+
+/* Seed Advance expense categories (claim_type=2) if missing */
+if (db_sync_table_exists($conn, 'expence_category') && db_sync_column_exists($conn, 'expence_category', 'expense_claim_type')) {
+	$advanceCategoryNames = array(
+		'Advance Brand Approval Expense',
+		'Advance Travelling Expense',
+	);
+	foreach ($advanceCategoryNames as $advName) {
+		$advEsc = mysqli_real_escape_string($conn, $advName);
+		$advCheck = mysqli_query($conn, "SELECT id, expense_claim_type FROM `expence_category` WHERE name='{$advEsc}' AND isDelete=0 LIMIT 1");
+		if ($advCheck && mysqli_num_rows($advCheck) > 0) {
+			$advRow = mysqli_fetch_assoc($advCheck);
+			if ((int)$advRow['expense_claim_type'] !== 2) {
+				db_sync_run_query(
+					$conn,
+					"UPDATE `expence_category` SET `expense_claim_type`=2, `isActive`=1 WHERE `id`='" . (int)$advRow['id'] . "'",
+					"SET claim_type=2 for category: {$advName}"
+				);
+			} else {
+				db_sync_log('SKIP', "Advance category already ready: {$advName}");
+			}
+		} else {
+			db_sync_run_query(
+				$conn,
+				"INSERT INTO `expence_category` (`name`, `image_path`, `expense_claim_type`, `isActive`, `isDelete`) VALUES ('{$advEsc}', '', 2, 1, 0)",
+				"INSERT Advance category: {$advName}"
+			);
+		}
+	}
+
+	/* Seed Regular OCE category if missing (matches live Regular list) */
+	$oceEsc = mysqli_real_escape_string($conn, 'OCE');
+	$oceCheck = mysqli_query($conn, "SELECT id, expense_claim_type FROM `expence_category` WHERE name='{$oceEsc}' AND isDelete=0 LIMIT 1");
+	if ($oceCheck && mysqli_num_rows($oceCheck) > 0) {
+		$oceRow = mysqli_fetch_assoc($oceCheck);
+		if ((int)$oceRow['expense_claim_type'] !== 1) {
+			db_sync_run_query(
+				$conn,
+				"UPDATE `expence_category` SET `expense_claim_type`=1, `isActive`=1 WHERE `id`='" . (int)$oceRow['id'] . "'",
+				"SET claim_type=1 for category: OCE"
+			);
+		} else {
+			db_sync_log('SKIP', 'Regular category already ready: OCE');
+		}
+	} else {
+		db_sync_run_query(
+			$conn,
+			"INSERT INTO `expence_category` (`name`, `image_path`, `expense_claim_type`, `isActive`, `isDelete`) VALUES ('{$oceEsc}', '', 1, 1, 0)",
+			"INSERT Regular category: OCE"
+		);
+	}
+}
 
 /* ------------------------------------------------------------------
  * STEP 5d — Visit End Remark / Reason (visit columns + APIs 231-232)
@@ -535,6 +671,13 @@ db_sync_add_column_if_missing(
 	'channel_partner_order_flag',
 	"tinyint(1) NOT NULL DEFAULT 0 COMMENT '1=Channel Partner Order, 0=Normal Order'",
 	array('customer_type', 'customer_id', 'customer_flag')
+);
+db_sync_add_column_if_missing(
+	$conn,
+	'orders',
+	'channel_partner_customer_id',
+	"int(11) NOT NULL DEFAULT 0 COMMENT 'FK channel_partner_customer.id (end customer for CP order)'",
+	array('channel_partner_order_flag', 'customer_id')
 );
 
 /* ------------------------------------------------------------------
@@ -861,7 +1004,7 @@ $environment = isset($config['environment']) ? $config['environment'] : 'unknown
 			<li>Column <code>executive.channel_partner_flag</code></li>
 			<li>Page URLs in <code>page_table</code> id=555</li>
 			<li>APIs in <code>api_table</code> id 223, 224, 225, 226, 227, 228</li>
-			<li>Advance Expense APIs 229-230 + <code>expense_claim_type</code> columns</li>
+			<li>Advance Expense APIs 229-230 + <code>expense_claim_type</code> columns + Advance categories seed</li>
 			<li>Visit Remark/Reason APIs 231-234 + <code>visit.remark_code</code>, <code>reason_code</code>, <code>approval_type</code>, <code>visit_followup_id</code></li>
 			<li>API <code>#233 save_visit_consultant_form</code> — Consultant Detail SAVE AND NEXT</li>
 			<li>API <code>#234 save_visit_high_rate_form</code> — High Rate Analysis SAVE AND NEXT (accepts product <code>slug</code>)</li>

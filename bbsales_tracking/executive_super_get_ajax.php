@@ -25,6 +25,9 @@ if (isset($_REQUEST['flag']) && $_REQUEST['flag'] == "") {
 } else if (isset($_REQUEST['flag']) && $_REQUEST['flag'] == "channel_partner") {
 	$ctable_where .= "customer_flag=0 AND channel_partner_flag=1 AND ";
 	$isFillter = true;
+	if (function_exists('cp_is_channel_partner_login') && cp_is_channel_partner_login($db)) {
+		$ctable_where .= "id='" . (int) cp_get_login_channel_partner_id() . "' AND ";
+	}
 }
 
 if (isset($_REQUEST['searchName']) && $_REQUEST['searchName'] != "") {

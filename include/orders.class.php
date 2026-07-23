@@ -1299,6 +1299,60 @@ class Order extends Functions
 					if ($has_cp_order_flag && $channel_partner_order_flag == 1) {
 						$this->db->rp_update("orders", array("channel_partner_order_flag" => 1), "id='" . $order_id . "'", 0);
 					}
+					/* Link Channel Partner end-customer (channel_partner_customer) when provided */
+					$cp_end_customer_id = 0;
+					if (isset($detail['channel_partner_customer_id'])) {
+						$cp_end_customer_id = (int) $detail['channel_partner_customer_id'];
+					} else if (isset($_REQUEST['channel_partner_customer_id'])) {
+						$cp_end_customer_id = (int) $_REQUEST['channel_partner_customer_id'];
+					}
+					if ($cp_end_customer_id > 0 && $channel_partner_order_flag == 1) {
+						$cp_end_r = $this->db->rp_getData(
+							"channel_partner_customer",
+							"*",
+							"id='" . $cp_end_customer_id . "' AND channel_partner_id='" . (int) $customer_r['id'] . "' AND isDelete=0",
+							"",
+							0
+						);
+						if ($cp_end_r && $cp_end_d = mysqli_fetch_assoc($cp_end_r)) {
+							$cp_order_upd = array(
+								"channel_partner_customer_id" => $cp_end_customer_id,
+								"customer_name" => $cp_end_d['person_name'],
+								"company_name" => $cp_end_d['company_name'],
+							);
+							$cp_col_check2 = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `orders` LIKE 'channel_partner_customer_id'");
+							if (!($cp_col_check2 && mysqli_num_rows($cp_col_check2) > 0)) {
+								unset($cp_order_upd['channel_partner_customer_id']);
+							}
+							if (!empty($detail['shipping_address'])) {
+								$cp_order_upd['shipping_address'] = $this->db->clean($detail['shipping_address']);
+							} else {
+								$addrParts = array_filter(array($cp_end_d['city'], $cp_end_d['state'], $cp_end_d['pincode'], $cp_end_d['country']));
+								$cp_order_upd['shipping_address'] = implode(', ', $addrParts);
+							}
+							if (!empty($detail['billing_address'])) {
+								$cp_order_upd['billing_address'] = $this->db->clean($detail['billing_address']);
+							} else {
+								$cp_order_upd['billing_address'] = $cp_order_upd['shipping_address'];
+							}
+							if (!empty($detail['name_gstin'])) {
+								$cp_order_upd['gst'] = $detail['name_gstin'];
+							} else if (!empty($cp_end_d['gst'])) {
+								$cp_order_upd['gst'] = $cp_end_d['gst'];
+							}
+							if (!empty($detail['booking_place'])) {
+								$cp_order_upd['booking_place'] = $detail['booking_place'];
+							} else if (!empty($cp_end_d['city'])) {
+								$cp_order_upd['booking_place'] = $cp_end_d['city'] . (!empty($cp_end_d['state']) ? ', ' . $cp_end_d['state'] : '');
+							}
+							if (!empty($detail['booking_pincode'])) {
+								$cp_order_upd['booking_pincode'] = $detail['booking_pincode'];
+							} else if (!empty($cp_end_d['pincode'])) {
+								$cp_order_upd['booking_pincode'] = $cp_end_d['pincode'];
+							}
+							$this->db->rp_update("orders", $cp_order_upd, "id='" . $order_id . "'", 0);
+						}
+					}
 					// covert prospect customer into customer
 					if ($customer_r['customer_flag'] == 1) {
 						$this->db->rp_update("executive", array("customer_flag" => 0, "customer_flag_change_date" => date('Y-m-d H:i:s')), "id='" . $customer_r['id'] . "'", 0);

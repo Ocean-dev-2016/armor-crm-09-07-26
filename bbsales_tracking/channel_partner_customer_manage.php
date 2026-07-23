@@ -64,6 +64,11 @@ include("connect.php");
 											Add Channel Partner Customer <i class="fa fa-plus"></i>
 										</a>
 									<?php } ?>
+									<?php if (function_exists('cp_is_channel_partner_login') && cp_is_channel_partner_login($db)) { ?>
+										<a href="orders_crud.php?mode=add&c_type=channel_partner" class="btn sbold green">
+											Add Customer Order <i class="fa fa-shopping-cart"></i>
+										</a>
+									<?php } ?>
 								</div>
 							</div>
 						</div>
@@ -86,6 +91,7 @@ include("connect.php");
 <script type="text/javascript">
 var searchName = "";
 var data_url = "<?php echo $ctable; ?>_get_ajax.php";
+var isCpLogin = <?php echo (function_exists('cp_is_channel_partner_login') && cp_is_channel_partner_login($db)) ? 'true' : 'false'; ?>;
 
 function searchByName() {
 	searchName = $("#searchName").val();
@@ -98,13 +104,30 @@ function clearSearchByName() {
 	displayRecords(100, 1);
 }
 function loadDataTable() {
-	$('#datatable_1').dataTable({
-		"bPaginate": false,
-		"bFilter": false,
-		"bInfo": false,
-		"bAutoWidth": false,
-		"aoColumns": [
-			{ "sWidth": "5%" },
+	if (!$('#datatable_1').length) {
+		return;
+	}
+	// Avoid init when empty placeholder row uses colspan
+	if ($('#datatable_1 tbody tr td[colspan]').length > 0) {
+		return;
+	}
+	if ($.fn.DataTable && $.fn.DataTable.fnIsDataTable && $.fn.DataTable.fnIsDataTable('#datatable_1')) {
+		$('#datatable_1').dataTable().fnDestroy();
+	}
+	var aoColumns = [
+		{ "sWidth": "5%", "bSortable": false },
+		{ "sWidth": "15%" },
+		{ "sWidth": "13%" },
+		{ "sWidth": "11%" },
+		{ "sWidth": "11%" },
+		{ "sWidth": "10%" },
+		{ "sWidth": "10%" },
+		{ "sWidth": "10%" }
+	];
+	if (!isCpLogin) {
+		// Staff/admin table includes Channel Partner column
+		aoColumns = [
+			{ "sWidth": "5%", "bSortable": false },
 			{ "sWidth": "15%" },
 			{ "sWidth": "15%" },
 			{ "sWidth": "13%" },
@@ -112,8 +135,16 @@ function loadDataTable() {
 			{ "sWidth": "11%" },
 			{ "sWidth": "10%" },
 			{ "sWidth": "10%" },
-			{ "sWidth": "10%", "bSortable": false }
-		]
+			{ "sWidth": "10%" }
+		];
+	}
+	$('#datatable_1').dataTable({
+		"bPaginate": false,
+		"bFilter": false,
+		"bInfo": false,
+		"bAutoWidth": false,
+		"bDestroy": true,
+		"aoColumns": aoColumns
 	});
 }
 function displayRecords(numRecords) {
@@ -122,10 +153,11 @@ function displayRecords(numRecords) {
 	$("#results").load(data_url + "?show=" + numRecords + "&searchName=" + searchName, function(response, status) {
 		if (status === "error") {
 			$("#results").html('<div class="alert alert-danger">Failed to load listing. Please run db_sync.php on live server.</div>');
+			return;
 		}
 		loadDataTable();
 	});
-	$("#results").on("click", ".paging_simple_numbers a", function(e) {
+	$("#results").off("click", ".paging_simple_numbers a").on("click", ".paging_simple_numbers a", function(e) {
 		e.preventDefault();
 		var numRecords = $("#numRecords").val();
 		$(".loading-div").show();

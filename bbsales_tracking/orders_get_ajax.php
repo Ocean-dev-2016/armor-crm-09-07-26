@@ -84,7 +84,10 @@ if ($_SESSION[SITE_SESS . 'REFERANCE_TYPE'] != 0) {
 		}
 	} else if ($_SESSION[SITE_SESS . 'REFERANCE_TYPE'] == 3) // customer and its chain wise order
 	{
-		if ($rights['personal_flag'] == 1) {
+		// Channel Partner login: always own orders only
+		if (function_exists('cp_is_channel_partner_login') && cp_is_channel_partner_login($db)) {
+			$ctable_where .= " isDelete=0 AND status!=-1 AND customer_id='" . (int) $_SESSION[SITE_SESS . 'REFERANCE_ID'] . "'";
+		} else if ($rights['personal_flag'] == 1) {
 			$ctable_where .= " isDelete=0 AND status!=-1 AND customer_id='" . $_SESSION[SITE_SESS . 'REFERANCE_ID'] . "'";
 		} else {
 			if ($rights['chain_vise_flag'] == 1) {

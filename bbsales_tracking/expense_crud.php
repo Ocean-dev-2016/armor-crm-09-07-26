@@ -15,22 +15,39 @@ $category_id 	="";
 $subcategory_id ="";
 $total 				="";
 $remark 				="";
+$image_path				="";
+$total_amount			="";
+
+/* Expense Category from Sub Master (same list for Regular + Advance after Advance Type) */
+$categoryOptionsHtml = '<option value="">Select Expence Category</option>';
+$expence_cat_d = $db->rp_getData('expence_category', "id,name", "isDelete=0 AND isActive=1 AND (IFNULL(expense_claim_type,1)<>2)", "name ASC", 0);
+if ($expence_cat_d) {
+	while ($expence_cat_r = mysqli_fetch_assoc($expence_cat_d)) {
+		$categoryOptionsHtml .= '<option value="'.(int)$expence_cat_r['id'].'">'.htmlspecialchars($expence_cat_r['name']).'</option>';
+	}
+}
+
 if(isset($_REQUEST['submit'])){
-		
-	$detail['sales_executive_id']		= $db->clean($_REQUEST['sales_executive_id']);	
+
+	$expense_mode = isset($_REQUEST['expense_mode']) ? $db->clean($_REQUEST['expense_mode']) : "";
+	$advance_expense_type = isset($_REQUEST['advance_expense_type']) ? $db->clean($_REQUEST['advance_expense_type']) : "0";
+
+	$detail['sales_executive_id']		= $db->clean($_REQUEST['sales_executive_id']);
 	$detail['category_id']				= $db->clean($_REQUEST['category_id']);
-	$detail['subcategory_id']			= $db->clean($_REQUEST['subcategory_id']);
+	$detail['subcategory_id']			= $db->clean(isset($_REQUEST['subcategory_id']) ? $_REQUEST['subcategory_id'] : 0);
 	$detail['total']					= $db->clean($_REQUEST['total_amount']);
 	$detail['remark']					= $db->clean($_REQUEST['remark']);
-	$detail['image_path']   	   = $db->clean($_REQUEST['image_path']);
-
-	$detail['old_image_path']     = $db->clean($_REQUEST['old_image_path']);
+	$detail['image_path']   	   		= $db->clean($_REQUEST['image_path']);
+	$detail['old_image_path']     		= $db->clean($_REQUEST['old_image_path']);
+	$detail['advance_expense_type']		= $advance_expense_type;
 	$detail['isActive']					= 1;
-	$detail['entry_flag']  = 1;
-	$detail['update_entry_flag']  = 1;
-	//print_r($detail);exit;
+	$detail['entry_flag']  				= 1;
+	$detail['update_entry_flag']  		= 1;
+
+	// Live: expense_mode 0=Regular, 1=Advance → DB expense_claim_type 1/2
+	$detail['expense_claim_type'] = ($expense_mode === "1") ? 2 : 1;
+
 	if(isset($_REQUEST['mode']) && $_REQUEST['mode']=="add"){
-		//print_r($detail);exit;
 		if($rights['insert_flag']!=1)
 		{
 			$db->rp_location('access_denied.php?msg=insert_access_denied');
@@ -40,16 +57,15 @@ if(isset($_REQUEST['submit'])){
 
 		if($reply['ack']==1){
 			$db->addSuccessMessage($reply['ack_msg']);
-		$db->rp_location($ctable."_manage.php?msg=inserted");
+			$db->rp_location($ctable."_manage.php?msg=inserted");
 		}
 		else{
-			 $db->addErrorMessage($reply['ack_msg']);				 
-		} 
+			 $db->addErrorMessage($reply['ack_msg']);
+		}
 	}
 }
 
-if(isset($_REQUEST['id']) && $_REQUEST['id']>0 && $_REQUEST['mode']=="delete"){	
-// echo "hello"; exit;	
+if(isset($_REQUEST['id']) && $_REQUEST['id']>0 && $_REQUEST['mode']=="delete"){
 	if($rights['delete_flag']!=1)
 	{
 		$db->rp_location('access_denied.php?msg=delete_access_denied');
@@ -61,7 +77,7 @@ if(isset($_REQUEST['id']) && $_REQUEST['id']>0 && $_REQUEST['mode']=="delete"){
 	$db->rp_location($ctable."_manage.php?msg=inserted");
 	}
 	else{
-		$db->addErrorMessage($reply['ack_msg']);		
+		$db->addErrorMessage($reply['ack_msg']);
 	}
 }
 
@@ -80,6 +96,9 @@ if(isset($_REQUEST['id']) && $_REQUEST['id']>0 && $_REQUEST['mode']=="delete"){
 <link rel="stylesheet" type="text/css" href="assets/global/plugins/select2/select2.css"/>
 <link rel="stylesheet" href="assets/global/plugins/jquery-ui/jquery-ui.min.css">
 <link rel="stylesheet" type="text/css" href="assets/global/plugins/bootstrap-datepicker/css/bootstrap-datepicker3.min.css"/>
+<style type="text/css">
+	.expense-field-hidden { display: none !important; }
+</style>
 </head>
 <body class="page-md">
 <?php include("header.php"); ?>
@@ -99,7 +118,6 @@ if(isset($_REQUEST['id']) && $_REQUEST['id']>0 && $_REQUEST['mode']=="delete"){
 				<?php $db->printSuccessMessage(); ?>
 				</div>
 			</div>
-			<!-- Employee ID-->
 			<div class="row">
 				<div class="col-md-12">
 					<div class="portlet box blue">
@@ -126,150 +144,122 @@ if(isset($_REQUEST['id']) && $_REQUEST['id']>0 && $_REQUEST['mode']=="delete"){
 															<div class="portlet-body">
 																<div class="row">
 																	<div class="col-sm-12">
-																		
+
 																		<form role="form" action="" method="post" enctype="multipart/form-data" onSubmit="return check_form();">
-																		<div class="row">
-																			<div class="col-md-12">
-																				<div class="form-body">
-																					<div class="form-group">
-																						<div class="row">
-																							<div class="col-md-12">
-																								<div class="row">
-																									<div class="col-md-4">
-																										<div class="form-group">
-																										<label><b>Sales Person</b><code>*</code></label>
-																										<?php
-																										if($_SESSION[SITE_SESS.'_ADMIN_TYPE']==0 || $_SESSION[SITE_SESS.'_ADMIN_TYPE']==14)
-																										{
-																											?>
-																											<select class="form-control" name="sales_executive_id" id="sales_executive_id">
-																											<option value="">Select Sales Person</option>
-																											<?php
-																												$product_list_d=$db->rp_getData('sales_executive',"*","isDelete=0 AND isActive=1 AND type!='service_engineer'","",0);
-																												while($product_list_r=mysqli_fetch_assoc($product_list_d))
-																												{
-																													?>
-																														<option <?=($product_list_r['id']==$_SESSION[SITE_SESS.'REFERANCE_ID'])?"selected":"";?> <?php echo $product_list_r['username']?> value="<?php echo $product_list_r['id'];?>">
-																														<?php echo $product_list_r['name']?>
-																														</option>
-																														<?php
-																												}
-																											?>
-																											</select>
-																											<?php
-																										}
-																										else
-																										{
-																											// $_SESSION[SITE_SESS.'REFERANCE_ID']
-																											?>
-																											<input type="hidden" class="form-control" name="sales_executive_id" id="sales_executive_id" value="<?=$_SESSION[SITE_SESS.'REFERANCE_ID']?>">
-																											<input type="text" readonly="" class="form-control" value="<?=$db->rp_getValue('sales_executive',"name","id='".$_SESSION[SITE_SESS.'REFERANCE_ID']."'","",0)?>">
-																											<?php
-																										}
-																										?>
-																										<p class="help-block"></p>
-																										</div>
-																									</div>
-																									<div class="col-md-4">
-																										<div class="form-group">
-																										<label><b>Expence Category</b><code>*</code></label>
-																										<select class="form-control" name="category_id" id="category_id" onchange="amount_fun(this.value);">
-																										<option value="">Select Expence Category</option>
-																										<?php
-																											$expence_cat_d=$db->rp_getData('expence_category',"*","isDelete=0 AND isActive=1","",0);
-																											while($expence_cat_r=mysqli_fetch_assoc($expence_cat_d))
-																											{
-																												?>
-																													<option "<?php echo $expence_cat_r['name']?>" value="<?php echo $expence_cat_r['id'];?>">
-																													<?php echo $expence_cat_r['name']?>
-																													</option>
-																													<?php
-																											}
-																										?>
-																										</select>
-																										<p class="help-block"></p>
-																										</div>
-																									</div>
-																								</div>
-																				
-																								<div class="row">
-																									<div class="col-md-4">
-																										<div class="form-group">
-																										<label><b>Expence Sub Category</b><code>*</code></label>
-																										<select class="form-control" name="subcategory_id" id="subcategory_id" onchange="fixed_amount(this.value);">
-																										<option value="">Select Expence Sub Category</option>
-																										</select>
-																										<p class="help-block"></p>
-																										</div>
-																									</div>
-																									<div class="col-md-4">
-																										<div class="form-group">
-																										<label><b>Amount</label>
-																										<input type="text" class="form-control" name="total_amount" id="total_amount" value="<?php echo $total_amount;?>"/>
-																										<p class="help-block"></p>
-																										</div>
-																									</div>
-																								</div>
-																								<!-- <div class="row">
-																									<div class="col-md-4">
-																										<div class="form-group">
-																										<label><b>MOA</b> (Monthly Oversease Allownce)</label>
-																										<input type="text" class="form-control" name="MOA" id="MOA" value="<?php echo $MOA;?>" onChange='recalculateRow(this)'/>
-																										<p class="help-block"></p>
-																										</div>
-																									</div>
-																									<div class="col-md-4">
-																										<div class="form-group">
-																										<label><b>NA</b> (Night Allownce)</label>
-																										<input type="text" class="form-control" name="NA" id="NA" value="<?php echo $NA;?>" onChange='recalculateRow(this)'/>
-																										<p class="help-block"></p>
-																										</div>
-																									</div>
-																								</div> -->
-																								<!-- <div class="row">
-																									<div class="col-md-4">
-																										<div class="form-group">
-																										<label>Extra </label>
-																										<input type="text" class="form-control" name="extra" id="extra" value="<?php echo $extra;?>" onChange='recalculateRow(this)'/>
-																										<p class="help-block"></p>
-																										</div>
-																									</div>
-																									<div class="col-md-4">
-																										<div class="form-group">
-																										<label>Total</label>
-																										<input type="text" class="form-control" name="total" id="total" value="<?php echo $total;?>" disabled  />
-																										<p class="help-block"></p>
-																										</div>
-																									</div>
-																								</div> -->
-																								<div class="row">
-																									<div class="col-md-4">
-																										<div class="form-group">
-																										<label><b>Remark</b></label>
-																										<textarea type="text" class="form-control" name="remark" id="remark" ><?php echo $remark;?></textarea>
-																										<p class="help-block"></p>
-																										</div>
-																									</div>
+																		<input type="hidden" name="advance_expense_type" id="advance_expense_type_hidden" value="0">
 
-																									<div class="col-md-4">
-																										<div class="form-group">
-																										<input data-image="<?php echo ($image_path!="" && file_exists(EXPENCE_A.$image_path))?EXPENCE_A.$image_path:"";?>" type="file" name="image_path" id="image_path" data-old-image-dom="old_image_path" data-old-image-path="<?php echo $image_path ?>" value="" >
-																									</div>
-																								</div>
-
-																								</div>
-																							</div>
-																						</div>
-																					</div>
+																		<!-- Row 1 fixed slots -->
+																		<div class="row" id="row_1">
+																			<div class="col-md-4">
+																				<div class="form-group">
+																				<label><b>Sales Person</b><code>*</code></label>
+																				<?php
+																				if($_SESSION[SITE_SESS.'_ADMIN_TYPE']==0 || $_SESSION[SITE_SESS.'_ADMIN_TYPE']==14)
+																				{
+																					?>
+																					<select class="form-control" name="sales_executive_id" id="sales_executive_id">
+																					<option value="">Select Sales Person</option>
+																					<?php
+																						$product_list_d=$db->rp_getData('sales_executive',"*","isDelete=0 AND isActive=1 AND type!='service_engineer'","",0);
+																						while($product_list_r=mysqli_fetch_assoc($product_list_d))
+																						{
+																							?>
+																								<option <?=($product_list_r['id']==$_SESSION[SITE_SESS.'REFERANCE_ID'])?"selected":"";?> value="<?php echo $product_list_r['id'];?>">
+																								<?php echo $product_list_r['name']?>
+																								</option>
+																								<?php
+																						}
+																					?>
+																					</select>
+																					<?php
+																				}
+																				else
+																				{
+																					?>
+																					<input type="hidden" class="form-control" name="sales_executive_id" id="sales_executive_id" value="<?=$_SESSION[SITE_SESS.'REFERANCE_ID']?>">
+																					<input type="text" readonly="" class="form-control" value="<?=$db->rp_getValue('sales_executive',"name","id='".$_SESSION[SITE_SESS.'REFERANCE_ID']."'","",0)?>">
+																					<?php
+																				}
+																				?>
+																				<p class="help-block"></p>
 																				</div>
-																			</div>							
-																		</div>							
-																	</div>							
-																	<div class="col-sm-12 col-lg-12 col-xs-12 form-group " style="padding-right:30px;">
-																	<button type="submit" name="submit" class="btn green">Submit</button>
-																	<button type="button"  class="btn btn-default" onClick="window.location.href='<?php echo $ctable1; ?>_manage.php'">Back</button>								
+																			</div>
+																			<div class="col-md-4">
+																				<div class="form-group">
+																				<label><b>Expense Type</b><code>*</code></label>
+																				<select class="form-control" name="expense_mode" id="expense_mode" onchange="toggleExpenseMode();">
+																					<option value="">Select Expense Type</option>
+																					<option value="0">Regular</option>
+																					<option value="1">Advance</option>
+																				</select>
+																				<p class="help-block"></p>
+																				</div>
+																			</div>
+																			<div class="col-md-4" id="slot_row1_third"></div>
+																		</div>
+
+																		<!-- Row 2 / 3 slots -->
+																		<div class="row" id="row_2" style="display:none;">
+																			<div class="col-md-4" id="slot_row2_col1"></div>
+																			<div class="col-md-4" id="slot_row2_col2"></div>
+																			<div class="col-md-4" id="slot_row2_col3"></div>
+																		</div>
+																		<div class="row" id="row_3" style="display:none;">
+																			<div class="col-md-4" id="slot_row3_col1"></div>
+																			<div class="col-md-4" id="slot_row3_col2"></div>
+																		</div>
+
+																		<!-- Field templates (moved into slots by JS) -->
+																		<div id="expense_field_bank" class="expense-field-hidden">
+																			<div class="form-group" id="field_advance_type">
+																				<label><b>Advance Type</b><code>*</code></label>
+																				<select class="form-control" id="advance_expense_type" onchange="toggleAdvanceType();">
+																					<option value="">Select Advance Type</option>
+																					<option value="1">Advance Brand Approval Expense</option>
+																					<option value="2">Advance Travelling Expense</option>
+																				</select>
+																				<p class="help-block"></p>
+																			</div>
+
+																			<div class="form-group" id="field_category">
+																				<label><b>Expence Category</b><code>*</code></label>
+																				<select class="form-control" name="category_id" id="category_id" onchange="amount_fun(this.value);">
+																					<?php echo $categoryOptionsHtml; ?>
+																				</select>
+																				<p class="help-block"></p>
+																			</div>
+
+																			<div class="form-group" id="field_subcategory">
+																				<label><b>Expence Sub Category</b><code>*</code></label>
+																				<select class="form-control" name="subcategory_id" id="subcategory_id" onchange="fixed_amount(this.value);">
+																					<option value="">Select Expence Sub Category</option>
+																				</select>
+																				<p class="help-block"></p>
+																			</div>
+
+																			<div class="form-group" id="field_amount">
+																				<label><b>Amount</b><code>*</code></label>
+																				<input type="text" class="form-control" name="total_amount" id="total_amount" value=""/>
+																				<p class="help-block"></p>
+																			</div>
+
+																			<div class="form-group" id="field_image">
+																				<input data-image="<?php echo ($image_path!="" && file_exists(EXPENCE_A.$image_path))?EXPENCE_A.$image_path:"";?>" type="file" name="image_path" id="image_path" data-old-image-dom="old_image_path" data-old-image-path="<?php echo $image_path ?>" value="" >
+																			</div>
+
+																			<div class="form-group" id="field_remark">
+																				<label><b>Remark</b></label>
+																				<textarea class="form-control" name="remark" id="remark"><?php echo $remark;?></textarea>
+																				<p class="help-block"></p>
+																			</div>
+																		</div>
+
+																		<div class="col-sm-12 col-lg-12 col-xs-12 form-group " style="padding-right:30px;">
+																			<button type="submit" name="submit" class="btn green">Submit</button>
+																			<button type="button"  class="btn btn-default" onClick="window.location.href='<?php echo $ctable1; ?>_manage.php'">Back</button>
+																		</div>
+																		</form>
 																	</div>
-																	</form>
 																</div>
 															</div>
 														</div>
@@ -283,9 +273,9 @@ if(isset($_REQUEST['id']) && $_REQUEST['id']>0 && $_REQUEST['mode']=="delete"){
 						</div>
 					</div>
 				</div>
-			</div>						
+			</div>
 		</div>
-	</div>	
+	</div>
 </div>
 
 <?php include("footer.php"); ?>
@@ -302,7 +292,6 @@ if(isset($_REQUEST['id']) && $_REQUEST['id']>0 && $_REQUEST['mode']=="delete"){
 		function(isImageThumbnailLoadedReply,isImageThumbnailValidReply){
 			isImageThumbnailLoaded=isImageThumbnailLoadedReply;
 			isImageThumbnailValidT=isImageThumbnailValidReply;
-			//toastr.success("Old Image Found!!");
 		},
 		function(file,img)
 		{
@@ -314,7 +303,6 @@ if(isset($_REQUEST['id']) && $_REQUEST['id']>0 && $_REQUEST['mode']=="delete"){
 		function(isImageThumbnailLoadedReply,isImageThumbnailValidReply,image_width,image_height){
 			isImageThumbnailLoaded=isImageThumbnailLoadedReply;
 			isImageThumbnailValidT=isImageThumbnailValidReply;
-				//toastr.success("Selected File Dimension: "+image_width+" X "+image_height);
 			},
 		function(data){
 			isImageThumbnailLoadedReply
@@ -323,100 +311,125 @@ if(isset($_REQUEST['id']) && $_REQUEST['id']>0 && $_REQUEST['mode']=="delete"){
 		);
 	})
 </script>
-	
-	<script type="text/javascript">
-		function amount_fun(id)
+
+<script type="text/javascript">
+	function amount_fun(id)
+	{
+		var sales_id = $("#sales_executive_id").val();
+		$.ajax({
+			type: "POST",
+			url: "ajax_get_fixed_amount.php",
+			data: 'id='+id+"&sales_id="+sales_id,
+			success: function(result){
+				$("#subcategory_id").html(result);
+			}
+		});
+	}
+
+	function fixed_amount(val)
+	{
+		$("#total_amount").val($("#subcategory_id").find("option:selected").data("expense_amount"));
+		var id = $("#subcategory_id").val();
+		if(id=='6' || id=='7' || id=='8')
 		{
-				var sales_id = $("#sales_executive_id").val();
-         	$.ajax({
-         		type: "POST",
-         		url: "ajax_get_fixed_amount.php",
-         		data: 'id='+id+"&sales_id="+sales_id,
-         		success: function(result){
-         				$("#subcategory_id").html(result);
-         			}
-         	});
-        }
-        
-        function fixed_amount(val)
-        {
-         	$("#total_amount").val($("#subcategory_id").find("option:selected").data("expense_amount"));
-         	var id = $("#subcategory_id").val()
-         	if(id=='6' || id=='7' || id=='8')
-         	{
-         		$('#total_amount').prop('readonly', true);
-         	}
-         	else
-         	{
-         		$('#total_amount').prop('readonly', false);
-         	}
-        }
-	</script>
-	
+			$('#total_amount').prop('readonly', true);
+		}
+		else
+		{
+			$('#total_amount').prop('readonly', false);
+		}
+	}
+
+	function hideAllFields() {
+		$("#field_category, #field_advance_type, #field_subcategory, #field_amount, #field_image, #field_remark").appendTo("#expense_field_bank").hide();
+		$("#row_2, #row_3").hide();
+	}
+
+	function showRegularLayout() {
+		hideAllFields();
+		$("#field_category").appendTo("#slot_row1_third").show();
+		$("#field_subcategory").appendTo("#slot_row2_col1").show();
+		$("#field_amount").appendTo("#slot_row2_col2").show();
+		$("#field_image").appendTo("#slot_row2_col3").show();
+		$("#field_remark").appendTo("#slot_row3_col1").show();
+		$("#row_2, #row_3").show();
+	}
+
+	function showAdvanceLayout() {
+		hideAllFields();
+		var advType = $("#advance_expense_type").val();
+		$("#field_advance_type").appendTo("#slot_row1_third").show();
+		if (advType == "1" || advType == "2") {
+			$("#field_category").appendTo("#slot_row2_col1").show();
+			$("#field_subcategory").appendTo("#slot_row2_col2").show();
+			$("#field_amount").appendTo("#slot_row2_col3").show();
+			$("#field_image").appendTo("#slot_row3_col1").show();
+			$("#field_remark").appendTo("#slot_row3_col2").show();
+			$("#row_2, #row_3").show();
+		}
+	}
+
+	function toggleExpenseMode() {
+		$("#advance_expense_type").val("");
+		$("#advance_expense_type_hidden").val("0");
+		$("#category_id").val("");
+		$("#subcategory_id").html('<option value="">Select Expence Sub Category</option>');
+		$("#total_amount").val("").prop("readonly", false);
+		var mode = $("#expense_mode").val();
+		if (mode === "0") {
+			showRegularLayout();
+		} else if (mode === "1") {
+			showAdvanceLayout();
+		} else {
+			hideAllFields();
+		}
+	}
+
+	function toggleAdvanceType() {
+		var advType = $("#advance_expense_type").val();
+		$("#advance_expense_type_hidden").val(advType != "" ? advType : "0");
+		if ($("#expense_mode").val() === "1") {
+			showAdvanceLayout();
+		}
+	}
+</script>
 
 <script type="text/javascript">
 $('#expense_date').datepicker({  datepicker: true, autoclose: true ,  maxDate:0  });
 $("#total_amount").numeric();
-// $("#DA").numeric();
-// $("#MOA").numeric();
-// $("#NA").numeric();
-// $("#extra").numeric();
-   // function recalculateRow(t)
-   // {
-	  // var row = $(t).parent('td').parent('tr');
-	  // var TA=($('#TA').val()!="")?$('#TA').val():0;
-	  // var DA=($('#DA').val()!="")?$('#DA').val():0;		
-	  // var MOA=($('#MOA').val()!="")?$('#MOA').val():0;	
-	  // var NA=($('#NA').val()!="")?$('#NA').val():0;	
-	  // var extra=($('#extra').val()!="")?$('#extra').val():0;		
-	  // var total=parseFloat(TA) + parseFloat(DA) + parseFloat(MOA) + parseFloat(NA) + parseFloat(extra);	
-	  // $('#total').val(''+total);
-	  // //total=total;
-	  // //alert(total);
-	  // //$(row).find("td").find("input.total").val(total);	
-   // } 
-  
 
 function check_form(){
 	$(".form-body").children().removeClass("has-error");
 	var isValid=true;
-	
-	if($("#sales_executive_id").val()=="" || $("#sales_executive_id").val().split(" ").join("")==""){		
+
+	if($("#sales_executive_id").val()=="" || $("#sales_executive_id").val().split(" ").join("")==""){
 		vd=aj.error('sales_executive_id',"Please Select Sales Officer.","add_error");
 		isValid=false;
 	}
-	if($("#category_id").val()=="" || $("#category_id").val().split(" ").join("")==""){		
-		vd=aj.error('category_id',"Please Select Expence Category.","add_error");
+	if($("#expense_mode").val()==="" || $("#expense_mode").val().split(" ").join("")==""){
+		vd=aj.error('expense_mode',"Please Select Expense Type.","add_error");
 		isValid=false;
 	}
-	if($("#subcategory_id").val()=="" || $("#subcategory_id").val().split(" ").join("")==""){		
-		vd=aj.error('subcategory_id',"Please Select Expence Sub Category.","add_error");
-		isValid=false;
+	if($("#expense_mode").val()==="0" || ($("#expense_mode").val()==="1" && ($("#advance_expense_type").val()=="1" || $("#advance_expense_type").val()=="2"))){
+		if($("#category_id").val()=="" || $("#category_id").val().split(" ").join("")==""){
+			vd=aj.error('category_id',"Please Select Expence Category.","add_error");
+			isValid=false;
+		}
+		if($("#subcategory_id").val()=="" || $("#subcategory_id").val().split(" ").join("")==""){
+			vd=aj.error('subcategory_id',"Please Select Expence Sub Category.","add_error");
+			isValid=false;
+		}
+		if($("#total_amount").val()=="" || $("#total_amount").val().split(" ").join("")==""){
+			vd=aj.error('total_amount',"Please Enter Total Amount.","add_error");
+			isValid=false;
+		}
 	}
-	if($("#total_amount").val()=="" || $("#total_amount").val().split(" ").join("")==""){		
-		vd=aj.error('total_amount',"Please Enter Total Amount.","add_error");
-		isValid=false;
+	if($("#expense_mode").val()==="1"){
+		if($("#advance_expense_type").val()=="" || $("#advance_expense_type").val()=="0"){
+			vd=aj.error('advance_expense_type',"Please Select Advance Type.","add_error");
+			isValid=false;
+		}
 	}
-	/*if($("#DA").val()=="" || $("#DA").val().split(" ").join("")==""){		
-		vd=aj.error('DA',"Please Enter Daily Allownce.","add_error");
-		isValid=false;
-	}
-	if($("#TA").val()=="" || $("#TA").val().split(" ").join("")==""){		
-		vd=aj.error('TA',"Please Enter Travel Allownce.","add_error");
-		isValid=false;
-	}
-	if($("#MOA").val()=="" || $("#MOA").val().split(" ").join("")==""){		
-		vd=aj.error('MOA',"Please Enter Monthly Oversease Allownce.","add_error");
-		isValid=false;
-	}	
-	if($("#NA").val()=="" || $("#NA").val().split(" ").join("")==""){		
-		vd=aj.error('NA',"Please Enter Night Allownce.","add_error");
-		isValid=false;
-	}	
-	if($("#extra").val()=="" || $("#extra").val().split(" ").join("")==""){		
-		vd=aj.error('extra',"Please Enter Monthly Oversease Allownce.","add_error");
-		isValid=false;
-	}	*/
 	if(isValid)
 	{
 		return true;
@@ -427,15 +440,9 @@ function check_form(){
 	}
 }
 $(".form-control").bind("keyup change",function(){ if($(this).parent().hasClass("has-error")) { $(this).parent().removeClass("has-error"); $(this).parent().find('p.help-block').html(""); } });
- $(document).ready(function(){
 
- $("#datatable_1").on('click','.delete',function(){
-	 //var rows = document.getElementById("#datatable_1").getElementsByTagName("tr").length;
-	 //alert(rows);
-       $(this).closest('tr').remove();
-	   recalculateFinalValues();
-     });
-
+$(document).ready(function(){
+	toggleExpenseMode();
 });
 </script>
 

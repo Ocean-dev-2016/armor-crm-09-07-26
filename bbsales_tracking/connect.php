@@ -5,6 +5,7 @@ date_default_timezone_set('Asia/Kolkata');
 include("../include/define.php");
 include("../include/function.class.php");
 include("../include/class.system.php");
+include("../include/channel_partner_helper.php");
 $db = new Admin();
 $conn = $db->connect();
 

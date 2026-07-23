@@ -35,6 +35,10 @@ if ($_SESSION[SITE_SESS . 'REFERANCE_TYPE'] == 3) // customer and its chain wise
 {
     // for customer panel only
     $check_id = $_SESSION[SITE_SESS . 'REFERANCE_ID'];
+    if (function_exists('cp_is_channel_partner_login') && cp_is_channel_partner_login($db) && $is_channel_partner) {
+        $where .= " AND id='" . (int) $check_id . "'";
+        $selected_value = $check_id;
+    } else {
     $get_customer_type = $db->rp_getValue("executive", "type_of_executive", "isDelete=0 AND id='" . $check_id . "'", 0);
     if ($get_customer_type == $customer_type)  //super stockist
     {
@@ -46,6 +50,7 @@ if ($_SESSION[SITE_SESS . 'REFERANCE_TYPE'] == 3) // customer and its chain wise
         $where .= " AND super_stockist_id='" . $check_id . "'";
     } else if ($get_customer_type == 2 && $customer_type == 3) {
         $where .= " AND dealer_distributor_id='" . $check_id . "'";
+    }
     }
     // for customer panel only
 }

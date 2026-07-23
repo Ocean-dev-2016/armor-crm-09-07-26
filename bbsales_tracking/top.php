@@ -97,9 +97,42 @@ $ctableAPK        = "application_info";
 						<?php
 						$arc = 0;
 						$tp = 0;
+						$is_cp_menu = function_exists('cp_is_channel_partner_login') && cp_is_channel_partner_login($db);
 						foreach ($left_sales_array as $arr) {
 							$tp++;
+							// Channel Partner login: only own CP portal menus (not full Customer CRM)
+							if ($is_cp_menu && (!isset($arr[1]) || $arr[1] != 'channel_partner')) {
+								continue;
+							}
 							if ($db->checkUserPermission($arr[3], $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'], 'view')) {
+								// CP login: only My Customers + My Stock under Channel Partner menu
+								if ($is_cp_menu && isset($arr[1]) && $arr[1] == 'channel_partner') {
+									$cp_menu_pages = array(
+										array("My Customers", "channel_partner_customer", "channel_partner_customer_manage.php", 555),
+										array("Add Customer Order", "channel_partner_order", "orders_crud.php?mode=add&c_type=channel_partner", 565),
+										array("My Stock", "channel_partner_stock", "channel_partner_stock_manage.php", 650),
+									);
+						?>
+								<li class="dropdown-submenu <?php if ($main_page == $arr[1]) { ?> active<?php } ?>">
+									<a href="channel_partner_customer_manage.php" id="mntp_inquiry1<?php echo $tp; ?>">
+										<i class="icon-list"></i> Channel Partner</a>
+									<ul class="dropdown-menu">
+										<?php foreach ($cp_menu_pages as $trr) {
+											if (!$db->checkUserPermission($trr[3], $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'], 'view')) {
+												continue;
+											}
+										?>
+											<li <?php if ($page == $trr[1]) { ?>class="active" <?php } ?>>
+												<a href="<?php echo $trr[2]; ?>">
+													<i class="icon-arrow-right"></i> <?php echo $trr[0]; ?></a>
+											</li>
+										<?php } ?>
+									</ul>
+								</li>
+						<?php
+									$arc++;
+									continue;
+								}
 								$hasSubMenu = count($arr[2]) > 1;
 
 						?>
@@ -148,8 +181,15 @@ $ctableAPK        = "application_info";
 						<?php
 						if ($db->checkUserPermission(565, $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'], 'view')) {
 							$check_id = $_SESSION[SITE_SESS . 'REFERANCE_ID'];
+							$is_cp_menu = function_exists('cp_is_channel_partner_login') && cp_is_channel_partner_login($db);
 							$get_customer_type = $db->rp_getValue("executive", "type_of_executive", "isDelete=0 AND id='" . $check_id . "'", 0);
-							if ($get_customer_type == 1 || $_SESSION[SITE_SESS . 'REFERANCE_TYPE'] != 3) {
+							if ($is_cp_menu) {
+						?>
+								<li class="">
+									<a href="dealer_orders_manage.php?type=channel_partner" id="mntp_order_cp"><i class="icon-list"></i>My Orders</a>
+								</li>
+						<?php
+							} else if ($get_customer_type == 1 || $_SESSION[SITE_SESS . 'REFERANCE_TYPE'] != 3) {
 						?>
 								<li class="">
 									<a href="dealer_orders_manage.php?type=100" id="mntp_order20"><i class="icon-list"></i>All Orders</a>

@@ -267,6 +267,8 @@ $left_pages_sales_array6 = array(
 $left_pages_channel_partner_array = array(
 	"1"=>array("Channel Partner","channel_partner","executive_manage.php?flag=channel_partner",555),
 	"2"=>array("Customer","channel_partner_customer","channel_partner_customer_manage.php",555),
+	"3"=>array("Add Customer Order","channel_partner_order","orders_crud.php?mode=add&c_type=channel_partner",565),
+	"4"=>array("My Stock","channel_partner_stock","channel_partner_stock_manage.php",650),
 );
 
 $left_pages_sales_array22 = array("1"=>array("Manage Prospect Customer","prospect_customer","executive_manage.php?flag=prospect",616),);

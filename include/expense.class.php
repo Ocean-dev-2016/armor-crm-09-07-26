@@ -74,6 +74,8 @@ class Expense extends Functions
 
 			$expense_date=date('Y-m-d H:i:s');
 			$adate	= date('Y-m-d H:i:s');
+			$expense_claim_type = isset($expense_claim_type) && $expense_claim_type != "" ? $expense_claim_type : 1;
+			$advance_expense_type = isset($advance_expense_type) && $advance_expense_type != "" ? $advance_expense_type : 0;
 			$rows 	= array(
 				"sales_executive_id",
 				"category_id",
@@ -82,6 +84,8 @@ class Expense extends Functions
 				"remark",
 				"expense_date",
 				"expense_type",
+				"expense_claim_type",
+				"advance_expense_type",
 				"fix_amount",
 				"isDelete",
 				"isActive",
@@ -95,7 +99,9 @@ class Expense extends Functions
 				$total,		
 				$remark,	
 				$expense_date,	
-				$expense_type,	
+				$expense_type,
+				$expense_claim_type,
+				$advance_expense_type,
 				$fix_amount,	
 				0,
 				1,
