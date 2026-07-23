@@ -596,21 +596,52 @@ class Expense extends Functions
 	public function AddVehicleexpense($detail,$file)
 	{
 		extract($detail);
-		$subcat_id = $this->db->rp_getValue("expence_sub_category","id","slug='".$subcat_slug."' AND sales_executive_id='".$sales_executive_id."' AND isDelete=0 ",0);
-		$category_id = $this->db->rp_getValue("expence_sub_category","expense_category_id","slug='".$subcat_slug."' AND sales_executive_id='".$sales_executive_id."' AND isDelete=0 ");
-		/*$type_flag = array("1"=>"Start","2"=>"stop");*/
-		if($type_flag==1)
-		{
-			$rows 	= array(
-				"sales_executive_id",
-				"category_id",        	
-				"subcategory_id",     				
-				"start_date_time",    
-				"start_km",       		
-				"isDelete",
-				"isActive", 
-			);
 
+		$type_flag = isset($type_flag) ? $type_flag : "";
+		$subcat_slug = isset($subcat_slug) ? $subcat_slug : "";
+		$sales_executive_id = isset($sales_executive_id) ? $sales_executive_id : "";
+		$start_km = isset($start_km) ? $start_km : "";
+		$end_km = isset($end_km) ? $end_km : "";
+		$tmp_id = isset($id) && $id != "" ? $id : (isset($_REQUEST['id']) ? $_REQUEST['id'] : "");
+
+		if ($sales_executive_id == "" || $subcat_slug == "") {
+			return array("ack" => 0, "developer_msg" => "sales_executive_id and subcat_slug required", "ack_msg" => "Sales person and vehicle type are required.");
+		}
+
+		$subcat_id = $this->db->rp_getValue("expence_sub_category", "id", "slug='" . $subcat_slug . "' AND sales_executive_id='" . $sales_executive_id . "' AND isDelete=0 AND isActive=1", 0);
+		$category_id = $this->db->rp_getValue("expence_sub_category", "expense_category_id", "slug='" . $subcat_slug . "' AND sales_executive_id='" . $sales_executive_id . "' AND isDelete=0 AND isActive=1", 0);
+		$fix_amount = $this->db->rp_getValue("expence_sub_category", "fix_amount", "slug='" . $subcat_slug . "' AND sales_executive_id='" . $sales_executive_id . "' AND isDelete=0 AND isActive=1", 0);
+
+		if (!$subcat_id || !$category_id) {
+			return array("ack" => 0, "developer_msg" => "Vehicle subcategory not found", "ack_msg" => "Expense Sub Category for " . $subcat_slug . " is not configured for this sales person.");
+		}
+
+		/* type_flag: 1 = Start KM, 2 = End KM */
+		if ($type_flag == "1" || $type_flag == 1) {
+			if ($start_km === "" || !is_numeric($start_km)) {
+				return array("ack" => 0, "developer_msg" => "start_km required", "ack_msg" => "Please enter Start km.");
+			}
+
+			// Close any open trip for same SE + vehicle without end
+			$openWhere = "sales_executive_id='" . $sales_executive_id . "' AND subcategory_id='" . $subcat_id . "' AND isDelete=0 AND isActive=1 AND (end_date_time IS NULL OR end_date_time='' OR end_date_time='0000-00-00 00:00:00')";
+			$openRow = $this->db->rp_getData("expense_tmp", "id", $openWhere, "id DESC", 0);
+			if ($openRow) {
+				$openD = mysqli_fetch_assoc($openRow);
+				if (!empty($openD['id'])) {
+					return array("ack" => 0, "developer_msg" => "Open trip exists id=" . $openD['id'], "ack_msg" => "Please complete previous trip first (enter End km).", "inserted_id" => $openD['id']);
+				}
+			}
+
+			$start_date_time = isset($start_date_time) && $start_date_time != "" ? $start_date_time : date('Y-m-d H:i:s');
+			$rows = array(
+				"sales_executive_id",
+				"category_id",
+				"subcategory_id",
+				"start_date_time",
+				"start_km",
+				"isDelete",
+				"isActive",
+			);
 			$value = array(
 				$sales_executive_id,
 				$category_id,
@@ -621,175 +652,167 @@ class Expense extends Functions
 				1,
 			);
 
-			$inserted_id = $this->db->rp_insert("expense_tmp",$value,$rows,0);
-			$image_path=array();
-			if (isset($file["image_path"]) && $file["image_path"]['size']!=0) 
-			{
-				$ri = $inserted_id;
-				$rt = "expense";
-				$tc = "expense";
-				$rc = "id";
-				for($i=0;$i<sizeof($file["image_path"]['name']);$i++)
-				{
-					//print_r($file["image_path"]);
-					$file_name = $file['image_path']['name'];
-					$file_size = $file['image_path']['size'];
-					$file_tmp  = $file['image_path']['tmp_name'];
-					$file_type = $file['image_path']['type'];
-					$extension=explode(".",$file_name);
-						
-					$allowed_extentions=array("jpg","jpeg","png","JPEG","JPEG","PNG");
-					$extension=$extension[sizeof($extension)-1];
-					if(!in_array($extension,$allowed_extentions))
-					{
-						$file_error=true;
-					}
-					$orignal_file_name=$extension[0];
-					if(in_array($extension,$allowed_extentions))
-					{
-						$attachment="../resource/image/";
-						move_uploaded_file($file_tmp,$attachment.$file_name);
-					}
-
-					$MediaTitle=$file_name;
-			    	$MediaOrignalTitle=$file_name;
-
-					$MediaFileName=$file_name;
-					$UploadDate=date("Y-m-d H:i:s");
-					
-					$Values=array($MediaTitle,$MediaOrignalTitle,$MediaFileName,$extension,$UploadDate,$ri,$rt,$tc);
-					$Columns=array("title","orignal_title","url","ext","upload_date","reference_id","reference_table","reference_column");
-					$MediaID=$this->db->rp_insert("media",$Values,$Columns,0);
-
-					$image_path[] = $MediaID;
-				}
-				$image_path = implode(",", $image_path);
-				$upadateid1 = $this->db->rp_update("expense_tmp",array("start_image"=>$image_path),"
-					id='".$inserted_id."'",0);
-				
+			$inserted_id = $this->db->rp_insert("expense_tmp", $value, $rows, 0);
+			if (!$inserted_id) {
+				return array("ack" => 0, "developer_msg" => "expense_tmp insert failed", "ack_msg" => "Failed! Expense Start Failed.");
 			}
-			if($inserted_id)
-			{
-				$reply=array("ack"=>1,"developer_msg"=>"Expense Added.","ack_msg"=>"Success! Expense Insert Successfully.","inserted_id"=>$inserted_id);
-				return $reply;
+
+			$start_image = $this->saveVehicleExpenseImage($file, $inserted_id);
+			if ($start_image != "") {
+				$this->db->rp_update("expense_tmp", array("start_image" => $start_image), "id='" . $inserted_id . "'", 0);
 			}
-			else
-			{
-				$reply=array("ack"=>0,"developer_msg"=>"Database error!!","ack_msg"=>"Failed! Expense Update Failed.");
-				return $reply;
-			}
+
+			return array("ack" => 1, "developer_msg" => "Expense trip started.", "ack_msg" => "Success! Start km saved.", "inserted_id" => $inserted_id);
 		}
-		else
-		{
-			$rows 	= array(
-				"end_date_time" =>date('Y-m-d H:i:s'), 
-				"end_km"        => $end_km, 
+
+		// STOP / End KM
+		if ($type_flag == "2" || $type_flag == 2) {
+			if ($tmp_id == "") {
+				return array("ack" => 0, "developer_msg" => "id required for end km", "ack_msg" => "Trip id missing. Please start trip again.");
+			}
+			if ($end_km === "" || !is_numeric($end_km)) {
+				return array("ack" => 0, "developer_msg" => "end_km required", "ack_msg" => "Please enter End km.");
+			}
+
+			$data = $this->db->rp_getData("expense_tmp", "*", "id='" . $tmp_id . "' AND sales_executive_id='" . $sales_executive_id . "' AND isDelete=0", "", 0);
+			if (!$data) {
+				return array("ack" => 0, "developer_msg" => "expense_tmp not found", "ack_msg" => "Trip not found. Please start trip again.");
+			}
+			$r = mysqli_fetch_assoc($data);
+			$start_kilometer = floatval($r['start_km']);
+			$end_kilometer = floatval($end_km);
+
+			if ($end_kilometer < $start_kilometer) {
+				return array("ack" => 0, "developer_msg" => "end_km < start_km", "ack_msg" => "End km must be greater than or equal to Start km (" . $start_kilometer . ").");
+			}
+
+			$total_kilometer = $end_kilometer - $start_kilometer;
+			$fix_amount = $this->db->rp_getValue("expence_sub_category", "fix_amount", "id='" . $r['subcategory_id'] . "' AND isDelete=0", 0);
+			if ($fix_amount === false || $fix_amount === "") {
+				$fix_amount = 0;
+			}
+			$total = $total_kilometer * floatval($fix_amount);
+
+			$end_image = $this->saveVehicleExpenseImage($file, $tmp_id);
+			$updRows = array(
+				"end_date_time" => date('Y-m-d H:i:s'),
+				"end_km" => $end_km,
+			);
+			if ($end_image != "") {
+				$updRows["end_image"] = $end_image;
+			}
+			$this->db->rp_update("expense_tmp", $updRows, "id='" . $tmp_id . "'", 0);
+
+			// refresh after update
+			$data2 = $this->db->rp_getData("expense_tmp", "*", "id='" . $tmp_id . "'", "", 0);
+			$r2 = mysqli_fetch_assoc($data2);
+			$start_path = isset($r2['start_image']) ? $r2['start_image'] : "";
+			$end_path = isset($r2['end_image']) ? $r2['end_image'] : "";
+			$new_path = trim($start_path . ($start_path != "" && $end_path != "" ? "," : "") . $end_path, ",");
+
+			$expenseRows = array(
+				"sales_executive_id",
+				"category_id",
+				"subcategory_id",
+				"expense_type",
+				"expense_claim_type",
+				"expense_date",
+				"image_path",
+				"start_kilometer",
+				"end_kilometer",
+				"total_kilometer",
+				"fix_amount",
+				"total",
+				"remark",
+				"isDelete",
+				"isActive",
+				"entry_flag",
+			);
+			$expenseValues = array(
+				$r2['sales_executive_id'],
+				$r2['category_id'],
+				$r2['subcategory_id'],
+				2, // kilometer type
+				1, // Regular
+				date('Y-m-d'),
+				$new_path,
+				$start_kilometer,
+				$end_kilometer,
+				$total_kilometer,
+				$fix_amount,
+				$total,
+				"Vehicle " . $subcat_slug . " trip",
+				0,
+				1,
+				5,
 			);
 
-			$Where = "id='".$_REQUEST['id']."'";	
-			$upadateid1 = $this->db->rp_update("expense_tmp",$rows,$Where,0);
-			$image_path=array();
-			if (isset($file["image_path"]) && $file["image_path"]['size']!=0) 
-			{
-				$ri = $_REQUEST['id'];
-				$rt = "expense";
-				$tc = "expense";
-				$rc = "id";
-				for($i=0;$i<sizeof($file["image_path"]['name']);$i++)
-				{
-					//print_r($file["image_path"]);
-					$file_name = $file['image_path']['name'];
-					$file_size = $file['image_path']['size'];
-					$file_tmp = $file['image_path']['tmp_name'];
-					$file_type = $file['image_path']['type'];
-					$extension=explode(".",$file_name);
-					
-					$allowed_extentions=array("jpg","jpeg","png","JPEG","JPEG","PNG");
-					$extension=$extension[sizeof($extension)-1];
-					if(!in_array($extension,$allowed_extentions))
-					{
-						$file_error=true;
-					}
-					$orignal_file_name=$extension[0];
-					if(in_array($extension,$allowed_extentions))
-					{
-						$attachment="../resource/image/";
-						move_uploaded_file($file_tmp,$attachment.$file_name);
-					}
-					$MediaTitle=$file_name;
-			    	$MediaOrignalTitle=$file_name;
+			$expense_id = $this->db->rp_insert("expense", $expenseValues, $expenseRows, 0);
+			if (!$expense_id) {
+				return array("ack" => 0, "developer_msg" => "expense insert failed", "ack_msg" => "Failed! Expense Update Failed.");
+			}
 
-					$MediaFileName=$file_name;
-					// $MediaType=User::$ValidMediaType[$extension];
-					$UploadDate=date("Y-m-d H:i:s");
-					
-					// $Values=array($MediaTitle,$MediaOrignalTitle,$MediaFileName,$MediaType,$extension,$UploadDate,$ri,$rt,$tc);
-					$Values=array($MediaTitle,$MediaOrignalTitle,$MediaFileName,$extension,$UploadDate,$ri,$rt,$tc);
-					// $Columns=array("title","orignal_title","url","media_type","ext","upload_date","reference_id","reference_table","reference_column");
-					$Columns=array("title","orignal_title","url","ext","upload_date","reference_id","reference_table","reference_column");
-					$MediaID=$this->db->rp_insert("media",$Values,$Columns,0);
-
-					$image_path[] = $MediaID;
+			// link media to final expense
+			foreach (array($start_path, $end_path) as $mediaId) {
+				if ($mediaId != "" && is_numeric($mediaId)) {
+					$this->db->rp_update("media", array("reference_id" => $expense_id), "id='" . $mediaId . "'", 0);
 				}
-				$image_path = implode(",", $image_path);
-				$upadateid1 = $this->db->rp_update("expense_tmp",array("end_image"=>$image_path),"
-					id='".$_REQUEST['id']."'",0);
 			}
 
-			if($upadateid1)
-			{
+			// mark tmp completed
+			$this->db->rp_update("expense_tmp", array("isActive" => 0), "id='" . $tmp_id . "'", 0);
 
-				$data = $this->db->rp_getData("expense_tmp","*","id='".$_REQUEST['id']."'",'',0);
-				$r=mysqli_fetch_assoc($data);
-
-
-				$start_path = $r['start_image'];
-				$end_path   = $r['end_image'];
-
-
-				$new_path =  $start_path.",".$end_path; 
-
-				$start_kilometer = $r['start_km'];
-				$end_kilometer = $r['end_km'];
-				$total_kilometer = $end_kilometer - $start_kilometer;
-
-				$fix_amount = $this->db->rp_getValue("expence_sub_category","fix_amount","id='".$r['subcategory_id']."' AND isDelete=0",0);
-
-				$total = $total_kilometer * $fix_amount;
-
-				// exit("sdf");
-				$rows = array("sales_executive_id","category_id","subcategory_id","expense_type","expense_date","image_path","start_kilometer","end_kilometer","total_kilometer","fix_amount","total");
-
-				$values = array($sales_executive_id,$category_id,$subcat_id,"2",date('Y-m-d'),$new_path,$start_kilometer,$end_kilometer,$total_kilometer,$fix_amount,$total);
-
-				$inserted_id1 = $this->db->rp_insert("expense",$values,$rows,0);
-				if($inserted_id1)
-				{
-					for($i1=0;$i1<=1;$i1++)
-					{
-						if($i1==0)
-						{
-							$where = "id='".$start_path."' ";
-						}
-						else
-						{
-							$where = "id='".$end_path."' ";	
-						}
-						$update = $this->db->rp_update("media",array("reference_id"=>$inserted_id1),$where,0);
-					}
-				}
-
-				$reply=array("ack"=>1,"developer_msg"=>"Expense Added.","ack_msg"=>"Success! Expense Insert Successfully.","inserted_id"=>$_REQUEST['id']);
-				return $reply;
-			}
-			else
-			{
-				$reply=array("ack"=>0,"developer_msg"=>"Database error!!","ack_msg"=>"Failed! Expense Update Failed.");
-				return $reply;
-			}
-
+			return array(
+				"ack" => 1,
+				"developer_msg" => "Expense trip completed. total_km=" . $total_kilometer . " total=" . $total,
+				"ack_msg" => "Success! Expense saved for " . $total_kilometer . " km.",
+				"inserted_id" => $expense_id,
+				"tmp_id" => $tmp_id,
+				"start_km" => $start_kilometer,
+				"end_km" => $end_kilometer,
+				"total_kilometer" => $total_kilometer,
+				"fix_amount" => $fix_amount,
+				"total" => $total,
+			);
 		}
 
+		return array("ack" => 0, "developer_msg" => "Invalid type_flag", "ack_msg" => "Invalid request. type_flag must be 1 (start) or 2 (end).");
+	}
+
+	private function saveVehicleExpenseImage($file, $referenceId)
+	{
+		if (!isset($file["image_path"]) || empty($file["image_path"]["name"])) {
+			return "";
+		}
+
+		$names = $file["image_path"]["name"];
+		$tmps = $file["image_path"]["tmp_name"];
+		$isMulti = is_array($names);
+		$count = $isMulti ? count($names) : 1;
+		$imageIds = array();
+		$allowed = array("jpg", "jpeg", "png", "gif", "JPG", "JPEG", "PNG");
+
+		for ($i = 0; $i < $count; $i++) {
+			$fileName = $isMulti ? $names[$i] : $names;
+			$fileTmp = $isMulti ? $tmps[$i] : $tmps;
+			if ($fileName == "" || $fileTmp == "") {
+				continue;
+			}
+			$extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+			if (!in_array($extension, $allowed)) {
+				continue;
+			}
+			$attachment = "../resource/image/";
+			@move_uploaded_file($fileTmp, $attachment . $fileName);
+			$Values = array($fileName, $fileName, $fileName, $extension, date("Y-m-d H:i:s"), $referenceId, "expense", "expense");
+			$Columns = array("title", "orignal_title", "url", "ext", "upload_date", "reference_id", "reference_table", "reference_column");
+			$MediaID = $this->db->rp_insert("media", $Values, $Columns, 0);
+			if ($MediaID) {
+				$imageIds[] = $MediaID;
+			}
+		}
+
+		return !empty($imageIds) ? implode(",", $imageIds) : "";
 	}
 
 	public function InsertAdvanceExpense($detail, $file)

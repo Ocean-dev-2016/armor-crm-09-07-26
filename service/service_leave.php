@@ -547,7 +547,8 @@ if($is_valid_api_key)
 				$detail['start_km']	    		= isset($_REQUEST['start_km'])?$db->clean($_REQUEST['start_km']):"";
 				$detail['end_km']	    		= isset($_REQUEST['end_km'])?$db->clean($_REQUEST['end_km']):"";
 				$detail['type_flag']	    	= isset($_REQUEST['type_flag'])?$db->clean($_REQUEST['type_flag']):"";
-				$detail['subcat_slug']	    =  isset($_REQUEST['subcat_slug'])?$db->clean($_REQUEST['subcat_slug']):"";
+				$detail['subcat_slug']	    	= isset($_REQUEST['subcat_slug'])?$db->clean($_REQUEST['subcat_slug']):"";
+				$detail['id']	    			= isset($_REQUEST['id'])?$db->clean($_REQUEST['id']):"";
 
 				include('../include/expense.class.php');
 				$objExpense=new Expense();
@@ -555,9 +556,23 @@ if($is_valid_api_key)
 				$reply=$objExpense->AddVehicleexpense($detail,$_FILES);
 				if($reply['ack']==1)
 				{
-					$result=$db->rp_getData("expense_tmp","*","id='".$reply['inserted_id']."'","",0);
-					$r=mysqli_fetch_assoc($result);
-					$ack=array("ack"=>1,"ack_msg"=>"Expense Detail Add Successfully!!","developer_msg"=>"Expense Detail Add Successfully","result"=>$r);
+					// Start: result from expense_tmp; Stop: final expense row
+					$resultTable = (isset($reply['tmp_id']) || (isset($detail['type_flag']) && ($detail['type_flag']=="2" || $detail['type_flag']==2))) ? "expense" : "expense_tmp";
+					$resultId = $reply['inserted_id'];
+					if ($resultTable == "expense_tmp" || ($detail['type_flag']=="1" || $detail['type_flag']==1)) {
+						$result=$db->rp_getData("expense_tmp","*","id='".$resultId."'","",0);
+					} else {
+						$result=$db->rp_getData("expense","*","id='".$resultId."'","",0);
+					}
+					$r = $result ? mysqli_fetch_assoc($result) : array();
+					if (isset($reply['total_kilometer'])) {
+						$r['start_km'] = $reply['start_km'];
+						$r['end_km'] = $reply['end_km'];
+						$r['total_kilometer'] = $reply['total_kilometer'];
+						$r['fix_amount'] = $reply['fix_amount'];
+						$r['total'] = $reply['total'];
+					}
+					$ack=array("ack"=>1,"ack_msg"=>$reply['ack_msg'],"developer_msg"=>$reply['developer_msg'],"result"=>$r,"inserted_id"=>$resultId);
 					$db->printJSON($ack);
 				}
 				else
