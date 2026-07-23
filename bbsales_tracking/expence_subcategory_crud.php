@@ -81,20 +81,62 @@ if(isset($_REQUEST['submit'])){
 		{
 			$db->rp_location('access_denied.php?msg=delete_access_denied');
 		}
-		for($i1=0;$i1<sizeof($_REQUEST['sales_executive_id']);$i1++)
+		if(!isset($_REQUEST['sales_executive_id']) || !is_array($_REQUEST['sales_executive_id']) || sizeof($_REQUEST['sales_executive_id'])<1)
 		{
-			$detail['sales_executive_id']=$_REQUEST['sales_executive_id'][$i1];
-		    $reply=$objCategory->UpdateExpenceSubCategory($detail,$_FILES);
-		}
-		if($reply['ack']==1)
-		{
-			$db->addSuccessMessage($reply['ack_msg']);
-		    $db->rp_location($ctable2."_manage.php?msg=updated");
+			$db->addErrorMessage("Please select at least one Sales Executive.");
 		}
 		else
 		{
-			$db->addErrorMessage($reply['ack_msg']);
-		} 
+			$editId = isset($_REQUEST['id']) ? $db->clean($_REQUEST['id']) : "";
+			$successNames = array();
+			$errorNames = array();
+			$first = true;
+			for($i1=0;$i1<sizeof($_REQUEST['sales_executive_id']);$i1++)
+			{
+				$detail['sales_executive_id']=$db->clean($_REQUEST['sales_executive_id'][$i1]);
+				$seName = $db->rp_getValue("sales_executive","name","id='".$detail['sales_executive_id']."'",0);
+
+				// Existing row for this SE + category + name?
+				$existId = $db->rp_getValue($ctable,"id","name='".$detail['name']."' AND expense_category_id='".$detail['expense_category_id']."' AND sales_executive_id='".$detail['sales_executive_id']."' AND isDelete=0",0);
+
+				if($existId)
+				{
+					$_REQUEST['id'] = $existId;
+					$reply=$objCategory->UpdateExpenceSubCategory($detail,$_FILES);
+				}
+				else if($first && $editId!="")
+				{
+					// First selected SE updates the opened row
+					$_REQUEST['id'] = $editId;
+					$reply=$objCategory->UpdateExpenceSubCategory($detail,$_FILES);
+				}
+				else
+				{
+					// Extra SEs get new BIKE/CAR rows (needed for App vehicle expense)
+					$reply=$objCategory->InsertExpenceSubCategory($detail,$_FILES);
+				}
+				$first = false;
+
+				if($reply['ack']==1){
+					$successNames[] = $seName;
+				}else{
+					$errorNames[] = $seName;
+				}
+			}
+			if(sizeof($successNames)>0)
+			{
+				$msg = "Expence Sub Category saved for: ".implode(", ",$successNames);
+				if(sizeof($errorNames)>0){
+					$msg .= " | Already/Failed: ".implode(", ",$errorNames);
+				}
+				$db->addSuccessMessage($msg);
+				$db->rp_location($ctable2."_manage.php?msg=updated");
+			}
+			else
+			{
+				$db->addErrorMessage(isset($reply['ack_msg'])?$reply['ack_msg']:"Update failed");
+			}
+		}
 	}
 }
 
@@ -202,21 +244,21 @@ if(isset($_REQUEST['id']) && $_REQUEST['id']>0 && $_REQUEST['mode']=="isActive" 
 								</div>
 								<div class="form-group">
 									<label for="sales_executive_id">Select Sales Executive <code>*</code></label>
-									<select class="form-control" name="sales_executive_id[]" id="sales_executive_id" multiple>
-										<option value="">Select Sales Executive</option>
+									<select class="form-control noSelect2" name="sales_executive_id[]" id="sales_executive_id" multiple="multiple">
 										<?php
-											$sales_executive_table_r = $db->rp_getData("sales_executive","*","isDelete=0");
-											if(mysqli_num_rows($sales_executive_table_r)>0){
+											$sales_executive_table_r = $db->rp_getData("sales_executive","*","isDelete=0 AND isActive=1","name ASC",0);
+											if($sales_executive_table_r && mysqli_num_rows($sales_executive_table_r)>0){
 												while($sales_executive_d = mysqli_fetch_array($sales_executive_table_r)){
 												?>
 												<option <?=($sales_executive_id == $sales_executive_d['id'])?"selected":"";?> value="<?php echo $sales_executive_d['id']; ?>" >
-													<?php echo $sales_executive_d['name']; ?>
+													<?php echo htmlspecialchars($sales_executive_d['name']); ?>
 												</option>
 											<?php
 												}
 											}
 											?>
 									</select>
+									<p class="help-block">You can select multiple sales persons (search + click to tick).</p>
 								</div>
 								<div class="form-group">
 									<label for="expense_type">Select Type <code>*</code></label>
@@ -248,12 +290,43 @@ if(isset($_REQUEST['id']) && $_REQUEST['id']>0 && $_REQUEST['mode']=="isActive" 
 <?php include("footer.php"); ?>
 <?php include("include_js.php"); ?>
 <script type="text/javascript" src="js/fSelect.js"></script>
+<style type="text/css">
+	#sales_executive_id + .fs-dropdown,
+	.fs-wrap.multiple .fs-dropdown {
+		width: 100% !important;
+		min-width: 100%;
+		z-index: 9999;
+	}
+	.fs-wrap.multiple {
+		width: 100%;
+		position: relative;
+	}
+	.fs-option {
+		cursor: pointer !important;
+	}
+</style>
 <script type="text/javascript">
-	$("#sales_executive_id").fSelect();
+$(document).ready(function(){
+	var $se = $("#sales_executive_id");
+	// Conflict fix: global select2 breaks fSelect multi-select tick
+	if ($se.hasClass('select2-offscreen') || $se.data('select2')) {
+		try { $se.select2('destroy'); } catch (e) {}
+	}
+	$se.addClass('noSelect2').removeClass('select2-offscreen');
+	$se.next('.select2-container').remove();
 
-	$("#checkAll").change(function () {
-	    $(".md-check").prop('checked', $(this).prop("checked"));
+	$se.fSelect({
+		placeholder: 'Select Sales Executive',
+		numDisplayed: 3,
+		overflowText: '{n} selected',
+		searchText: 'Search',
+		showSearch: true
 	});
+});
+
+$("#checkAll").change(function () {
+	$(".md-check").prop('checked', $(this).prop("checked"));
+});
 </script>
 <script type="text/javascript">
 $(".form-control").bind("keyup change",function(){ if($(this).parent().hasClass("has-error")) { $(this).parent().removeClass("has-error"); $(this).parent().find('p.help-block').html(""); } }); 
@@ -268,6 +341,12 @@ function check_form(){
 	if($("#expense_category_id").val()==""){
 		alert("Please select Expence  category.");
 		$("#expense_category_id").focus();
+		return false;
+	}
+
+	var seVals = $("#sales_executive_id").val();
+	if (!seVals || seVals.length < 1) {
+		alert("Please select at least one Sales Executive.");
 		return false;
 	}
 
