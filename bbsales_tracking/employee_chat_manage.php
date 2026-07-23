@@ -131,9 +131,18 @@ $meName = isset($_SESSION[SITE_SESS . 'SESS_NAME']) ? $_SESSION[SITE_SESS . 'SES
 		.wa-row.mine .wa-bubble { background: var(--wa-out); border-top-right-radius: 0; }
 		.wa-row.theirs .wa-bubble { background: var(--wa-in); border-top-left-radius: 0; }
 		.wa-bubble .time {
-			display: inline-block; float: right; margin: 4px 0 0 12px;
+			display: inline-block; float: right; margin: 4px 0 0 8px;
 			font-size: 11px; color: #667781; white-space: nowrap;
 		}
+		.wa-ticks {
+			display: inline-block; margin-left: 3px; position: relative; width: 16px; height: 10px; vertical-align: middle;
+		}
+		.wa-ticks i {
+			font-size: 10px; color: #8696a0; position: absolute; top: 0;
+		}
+		.wa-ticks i:first-child { left: 0; }
+		.wa-ticks i:last-child { left: 4px; }
+		.wa-ticks.read i { color: #8ed3f0; } /* lighter blue tick = read */
 		.wa-compose {
 			display: none; background: #f0f2f5; padding: 10px 12px;
 			border-top: 1px solid #e9edef;
@@ -268,6 +277,25 @@ function loadList(){
 	}
 }
 
+function tickHtml(isRead){
+	var cls = (parseInt(isRead,10)===1) ? 'wa-ticks read' : 'wa-ticks';
+	return '<span class="'+cls+'" title="'+(parseInt(isRead,10)===1?'Read':'Sent')+'"><i class="fa fa-check"></i><i class="fa fa-check"></i></span>';
+}
+
+function applyReadReceipts(receipts){
+	if(!receipts||!receipts.length) return;
+	$.each(receipts,function(i,r){
+		var $row = $('.wa-row.mine[data-msg-id="'+r.id+'"]');
+		if(!$row.length) return;
+		var $t = $row.find('.wa-ticks');
+		if(parseInt(r.is_read,10)===1){
+			$t.addClass('read').attr('title','Read');
+		} else {
+			$t.removeClass('read').attr('title','Sent');
+		}
+	});
+}
+
 function appendMessages(messages, replace){
 	if(replace){ $('#ec_messages').html(''); EC.lastMsgId=0; EC.knownIds={}; }
 	if(!messages||!messages.length){
@@ -276,10 +304,18 @@ function appendMessages(messages, replace){
 	}
 	if(replace) $('#ec_messages').html('');
 	$.each(messages,function(i,m){
-		if(EC.knownIds[m.id]) return;
+		if(EC.knownIds[m.id]){
+			// already shown — still update tick if mine
+			if(m.is_mine==1) applyReadReceipts([{id:m.id,is_read:m.is_read}]);
+			return;
+		}
 		EC.knownIds[m.id]=1;
 		var cls=m.is_mine==1?'mine':'theirs';
-		$('#ec_messages').append('<div class="wa-row '+cls+'"><div class="wa-bubble">'+esc(m.message_text)+'<span class="time">'+esc(shortTime(m.created_date))+'</span></div></div>');
+		var ticks = (m.is_mine==1) ? tickHtml(m.is_read) : '';
+		$('#ec_messages').append(
+			'<div class="wa-row '+cls+'" data-msg-id="'+m.id+'"><div class="wa-bubble">'+esc(m.message_text)+
+			'<span class="time">'+esc(shortTime(m.created_date))+ticks+'</span></div></div>'
+		);
 		if(m.id>EC.lastMsgId) EC.lastMsgId=m.id;
 		if(m.is_mine!=1 && typeof toastr!=='undefined' && !replace){
 			toastr.options={timeOut:3500,positionClass:'toast-top-right'};
@@ -304,6 +340,7 @@ function openPeer(peerId, peerSeId){
 		$('#ec_compose').show();
 		$('#wa_layout').addClass('chat-open');
 		appendMessages(res.messages,true);
+		applyReadReceipts(res.read_receipts||[]);
 		EC.mode='threads';
 		$('#tab_chats').addClass('active'); $('#tab_users').removeClass('active');
 		loadList();
@@ -321,6 +358,8 @@ function pollMessages(){
 			appendMessages(res.messages,false);
 			loadList();
 		}
+		// Blue tick update without new messages
+		applyReadReceipts(res.read_receipts||[]);
 	});
 }
 function startPoll(){ if(EC.pollTimer) clearInterval(EC.pollTimer); EC.pollTimer=setInterval(pollMessages,3000); }
@@ -335,6 +374,7 @@ function sendMessage(){
 		if(!res||res.ack!=1){ alert((res&&res.ack_msg)||'Send failed'); return; }
 		$('#ec_text').val('');
 		if($('#ec_messages .wa-empty, #ec_messages .wa-welcome').length) $('#ec_messages').html('');
+		if(res.message && typeof res.message.is_read==='undefined') res.message.is_read=0;
 		appendMessages([res.message],false);
 		loadList();
 	},'json');

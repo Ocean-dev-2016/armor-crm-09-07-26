@@ -243,6 +243,7 @@ class EmployeeChat
 			'peer_id' => $msgs['peer_id'],
 			'peer_name' => $msgs['peer_name'],
 			'messages' => $msgs['messages'],
+			'read_receipts' => isset($msgs['read_receipts']) ? $msgs['read_receipts'] : array(),
 		);
 	}
 
@@ -299,7 +300,7 @@ class EmployeeChat
 				);
 			}
 		}
-		// mark peer messages as read
+		// mark peer messages as read (when I open/poll this thread)
 		$nowRead = date('Y-m-d H:i:s');
 		@mysqli_query(
 			$this->db->myconn,
@@ -307,7 +308,31 @@ class EmployeeChat
 			 WHERE thread_id='{$threadId}' AND sender_id!='{$meId}' AND is_read=0 AND isDelete=0"
 		);
 
-		return array('ack' => 1, 'messages' => $messages, 'peer_id' => $this->getPeerId($threadId, $meId), 'peer_name' => $this->getUserDisplayName($this->getPeerId($threadId, $meId)));
+		// Read receipts for MY messages (blue tick on sender side)
+		$readReceipts = array();
+		$rr = $this->db->rp_getData(
+			$this->messageTable,
+			'id,is_read',
+			"thread_id='{$threadId}' AND sender_id='{$meId}' AND isDelete=0",
+			'id ASC',
+			0
+		);
+		if ($rr) {
+			while ($rrow = mysqli_fetch_assoc($rr)) {
+				$readReceipts[] = array(
+					'id' => (int) $rrow['id'],
+					'is_read' => (int) $rrow['is_read'],
+				);
+			}
+		}
+
+		return array(
+			'ack' => 1,
+			'messages' => $messages,
+			'read_receipts' => $readReceipts,
+			'peer_id' => $this->getPeerId($threadId, $meId),
+			'peer_name' => $this->getUserDisplayName($this->getPeerId($threadId, $meId)),
+		);
 	}
 
 	public function sendMessage($threadId, $meId, $text)
