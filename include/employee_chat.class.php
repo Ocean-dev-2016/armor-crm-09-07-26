@@ -44,19 +44,54 @@ class EmployeeChat
 		}
 		$userOne = $pair[0];
 		$userTwo = $pair[1];
+		$now = date('Y-m-d H:i:s');
+
+		// Active thread
 		$where = "user_one_id='{$userOne}' AND user_two_id='{$userTwo}' AND isDelete=0";
 		$existing = $this->db->rp_getValue($this->threadTable, 'id', $where, 0);
 		if ($existing) {
 			return array('ack' => 1, 'thread_id' => (int) $existing);
 		}
-		$now = date('Y-m-d H:i:s');
+
+		// Soft-deleted pair still blocks UNIQUE KEY uk_ect_pair — revive it
+		$deletedId = (int) $this->db->rp_getValue(
+			$this->threadTable,
+			'id',
+			"user_one_id='{$userOne}' AND user_two_id='{$userTwo}' AND isDelete=1",
+			0
+		);
+		if ($deletedId > 0) {
+			@mysqli_query(
+				$this->db->myconn,
+				"UPDATE `{$this->threadTable}` SET isDelete=0, isActive=1, modified_date='{$now}' WHERE id='{$deletedId}'"
+			);
+			return array('ack' => 1, 'thread_id' => $deletedId);
+		}
+
 		$rows = array('user_one_id', 'user_two_id', 'last_message_id', 'last_message_date', 'created_date', 'modified_date', 'isActive', 'isDelete');
 		$values = array($userOne, $userTwo, 0, $now, $now, $now, 1, 0);
 		$ins = $this->db->rp_insert($this->threadTable, $values, $rows, 0);
 		if ($ins) {
 			return array('ack' => 1, 'thread_id' => (int) $ins);
 		}
-		return array('ack' => 0, 'ack_msg' => 'Could not create conversation');
+
+		// Race / unique conflict: re-read any row for this pair
+		$retry = (int) $this->db->rp_getValue(
+			$this->threadTable,
+			'id',
+			"user_one_id='{$userOne}' AND user_two_id='{$userTwo}'",
+			0
+		);
+		if ($retry > 0) {
+			@mysqli_query(
+				$this->db->myconn,
+				"UPDATE `{$this->threadTable}` SET isDelete=0, isActive=1, modified_date='{$now}' WHERE id='{$retry}'"
+			);
+			return array('ack' => 1, 'thread_id' => $retry);
+		}
+
+		$err = @mysqli_error($this->db->myconn);
+		return array('ack' => 0, 'ack_msg' => 'Could not create conversation' . ($err != '' ? (': ' . $err) : ''));
 	}
 
 	public function userCanAccessThread($threadId, $userId)
@@ -389,7 +424,12 @@ class EmployeeChat
 		if ($seId <= 0) {
 			return 0;
 		}
+		// Prefer System User (type 2), then any active login linked to this SE
 		$id = $this->db->rp_getValue(CTABLE_ADMIN, 'id', "sales_executive_id='{$seId}' AND type=2 AND isDelete=0", 0);
+		if ($id) {
+			return (int) $id;
+		}
+		$id = $this->db->rp_getValue(CTABLE_ADMIN, 'id', "sales_executive_id='{$seId}' AND isDelete=0", 0);
 		return $id ? (int) $id : 0;
 	}
 
