@@ -520,6 +520,35 @@ class EmployeeChat
 		);
 	}
 
+	public function deleteThread($threadId, $meId, $isSuperAdmin)
+	{
+		$threadId = (int) $threadId;
+		$meId = (int) $meId;
+
+		if ($threadId <= 0) {
+			return array('ack' => 0, 'ack_msg' => 'Invalid chat');
+		}
+		if (!$isSuperAdmin) {
+			return array('ack' => 0, 'ack_msg' => 'Only Admin can delete chat');
+		}
+		$exists = $this->db->rp_getValue($this->threadTable, 'id', "id='{$threadId}' AND isDelete=0", 0);
+		if (!$exists) {
+			return array('ack' => 0, 'ack_msg' => 'Chat not found or already deleted');
+		}
+
+		$now = date('Y-m-d H:i:s');
+		@mysqli_query(
+			$this->db->myconn,
+			"UPDATE `{$this->messageTable}` SET isDelete=1 WHERE thread_id='{$threadId}' AND isDelete=0"
+		);
+		@mysqli_query(
+			$this->db->myconn,
+			"UPDATE `{$this->threadTable}` SET isDelete=1, modified_date='{$now}' WHERE id='{$threadId}'"
+		);
+
+		return array('ack' => 1, 'ack_msg' => 'Chat deleted successfully', 'thread_id' => $threadId);
+	}
+
 	/**
 	 * Mobile: list other employees who have System User login (type 0/2)
 	 */

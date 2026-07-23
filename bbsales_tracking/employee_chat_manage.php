@@ -11,6 +11,7 @@ $page_hierarchy = array(
 );
 include('connect.php');
 $meName = isset($_SESSION[SITE_SESS . 'SESS_NAME']) ? $_SESSION[SITE_SESS . 'SESS_NAME'] : '';
+$isChatAdmin = (isset($_SESSION[SITE_SESS . '_ADMIN_TYPE']) && (int) $_SESSION[SITE_SESS . '_ADMIN_TYPE'] === 0) ? 1 : 0;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -143,6 +144,18 @@ $meName = isset($_SESSION[SITE_SESS . 'SESS_NAME']) ? $_SESSION[SITE_SESS . 'SES
 		.wa-ticks i:first-child { left: 0; }
 		.wa-ticks i:last-child { left: 4px; }
 		.wa-ticks.read i { color: #8ed3f0; } /* lighter blue tick = read */
+		.wa-del-btn {
+			border: 0; background: transparent; color: #667781; font-size: 16px;
+			padding: 6px 10px; border-radius: 50%; cursor: pointer;
+		}
+		.wa-del-btn:hover { background: #ffe8e8; color: #e7505a; }
+		.wa-item { position: relative; }
+		.wa-item .wa-item-del {
+			display: none; border: 0; background: #fff; color: #e7505a;
+			width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+			box-shadow: 0 1px 3px rgba(0,0,0,.15); margin-left: 6px; flex-shrink: 0;
+		}
+		.wa-item:hover .wa-item-del { display: inline-block; }
 		.wa-compose {
 			display: none; background: #f0f2f5; padding: 10px 12px;
 			border-top: 1px solid #e9edef;
@@ -204,6 +217,9 @@ $meName = isset($_SESSION[SITE_SESS . 'SESS_NAME']) ? $_SESSION[SITE_SESS . 'SES
 								<strong id="ec_peer_name">Select chat</strong>
 								<span id="ec_peer_status">click for contact info</span>
 							</div>
+							<?php if ($isChatAdmin) { ?>
+							<button type="button" class="wa-del-btn" id="ec_delete_chat" title="Delete chat"><i class="fa fa-trash"></i></button>
+							<?php } ?>
 							<div style="font-size:12px;color:#667781;">You: <?php echo htmlspecialchars($meName); ?></div>
 						</div>
 						<div class="wa-messages" id="ec_messages">
@@ -228,7 +244,7 @@ $meName = isset($_SESSION[SITE_SESS . 'SESS_NAME']) ? $_SESSION[SITE_SESS . 'SES
 <?php include('footer.php'); ?>
 <?php include('include_js.php'); ?>
 <script type="text/javascript">
-var EC = { mode:'threads', threadId:0, peerId:0, peerSeId:0, lastMsgId:0, pollTimer:null, knownIds:{} };
+var EC = { mode:'threads', threadId:0, peerId:0, peerSeId:0, lastMsgId:0, pollTimer:null, knownIds:{}, isAdmin: <?php echo (int) $isChatAdmin; ?> };
 window.EC = EC;
 
 function esc(s){ return $('<div/>').text(s||'').html(); }
@@ -266,11 +282,12 @@ function loadList(){
 			$.each(list,function(i,t){
 				var active=t.thread_id==EC.threadId?' active':'';
 				var badge=t.unread>0?' <span class="wa-badge">'+t.unread+'</span>':'';
+				var delBtn = EC.isAdmin ? '<button type="button" class="wa-item-del" data-thread="'+t.thread_id+'" title="Delete chat"><i class="fa fa-trash"></i></button>' : '';
 				html+='<div class="wa-item'+active+'" data-peer="'+t.peer_id+'" data-se="0" data-thread="'+t.thread_id+'">'+
 					'<div class="wa-avatar '+avatarClass(t.peer_name)+'">'+esc(initial(t.peer_name))+'</div>'+
 					'<div class="wa-meta"><div class="top"><div class="name">'+esc(t.peer_name)+badge+'</div>'+
 					'<div class="time">'+esc(shortTime(t.last_message_date))+'</div></div>'+
-					'<div class="preview">'+esc(t.last_message||'')+'</div></div></div>';
+					'<div class="preview">'+esc(t.last_message||'')+'</div></div>'+delBtn+'</div>';
 			});
 			$('#ec_list').html(html);
 		});
@@ -380,14 +397,42 @@ function sendMessage(){
 	},'json');
 }
 
+function resetChatPane(){
+	EC.threadId=0; EC.peerId=0; EC.peerSeId=0; EC.lastMsgId=0; EC.knownIds={};
+	$('#ec_head').hide();
+	$('#ec_compose').hide();
+	$('#wa_layout').removeClass('chat-open');
+	$('#ec_messages').html('<div class="wa-welcome"><i class="fa fa-whatsapp"></i><div style="font-size:20px;margin-bottom:6px;">Armor CRM Chat</div><div style="font-size:13px;line-height:1.5;">Select an employee from the left to start messaging.</div></div>');
+}
+
+function deleteChat(threadId){
+	if(!EC.isAdmin){ alert('Only Admin can delete chat'); return; }
+	threadId = parseInt(threadId,10)||0;
+	if(!threadId){ alert('Select a chat first'); return; }
+	if(!confirm('Delete this chat permanently from list? Messages will be removed.')) return;
+	$.post('employee_chat_ajax.php',{mode:'delete_thread',thread_id:threadId},function(res){
+		if(typeof res==='string'){ try{res=$.parseJSON(res);}catch(e){res=null;} }
+		if(!res||res.ack!=1){ alert((res&&res.ack_msg)||'Delete failed'); return; }
+		if(EC.threadId==threadId) resetChatPane();
+		loadList();
+		if(typeof toastr!=='undefined') toastr.success(res.ack_msg||'Chat deleted');
+	},'json');
+}
+
 $(function(){
 	loadList();
 	$('#tab_chats').on('click',function(){ EC.mode='threads'; $(this).addClass('active'); $('#tab_users').removeClass('active'); loadList(); });
 	$('#tab_users').on('click',function(){ EC.mode='users'; $(this).addClass('active'); $('#tab_chats').removeClass('active'); loadList(); });
 	var t=null; $('#ec_search').on('keyup',function(){ clearTimeout(t); t=setTimeout(loadList,250); });
-	$('#ec_list').on('click','.wa-item',function(){
+	$('#ec_list').on('click','.wa-item',function(e){
+		if($(e.target).closest('.wa-item-del').length) return;
 		openPeer(parseInt($(this).data('peer'),10)||0, parseInt($(this).data('se'),10)||0);
 	});
+	$('#ec_list').on('click','.wa-item-del',function(e){
+		e.preventDefault(); e.stopPropagation();
+		deleteChat($(this).data('thread'));
+	});
+	$('#ec_delete_chat').on('click',function(){ deleteChat(EC.threadId); });
 	$('#ec_send').on('click',sendMessage);
 	$('#ec_text').on('keydown',function(e){ if(e.keyCode===13 && !e.shiftKey){ e.preventDefault(); sendMessage(); } });
 	setInterval(function(){ if(EC.mode==='threads') loadList(); },8000);

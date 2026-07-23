@@ -58,4 +58,11 @@ if ($mode === 'live_notify') {
 	exit;
 }
 
+if ($mode === 'delete_thread') {
+	$threadId = isset($_REQUEST['thread_id']) ? (int) $_REQUEST['thread_id'] : 0;
+	$isSuperAdmin = (isset($_SESSION[SITE_SESS . '_ADMIN_TYPE']) && (int) $_SESSION[SITE_SESS . '_ADMIN_TYPE'] === 0);
+	echo json_encode($chat->deleteThread($threadId, $me, $isSuperAdmin));
+	exit;
+}
+
 echo json_encode(array('ack' => 0, 'ack_msg' => 'Invalid mode'));
