@@ -110,7 +110,38 @@ $defaultTo = date("Y-m-t");
 
 		$("#kra_filter_btn").on("click", loadReport);
 		$("#kra_excel_btn").on("click", function () {
-			window.location.href = "employee_visit_kra_report_excel.php?" + queryString();
+			$.ajax({
+				method: "POST",
+				url: "employee_visit_kra_report_excel.php",
+				data: {
+					from_date: $("#kra_from_date").val(),
+					to_date: $("#kra_to_date").val(),
+					employee_ids: ($("#kra_employee_ids").val() || []).join(",")
+				},
+				dataType: "json",
+				beforeSend: function () {
+					$(".loading-div").show();
+				},
+				success: function (result) {
+					$(".loading-div").hide();
+					if (!result || result.ack == 0 || !result.file_path) {
+						alert((result && result.ack_msg) ? result.ack_msg : "Excel download failed");
+						return;
+					}
+					window.location.href = "<?= SITEURL ?>" + result.file_path;
+				},
+				error: function (xhr) {
+					$(".loading-div").hide();
+					var msg = "Excel download failed";
+					if (xhr && xhr.responseText) {
+						try {
+							var parsed = $.parseJSON(xhr.responseText);
+							if (parsed && parsed.ack_msg) msg = parsed.ack_msg;
+						} catch (e) {}
+					}
+					alert(msg);
+				}
+			});
 		});
 		$(document).ready(loadReport);
 	})();

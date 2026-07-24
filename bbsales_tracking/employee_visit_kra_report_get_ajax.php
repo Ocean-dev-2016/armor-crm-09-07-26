@@ -27,6 +27,7 @@ $data = $report->build(
 	isset($_REQUEST['employee_ids']) ? $_REQUEST['employee_ids'] : "",
 	$rights
 );
+$fixedColCount = 9; // Sr .. Total Visit
 ?>
 <style>
 	.kra-employee { border:1px solid #d9e2ea; margin-bottom:24px; background:#fff; }
@@ -37,21 +38,53 @@ $data = $report->build(
 	.kra-kpi-label { color:#63717c; font-size:11px; text-transform:uppercase; }
 	.kra-kpi-value { font-size:17px; font-weight:700; margin-top:3px; }
 	.kra-scroll { overflow:auto; max-height:620px; border-top:1px solid #ddd; }
-	.kra-table { border-collapse:collapse; width:max-content; min-width:100%; margin:0; }
-	.kra-table th,.kra-table td { border:1px solid #cfd7de; padding:5px; font-size:11px; vertical-align:top; }
-	.kra-table thead th { position:sticky; top:0; z-index:3; background:#e9782e; color:#fff; text-align:center; }
-	.kra-table .kra-fixed { position:sticky; left:0; z-index:2; background:#fff; }
-	.kra-table thead .kra-fixed { z-index:4; background:#e9782e; }
+	.kra-table { border-collapse:separate; border-spacing:0; width:max-content; min-width:100%; margin:0; }
+	.kra-table th,.kra-table td {
+		border:1px solid #cfd7de; padding:6px 5px; font-size:11px; vertical-align:top;
+		background:#fff;
+	}
+	.kra-table thead th {
+		position:sticky; top:0; z-index:5;
+		background:#e9782e; color:#fff; text-align:center;
+		box-shadow:0 1px 0 #cfd7de;
+	}
+	/* Freeze master columns (Excel-like) while scrolling date columns */
+	.kra-table .kra-f0 { position:sticky; left:0;    z-index:3; min-width:40px;  width:40px; }
+	.kra-table .kra-f1 { position:sticky; left:40px;  z-index:3; min-width:85px;  width:85px; }
+	.kra-table .kra-f2 { position:sticky; left:125px; z-index:3; min-width:190px; width:190px; }
+	.kra-table .kra-f3 { position:sticky; left:315px; z-index:3; min-width:95px;  width:95px; }
+	.kra-table .kra-f4 { position:sticky; left:410px; z-index:3; min-width:105px; width:105px; }
+	.kra-table .kra-f5 { position:sticky; left:515px; z-index:3; min-width:150px; width:150px; }
+	.kra-table .kra-f6 { position:sticky; left:665px; z-index:3; min-width:80px;  width:80px; }
+	.kra-table .kra-f7 { position:sticky; left:745px; z-index:3; min-width:70px;  width:70px; }
+	.kra-table .kra-f8 { position:sticky; left:815px; z-index:3; min-width:78px;  width:78px; text-align:center; }
+	.kra-table thead [class*="kra-f"] { z-index:6; background:#e9782e; color:#fff; }
+	.kra-table thead .kra-f8 { background:#c85a12 !important; }
+	.kra-table tbody [class*="kra-f"] {
+		background:#fff;
+		box-shadow:2px 0 3px rgba(0,0,0,0.05);
+	}
+	.kra-table tbody .kra-f8 { background:#e8f4ff !important; }
+	.kra-table tbody tr.kra-summary [class*="kra-f"] { background:#eef5ef !important; }
 	.kra-table .kra-summary td { background:#eef5ef; font-weight:700; text-align:center; }
-	.kra-date { min-width:92px; text-align:center; }
-	.kra-account { min-width:160px; max-width:220px; }
-	.kra-small-col { min-width:80px; max-width:135px; }
-	.kra-code { display:inline-block; margin:1px; padding:2px 5px; border-radius:3px; color:#fff; background:#337ab7; font-weight:700; }
+	.kra-total-num { font-size:16px; font-weight:800; color:#1f4e79; }
+	.kra-date { min-width:112px; text-align:center; }
+	.kra-code {
+		display:inline-block; margin:2px;
+		padding:7px 11px; border-radius:4px;
+		color:#fff; background:#337ab7;
+		font-weight:800; font-size:17px; line-height:1.15;
+		min-width:30px; text-align:center;
+		letter-spacing:0.5px;
+	}
 	.kra-code-open { background:#d9534f; }
+	.kra-code-sm { font-size:12px; padding:3px 6px; font-weight:700; min-width:auto; }
 	.kra-cell-details { min-width:230px; text-align:left; padding:5px; background:#fafafa; border:1px solid #ddd; margin-top:4px; }
 	.kra-cell-details div { margin-bottom:3px; }
 	.kra-legend { padding:8px 10px; font-size:11px; border-top:1px solid #ddd; }
 	.kra-empty { text-align:center; padding:30px; color:#777; }
+	.kra-table details summary { list-style:none; cursor:pointer; outline:none; }
+	.kra-table details summary::-webkit-details-marker { display:none; }
 </style>
 
 <?php if ($data['range']['was_limited']) { ?>
@@ -86,44 +119,48 @@ $data = $report->build(
 			<table class="kra-table">
 				<thead>
 				<tr>
-					<th class="kra-fixed">Sr.</th>
-					<th>Code</th>
-					<th class="kra-account">Account Name</th>
-					<th class="kra-small-col">Turnover</th>
-					<th class="kra-small-col">GST No.</th>
-					<th class="kra-account">Address</th>
-					<th class="kra-small-col">City</th>
-					<th class="kra-small-col">Pincode</th>
+					<th class="kra-f0">Sr.</th>
+					<th class="kra-f1">Code</th>
+					<th class="kra-f2">Account Name</th>
+					<th class="kra-f3">Turnover</th>
+					<th class="kra-f4">GST No.</th>
+					<th class="kra-f5">Address</th>
+					<th class="kra-f6">City</th>
+					<th class="kra-f7">Pincode</th>
+					<th class="kra-f8">Total Visit</th>
 					<?php foreach ($data['range']['dates'] as $date) { ?>
 						<th class="kra-date"><?php echo date("d/m/Y", strtotime($date)); ?></th>
 					<?php } ?>
 				</tr>
-			</thead>
-			<tbody>
+				</thead>
+				<tbody>
 				<tr class="kra-summary">
-					<td class="kra-fixed" colspan="8">Daily Visit Count / Outcome</td>
+					<td class="kra-f0" colspan="9">Daily Visit Count / Outcome</td>
 					<?php foreach ($data['range']['dates'] as $date) {
 						$daily = $employee['daily'][$date]; ?>
 						<td>
 							<?php echo (int) $daily['total']; ?> visit<?php echo $daily['total'] == 1 ? "" : "s"; ?><br>
 							<?php foreach ($daily['codes'] as $code => $count) {
-								if ($count > 0) { ?><span class="kra-code"><?php echo kra_h($code); ?>:<?php echo (int) $count; ?></span><?php }
+								if ($count > 0) { ?><span class="kra-code kra-code-sm"><?php echo kra_h($code); ?>:<?php echo (int) $count; ?></span><?php }
 							} ?>
-							<?php if ($daily['open'] > 0) { ?><span class="kra-code kra-code-open">Open:<?php echo (int) $daily['open']; ?></span><?php } ?>
+							<?php if ($daily['open'] > 0) { ?><span class="kra-code kra-code-open kra-code-sm">Open:<?php echo (int) $daily['open']; ?></span><?php } ?>
 						</td>
 					<?php } ?>
 				</tr>
 
-				<?php $sr = 0; foreach ($employee['accounts'] as $account) { ?>
+				<?php $sr = 0; foreach ($employee['accounts'] as $account) {
+					$acctVisits = isset($account['total_visits']) ? (int) $account['total_visits'] : 0;
+					?>
 					<tr>
-						<td class="kra-fixed"><?php echo ++$sr; ?></td>
-						<td><?php echo kra_h($account['code']); ?></td>
-						<td class="kra-account"><b><?php echo kra_h($account['company']); ?></b><br><small><?php echo kra_h($account['person']); ?> | <?php echo kra_h($account['type']); ?></small></td>
-						<td><?php echo kra_h($account['turnover']); ?></td>
-						<td><?php echo kra_h($account['gst']); ?></td>
-						<td class="kra-account"><?php echo kra_h($account['address']); ?></td>
-						<td><?php echo kra_h($account['city']); ?></td>
-						<td><?php echo kra_h($account['pincode']); ?></td>
+						<td class="kra-f0"><?php echo ++$sr; ?></td>
+						<td class="kra-f1"><?php echo kra_h($account['code']); ?></td>
+						<td class="kra-f2"><b><?php echo kra_h($account['company']); ?></b><br><small><?php echo kra_h($account['person']); ?> | <?php echo kra_h($account['type']); ?></small></td>
+						<td class="kra-f3"><?php echo kra_h($account['turnover']); ?></td>
+						<td class="kra-f4"><?php echo kra_h($account['gst']); ?></td>
+						<td class="kra-f5"><?php echo kra_h($account['address']); ?></td>
+						<td class="kra-f6"><?php echo kra_h($account['city']); ?></td>
+						<td class="kra-f7"><?php echo kra_h($account['pincode']); ?></td>
+						<td class="kra-f8"><span class="kra-total-num"><?php echo $acctVisits; ?></span></td>
 						<?php foreach ($data['range']['dates'] as $date) { ?>
 							<td class="kra-date">
 								<?php if (!empty($account['dates'][$date])) {
@@ -149,15 +186,15 @@ $data = $report->build(
 					</tr>
 				<?php } ?>
 				<?php if (empty($employee['accounts'])) { ?>
-					<tr><td colspan="<?php echo 8 + count($data['range']['dates']); ?>" class="kra-empty">No visits in this period.</td></tr>
+					<tr><td colspan="<?php echo $fixedColCount + count($data['range']['dates']); ?>" class="kra-empty">No visits in this period.</td></tr>
 				<?php } ?>
-			</tbody>
-		</table>
+				</tbody>
+			</table>
 		</div>
 		<div class="kra-legend">
 			<b>Visit Code Chart:</b>
 			<?php foreach ($data['remark_labels'] as $code => $label) { ?>
-				<span class="kra-code"><?php echo kra_h($code); ?></span> <?php echo kra_h($label); ?>&nbsp;&nbsp;
+				<span class="kra-code kra-code-sm"><?php echo kra_h($code); ?></span> <?php echo kra_h($label); ?>&nbsp;&nbsp;
 			<?php } ?>
 		</div>
 	</div>

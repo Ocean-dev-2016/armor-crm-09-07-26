@@ -271,12 +271,14 @@ class EmployeeVisitKraReport
 			$key = $account['key'];
 			if (!isset($data['employees'][$employeeId]['accounts'][$key])) {
 				$account['dates'] = array();
+				$account['total_visits'] = 0;
 				$data['employees'][$employeeId]['accounts'][$key] = $account;
 			}
 			if (!isset($data['employees'][$employeeId]['accounts'][$key]['dates'][$visitDate])) {
 				$data['employees'][$employeeId]['accounts'][$key]['dates'][$visitDate] = array();
 			}
 			$data['employees'][$employeeId]['accounts'][$key]['dates'][$visitDate][] = $row;
+			$data['employees'][$employeeId]['accounts'][$key]['total_visits']++;
 
 			$data['employees'][$employeeId]['daily'][$visitDate]['total']++;
 			$data['employees'][$employeeId]['kpi']['total_visits']++;
@@ -453,4 +455,3 @@ class EmployeeVisitKraReport
 		return ($result === false) ? false : $result;
 	}
 }
-?>
