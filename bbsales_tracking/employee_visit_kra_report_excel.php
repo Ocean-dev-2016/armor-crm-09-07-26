@@ -1,21 +1,53 @@
 <?php
+/**
+ * Employee Visit KRA Excel — supports ALL employees in one file.
+ * One sheet per employee (KRA grid + Total Visit + visit codes).
+ */
 $page_id = 599;
 $page_slug = 'visit_report_page';
 include("connect.php");
 require_once("../include/class.employee_visit_kra_report.php");
 require_once("PHPExcel/IOFactory.php");
 
-@set_time_limit(300);
-@ini_set('memory_limit', '512M');
+@set_time_limit(0);
+@ini_set('max_execution_time', '0');
+@ini_set('memory_limit', '1024M');
+@ini_set('display_errors', '0');
+@ignore_user_abort(true);
+
+function kra_excel_json_exit($payload)
+{
+	while (ob_get_level()) {
+		@ob_end_clean();
+	}
+	if (!headers_sent()) {
+		header('Content-Type: application/json; charset=utf-8');
+	}
+	echo json_encode($payload);
+	exit;
+}
+
+register_shutdown_function(function () {
+	$err = error_get_last();
+	if (!$err) {
+		return;
+	}
+	$fatalTypes = array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR);
+	if (!in_array($err['type'], $fatalTypes, true)) {
+		return;
+	}
+	kra_excel_json_exit(array(
+		'ack' => 0,
+		'ack_msg' => 'Excel failed: ' . $err['message'] . ' (line ' . $err['line'] . ')',
+	));
+});
 
 $canExport = (
 	(isset($rights['export_excel_flag']) && (int) $rights['export_excel_flag'] === 1)
 	|| (isset($_SESSION[SITE_SESS . '_ADMIN_TYPE']) && (int) $_SESSION[SITE_SESS . '_ADMIN_TYPE'] === 0)
 );
 if (!$canExport) {
-	header('Content-Type: application/json; charset=utf-8');
-	echo json_encode(array('ack' => 0, 'ack_msg' => 'Excel export permission required.'));
-	exit;
+	kra_excel_json_exit(array('ack' => 0, 'ack_msg' => 'Excel export permission required.'));
 }
 
 function kra_excel_safe_title($name, $used)
@@ -40,23 +72,6 @@ function kra_excel_visit_code($visit)
 	return ($code != "") ? $code : ($visit['is_completed'] ? "Done" : "Open");
 }
 
-function kra_excel_account_visits($account)
-{
-	$visits = array();
-	foreach ($account['dates'] as $dateRows) {
-		foreach ($dateRows as $visit) {
-			$visits[] = $visit;
-		}
-	}
-	usort($visits, "kra_excel_sort_visits");
-	return $visits;
-}
-
-function kra_excel_sort_visits($a, $b)
-{
-	return strcmp($a['start_date_time'], $b['start_date_time']);
-}
-
 $builder = new EmployeeVisitKraReport($db);
 $data = $builder->build(
 	isset($_REQUEST['from_date']) ? $_REQUEST['from_date'] : "",
@@ -66,17 +81,30 @@ $data = $builder->build(
 );
 
 if (empty($data['employees'])) {
-	header('Content-Type: application/json; charset=utf-8');
-	echo json_encode(array('ack' => 0, 'ack_msg' => 'No accessible employee data found for export.'));
-	exit;
+	kra_excel_json_exit(array('ack' => 0, 'ack_msg' => 'No accessible employee data found for export.'));
 }
+
+$employeeCount = count($data['employees']);
+// Bulk (all / many employees): keep KRA grid, skip heavy VISIT DETAILS for speed on Live
+$includeVisitDetails = ($employeeCount <= 3);
 
 $book = new PHPExcel();
 $book->removeSheetByIndex(0);
 $usedTitles = array();
 $sheetIndex = 0;
-$masterColCount = 9; // Sr .. Total Visit
-$firstDateColIndex = 9; // column J (0-based)
+$masterColCount = 9;
+$firstDateColIndex = 9;
+
+$headerStyle = array(
+	"font" => array("bold" => true, "color" => array("rgb" => "FFFFFF")),
+	"fill" => array("type" => PHPExcel_Style_Fill::FILL_SOLID, "color" => array("rgb" => "E9782E")),
+	"alignment" => array("horizontal" => PHPExcel_Style_Alignment::HORIZONTAL_CENTER),
+);
+$titleStyle = array(
+	"font" => array("bold" => true, "size" => 13, "color" => array("rgb" => "FFFFFF")),
+	"fill" => array("type" => PHPExcel_Style_Fill::FILL_SOLID, "color" => array("rgb" => "2F6F44")),
+	"alignment" => array("horizontal" => PHPExcel_Style_Alignment::HORIZONTAL_CENTER),
+);
 
 foreach ($data['employees'] as $employee) {
 	$sheet = new PHPExcel_Worksheet($book);
@@ -86,12 +114,14 @@ foreach ($data['employees'] as $employee) {
 	$book->addSheet($sheet, $sheetIndex++);
 
 	$dateCount = count($data['range']['dates']);
-	$lastColumnIndex = ($masterColCount - 1) + $dateCount;
+	$lastColumnIndex = ($masterColCount - 1) + max(1, $dateCount);
 	$lastColumn = PHPExcel_Cell::stringFromColumnIndex($lastColumnIndex);
+
 	$sheet->mergeCells("A1:" . $lastColumn . "1");
 	$sheet->setCellValue("A1", "KEY RESULT AREA - " . strtoupper($employee['name']));
 	$sheet->mergeCells("A2:" . $lastColumn . "2");
 	$sheet->setCellValue("A2", date("d/m/Y", strtotime($data['range']['from'])) . " TO " . date("d/m/Y", strtotime($data['range']['to'])));
+	$sheet->getStyle("A1")->applyFromArray($titleStyle);
 
 	$kpiLabels = array("Approved Expense", "Salary", "Expense + Salary", "Total Sales", "Total Visit", "Completed / Open", "Total Quotation", "Total PI Approved");
 	$kpiValues = array(
@@ -109,6 +139,7 @@ foreach ($data['employees'] as $employee) {
 		$sheet->setCellValue($column . "3", $kpiLabels[$i]);
 		$sheet->setCellValue($column . "4", $kpiValues[$i]);
 	}
+	$sheet->getStyle("A3:H3")->getFont()->setBold(true);
 
 	$headerRow = 6;
 	$headers = array("Sr.", "Code", "Account Name", "Turnover", "GST No.", "Address", "City", "Pincode", "Total Visit");
@@ -116,9 +147,10 @@ foreach ($data['employees'] as $employee) {
 		$headers[] = date("d/m/Y", strtotime($date));
 	}
 	foreach ($headers as $index => $header) {
-		$column = PHPExcel_Cell::stringFromColumnIndex($index);
-		$sheet->setCellValue($column . $headerRow, $header);
+		$sheet->setCellValue(PHPExcel_Cell::stringFromColumnIndex($index) . $headerRow, $header);
 	}
+	$sheet->getStyle("A" . $headerRow . ":" . $lastColumn . $headerRow)->applyFromArray($headerStyle);
+	$sheet->getStyle("I" . $headerRow)->getFill()->setFillType(PHPExcel_Style_Fill::FILL_SOLID)->getStartColor()->setRGB("C85A12");
 
 	$summaryRow = 7;
 	$sheet->mergeCells("A" . $summaryRow . ":I" . $summaryRow);
@@ -134,19 +166,18 @@ foreach ($data['employees'] as $employee) {
 		if ($daily['open'] > 0) {
 			$parts[] = "Open:" . $daily['open'];
 		}
-		$column = PHPExcel_Cell::stringFromColumnIndex($firstDateColIndex + $dateIndex);
-		$sheet->setCellValue($column . $summaryRow, implode("\n", $parts));
+		$sheet->setCellValue(PHPExcel_Cell::stringFromColumnIndex($firstDateColIndex + $dateIndex) . $summaryRow, implode(" | ", $parts));
 	}
 
 	$rowNumber = 8;
-	$sr = 0;
 	$accountStartRow = $rowNumber;
+	$sr = 0;
 	foreach ($employee['accounts'] as $account) {
 		$acctVisits = isset($account['total_visits']) ? (int) $account['total_visits'] : 0;
 		$values = array(
 			++$sr,
 			$account['code'],
-			$account['company'] . (($account['person'] != "") ? "\n" . $account['person'] : ""),
+			$account['company'] . (($account['person'] != "") ? " / " . $account['person'] : ""),
 			$account['turnover'],
 			$account['gst'],
 			$account['address'],
@@ -155,8 +186,7 @@ foreach ($data['employees'] as $employee) {
 			$acctVisits,
 		);
 		foreach ($values as $index => $value) {
-			$column = PHPExcel_Cell::stringFromColumnIndex($index);
-			$sheet->setCellValue($column . $rowNumber, $value);
+			$sheet->setCellValue(PHPExcel_Cell::stringFromColumnIndex($index) . $rowNumber, $value);
 		}
 		foreach ($data['range']['dates'] as $dateIndex => $date) {
 			$codes = array();
@@ -165,183 +195,114 @@ foreach ($data['employees'] as $employee) {
 					$codes[] = kra_excel_visit_code($visit);
 				}
 			}
-			$column = PHPExcel_Cell::stringFromColumnIndex($firstDateColIndex + $dateIndex);
-			$sheet->setCellValue($column . $rowNumber, implode("\n", $codes));
+			$sheet->setCellValue(
+				PHPExcel_Cell::stringFromColumnIndex($firstDateColIndex + $dateIndex) . $rowNumber,
+				implode(", ", $codes)
+			);
 		}
 		$rowNumber++;
 	}
 	$accountEndRow = $rowNumber - 1;
 
-	$rowNumber += 2;
-	$legendRow = $rowNumber;
-	$sheet->setCellValue("A" . $legendRow, "Visit Code Chart:");
-	$sheet->getStyle("A" . $legendRow)->getFont()->setBold(true);
+	if ($accountEndRow >= $accountStartRow) {
+		$sheet->getStyle("I" . $accountStartRow . ":I" . $accountEndRow)->getFont()->setBold(true)->setSize(14);
+		$dateStartCol = PHPExcel_Cell::stringFromColumnIndex($firstDateColIndex);
+		$sheet->getStyle($dateStartCol . $accountStartRow . ":" . $lastColumn . $accountEndRow)->getFont()->setBold(true)->setSize(14);
+		$sheet->getStyle($dateStartCol . $accountStartRow . ":" . $lastColumn . $accountEndRow)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+	}
+
+	$rowNumber += 1;
+	$sheet->setCellValue("A" . $rowNumber, "Visit Code Chart:");
 	$col = 1;
 	foreach ($data['remark_labels'] as $code => $label) {
-		$column = PHPExcel_Cell::stringFromColumnIndex($col);
-		$sheet->setCellValue($column . $legendRow, $code . " = " . $label);
+		$sheet->setCellValue(PHPExcel_Cell::stringFromColumnIndex($col) . $rowNumber, $code . " = " . $label);
 		$col++;
 	}
 
-	$rowNumber += 2;
-	$detailTitleRow = $rowNumber;
-	$detailHeaders = array(
-		"Visit Date", "Visit ID", "Account", "Person", "Visit Type", "Purpose",
-		"Start Time", "Stop Time", "Duration Minutes", "Remark Code", "Reason Code",
-		"Outcome", "Full Stop Remark", "Purchasing From", "Contact Name", "Contact Mobile",
-		"Start Address", "Stop Address", "Follow-up ID"
-	);
-	$detailLastColumn = PHPExcel_Cell::stringFromColumnIndex(count($detailHeaders) - 1);
-	$sheet->mergeCells("A" . $detailTitleRow . ":" . $detailLastColumn . $detailTitleRow);
-	$sheet->setCellValue("A" . $detailTitleRow, "VISIT DETAILS");
-	$rowNumber++;
-	foreach ($detailHeaders as $index => $header) {
-		$column = PHPExcel_Cell::stringFromColumnIndex($index);
-		$sheet->setCellValue($column . $rowNumber, $header);
-	}
-	$detailHeaderRow = $rowNumber;
-	$rowNumber++;
-
-	foreach ($employee['accounts'] as $account) {
-		foreach (kra_excel_account_visits($account) as $visit) {
-			$visitType = "";
-			if ($visit['visit_type'] == "1") {
-				$visitType = "Existing Customer";
-			} else if ($visit['visit_type'] == "3") {
-				$visitType = "Inquiry";
-			} else if ($visit['visit_type'] == "4") {
-				$visitType = "New Customer";
+	if ($includeVisitDetails) {
+		$rowNumber += 2;
+		$sheet->setCellValue("A" . $rowNumber, "VISIT DETAILS");
+		$sheet->getStyle("A" . $rowNumber)->applyFromArray($titleStyle);
+		$rowNumber++;
+		$detailHeaders = array("Visit Date", "Visit ID", "Account", "Code", "Purpose", "Start", "Stop", "Remark", "Reason", "Outcome", "Stop Remark");
+		foreach ($detailHeaders as $index => $header) {
+			$sheet->setCellValue(PHPExcel_Cell::stringFromColumnIndex($index) . $rowNumber, $header);
+		}
+		$sheet->getStyle("A" . $rowNumber . ":K" . $rowNumber)->applyFromArray($headerStyle);
+		$rowNumber++;
+		foreach ($employee['accounts'] as $account) {
+			foreach ($account['dates'] as $dateRows) {
+				foreach ($dateRows as $visit) {
+					$sheet->setCellValue("A" . $rowNumber, date("d/m/Y", strtotime($visit['visit_date'])));
+					$sheet->setCellValue("B" . $rowNumber, $visit['id']);
+					$sheet->setCellValue("C" . $rowNumber, $account['company']);
+					$sheet->setCellValue("D" . $rowNumber, kra_excel_visit_code($visit));
+					$sheet->setCellValue("E" . $rowNumber, $visit['purpose_name']);
+					$sheet->setCellValue("F" . $rowNumber, $visit['start_date_time']);
+					$sheet->setCellValue("G" . $rowNumber, $visit['is_completed'] ? $visit['stop_date_time'] : "Open");
+					$sheet->setCellValue("H" . $rowNumber, $visit['normalized_remark_code']);
+					$sheet->setCellValue("I" . $rowNumber, $visit['normalized_reason_code']);
+					$sheet->setCellValue("J" . $rowNumber, trim($visit['remark_label'] . (($visit['reason_label'] != "") ? " - " . $visit['reason_label'] : "")));
+					$sheet->setCellValue("K" . $rowNumber, $visit['stop_remark']);
+					$rowNumber++;
+				}
 			}
-			$detailValues = array(
-				date("d/m/Y", strtotime($visit['visit_date'])),
-				$visit['id'],
-				$account['company'],
-				$account['person'],
-				$visitType,
-				$visit['purpose_name'],
-				$visit['start_date_time'],
-				$visit['is_completed'] ? $visit['stop_date_time'] : "Open",
-				$visit['duration_minutes'] === null ? "" : $visit['duration_minutes'],
-				$visit['normalized_remark_code'],
-				$visit['normalized_reason_code'],
-				trim($visit['remark_label'] . (($visit['reason_label'] != "") ? " - " . $visit['reason_label'] : "")),
-				$visit['stop_remark'],
-				$visit['product_name'],
-				$visit['name'],
-				$visit['mobile_no'],
-				$visit['app_address'],
-				$visit['stop_app_address'],
-				$visit['visit_followup_id'],
-			);
-			foreach ($detailValues as $index => $value) {
-				$column = PHPExcel_Cell::stringFromColumnIndex($index);
-				$sheet->setCellValue($column . $rowNumber, $value);
-			}
-			$rowNumber++;
 		}
 	}
 
-	$headerStyle = array(
-		"font" => array("bold" => true, "color" => array("rgb" => "FFFFFF")),
-		"fill" => array("type" => PHPExcel_Style_Fill::FILL_SOLID, "color" => array("rgb" => "E9782E")),
-		"alignment" => array("horizontal" => PHPExcel_Style_Alignment::HORIZONTAL_CENTER, "vertical" => PHPExcel_Style_Alignment::VERTICAL_CENTER, "wrap" => true),
-		"borders" => array("allborders" => array("style" => PHPExcel_Style_Border::BORDER_THIN)),
-	);
-	$titleStyle = array(
-		"font" => array("bold" => true, "size" => 14, "color" => array("rgb" => "FFFFFF")),
-		"fill" => array("type" => PHPExcel_Style_Fill::FILL_SOLID, "color" => array("rgb" => "2F6F44")),
-		"alignment" => array("horizontal" => PHPExcel_Style_Alignment::HORIZONTAL_CENTER),
-	);
-	$totalVisitHeaderStyle = array(
-		"font" => array("bold" => true, "color" => array("rgb" => "FFFFFF")),
-		"fill" => array("type" => PHPExcel_Style_Fill::FILL_SOLID, "color" => array("rgb" => "C85A12")),
-		"alignment" => array("horizontal" => PHPExcel_Style_Alignment::HORIZONTAL_CENTER, "vertical" => PHPExcel_Style_Alignment::VERTICAL_CENTER),
-	);
-	$totalVisitBodyStyle = array(
-		"font" => array("bold" => true, "size" => 14, "color" => array("rgb" => "1F4E79")),
-		"fill" => array("type" => PHPExcel_Style_Fill::FILL_SOLID, "color" => array("rgb" => "E8F4FF")),
-		"alignment" => array("horizontal" => PHPExcel_Style_Alignment::HORIZONTAL_CENTER, "vertical" => PHPExcel_Style_Alignment::VERTICAL_CENTER),
-	);
-	$visitCodeStyle = array(
-		"font" => array("bold" => true, "size" => 16, "color" => array("rgb" => "1F4E79")),
-		"alignment" => array("horizontal" => PHPExcel_Style_Alignment::HORIZONTAL_CENTER, "vertical" => PHPExcel_Style_Alignment::VERTICAL_CENTER, "wrap" => true),
-	);
-
-	$sheet->getStyle("A1:" . $lastColumn . "1")->applyFromArray($titleStyle);
-	$sheet->getStyle("A2:" . $lastColumn . "2")->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
-	$sheet->getStyle("A3:H3")->getFont()->setBold(true);
-	$sheet->getStyle("A3:H4")->getBorders()->getAllBorders()->setBorderStyle(PHPExcel_Style_Border::BORDER_THIN);
-	$sheet->getStyle("A" . $headerRow . ":" . $lastColumn . $headerRow)->applyFromArray($headerStyle);
-	$sheet->getStyle("I" . $headerRow)->applyFromArray($totalVisitHeaderStyle);
-	$sheet->getStyle("A" . $detailHeaderRow . ":" . $detailLastColumn . $detailHeaderRow)->applyFromArray($headerStyle);
-	$sheet->getStyle("A" . $detailTitleRow . ":" . $detailLastColumn . $detailTitleRow)->applyFromArray($titleStyle);
-	$sheet->getStyle("A1:" . $detailLastColumn . ($rowNumber - 1))->getAlignment()->setWrapText(true)->setVertical(PHPExcel_Style_Alignment::VERTICAL_TOP);
-
-	if ($accountEndRow >= $accountStartRow && $dateCount > 0) {
-		$sheet->getStyle("I" . $accountStartRow . ":I" . $accountEndRow)->applyFromArray($totalVisitBodyStyle);
-		$dateStartCol = PHPExcel_Cell::stringFromColumnIndex($firstDateColIndex);
-		$sheet->getStyle($dateStartCol . $accountStartRow . ":" . $lastColumn . $accountEndRow)->applyFromArray($visitCodeStyle);
-		$sheet->getStyle("A" . $summaryRow . ":" . $lastColumn . $summaryRow)->getFont()->setBold(true);
-		$sheet->getStyle("A" . $summaryRow . ":" . $lastColumn . $summaryRow)->getFill()->setFillType(PHPExcel_Style_Fill::FILL_SOLID)->getStartColor()->setRGB("EEF5EF");
-	}
-
-	// Freeze master columns + header/summary (Excel-like horizontal scroll)
 	$sheet->freezePane("J8");
-	$sheet->setAutoFilter("A" . $detailHeaderRow . ":" . $detailLastColumn . $detailHeaderRow);
 	$sheet->getColumnDimension("A")->setWidth(8);
 	$sheet->getColumnDimension("B")->setWidth(12);
 	$sheet->getColumnDimension("C")->setWidth(28);
-	$sheet->getColumnDimension("D")->setWidth(16);
-	$sheet->getColumnDimension("E")->setWidth(18);
-	$sheet->getColumnDimension("F")->setWidth(32);
-	$sheet->getColumnDimension("G")->setWidth(14);
-	$sheet->getColumnDimension("H")->setWidth(11);
+	$sheet->getColumnDimension("D")->setWidth(14);
+	$sheet->getColumnDimension("E")->setWidth(16);
+	$sheet->getColumnDimension("F")->setWidth(24);
+	$sheet->getColumnDimension("G")->setWidth(12);
+	$sheet->getColumnDimension("H")->setWidth(10);
 	$sheet->getColumnDimension("I")->setWidth(12);
 	for ($index = $firstDateColIndex; $index <= $lastColumnIndex; $index++) {
-		$sheet->getColumnDimension(PHPExcel_Cell::stringFromColumnIndex($index))->setWidth(14);
-	}
-	if ($accountEndRow >= $accountStartRow) {
-		for ($r = $accountStartRow; $r <= $accountEndRow; $r++) {
-			$sheet->getRowDimension($r)->setRowHeight(28);
-		}
+		$sheet->getColumnDimension(PHPExcel_Cell::stringFromColumnIndex($index))->setWidth(11);
 	}
 }
 
 $book->setActiveSheetIndex(0);
-$fileName = "Employee_Visit_KRA_" . date("Ymd_His") . ".xlsx";
 
-// Project-standard Excel export: save to inquiry_documents, return JSON path
-$saveDir = INQUIRY_REPORT_FILES;
+$saveDir = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'inquiry_documents' . DIRECTORY_SEPARATOR;
 if (!is_dir($saveDir)) {
-	@mkdir($saveDir, 0777, true);
+	if (!@mkdir($saveDir, 0777, true) && !is_dir($saveDir)) {
+		kra_excel_json_exit(array('ack' => 0, 'ack_msg' => 'Cannot create folder inquiry_documents. Check server write permission.'));
+	}
 }
-$savePath = $saveDir . $fileName;
+if (!is_writable($saveDir)) {
+	kra_excel_json_exit(array('ack' => 0, 'ack_msg' => 'inquiry_documents folder is not writable on server.'));
+}
 
-while (ob_get_level()) {
-	@ob_end_clean();
-}
+$fileName = "Employee_Visit_KRA_ALL_" . date("Ymd_His") . ".xlsx";
+$savePath = $saveDir . $fileName;
 
 try {
 	$writer = PHPExcel_IOFactory::createWriter($book, "Excel2007");
+	$writer->setPreCalculateFormulas(false);
 	$writer->save($savePath);
 } catch (Exception $e) {
-	header('Content-Type: application/json; charset=utf-8');
-	echo json_encode(array('ack' => 0, 'ack_msg' => 'Excel create failed: ' . $e->getMessage()));
-	exit;
+	$fileName = "Employee_Visit_KRA_ALL_" . date("Ymd_His") . ".xls";
+	$savePath = $saveDir . $fileName;
+	try {
+		$writer = PHPExcel_IOFactory::createWriter($book, "Excel5");
+		$writer->save($savePath);
+	} catch (Exception $e2) {
+		kra_excel_json_exit(array('ack' => 0, 'ack_msg' => 'Excel create failed: ' . $e->getMessage() . ' | ' . $e2->getMessage()));
+	}
 }
 
-if (!file_exists($savePath) || filesize($savePath) < 100) {
-	header('Content-Type: application/json; charset=utf-8');
-	echo json_encode(array('ack' => 0, 'ack_msg' => 'Excel file was not created. Check folder permission: inquiry_documents'));
-	exit;
+if (!file_exists($savePath) || filesize($savePath) < 50) {
+	kra_excel_json_exit(array('ack' => 0, 'ack_msg' => 'Excel file was not created. Check inquiry_documents permission.'));
 }
 
-$filePath = trim(ADMINFOLDER . "/inquiry_documents/" . $fileName);
-header('Content-Type: application/json; charset=utf-8');
-echo json_encode(array(
+kra_excel_json_exit(array(
 	'ack' => 1,
-	'ack_msg' => 'Excel ready',
-	'file_path' => $filePath,
+	'ack_msg' => 'Excel ready (' . $employeeCount . ' employees)',
+	'file_path' => trim(ADMINFOLDER . "/inquiry_documents/" . $fileName),
 	'file_name' => $fileName,
+	'employee_count' => $employeeCount,
 ));
-exit;

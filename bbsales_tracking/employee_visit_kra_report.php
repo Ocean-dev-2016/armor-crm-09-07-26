@@ -110,6 +110,10 @@ $defaultTo = date("Y-m-t");
 
 		$("#kra_filter_btn").on("click", loadReport);
 		$("#kra_excel_btn").on("click", function () {
+			var empCount = ($("#kra_employee_ids").val() || []).length;
+			var waitMsg = empCount === 0
+				? "Exporting ALL employees Excel… please wait (1–3 min on Live)."
+				: "Exporting Excel… please wait.";
 			$.ajax({
 				method: "POST",
 				url: "employee_visit_kra_report_excel.php",
@@ -118,26 +122,44 @@ $defaultTo = date("Y-m-t");
 					to_date: $("#kra_to_date").val(),
 					employee_ids: ($("#kra_employee_ids").val() || []).join(",")
 				},
-				dataType: "json",
+				dataType: "text",
+				timeout: 600000,
 				beforeSend: function () {
 					$(".loading-div").show();
+					if (!$("#kra_export_status").length) {
+						$(".loading-div").append('<div id="kra_export_status" style="margin-top:10px;font-weight:600;"></div>');
+					}
+					$("#kra_export_status").text(waitMsg);
 				},
-				success: function (result) {
+				success: function (raw) {
 					$(".loading-div").hide();
+					$("#kra_export_status").text("");
+					var result = null;
+					try { result = $.parseJSON(raw); } catch (e) { result = null; }
 					if (!result || result.ack == 0 || !result.file_path) {
-						alert((result && result.ack_msg) ? result.ack_msg : "Excel download failed");
+						var msg = (result && result.ack_msg) ? result.ack_msg : "Excel download failed";
+						if (!result && raw) {
+							msg += "\n" + String(raw).replace(/<[^>]+>/g, " ").substring(0, 250);
+						}
+						alert(msg);
 						return;
 					}
 					window.location.href = "<?= SITEURL ?>" + result.file_path;
 				},
-				error: function (xhr) {
+				error: function (xhr, status) {
 					$(".loading-div").hide();
+					$("#kra_export_status").text("");
 					var msg = "Excel download failed";
-					if (xhr && xhr.responseText) {
+					if (status === "timeout") {
+						msg = "Excel export timed out on server. Please try again, or export in 2–3 employee batches if Live is slow.";
+					} else if (xhr && xhr.responseText) {
 						try {
 							var parsed = $.parseJSON(xhr.responseText);
 							if (parsed && parsed.ack_msg) msg = parsed.ack_msg;
-						} catch (e) {}
+							else msg += " (HTTP " + xhr.status + ")";
+						} catch (e) {
+							msg += " (HTTP " + xhr.status + ")";
+						}
 					}
 					alert(msg);
 				}
