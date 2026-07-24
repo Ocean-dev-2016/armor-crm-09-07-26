@@ -277,12 +277,21 @@ if (!is_writable($saveDir)) {
 	kra_excel_json_exit(array('ack' => 0, 'ack_msg' => 'inquiry_documents folder is not writable on server.'));
 }
 
-$fileName = "Employee_Visit_KRA_ALL_" . date("Ymd_His") . ".xlsx";
+// Live has no php-zip → Excel2007 fatals with "Class ZipArchive not found"
+// Detect first and use Excel5 (.xls) which does not need ZipArchive.
+$useXlsx = class_exists('ZipArchive');
+$fileName = "Employee_Visit_KRA_ALL_" . date("Ymd_His") . ($useXlsx ? ".xlsx" : ".xls");
 $savePath = $saveDir . $fileName;
 
 try {
-	$writer = PHPExcel_IOFactory::createWriter($book, "Excel2007");
-	$writer->setPreCalculateFormulas(false);
+	if ($useXlsx) {
+		$writer = PHPExcel_IOFactory::createWriter($book, "Excel2007");
+		if (method_exists($writer, 'setPreCalculateFormulas')) {
+			$writer->setPreCalculateFormulas(false);
+		}
+	} else {
+		$writer = PHPExcel_IOFactory::createWriter($book, "Excel5");
+	}
 	$writer->save($savePath);
 } catch (Exception $e) {
 	$fileName = "Employee_Visit_KRA_ALL_" . date("Ymd_His") . ".xls";
@@ -305,4 +314,5 @@ kra_excel_json_exit(array(
 	'file_path' => trim(ADMINFOLDER . "/inquiry_documents/" . $fileName),
 	'file_name' => $fileName,
 	'employee_count' => $employeeCount,
+	'format' => $useXlsx ? 'xlsx' : 'xls',
 ));
