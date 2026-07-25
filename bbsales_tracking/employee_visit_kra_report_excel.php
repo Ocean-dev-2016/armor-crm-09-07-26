@@ -224,15 +224,42 @@ foreach ($data['employees'] as $employee) {
 		$sheet->setCellValue("A" . $rowNumber, "VISIT DETAILS");
 		$sheet->getStyle("A" . $rowNumber)->applyFromArray($titleStyle);
 		$rowNumber++;
-		$detailHeaders = array("Visit Date", "Visit ID", "Account", "Code", "Purpose", "Start", "Stop", "Remark", "Reason", "Outcome", "Stop Remark");
+		$detailHeaders = array("Visit Date", "Visit ID", "Account", "Code", "Purpose", "Start", "Stop", "Remark", "Reason", "Outcome", "Stop Remark", "Consultant Firm", "Consultant Contact", "Consultant Mobile", "HR Customer", "HR Payment", "HR Products");
 		foreach ($detailHeaders as $index => $header) {
 			$sheet->setCellValue(PHPExcel_Cell::stringFromColumnIndex($index) . $rowNumber, $header);
 		}
-		$sheet->getStyle("A" . $rowNumber . ":K" . $rowNumber)->applyFromArray($headerStyle);
+		$sheet->getStyle("A" . $rowNumber . ":Q" . $rowNumber)->applyFromArray($headerStyle);
 		$rowNumber++;
 		foreach ($employee['accounts'] as $account) {
 			foreach ($account['dates'] as $dateRows) {
 				foreach ($dateRows as $visit) {
+					$cfFirm = "";
+					$cfContact = "";
+					$cfMobile = "";
+					if (!empty($visit['consultant_form']) && is_array($visit['consultant_form'])) {
+						$cfFirm = $visit['consultant_form']['firm_name'];
+						$cfContact = $visit['consultant_form']['contact_person'];
+						$cfMobile = $visit['consultant_form']['mobile'];
+					}
+					$hrCust = "";
+					$hrPay = "";
+					$hrProducts = "";
+					if (!empty($visit['high_rate_form']) && is_array($visit['high_rate_form'])) {
+						$hrCust = $visit['high_rate_form']['customer_name'];
+						$hrPay = $visit['high_rate_form']['payment_option'];
+						if ($hrPay === '0' || $hrPay === 0) {
+							$hrPay = 'Advance';
+						} else if ($hrPay === '1' || $hrPay === 1) {
+							$hrPay = '30 Days';
+						}
+						if (!empty($visit['high_rate_items'])) {
+							$bits = array();
+							foreach ($visit['high_rate_items'] as $hi) {
+								$bits[] = $hi['product_name'] . " (G:" . $hi['given_rate'] . "/Q:" . $hi['qty'] . "/C:" . $hi['customer_rate'] . ")";
+							}
+							$hrProducts = implode("; ", $bits);
+						}
+					}
 					$sheet->setCellValue("A" . $rowNumber, date("d/m/Y", strtotime($visit['visit_date'])));
 					$sheet->setCellValue("B" . $rowNumber, $visit['id']);
 					$sheet->setCellValue("C" . $rowNumber, $account['company']);
@@ -244,6 +271,12 @@ foreach ($data['employees'] as $employee) {
 					$sheet->setCellValue("I" . $rowNumber, $visit['normalized_reason_code']);
 					$sheet->setCellValue("J" . $rowNumber, trim($visit['remark_label'] . (($visit['reason_label'] != "") ? " - " . $visit['reason_label'] : "")));
 					$sheet->setCellValue("K" . $rowNumber, $visit['stop_remark']);
+					$sheet->setCellValue("L" . $rowNumber, $cfFirm);
+					$sheet->setCellValue("M" . $rowNumber, $cfContact);
+					$sheet->setCellValue("N" . $rowNumber, $cfMobile);
+					$sheet->setCellValue("O" . $rowNumber, $hrCust);
+					$sheet->setCellValue("P" . $rowNumber, $hrPay);
+					$sheet->setCellValue("Q" . $rowNumber, $hrProducts);
 					$rowNumber++;
 				}
 			}

@@ -250,7 +250,28 @@ class EmployeeVisitKraReport
 			return;
 		}
 
+		$visitRows = array();
+		$visitIds = array();
 		while ($row = mysqli_fetch_assoc($result)) {
+			$visitId = (int) $row['id'];
+			$visitIds[] = $visitId;
+			$row['consultant_form'] = null;
+			$row['high_rate_form'] = null;
+			$row['high_rate_items'] = array();
+			$visitRows[] = $row;
+		}
+
+		$formsByVisit = $this->loadVisitFormsByVisitIds($visitIds);
+		foreach ($visitRows as $idx => $row) {
+			$vid = (int) $row['id'];
+			if (isset($formsByVisit[$vid])) {
+				$visitRows[$idx]['consultant_form'] = $formsByVisit[$vid]['consultant_form'];
+				$visitRows[$idx]['high_rate_form'] = $formsByVisit[$vid]['high_rate_form'];
+				$visitRows[$idx]['high_rate_items'] = $formsByVisit[$vid]['high_rate_items'];
+			}
+		}
+
+		foreach ($visitRows as $row) {
 			$employeeId = (int) $row['user_id'];
 			if (!isset($data['employees'][$employeeId])) {
 				continue;
@@ -297,6 +318,78 @@ class EmployeeVisitKraReport
 		foreach ($data['employees'] as $employeeId => $employee) {
 			uasort($data['employees'][$employeeId]['accounts'], array($this, "sortAccounts"));
 		}
+	}
+
+	/**
+	 * Batch-load Need Approval (consultant) + High Rate forms for visit IDs.
+	 */
+	private function loadVisitFormsByVisitIds($visitIds)
+	{
+		$out = array();
+		if (empty($visitIds)) {
+			return $out;
+		}
+		$ids = array();
+		foreach ($visitIds as $id) {
+			$id = (int) $id;
+			if ($id > 0) {
+				$ids[$id] = $id;
+				$out[$id] = array(
+					"consultant_form" => null,
+					"high_rate_form" => null,
+					"high_rate_items" => array(),
+				);
+			}
+		}
+		if (empty($ids)) {
+			return $out;
+		}
+		$idList = implode(",", $ids);
+
+		$cfRes = $this->safeQuery("SELECT * FROM visit_consultant_form WHERE isDelete=0 AND visit_id IN (" . $idList . ") ORDER BY id DESC");
+		if ($cfRes) {
+			while ($cf = mysqli_fetch_assoc($cfRes)) {
+				$vid = (int) $cf['visit_id'];
+				if (isset($out[$vid]) && $out[$vid]['consultant_form'] === null) {
+					$out[$vid]['consultant_form'] = $cf;
+				}
+			}
+		}
+
+		$hrRes = $this->safeQuery("SELECT * FROM visit_high_rate_form WHERE isDelete=0 AND visit_id IN (" . $idList . ") ORDER BY id DESC");
+		$hrFormIds = array();
+		if ($hrRes) {
+			while ($hr = mysqli_fetch_assoc($hrRes)) {
+				$vid = (int) $hr['visit_id'];
+				if (isset($out[$vid]) && $out[$vid]['high_rate_form'] === null) {
+					$out[$vid]['high_rate_form'] = $hr;
+					$hrFormIds[(int) $hr['id']] = $vid;
+				}
+			}
+		}
+
+		if (!empty($hrFormIds)) {
+			$itemRes = $this->safeQuery(
+				"SELECT * FROM visit_high_rate_form_item
+				 WHERE isDelete=0 AND high_rate_form_id IN (" . implode(",", array_keys($hrFormIds)) . ")
+				 ORDER BY sort_order ASC, id ASC"
+			);
+			if ($itemRes) {
+				while ($it = mysqli_fetch_assoc($itemRes)) {
+					if ($it['given_rate'] == "" && $it['qty'] == "" && $it['customer_rate'] == "" && empty($it['remark'])) {
+						continue;
+					}
+					$fid = (int) $it['high_rate_form_id'];
+					if (!isset($hrFormIds[$fid])) {
+						continue;
+					}
+					$vid = $hrFormIds[$fid];
+					$out[$vid]['high_rate_items'][] = $it;
+				}
+			}
+		}
+
+		return $out;
 	}
 
 	public function sortAccounts($a, $b)

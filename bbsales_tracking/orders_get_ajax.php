@@ -189,11 +189,40 @@ if (isset($_REQUEST['customer_id']) && $_REQUEST['customer_id'] != "" && $_REQUE
 	$ctable_where .= " AND customer_id = '" . $_REQUEST['customer_id'] . "'";
 }
 // echo $_REQUEST['type']
-if (isset($_REQUEST['type']) && $_REQUEST['type'] != "" && $_REQUEST['type'] != NULL && $_REQUEST['type'] != undefined) {
-	if ($_REQUEST['type'] == "channel_partner") {
+$isPendingPaymentList = false;
+$isCpPortalList = false;
+$hasCpPortalCol = false;
+$cpPortalColCheck = @mysqli_query($db->myconn, "SHOW COLUMNS FROM `orders` LIKE 'cp_portal_order_flag'");
+if ($cpPortalColCheck && mysqli_num_rows($cpPortalColCheck) > 0) {
+	$hasCpPortalCol = true;
+}
+$is_cp_login_list = function_exists('cp_is_channel_partner_login') && cp_is_channel_partner_login($db);
+
+if (isset($_REQUEST['type']) && $_REQUEST['type'] != "" && $_REQUEST['type'] != NULL && $_REQUEST['type'] != 'undefined') {
+	if ($_REQUEST['type'] == "channel_partner_portal") {
+		$isCpPortalList = true;
 		$ctable_where .= " AND channel_partner_order_flag=1 ";
+		if ($hasCpPortalCol) {
+			$ctable_where .= " AND cp_portal_order_flag=1 ";
+		} else {
+			$ctable_where .= " AND 1=0 ";
+		}
 		$type = $_REQUEST['type'];
 		$disabled = "disabled";
+	} else if ($_REQUEST['type'] == "channel_partner") {
+		$ctable_where .= " AND channel_partner_order_flag=1 ";
+		/* Admin routine list: exclude portal-pending; CP My Orders: show all */
+		if ($hasCpPortalCol && !$is_cp_login_list) {
+			$ctable_where .= " AND (cp_portal_order_flag=0 OR cp_portal_order_flag IS NULL) ";
+		}
+		$type = $_REQUEST['type'];
+		$disabled = "disabled";
+	} else if ($_REQUEST['type'] == "pending_payment") {
+		$isPendingPaymentList = true;
+		$ctable_where .= " AND (payment_received_flag=0 OR payment_received_flag IS NULL) ";
+		$ctable_where .= " AND DATE(order_date) <= DATE_SUB(CURDATE(), INTERVAL 45 DAY) ";
+		$ctable_where .= " AND status NOT IN (-2,3) ";
+		$type = $_REQUEST['type'];
 	} else if ($_REQUEST['type'] != 100) {
 		$ctable_where .= " AND customer_type = '" . $_REQUEST['type'] . "' AND (channel_partner_order_flag=0 OR channel_partner_order_flag IS NULL) ";
 		$type = $_REQUEST['type'];
@@ -212,7 +241,7 @@ $total_pages = ceil($get_total_rows / $item_per_page);
 //get starting position to fetch the records
 $page_position = (($page_number - 1) * $item_per_page);
 
-$ctable_r = $db->rp_getData($ctable, "*", $ctable_where, "id DESC limit $page_position, $item_per_page", 0);
+$ctable_r = $db->rp_getData($ctable, "*", $ctable_where, ($isPendingPaymentList ? "company_name ASC, customer_name ASC, order_date ASC, id ASC" : "id DESC") . " limit $page_position, $item_per_page", 0);
 
 $lr_right_r = $db->rp_getData("page_admin_right", "*", "page_id = 615 AND admin_id = '" . $_SESSION[SITE_SESS . '_ADMIN_TYPE'] . "'", "", 0);
 // $lr_right = mysqli_fetch_array($lr_right_r);
@@ -504,10 +533,34 @@ $orders_status = array(/*"-1"=>"Add to Cart",*/"-2" => "Disapproved", "" => "Wai
 				if ($ctable_r) {
 					$count = 0;
 					$sales_name = '';
+					$lastCustomerKey = null;
+					$colspanCount = 14;
+					$paymentTypeLabels = array("1" => "By Cash", "2" => "By Cheque", "3" => "Online", "4" => "Other");
 					$entry_type_status = array("1" => "Admin Panel", "2" => "customer", "3" => "Web Sales", 4 => "Web Customer", 5 => "Sales App", 6 => "Customer App");
 					$orders_status = array("-1" => "Add to Cart", "-2" => "Disapproved", "0" => "Waiting For Approval", "1" => "Waiting For Account Approval", "3" => "Cancelled", "4" => "Account Approved", "5" => "Dispatch", "6" => "Order Complate");
 					while ($ctable_d = mysqli_fetch_array($ctable_r)) {
-						// $orders_status = array("-1"=>"Add to Cart","-2"=>"Disapproved","0"=>"Waiting For Approval","1"=>"Waiting For Account Approval","3"=>"Cancelled","4"=>"Account Approved","5"=>"Dispatch","6"=>"Order Complate","7"=>"Pending LR");
+						// Customer-wise header for Pending Payment list
+						if ($isPendingPaymentList) {
+							$custKey = (int) $ctable_d['customer_id'] . '|' . $ctable_d['company_name'];
+							if ($lastCustomerKey !== $custKey) {
+								$lastCustomerKey = $custKey;
+								$custLabel = trim($ctable_d['company_name']) != '' ? $ctable_d['company_name'] : 'Unknown Customer';
+								if (trim($ctable_d['customer_name']) != '') {
+									$custLabel .= ' — ' . $ctable_d['customer_name'];
+								}
+								if (!empty($ctable_d['client_code'])) {
+									$custLabel .= ' (' . $ctable_d['client_code'] . ')';
+								}
+								?>
+								<tr style="background-color:#f5d0d0;">
+									<td colspan="<?php echo (int) $colspanCount; ?>" style="font-weight:700;color:#922b21;font-size:13px;padding:8px 10px;">
+										<i class="fa fa-user"></i> <?php echo htmlspecialchars($custLabel, ENT_QUOTES, 'UTF-8'); ?>
+									</td>
+								</tr>
+								<?php
+							}
+						}
+
 						$transport_through_id = $db->rp_getValue("orders", "transport_through", "id='" . $ctable_d['id'] . "'", 0);
 						$get_approved_by_name = $db->rp_getValue("dealer_distributor_network", "name", "id='" . $ctable_d['approve_by_id'] . "'", 0);
 						$transport_through = $db->rp_getValue("transport_by", "name", "id='" . $transport_through_id . "'");
@@ -548,6 +601,16 @@ $orders_status = array(/*"-1"=>"Add to Cart",*/"-2" => "Disapproved", "" => "Wai
 				{
 					$style = "style='background-color: #ec9b97;'";
 				}*/
+
+				$style = "";
+				if ($isPendingPaymentList) {
+					$style = "style='background-color:#fde8e8;color:#c0392b;'";
+				} else if (isset($ctable_d['payment_received_flag']) && (int) $ctable_d['payment_received_flag'] === 0
+					&& !empty($ctable_d['order_date']) && $ctable_d['order_date'] != '0000-00-00'
+					&& strtotime($ctable_d['order_date']) <= strtotime('-45 days')) {
+					// Soft highlight on All Orders when overdue without payment mark
+					$style = "style='color:#c0392b;'";
+				}
 
 				?>
 						<tr <?= $style ?>>
@@ -601,6 +664,24 @@ $orders_status = array(/*"-1"=>"Add to Cart",*/"-2" => "Disapproved", "" => "Wai
 											</li>
 											<li><a href="orders_crud.php?order_id=<?= $ctable_d['id'] ?>&mode=add&c_type=<?= $type ?>"><span class="text-warning"><i class="fa fa-refresh"></i> Repeat Order</span></a></li>
 											<?php
+											if (!$is_cp_login_list && !empty($ctable_d['cp_portal_order_flag']) && (int) $ctable_d['cp_portal_order_flag'] === 1) {
+												$cpFromName = trim($ctable_d['company_name']);
+												if ($cpFromName == '' && !empty($ctable_d['customer_name'])) {
+													$cpFromName = $ctable_d['customer_name'];
+												}
+											?>
+												<li>
+													<a href="javascript:;" onClick="ConvertCpPortalOrder('<?php echo $ctable_d['id']; ?>');">
+														<span class="text-primary"><i class="fa fa-exchange"></i> Convert to Regular Order (with Pricing)</span>
+													</a>
+												</li>
+												<li>
+													<a href="javascript:;" style="cursor:default;opacity:0.9;" title="Portal source">
+														<span class="text-warning"><i class="fa fa-building"></i> Order from <?php echo htmlspecialchars($cpFromName); ?></span>
+													</a>
+												</li>
+											<?php
+											}
 											if ($ctable_d['status'] == 1) {
 											?>
 												<li><a href="javascript:;" onClick="OrderStatus('<?php echo $ctable_d['id']; ?>','4');"><span><i class="fa fa-circle"></i>Account Approve</span></a></li>
@@ -660,6 +741,56 @@ $orders_status = array(/*"-1"=>"Add to Cart",*/"-2" => "Disapproved", "" => "Wai
 													</span>
 												</a>
 											</li>
+											<?php
+											$payReceived = isset($ctable_d['payment_received_flag']) ? (int) $ctable_d['payment_received_flag'] : 0;
+											if ($payReceived === 1) {
+												$payDateShow = (!empty($ctable_d['payment_received_date']) && $ctable_d['payment_received_date'] != '0000-00-00 00:00:00')
+													? date('d-m-Y', strtotime($ctable_d['payment_received_date']))
+													: '';
+												$payAmtShow = isset($ctable_d['payment_received_amount']) ? (float) $ctable_d['payment_received_amount'] : 0;
+												$payTypeShow = '';
+												if (isset($ctable_d['payment_received_type']) && isset($paymentTypeLabels[$ctable_d['payment_received_type']])) {
+													$payTypeShow = $paymentTypeLabels[$ctable_d['payment_received_type']];
+												}
+												$payExtra = array();
+												if ($payAmtShow > 0) {
+													$payExtra[] = number_format($payAmtShow, 2);
+												}
+												if ($payTypeShow != '') {
+													$payExtra[] = $payTypeShow;
+												}
+												if ($payDateShow != '') {
+													$payExtra[] = $payDateShow;
+												}
+												?>
+												<li>
+													<a href="javascript:;" title="Already marked" style="cursor:default;opacity:0.75;">
+														<span class="text-muted">
+															<i class="fa fa-check-circle"></i>
+															&nbsp;Payment Received<?php echo !empty($payExtra) ? ' (' . implode(' | ', $payExtra) . ')' : ''; ?>
+														</span>
+													</a>
+												</li>
+												<?php
+											} else if ($rights['update_flag'] == 1 || $_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0) {
+												$orderGrand = isset($ctable_d['grand_total']) ? (float) $ctable_d['grand_total'] : 0;
+												?>
+												<li>
+													<a href="#paymentReceivedModal"
+														data-toggle="modal"
+														data-order-id="<?php echo (int) $ctable_d['id']; ?>"
+														data-order-no="<?php echo htmlspecialchars($ctable_d['order_no'], ENT_QUOTES, 'UTF-8'); ?>"
+														data-grand-total="<?php echo $orderGrand; ?>"
+														title="Mark Payment Received">
+														<span class="text-success">
+															<i class="fa fa-money"></i>
+															&nbsp;Payment Received
+														</span>
+													</a>
+												</li>
+												<?php
+											}
+											?>
 										</ul>
 									</div>
 								<?php
@@ -667,7 +798,19 @@ $orders_status = array(/*"-1"=>"Add to Cart",*/"-2" => "Disapproved", "" => "Wai
 								?>
 							</td>
 							<td><?php echo ++$count; ?></td>
-							<td><span class="text-success"><a href="order_viewer.php?order_id=<?= $ctable_d['id'] ?>"><?php echo stripslashes($ctable_d['order_no']); ?></a></span><?php if (!empty($ctable_d['channel_partner_order_flag']) && $ctable_d['channel_partner_order_flag'] == 1) { ?> <span class="label label-info">Channel Partner</span><?php } ?></td>
+							<td><span class="text-success"><a href="order_viewer.php?order_id=<?= $ctable_d['id'] ?>"><?php echo stripslashes($ctable_d['order_no']); ?></a></span><?php if (!empty($ctable_d['channel_partner_order_flag']) && $ctable_d['channel_partner_order_flag'] == 1) { ?> <span class="label label-info">Channel Partner</span><?php } ?><?php
+							if (!empty($ctable_d['cp_portal_order_flag']) && (int) $ctable_d['cp_portal_order_flag'] === 1) {
+								$cpFromLbl = trim($ctable_d['company_name']);
+								if ($cpFromLbl == '' && !empty($ctable_d['customer_name'])) {
+									$cpFromLbl = $ctable_d['customer_name'];
+								}
+								echo ' <span class="label label-warning">Portal</span>';
+								echo '<div style="margin-top:4px;font-size:11px;color:#c87f0a;"><b>Order from:</b> ' . htmlspecialchars($cpFromLbl) . '</div>';
+								if (!$is_cp_login_list) {
+									echo '<div style="margin-top:2px;"><a href="javascript:;" class="btn btn-xs yellow" onClick="ConvertCpPortalOrder(\'' . (int) $ctable_d['id'] . '\');"><i class="fa fa-exchange"></i> Convert to Regular Order</a></div>';
+								}
+							}
+							?></td>
 							<td><?php echo $get_approved_by_name ?></td>
 							<?php
 							if ($_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 11) {
@@ -938,5 +1081,7 @@ $orders_status = array(/*"-1"=>"Add to Cart",*/"-2" => "Disapproved", "" => "Wai
 			});
 		}
 	}
+
+	// Payment Received uses #paymentReceivedModal in dealer_orders_manage.php
 </script>
 <?php require_once "disconnect.php"; ?>

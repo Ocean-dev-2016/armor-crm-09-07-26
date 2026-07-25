@@ -109,7 +109,7 @@ $ctableAPK        = "application_info";
 								if ($is_cp_menu && isset($arr[1]) && $arr[1] == 'channel_partner') {
 									$cp_menu_pages = array(
 										array("My Customers", "channel_partner_customer", "channel_partner_customer_manage.php", 555),
-										array("Add Customer Order", "channel_partner_order", "orders_crud.php?mode=add&c_type=channel_partner", 565),
+										array("Add Customer Order", "channel_partner_order", "channel_partner_order_simple.php?cp_mode=customer", 565),
 										array("My Stock", "channel_partner_stock", "channel_partner_stock_manage.php", 650),
 									);
 						?>
@@ -195,7 +195,13 @@ $ctableAPK        = "application_info";
 									<a href="dealer_orders_manage.php?type=100" id="mntp_order20"><i class="icon-list"></i>All Orders</a>
 								</li>
 								<li class="">
+									<a href="dealer_orders_manage.php?type=channel_partner_portal" id="mntp_order_cp_portal"><i class="icon-list"></i>Channel Partner Portal Orders</a>
+								</li>
+								<li class="">
 									<a href="dealer_orders_manage.php?type=channel_partner" id="mntp_order_cp"><i class="icon-list"></i>Channel Partner Orders</a>
+								</li>
+								<li class="">
+									<a href="dealer_orders_manage.php?type=pending_payment" id="mntp_order_pending_pay"><i class="icon-list"></i>Pending Payment</a>
 								</li>
 						<?php
 							}

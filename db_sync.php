@@ -709,6 +709,63 @@ db_sync_add_column_if_missing(
 	"int(11) NOT NULL DEFAULT 0 COMMENT 'FK channel_partner_customer.id (end customer for CP order)'",
 	array('channel_partner_order_flag', 'customer_id')
 );
+db_sync_add_column_if_missing(
+	$conn,
+	'orders',
+	'cp_portal_order_flag',
+	"tinyint(1) NOT NULL DEFAULT 0 COMMENT '1=CP portal simple order pending Convert to Order'",
+	array('channel_partner_customer_id', 'channel_partner_order_flag')
+);
+db_sync_add_column_if_missing(
+	$conn,
+	'orders',
+	'cp_order_mode',
+	"varchar(20) NOT NULL DEFAULT '' COMMENT 'own|customer — CP portal order mode'",
+	array('cp_portal_order_flag', 'channel_partner_customer_id')
+);
+
+/* ------------------------------------------------------------------
+ * STEP 5g — Payment Received flag on orders (Pending Payment 45 days)
+ * ------------------------------------------------------------------ */
+db_sync_add_column_if_missing(
+	$conn,
+	'orders',
+	'payment_received_flag',
+	"tinyint(1) NOT NULL DEFAULT 0 COMMENT '1=Payment Received marked from Order History'",
+	array('channel_partner_customer_id', 'channel_partner_order_flag', 'status')
+);
+db_sync_add_column_if_missing(
+	$conn,
+	'orders',
+	'payment_received_date',
+	"datetime DEFAULT NULL COMMENT 'When Payment Received was marked'",
+	array('payment_received_flag')
+);
+db_sync_add_column_if_missing(
+	$conn,
+	'orders',
+	'payment_received_by',
+	"int(11) NOT NULL DEFAULT 0 COMMENT 'dealer_distributor_network.id who marked payment received'",
+	array('payment_received_date', 'payment_received_flag')
+);
+db_sync_add_column_if_missing(
+	$conn,
+	'orders',
+	'payment_received_amount',
+	"decimal(15,2) NOT NULL DEFAULT 0.00 COMMENT 'Amount received against order'",
+	array('payment_received_by', 'payment_received_flag')
+);
+db_sync_add_column_if_missing(
+	$conn,
+	'orders',
+	'payment_received_type',
+	"tinyint(1) NOT NULL DEFAULT 0 COMMENT '1=Cash 2=Cheque 3=Online 4=Other'",
+	array('payment_received_amount', 'payment_received_flag')
+);
+db_sync_append_page_urls($conn, 565, array(
+	'order_payment_received_ajax.php',
+	'dealer_orders_manage.php',
+));
 
 /* ------------------------------------------------------------------
  * STEP 6 — Final verification (every run)
@@ -872,6 +929,23 @@ if (db_sync_table_exists($conn, 'api_table')) {
 	} else {
 		$allReady = false;
 		db_sync_log('FAIL', 'MISSING: orders.channel_partner_order_flag');
+	}
+	foreach (array('cp_portal_order_flag', 'cp_order_mode') as $cpPortalCol) {
+		if (db_sync_column_exists($conn, 'orders', $cpPortalCol)) {
+			db_sync_log('CHECK', 'READY: orders.' . $cpPortalCol);
+		} else {
+			$allReady = false;
+			db_sync_log('FAIL', 'MISSING: orders.' . $cpPortalCol);
+		}
+	}
+
+	foreach (array('payment_received_flag', 'payment_received_date', 'payment_received_by', 'payment_received_amount', 'payment_received_type') as $payCol) {
+		if (db_sync_column_exists($conn, 'orders', $payCol)) {
+			db_sync_log('CHECK', 'READY: orders.' . $payCol);
+		} else {
+			$allReady = false;
+			db_sync_log('FAIL', 'MISSING: orders.' . $payCol);
+		}
 	}
 
 	foreach (array('visit_consultant_form', 'visit_high_rate_form', 'visit_high_rate_form_item') as $formTable) {
@@ -1126,6 +1200,8 @@ $environment = isset($config['environment']) ? $config['environment'] : 'unknown
 			<li>API <code>#235 get_visit_high_rate_products</code> — fixed product list with slugs</li>
 			<li>Visit forms: <code>visit_consultant_form</code> (C1/C2), <code>visit_high_rate_form</code> + <code>visit_high_rate_form_item</code> (E1)</li>
 			<li>Column <code>orders.channel_partner_order_flag</code> (1=Channel Partner Order)</li>
+			<li>Columns <code>orders.cp_portal_order_flag</code>, <code>cp_order_mode</code> (CP portal order → Convert to Order)</li>
+			<li>Columns <code>orders.payment_received_flag</code>, <code>payment_received_date</code>, <code>payment_received_by</code>, <code>payment_received_amount</code>, <code>payment_received_type</code> (Pending Payment 45 days)</li>
 		</ul>
 		<p><strong>Safe:</strong> Idempotent — run multiple times; existing data is not deleted.</p>
 		<p><strong>Security:</strong> Delete <code>db_sync.php</code> from live after final READY confirmation.</p>

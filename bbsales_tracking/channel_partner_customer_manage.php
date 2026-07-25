@@ -65,7 +65,7 @@ include("connect.php");
 										</a>
 									<?php } ?>
 									<?php if (function_exists('cp_is_channel_partner_login') && cp_is_channel_partner_login($db)) { ?>
-										<a href="orders_crud.php?mode=add&c_type=channel_partner" class="btn sbold green">
+										<a href="channel_partner_order_simple.php?cp_mode=customer" class="btn sbold green">
 											Add Customer Order <i class="fa fa-shopping-cart"></i>
 										</a>
 									<?php } ?>

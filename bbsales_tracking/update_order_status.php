@@ -9,6 +9,9 @@ $status	= $_REQUEST['status'];
 
 $customer_id = $db->rp_getValue("orders", "customer_id", "id='" . $order_id . "'");
 $order_no = $db->rp_getValue("orders", "order_no", "id='" . $order_id . "'");
+$update = false;
+$txt = "Updated";
+
 if ($status == 1) {
 	$txt = "Approved";
 	/*log entry*/
@@ -47,24 +50,41 @@ if ($status == 1) {
 	/*log entry*/
 } else if ($status == -2) {
 	$txt = "Disapproved";
-	/*log entry*/
 	$ctable = "orders";
 	$last_id = $order_id;
 	$flag = "Web";
 	$module_name = "Order";
 	$log_description = $module_name . " " . $order_no . " Status Change To " . $txt . " By " . $_SESSION[SITE_SESS . 'SESS_NAME'] . " ON " . date("Y-m-d H:i:s");
 	$db->insertLog($ctable, $last_id, "status_change", "", $insert, 0, $log_description, $flag, $module_name, $user_id, $customer_id);
-	/*log entry*/
+	$update = $db->rp_update("orders", array("status" => $status), "id='" . $order_id . "'", 0);
 } else if ($status == 3) {
 	$txt = "Cancelled";
-	/*log entry*/
 	$ctable = "orders";
 	$last_id = $order_id;
 	$flag = "Web";
 	$module_name = "Order";
 	$log_description = $module_name . " " . $order_no . " Status Change To " . $txt . " By " . $_SESSION[SITE_SESS . 'SESS_NAME'] . " ON " . date("Y-m-d H:i:s");
 	$db->insertLog($ctable, $last_id, "status_change", "", $insert, 0, $log_description, $flag, $module_name, $user_id, $customer_id);
-	/*log entry*/
+	$update = $db->rp_update("orders", array("status" => $status), "id='" . $order_id . "'", 0);
+} else if ($status == 4) {
+	// Gear menu / Order Viewer → Account Approve
+	$txt = "Account Approved";
+	$ctable = "orders";
+	$last_id = $order_id;
+	$flag = "Web";
+	$module_name = "Order";
+	$log_description = $module_name . " " . $order_no . " Status Change To " . $txt . " By " . $_SESSION[SITE_SESS . 'SESS_NAME'] . " ON " . date("Y-m-d H:i:s");
+	$db->insertLog($ctable, $last_id, "status_change", "", $insert, 0, $log_description, $flag, $module_name, $user_id, $customer_id);
+	$update = $db->rp_update("orders", array("status" => $status), "id='" . $order_id . "'", 0);
+} else if ($status == 5) {
+	$txt = "Dispatch";
+	$update = $db->rp_update("orders", array("status" => $status), "id='" . $order_id . "'", 0);
+} else if ($status == 6) {
+	$txt = "Order Complete";
+	$update = $db->rp_update("orders", array("status" => $status), "id='" . $order_id . "'", 0);
+} else if ($status == 7) {
+	$txt = "LR Pending";
+	$update = $db->rp_update("orders", array("status" => $status), "id='" . $order_id . "'", 0);
 }
 if ($update) {
 

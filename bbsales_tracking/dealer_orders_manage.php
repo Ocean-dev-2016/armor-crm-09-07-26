@@ -7,6 +7,10 @@ $page 		= "manage_".$ctable;
 $page_title = "Order History";
 if (isset($_REQUEST['type']) && $_REQUEST['type'] == "channel_partner") {
 	$page_title = "Channel Partner Order";
+} else if (isset($_REQUEST['type']) && $_REQUEST['type'] == "channel_partner_portal") {
+	$page_title = "Channel Partner Portal Orders";
+} else if (isset($_REQUEST['type']) && $_REQUEST['type'] == "pending_payment") {
+	$page_title = "Pending Payment Orders";
 } else if (isset($_REQUEST['type']) && $_REQUEST['type'] == "100") {
 	$page_title = "All Orders";
 }
@@ -150,7 +154,18 @@ if(isset($_REQUEST['lr_add_submit'])){
 									if($_SESSION[SITE_SESS.'_ADMIN_TYPE']!=0)
 									{
 									}
-									echo $db->getAddButton($ctable,$_REQUEST['type']);
+									$cp_add_url = null;
+									if (isset($_REQUEST['type']) && $_REQUEST['type'] == 'channel_partner'
+										&& function_exists('cp_is_channel_partner_login') && cp_is_channel_partner_login($db)) {
+										$cp_add_url = 'channel_partner_order_simple.php?cp_mode=own';
+									}
+									if (isset($_REQUEST['type']) && $_REQUEST['type'] == 'channel_partner_portal') {
+										/* Admin portal list: no add button — orders come from CP portal */
+										$cp_add_url = false;
+									}
+									if ($cp_add_url !== false) {
+										echo $db->getAddButton($ctable, $_REQUEST['type'], $cp_add_url);
+									}
 									?>
 									
 								</div>
@@ -371,6 +386,52 @@ if(isset($_REQUEST['lr_add_submit'])){
 	</div>
 </div>
 <!-- lr attachment modal end -->
+
+<!-- Payment Received against Order -->
+<div id="paymentReceivedModal" class="modal fade" tabindex="-1" role="dialog">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header" style="background:#2f6f44;color:#fff;">
+				<button type="button" class="close" data-dismiss="modal" style="color:#fff;opacity:1;">&times;</button>
+				<h4 class="modal-title"><i class="fa fa-money"></i> Payment Received</h4>
+			</div>
+			<div class="modal-body">
+				<input type="hidden" id="pr_order_id" value="">
+				<div class="form-group">
+					<label>Order Number</label>
+					<input type="text" class="form-control" id="pr_order_no" readonly>
+				</div>
+				<div class="form-group">
+					<label>Order Amount</label>
+					<input type="text" class="form-control" id="pr_order_amount" readonly>
+				</div>
+				<div class="form-group">
+					<label>Payment Received Amount <code>*</code></label>
+					<input type="number" step="0.01" min="0.01" class="form-control" id="pr_paid_amount" placeholder="Enter amount received">
+				</div>
+				<div class="form-group">
+					<label>Payment Type <code>*</code></label>
+					<select class="form-control" id="pr_payment_type">
+						<option value="">--- Select Payment Type ---</option>
+						<option value="1">By Cash</option>
+						<option value="2">By Cheque</option>
+						<option value="3">Online</option>
+						<option value="4">Other</option>
+					</select>
+				</div>
+				<div class="form-group">
+					<label>Remark</label>
+					<textarea class="form-control" id="pr_remark" rows="2" placeholder="Optional"></textarea>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+				<button type="button" class="btn btn-success" id="pr_save_btn"><i class="fa fa-save"></i> Save Payment</button>
+			</div>
+		</div>
+	</div>
+</div>
+
 <?php include("footer.php"); ?>
 <?php include("include_js.php"); ?>
 <script type="text/javascript" src="assets/global/plugins/datatables/media/js/jquery.dataTables.min.js"></script>
@@ -706,6 +767,82 @@ function del_conf(id){
 	}
 }
 
+$('#paymentReceivedModal').on('show.bs.modal', function (event) {
+	var button = $(event.relatedTarget);
+	var orderId = button.data('order-id') || '';
+	var orderNo = button.data('order-no') || '';
+	var grandTotal = button.data('grand-total') || 0;
+	$('#pr_order_id').val(orderId);
+	$('#pr_order_no').val(orderNo);
+	$('#pr_order_amount').val(grandTotal);
+	$('#pr_paid_amount').val(grandTotal > 0 ? grandTotal : '');
+	$('#pr_payment_type').val('');
+	$('#pr_remark').val('');
+});
+
+$('#pr_save_btn').on('click', function () {
+	var orderId = $('#pr_order_id').val();
+	var paidAmount = $.trim($('#pr_paid_amount').val());
+	var paymentType = $('#pr_payment_type').val();
+	var remark = $.trim($('#pr_remark').val());
+	var orderNo = $('#pr_order_no').val();
+
+	if (!orderId) {
+		alert('Invalid order.');
+		return;
+	}
+	if (paidAmount === '' || isNaN(paidAmount) || parseFloat(paidAmount) <= 0) {
+		alert('Please enter Payment Received Amount.');
+		$('#pr_paid_amount').focus();
+		return;
+	}
+	if (!paymentType) {
+		alert('Please select Payment Type.');
+		$('#pr_payment_type').focus();
+		return;
+	}
+	if (!confirm('Save Payment Received for Order ' + orderNo + '?')) {
+		return;
+	}
+
+	var $btn = $(this);
+	$btn.prop('disabled', true);
+	$.ajax({
+		type: 'POST',
+		url: 'order_payment_received_ajax.php',
+		data: {
+			order_id: orderId,
+			paid_amount: paidAmount,
+			payment_type: paymentType,
+			remark: remark
+		},
+		dataType: 'json',
+		success: function (result) {
+			$btn.prop('disabled', false);
+			if (result && result.ack == 1) {
+				$('#paymentReceivedModal').modal('hide');
+				if (typeof toastr !== 'undefined') {
+					toastr.success(result.ack_msg);
+				} else {
+					alert(result.ack_msg);
+				}
+				displayRecords(typeof numRecords !== 'undefined' ? numRecords : 100, 1);
+			} else {
+				var msg = (result && result.ack_msg) ? result.ack_msg : 'Failed to save payment';
+				if (typeof toastr !== 'undefined') {
+					toastr.error(msg);
+				} else {
+					alert(msg);
+				}
+			}
+		},
+		error: function () {
+			$btn.prop('disabled', false);
+			alert('Payment Received request failed');
+		}
+	});
+});
+
 function confirmChange(id) 
 {
 	var r=confirm("Are you sure to forward order to production department?");
@@ -860,6 +997,41 @@ var newdispatch_status = $("#dispatch_status"+id).val();
 }
 
 
+
+function ConvertCpPortalOrder(oid) {
+	var r = confirm("Convert this Portal Order to regular Channel Partner Order with pricing?\n\nIt will open in Armor regular order format.");
+	if (!r) {
+		return;
+	}
+	$.ajax({
+		type: "POST",
+		url: "ajax_convert_cp_portal_order.php",
+		data: { order_id: oid },
+		dataType: "json",
+		beforeSend: function () {
+			$(".transCover").fadeIn(800);
+		},
+		success: function (result) {
+			$(".transCover").fadeOut(100);
+			if (result && result.ack == 1) {
+				toastr.success(result.ack_msg);
+				if (result.redirect) {
+					setTimeout(function () {
+						window.location.href = result.redirect;
+					}, 800);
+				} else if (typeof displayRecords === "function") {
+					displayRecords(typeof numRecords !== "undefined" ? numRecords : 100, 1);
+				}
+			} else {
+				toastr.error((result && result.ack_msg) ? result.ack_msg : "Convert failed");
+			}
+		},
+		error: function () {
+			$(".transCover").fadeOut(100);
+			toastr.error("Convert request failed");
+		}
+	});
+}
 </script>
 </body>
 </html>

@@ -948,7 +948,11 @@ class Order extends Functions
 				if ($detail['order_id'] != "") {
 					$order_id = $detail['order_id'];
 				} else {
-					$order_id = $this->db->rp_getValue("orders", "id", "customer_id='" . $detail['cid'] . "' AND isDelete=0 AND status=0", 0);
+					$order_id = $this->db->rp_getValue("orders", "id", "customer_id='" . $detail['cid'] . "' AND isDelete=0 AND status=-1 " . $where . " ORDER BY id DESC", 0);
+				}
+				if ($order_id == "" || $order_id == 0 || $order_id == null) {
+					$reply = array("ack" => 0, "developer_msg" => "Cart order id not found", "ack_msg" => "Product added Failed");
+					return $reply;
 				}
 
 				$price_list_id = $this->db->rp_getValue("executive", "price_list_id", "id='" . $detail['cid'] . "' AND isDelete=0", 0);
@@ -1299,6 +1303,30 @@ class Order extends Functions
 					if ($has_cp_order_flag && $channel_partner_order_flag == 1) {
 						$this->db->rp_update("orders", array("channel_partner_order_flag" => 1), "id='" . $order_id . "'", 0);
 					}
+					/* CP portal simple order → pending Convert to Order for admin */
+					$cp_portal_flag = 0;
+					if (isset($detail['cp_portal_order_flag']) && (int) $detail['cp_portal_order_flag'] === 1) {
+						$cp_portal_flag = 1;
+					} else if (isset($_REQUEST['cp_portal_order_flag']) && (int) $_REQUEST['cp_portal_order_flag'] === 1) {
+						$cp_portal_flag = 1;
+					}
+					$cp_portal_col = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `orders` LIKE 'cp_portal_order_flag'");
+					if ($cp_portal_flag == 1 && $cp_portal_col && mysqli_num_rows($cp_portal_col) > 0) {
+						$portalUpd = array("cp_portal_order_flag" => 1);
+						$cp_mode_col = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `orders` LIKE 'cp_order_mode'");
+						if ($cp_mode_col && mysqli_num_rows($cp_mode_col) > 0) {
+							$cp_mode_val = '';
+							if (isset($detail['cp_order_mode'])) {
+								$cp_mode_val = $detail['cp_order_mode'];
+							} else if (isset($_REQUEST['cp_mode'])) {
+								$cp_mode_val = $_REQUEST['cp_mode'];
+							}
+							if ($cp_mode_val == 'own' || $cp_mode_val == 'customer') {
+								$portalUpd['cp_order_mode'] = $cp_mode_val;
+							}
+						}
+						$this->db->rp_update("orders", $portalUpd, "id='" . $order_id . "'", 0);
+					}
 					/* Link Channel Partner end-customer (channel_partner_customer) when provided */
 					$cp_end_customer_id = 0;
 					if (isset($detail['channel_partner_customer_id'])) {
@@ -1365,12 +1393,19 @@ class Order extends Functions
 								$product_detail = mysqli_fetch_assoc($product_detail);
 								$top_cat_id = $product_detail['tcid'];
 								$cat_id = $product_detail['cid'];
-								$hsn_code = $product_detail['hsn_code'];
-								$igst = $product_detail['igst'];
-								$ctable_item_weight_detail = $this->db->rp_getData("product_weight_price", "*", "weight_id='" . $p['weight_id'] . "' AND product_id='" . $p['pid'] . "'", "", 0);
+								$hsn_code = (isset($product_detail['hsn_code']) && $product_detail['hsn_code'] !== null) ? $product_detail['hsn_code'] : "";
+								$igst = (isset($product_detail['igst']) && $product_detail['igst'] !== null && $product_detail['igst'] !== '') ? $product_detail['igst'] : 0;
+								$ctable_item_weight_detail = false;
+								if (isset($p['weight_id']) && $p['weight_id'] !== '' && $p['weight_id'] !== null) {
+									$ctable_item_weight_detail = $this->db->rp_getData("product_weight_price", "*", "weight_id='" . $p['weight_id'] . "' AND product_id='" . $p['pid'] . "'", "", 0);
+								}
+								if (!$ctable_item_weight_detail) {
+									$ctable_item_weight_detail = $this->db->rp_getData("product_weight_price", "*", "product_id='" . $p['pid'] . "'", "id ASC", 0);
+								}
 
 								if ($ctable_item_weight_detail) {
 									$ctable_item_weight_detail = mysqli_fetch_assoc($ctable_item_weight_detail);
+									$p['weight_id'] = $ctable_item_weight_detail['weight_id'];
 									$weight_name = $this->db->rp_getValue("weight", "name", "id='" . $ctable_item_weight_detail['weight_id'] . "'");
 									$product_code = $ctable_item_weight_detail['catno'];
 
@@ -1379,31 +1414,32 @@ class Order extends Functions
 									} else {
 										$p['item_name'] = addslashes(html_entity_decode($product_detail['name'] . " (" . stripslashes($weight_name) . ")" . " (#" . stripslashes($product_code) . ")"));
 									}
-									$p['inner_size'] = $ctable_item_weight_detail['inner_size'];
-									$p['outer_size'] = $ctable_item_weight_detail['outer_size'];
-									/*$p['box_qty']=$p['qty']/$ctable_item_weight_detail['inner_size'];
-									$p['cartoon_qty']=$p['box_qty']/$ctable_item_weight_detail['outer_size'];*/
-									$p['box_qty'] = $p['box_qty'];
-									$p['cartoon_qty'] = $p['cartoon_qty'];
+									$p['inner_size'] = ($ctable_item_weight_detail['inner_size'] !== null && $ctable_item_weight_detail['inner_size'] !== '' && (float) $ctable_item_weight_detail['inner_size'] > 0) ? $ctable_item_weight_detail['inner_size'] : 1;
+									$p['outer_size'] = ($ctable_item_weight_detail['outer_size'] !== null && $ctable_item_weight_detail['outer_size'] !== '' && (float) $ctable_item_weight_detail['outer_size'] > 0) ? $ctable_item_weight_detail['outer_size'] : 1;
+									if (!isset($p['box_qty']) || $p['box_qty'] === '' || $p['box_qty'] === null) {
+										$p['box_qty'] = $p['qty'] / $p['inner_size'];
+									}
+									if (!isset($p['cartoon_qty']) || $p['cartoon_qty'] === '' || $p['cartoon_qty'] === null) {
+										$p['cartoon_qty'] = $p['box_qty'] / $p['outer_size'];
+									}
 
 									// $unitprice=$this->db->rp_getValue("product_weight_price","price","product_id='".$p['pid']."' AND weight_id='".$p['weight_id']."'",0);
-									$unitprice = $p['price'];
+									$unitprice = isset($p['price']) ? $p['price'] : $ctable_item_weight_detail['price'];
 									$unitprice = $this->db->rp_num($unitprice);
-									$GST = $product_detail['igst'];
+									$GST = $igst;
 									$totalprice = $p['qty'] * $unitprice;
 									$totalprice = $this->db->rp_num($totalprice);
-									$original_price = $p['original_price'];
+									$original_price = isset($p['original_price']) && $p['original_price'] !== '' && $p['original_price'] !== null ? $p['original_price'] : $unitprice;
 
-									$user_discount = $p['discount'];
-									if ($user_discount == 0) {
-										$discount_amount = $this->db->rp_num($p['discount_amount']);
-										// echo $discount_amount."TEST";exit;
+									$user_discount = isset($p['discount']) ? $p['discount'] : 0;
+									if ($user_discount == 0 || $user_discount == '' || $user_discount === null) {
+										$user_discount = 0;
+										$discount_amount = $this->db->rp_num(isset($p['discount_amount']) ? $p['discount_amount'] : 0);
 										if ($discount_amount == "") {
 											$discount_amount = 0;
 										}
 									} else {
-										$discount_amount = $this->db->rp_num(($p['original_price'] * $user_discount) / 100);
-										// echo $discount_amount."TEST123";exit;
+										$discount_amount = $this->db->rp_num(($original_price * $user_discount) / 100);
 									}
 
 									$unitprice_amt = $discount_amount;
@@ -1421,26 +1457,33 @@ class Order extends Functions
 											$add_price_list_id = $price_list_id;
 											$price_list_price = $this->db->rp_getValue("product_price_list", "price", "pid='" . $p['pid'] . "' AND weight_id='" . $ctable_item_weight_detail['weight_id'] . "' AND price_list_id='" . $price_list_id . "'");
 
-											$GST = $product_detail['igst'];
+											$GST = $igst;
 											$totalprice = $p['qty'] * $unitprice;
 											$totalprice = $this->db->rp_num($totalprice);
 											// $original_price=$price_list_price;
 											$final_price = $this->db->rp_num($totalprice);
 
 											$price_list_discount_type = $this->db->rp_getValue("product_price_list", "discount_type", "pid='" . $p['pid'] . "' AND weight_id='" . $ctable_item_weight_detail['weight_id'] . "' AND price_list_id='" . $price_list_id . "'");
+											if ($price_list_discount_type === null || $price_list_discount_type === false) {
+												$price_list_discount_type = 0;
+											}
 
 											$p_discount = $this->db->rp_getValue("product_price_list", "discount", "pid='" . $p['pid'] . "' AND weight_id='" . $ctable_item_weight_detail['weight_id'] . "' AND price_list_id='" . $price_list_id . "'");
 
 											// $discount = $p['discount'];
 											$price_list_discount = $this->db->rp_num($p_discount);
-											$discount_amount1 = ($p['original_price'] * $price_list_discount) / 100;
+											$discount_amount1 = ($original_price * $price_list_discount) / 100;
 											$price_list_discounted_amount = $this->db->rp_num($discount_amount1);
-											$price_list_discounted_price = $p['original_price'] - $price_list_discounted_amount;
+											$price_list_discounted_price = $original_price - $price_list_discounted_amount;
 										} else {
 											$add_price_list_id = 0;
 										}
 									} else {
 										$add_price_list_id = 0;
+									}
+
+									if ($price_list_price === null || $price_list_price === false || $price_list_price === '') {
+										$price_list_price = 0;
 									}
 
 									$rows 	= array(
@@ -1486,8 +1529,8 @@ class Order extends Functions
 									);
 									$values = array(
 										$order_id,
-										$top_cat_id,
-										$cat_id,
+										$top_cat_id !== null ? $top_cat_id : 0,
+										$cat_id !== null ? $cat_id : 0,
 										$p['pid'],
 										$p['weight_id'],
 										$this->db->clean($p['item_name']),
@@ -1508,23 +1551,29 @@ class Order extends Functions
 										$price_list_discounted_amount,
 										$price_list_discount_type,
 										$price_list_discount,
-										$this->db->clean($p['pro_description']),
+										$this->db->clean(isset($p['pro_description']) ? $p['pro_description'] : ""),
 										/*$p['brand_id'],*/
 										isset($p['loose']) ? $p['loose'] : "0",
-										$p['cd_discount'],
-										$p['ad_discount'],
+										isset($p['cd_discount']) ? $p['cd_discount'] : 0,
+										isset($p['ad_discount']) ? $p['ad_discount'] : 0,
 										$igst,
-										$p['gst_amount_item'],
-										$p['taxable_amount'],
-										$p['sub_total'],
-										$p['other_charge'],
-										$p['fright_charge'],
+										isset($p['gst_amount_item']) ? $p['gst_amount_item'] : 0,
+										isset($p['taxable_amount']) ? $p['taxable_amount'] : 0,
+										isset($p['sub_total']) ? $p['sub_total'] : 0,
+										isset($p['other_charge']) ? $p['other_charge'] : 0,
+										isset($p['fright_charge']) ? $p['fright_charge'] : 0,
 										$hsn_code,
-										$p['is_including'],
-										isset($p['item_order_unit']) ? $p['item_order_unit'] : "0",
-										isset($p['order_qty']) ? $p['order_qty'] : "0",
-										isset($p['order_item_brand_id']) ? $p['order_item_brand_id'] : "0",
+										isset($p['is_including']) && $p['is_including'] !== '' && $p['is_including'] !== null ? $p['is_including'] : 0,
+										isset($p['item_order_unit']) && $p['item_order_unit'] !== '' && $p['item_order_unit'] !== null ? $p['item_order_unit'] : "0",
+										isset($p['order_qty']) ? $p['order_qty'] : $p['qty'],
+										isset($p['order_item_brand_id']) && $p['order_item_brand_id'] !== '' && $p['order_item_brand_id'] !== null ? $p['order_item_brand_id'] : "0",
 									);
+									/* Force non-null scalars for rp_insert (null breaks SQL commas) */
+									for ($vi = 0; $vi < count($values); $vi++) {
+										if ($values[$vi] === null || $values[$vi] === false) {
+											$values[$vi] = "";
+										}
+									}
 									$total_qty += $p['qty'];
 									$sub_total += $final_price;
 									$item_id = $this->db->rp_insert("order_product_item", $values, $rows, 0);

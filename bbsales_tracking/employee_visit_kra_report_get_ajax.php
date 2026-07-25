@@ -177,6 +177,53 @@ $fixedColCount = 9; // Sr .. Total Visit
 												<div><b>Remark:</b> <?php echo kra_h($visit['stop_remark']); ?></div>
 												<div><b>Purchasing From:</b> <?php echo kra_h($visit['product_name']); ?></div>
 												<div><b>Contact:</b> <?php echo kra_h($visit['name']); ?> <?php echo kra_h($visit['mobile_no']); ?></div>
+												<?php
+												if (!empty($visit['consultant_form']) && is_array($visit['consultant_form'])) {
+													$vf = $visit['consultant_form'];
+													$typeLabel = (isset($vf['consultant_type']) && $vf['consultant_type'] == "government") ? "Government Consultant" : "Private Consultant";
+													?>
+													<div style="margin-top:6px;padding:6px;border:1px solid #ddd;background:#f9f9f9;font-size:11px;line-height:1.45;">
+														<b>Need Approval / Consultant (<?php echo kra_h($typeLabel); ?>)</b><br>
+														<b>Firm:</b> <?php echo kra_h($vf['firm_name']); ?><br>
+														<b>Address:</b> <?php echo kra_h($vf['address']); ?><br>
+														<b>City:</b> <?php echo kra_h($vf['city']); ?>
+														&nbsp; <b>State:</b> <?php echo kra_h($vf['state']); ?>
+														&nbsp; <b>Pincode:</b> <?php echo kra_h($vf['pincode']); ?><br>
+														<b>Contact:</b> <?php echo kra_h($vf['contact_person']); ?>
+														&nbsp; <b>Mo:</b> <?php echo kra_h($vf['mobile']); ?>
+														<?php if (!empty($vf['email'])) { ?> &nbsp; <b>Mail:</b> <?php echo kra_h($vf['email']); ?><?php } ?>
+													</div>
+												<?php }
+												if (!empty($visit['high_rate_form']) && is_array($visit['high_rate_form'])) {
+													$hf = $visit['high_rate_form'];
+													$payLabel = isset($hf['payment_option']) ? $hf['payment_option'] : '';
+													if ($payLabel === '0' || $payLabel === 0) {
+														$payLabel = 'Advance';
+													} else if ($payLabel === '1' || $payLabel === 1) {
+														$payLabel = '30 Days';
+													}
+													?>
+													<div style="margin-top:6px;padding:6px;border:1px solid #ddd;background:#fff8e6;font-size:11px;line-height:1.45;">
+														<b>High Rate Analysis</b><br>
+														<b>Customer:</b> <?php echo kra_h($hf['customer_name']); ?>
+														<?php if ($payLabel !== '') { ?> &nbsp; <b>Payment:</b> <?php echo kra_h($payLabel); ?><?php } ?>
+														<?php if (!empty($hf['payment_remark'])) { ?><br><b>Payment Remark:</b> <?php echo kra_h($hf['payment_remark']); ?><?php } ?>
+														<?php if (!empty($visit['high_rate_items'])) { ?>
+															<table border="1" cellpadding="2" cellspacing="0" style="width:100%;margin-top:4px;font-size:10px;">
+																<tr style="background:#f0f0f0;"><th>Product</th><th>Given</th><th>Qty</th><th>Cust. Rate</th><th>Remark</th></tr>
+																<?php foreach ($visit['high_rate_items'] as $hi) { ?>
+																	<tr>
+																		<td><?php echo kra_h($hi['product_name']); ?></td>
+																		<td><?php echo kra_h($hi['given_rate']); ?></td>
+																		<td><?php echo kra_h($hi['qty']); ?></td>
+																		<td><?php echo kra_h($hi['customer_rate']); ?></td>
+																		<td><?php echo kra_h(isset($hi['remark']) ? $hi['remark'] : ''); ?></td>
+																	</tr>
+																<?php } ?>
+															</table>
+														<?php } ?>
+													</div>
+												<?php } ?>
 											</div>
 										</details>
 									<?php }

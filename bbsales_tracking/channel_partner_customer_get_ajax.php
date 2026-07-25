@@ -91,7 +91,7 @@ $ctable_r = $db->rp_getData($ctable, "*", $ctable_where, "id DESC limit $page_po
 						<?php } ?>
 						<?php if ($show_cp_add_order) { ?>
 						<li>
-							<a href="orders_crud.php?mode=add&c_type=channel_partner&cp_customer_id=<?php echo (int) $ctable_d['id']; ?>">
+							<a href="channel_partner_order_simple.php?cp_mode=customer&cp_customer_id=<?php echo (int) $ctable_d['id']; ?>">
 								<span class="text-success"><i class="fa fa-shopping-cart"></i> Add Order</span>
 							</a>
 						</li>

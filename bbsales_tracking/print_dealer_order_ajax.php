@@ -85,8 +85,10 @@ if (isset($_REQUEST['df']) && $_REQUEST['df'] != "") {
 }
 
 if (isset($_REQUEST['type']) && $_REQUEST['type'] != "" && $_REQUEST['type'] != NULL && $_REQUEST['type'] != undefined) {
-  if ($_REQUEST['type'] == "channel_partner") {
-    $ctable_where .= " AND channel_partner_order_flag=1 ";
+  if ($_REQUEST['type'] == "channel_partner_portal") {
+    $ctable_where .= " AND channel_partner_order_flag=1 AND cp_portal_order_flag=1 ";
+  } else if ($_REQUEST['type'] == "channel_partner") {
+    $ctable_where .= " AND channel_partner_order_flag=1 AND (cp_portal_order_flag=0 OR cp_portal_order_flag IS NULL) ";
   } else if ($_REQUEST['type'] != 100) {
     $ctable_where .= " AND customer_type = '" . $_REQUEST['type'] . "' AND (channel_partner_order_flag=0 OR channel_partner_order_flag IS NULL) ";
   }
