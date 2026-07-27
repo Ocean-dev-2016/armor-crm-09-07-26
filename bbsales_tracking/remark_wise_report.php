@@ -94,6 +94,9 @@ $defaultTo = date("Y-m-t");
 						</div>
 						<div>
 							<button type="button" class="btn btn-success" id="rar_filter_btn"><i class="fa fa-search"></i> Show Report</button>
+							<?php if ((isset($rights['export_excel_flag']) && (int) $rights['export_excel_flag'] === 1) || (isset($_SESSION[SITE_SESS . '_ADMIN_TYPE']) && (int) $_SESSION[SITE_SESS . '_ADMIN_TYPE'] === 0)) { ?>
+								<button type="button" class="btn green-haze" id="rar_excel_btn"><i class="fa fa-file-excel-o"></i> Export Excel</button>
+							<?php } ?>
 							<button type="button" class="btn btn-default" id="rar_clear_btn">Clear</button>
 						</div>
 					</div>
@@ -164,6 +167,62 @@ $defaultTo = date("Y-m-t");
 
 	$("#rar_filter_btn").on("click", function () {
 		loadReport(1);
+	});
+
+	$("#rar_excel_btn").on("click", function () {
+		var employees = $("#rar_employee_ids").val() || [];
+		var customers = $("#rar_customer_ids").val() || [];
+		$.ajax({
+			method: "POST",
+			url: "remark_wise_report_excel.php",
+			data: {
+				from_date: $("#rar_from_date").val(),
+				to_date: $("#rar_to_date").val(),
+				employee_ids: employees.join(","),
+				customer_ids: customers.join(","),
+				remark_code: $("#rar_remark_code").val()
+			},
+			dataType: "text",
+			timeout: 600000,
+			beforeSend: function () {
+				$(".loading-div").show();
+				if (!$("#rar_export_status").length) {
+					$(".loading-div").append('<div id="rar_export_status" style="margin-top:10px;font-weight:600;"></div>');
+				}
+				$("#rar_export_status").text("Exporting Excel (sheet-wise forms)… please wait.");
+			},
+			success: function (raw) {
+				$(".loading-div").hide();
+				$("#rar_export_status").text("");
+				var result = null;
+				try { result = $.parseJSON(raw); } catch (e) { result = null; }
+				if (!result || result.ack == 0 || !result.file_path) {
+					var msg = (result && result.ack_msg) ? result.ack_msg : "Excel download failed";
+					if (!result && raw) {
+						msg += "\n" + String(raw).replace(/<[^>]+>/g, " ").substring(0, 250);
+					}
+					alert(msg);
+					return;
+				}
+				window.location.href = "<?= SITEURL ?>" + result.file_path;
+			},
+			error: function (xhr, status) {
+				$(".loading-div").hide();
+				$("#rar_export_status").text("");
+				var msg = "Excel download failed";
+				if (status === "timeout") {
+					msg = "Excel export timed out. Please try a smaller date range.";
+				} else if (xhr && xhr.responseText) {
+					try {
+						var parsed = $.parseJSON(xhr.responseText);
+						if (parsed && parsed.ack_msg) {
+							msg = parsed.ack_msg;
+						}
+					} catch (e) {}
+				}
+				alert(msg);
+			}
+		});
 	});
 
 	$("#rar_clear_btn").on("click", function () {
