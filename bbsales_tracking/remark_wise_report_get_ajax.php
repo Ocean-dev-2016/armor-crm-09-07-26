@@ -69,12 +69,18 @@ function rar_format_duration($minutes)
 	if ($minutes < 0) {
 		return "-";
 	}
-	$hours = (int) floor($minutes / 60);
+	$days = (int) floor($minutes / 1440);
+	$hours = (int) floor(($minutes % 1440) / 60);
 	$mins = $minutes % 60;
-	if ($hours > 0) {
-		return $hours . "h " . $mins . "m";
+	$parts = array();
+	if ($days > 0) {
+		$parts[] = $days . "d";
 	}
-	return $mins . " min";
+	if ($hours > 0 || $days > 0) {
+		$parts[] = $hours . "h";
+	}
+	$parts[] = $mins . "m";
+	return implode(" ", $parts);
 }
 
 function rar_render_form_html($visit)
@@ -234,48 +240,77 @@ function rar_render_form_html($visit)
 			<div class="alert alert-warning" style="margin:0;">No visits found for selected filters.</div>
 		<?php } else { ?>
 			<style>
-				.rar-customer-cell {
-					min-width:220px !important;
-					max-width:280px !important;
-					width:280px !important;
+				.rar-detail-wrap { width:100%; overflow-x:auto; }
+				.rar-detail-table {
+					width:100%;
+					min-width:1100px;
+					table-layout:fixed;
+					margin:0;
+					border-collapse:collapse;
+					font-size:12px;
+				}
+				.rar-detail-table > thead > tr > th {
+					background:#34495e !important;
+					color:#fff !important;
+					font-weight:600;
+					text-align:center;
+					vertical-align:middle !important;
+					padding:8px 6px !important;
+					border:1px solid #2c3e50 !important;
+					white-space:normal;
+					line-height:1.3;
+				}
+				.rar-detail-table > tbody > tr > td {
 					vertical-align:top !important;
+					padding:8px 6px !important;
+					border:1px solid #e0e6ed !important;
 					white-space:normal !important;
-					word-wrap:break-word !important;
-					overflow-wrap:anywhere !important;
+					word-wrap:break-word;
+					overflow-wrap:anywhere;
+					line-height:1.4;
+					background:#fff;
 				}
-				.rar-customer-info { width:100%; max-width:100%; table-layout:fixed; border-collapse:collapse; font-size:12px; margin:0; }
-				.rar-customer-info td { border:0 !important; background:transparent !important; vertical-align:top; padding:2px 4px; white-space:normal !important; }
-				.rar-ci-label { width:72px; color:#666; font-weight:600; white-space:nowrap !important; }
-				.rar-ci-value, .rar-ci-address {
-					color:#333;
-					white-space:normal !important;
-					word-break:break-word !important;
-					overflow-wrap:anywhere !important;
-					line-height:1.35;
+				.rar-detail-table > tbody > tr:nth-child(even) > td { background:#f8fafc; }
+				.rar-c-sr { width:3%; text-align:center !important; }
+				.rar-c-date { width:7%; text-align:center !important; white-space:nowrap !important; }
+				.rar-c-sales { width:9%; }
+				.rar-c-customer { width:26%; }
+				.rar-c-duration { width:7%; text-align:center !important; font-weight:700; color:#1f4e79; white-space:nowrap !important; }
+				.rar-c-remark { width:5%; text-align:center !important; }
+				.rar-c-reason { width:5%; text-align:center !important; }
+				.rar-c-desc { width:10%; }
+				.rar-c-stop { width:14%; }
+				.rar-c-form { width:7%; text-align:center !important; }
+				.rar-c-status { width:7%; text-align:center !important; }
+				.rar-cust-box {
+					background:#f4f8fb;
+					border:1px solid #d9e6f2;
+					border-radius:4px;
+					padding:7px 8px;
 				}
-				.rar-stop-remark {
-					max-width:180px;
-					white-space:normal !important;
-					word-break:break-word !important;
-					overflow-wrap:anywhere !important;
-					line-height:1.35;
-					vertical-align:top !important;
-				}
+				.rar-cust-code { color:#1a7a3a; font-weight:700; font-size:11px; margin-bottom:2px; }
+				.rar-cust-company { font-weight:700; color:#2c3e50; font-size:13px; margin-bottom:3px; }
+				.rar-cust-line { color:#555; margin-bottom:2px; }
+				.rar-cust-meta { color:#666; font-size:11px; margin-bottom:2px; }
+				.rar-cust-addr { color:#777; font-size:11px; margin-top:4px; line-height:1.35; }
+				.rar-cust-type { margin-top:5px; }
+				.rar-cust-type .label { font-size:10px; }
 			</style>
-			<table class="table table-striped table-bordered table-hover" style="margin:0;table-layout:auto;">
+			<div class="rar-detail-wrap">
+			<table class="table table-bordered rar-detail-table">
 				<thead>
 					<tr>
-						<th style="width:40px;">#</th>
-						<th style="width:90px;">Date</th>
-						<th style="min-width:110px;">Sales Person</th>
-						<th style="min-width:220px;max-width:280px;">Customer</th>
-						<th style="width:90px;">Visit Duration</th>
-						<th style="width:65px;">Remark</th>
-						<th style="width:65px;">Reason</th>
-						<th style="min-width:130px;">Description</th>
-						<th style="min-width:150px;">Stop Remark</th>
-						<th style="width:110px;">Form</th>
-						<th style="width:90px;">Status</th>
+						<th class="rar-c-sr">#</th>
+						<th class="rar-c-date">Date</th>
+						<th class="rar-c-sales">Sales Person</th>
+						<th class="rar-c-customer">Customer</th>
+						<th class="rar-c-duration">Visit Duration</th>
+						<th class="rar-c-remark">Remark</th>
+						<th class="rar-c-reason">Reason</th>
+						<th class="rar-c-desc">Description</th>
+						<th class="rar-c-stop">Stop Remark</th>
+						<th class="rar-c-form">Form</th>
+						<th class="rar-c-status">Status</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -303,7 +338,6 @@ function rar_render_form_html($visit)
 						} else if ($hasHighRate) {
 							$formTitle = 'High Rate Analysis Form';
 						}
-						/* Customer display values */
 						$custCode    = isset($visit['customer_code']) ? trim((string) $visit['customer_code']) : "";
 						$custPerson  = isset($visit['customer_person']) ? trim((string) $visit['customer_person']) : "";
 						$custMobile  = isset($visit['customer_mobile']) ? trim((string) $visit['customer_mobile']) : "";
@@ -317,82 +351,54 @@ function rar_render_form_html($visit)
 						$custCity    = isset($visit['customer_city']) ? trim((string) $visit['customer_city']) : "";
 						$custType    = isset($visit['customer_type']) ? trim((string) $visit['customer_type']) : "";
 						$custCompany = isset($visit['customer_name']) ? trim((string) $visit['customer_name']) : "";
-						$disp = function ($v) {
-							$v = trim((string) $v);
-							return ($v === "") ? "-" : $v;
-						};
+						$turnLabel = ($custTurnover != "") ? $custTurnover : "-";
+						if ($custTurnYear != "" && $custTurnYear != "0") {
+							$turnLabel .= " (" . $custTurnYear . ")";
+						}
+						$personMobile = trim(($custPerson != "" ? $custPerson : "-") . "  |  " . ($custMobile != "" ? $custMobile : "-"));
 						?>
 						<tr>
-							<td><?php echo $sr; ?></td>
-							<td><?php echo rar_h($dateLabel); ?></td>
-							<td><?php echo rar_h($visit['sales_person']); ?></td>
-							<td class="rar-customer-cell">
-								<table class="rar-customer-info">
-									<tr>
-										<td class="rar-ci-label">Code</td>
-										<td class="rar-ci-value"><strong><?php echo rar_h($disp($custCode)); ?></strong></td>
-									</tr>
-									<tr>
-										<td class="rar-ci-label">Company</td>
-										<td class="rar-ci-value"><strong><?php echo rar_h($disp($custCompany)); ?></strong></td>
-									</tr>
-									<tr>
-										<td class="rar-ci-label">Person</td>
-										<td class="rar-ci-value"><?php echo rar_h($disp($custPerson)); ?></td>
-									</tr>
-									<tr>
-										<td class="rar-ci-label">Mobile</td>
-										<td class="rar-ci-value"><?php echo rar_h($disp($custMobile)); ?></td>
-									</tr>
-									<tr>
-										<td class="rar-ci-label">Turnover</td>
-										<td class="rar-ci-value"><?php
-											echo rar_h($disp($custTurnover));
-											if ($custTurnYear != "" && $custTurnYear != "0") {
-												echo ' <span class="text-muted">(' . rar_h($custTurnYear) . ')</span>';
-											}
-										?></td>
-									</tr>
-									<tr>
-										<td class="rar-ci-label">GST</td>
-										<td class="rar-ci-value"><?php echo rar_h($disp($custGst)); ?></td>
-									</tr>
-									<tr>
-										<td class="rar-ci-label">City</td>
-										<td class="rar-ci-value"><?php echo rar_h($disp($custCity)); ?></td>
-									</tr>
-									<tr>
-										<td class="rar-ci-label">Address</td>
-										<td class="rar-ci-value rar-ci-address"><?php echo rar_h($disp($custAddress)); ?></td>
-									</tr>
-									<?php if ($custType != "") { ?>
-									<tr>
-										<td class="rar-ci-label">Type</td>
-										<td class="rar-ci-value"><span class="label label-default" style="font-size:10px;"><?php echo rar_h($custType); ?></span></td>
-									</tr>
+							<td class="rar-c-sr"><?php echo $sr; ?></td>
+							<td class="rar-c-date"><?php echo rar_h($dateLabel); ?></td>
+							<td class="rar-c-sales"><?php echo rar_h($visit['sales_person'] != "" ? $visit['sales_person'] : "-"); ?></td>
+							<td class="rar-c-customer">
+								<div class="rar-cust-box">
+									<?php if ($custCode != "") { ?>
+										<div class="rar-cust-code"><?php echo rar_h($custCode); ?></div>
 									<?php } ?>
-								</table>
+									<div class="rar-cust-company"><?php echo rar_h($custCompany != "" ? $custCompany : "-"); ?></div>
+									<div class="rar-cust-line"><?php echo rar_h($personMobile); ?></div>
+									<div class="rar-cust-meta"><b>Turnover:</b> <?php echo rar_h($turnLabel); ?></div>
+									<div class="rar-cust-meta"><b>GST:</b> <?php echo rar_h($custGst != "" ? $custGst : "-"); ?></div>
+									<div class="rar-cust-meta"><b>City:</b> <?php echo rar_h($custCity != "" ? $custCity : "-"); ?></div>
+									<?php if ($custAddress != "") { ?>
+										<div class="rar-cust-addr"><?php echo rar_h($custAddress); ?></div>
+									<?php } ?>
+									<?php if ($custType != "") { ?>
+										<div class="rar-cust-type"><span class="label label-default"><?php echo rar_h($custType); ?></span></div>
+									<?php } ?>
+								</div>
 							</td>
-							<td style="white-space:nowrap;font-weight:700;color:#1f4e79;">
+							<td class="rar-c-duration">
 								<?php echo rar_h(rar_format_duration(isset($visit['duration_minutes']) ? $visit['duration_minutes'] : null)); ?>
 							</td>
-							<td><span class="rar-code"><?php echo rar_h($visit['remark_code'] != "" ? $visit['remark_code'] : "-"); ?></span></td>
-							<td><span class="rar-code"><?php echo rar_h($visit['reason_code'] != "" ? $visit['reason_code'] : "-"); ?></span></td>
-							<td><?php echo rar_h($desc); ?></td>
-							<td class="rar-stop-remark">
-							<?php echo rar_h($visit['stop_remark']); ?>
-							<?php $visitNote = isset($visit['note']) ? trim($visit['note']) : ''; ?>
-							<?php if ($visitNote != '') { ?>
-								<br><small class="text-info"><i class="fa fa-sticky-note-o"></i> <em><?php echo rar_h($visitNote); ?></em></small>
-							<?php } ?>
-						</td>
-							<td>
+							<td class="rar-c-remark"><span class="rar-code"><?php echo rar_h($visit['remark_code'] != "" ? $visit['remark_code'] : "-"); ?></span></td>
+							<td class="rar-c-reason"><span class="rar-code"><?php echo rar_h($visit['reason_code'] != "" ? $visit['reason_code'] : "-"); ?></span></td>
+							<td class="rar-c-desc"><?php echo rar_h($desc); ?></td>
+							<td class="rar-c-stop">
+								<?php echo rar_h($visit['stop_remark'] != "" ? $visit['stop_remark'] : "-"); ?>
+								<?php $visitNote = isset($visit['note']) ? trim($visit['note']) : ''; ?>
+								<?php if ($visitNote != '') { ?>
+									<br><small class="text-info"><i class="fa fa-sticky-note-o"></i> <?php echo rar_h($visitNote); ?></small>
+								<?php } ?>
+							</td>
+							<td class="rar-c-form">
 								<?php if ($formHtml != "") { ?>
 									<button type="button"
 										class="btn btn-xs btn-primary rar-view-form-btn"
 										data-title="<?php echo rar_h($formTitle); ?>"
 										data-visit-id="<?php echo (int) $visit['id']; ?>">
-										<i class="fa fa-eye"></i> View Form
+										<i class="fa fa-eye"></i> View
 									</button>
 									<div class="rar-form-content" id="rar-form-<?php echo (int) $visit['id']; ?>" style="display:none;">
 										<?php echo $formHtml; ?>
@@ -403,11 +409,12 @@ function rar_render_form_html($visit)
 									-
 								<?php } ?>
 							</td>
-							<td><?php echo $visit['is_completed'] ? '<span class="label label-success">Completed</span>' : '<span class="label label-warning">Open</span>'; ?></td>
+							<td class="rar-c-status"><?php echo $visit['is_completed'] ? '<span class="label label-success">Completed</span>' : '<span class="label label-warning">Open</span>'; ?></td>
 						</tr>
 					<?php } ?>
 				</tbody>
 			</table>
+			</div>
 			<div class="row" style="margin-top:15px;padding:0 10px;">
 				<div class="col-md-6">
 					<div class="dataTables_info">
