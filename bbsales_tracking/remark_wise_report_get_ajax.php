@@ -233,13 +233,42 @@ function rar_render_form_html($visit)
 		<?php if ($get_total_rows < 1) { ?>
 			<div class="alert alert-warning" style="margin:0;">No visits found for selected filters.</div>
 		<?php } else { ?>
-			<table class="table table-striped table-bordered table-hover" style="margin:0;">
+			<style>
+				.rar-customer-cell {
+					min-width:220px !important;
+					max-width:280px !important;
+					width:280px !important;
+					vertical-align:top !important;
+					white-space:normal !important;
+					word-wrap:break-word !important;
+					overflow-wrap:anywhere !important;
+				}
+				.rar-customer-info { width:100%; max-width:100%; table-layout:fixed; border-collapse:collapse; font-size:12px; margin:0; }
+				.rar-customer-info td { border:0 !important; background:transparent !important; vertical-align:top; padding:2px 4px; white-space:normal !important; }
+				.rar-ci-label { width:72px; color:#666; font-weight:600; white-space:nowrap !important; }
+				.rar-ci-value, .rar-ci-address {
+					color:#333;
+					white-space:normal !important;
+					word-break:break-word !important;
+					overflow-wrap:anywhere !important;
+					line-height:1.35;
+				}
+				.rar-stop-remark {
+					max-width:180px;
+					white-space:normal !important;
+					word-break:break-word !important;
+					overflow-wrap:anywhere !important;
+					line-height:1.35;
+					vertical-align:top !important;
+				}
+			</style>
+			<table class="table table-striped table-bordered table-hover" style="margin:0;table-layout:auto;">
 				<thead>
 					<tr>
 						<th style="width:40px;">#</th>
 						<th style="width:90px;">Date</th>
 						<th style="min-width:110px;">Sales Person</th>
-						<th style="min-width:240px;">Customer</th>
+						<th style="min-width:220px;max-width:280px;">Customer</th>
 						<th style="width:90px;">Visit Duration</th>
 						<th style="width:65px;">Remark</th>
 						<th style="width:65px;">Reason</th>
@@ -334,7 +363,7 @@ function rar_render_form_html($visit)
 									</tr>
 									<tr>
 										<td class="rar-ci-label">Address</td>
-										<td class="rar-ci-value"><?php echo rar_h($disp($custAddress)); ?></td>
+										<td class="rar-ci-value rar-ci-address"><?php echo rar_h($disp($custAddress)); ?></td>
 									</tr>
 									<?php if ($custType != "") { ?>
 									<tr>
@@ -350,7 +379,7 @@ function rar_render_form_html($visit)
 							<td><span class="rar-code"><?php echo rar_h($visit['remark_code'] != "" ? $visit['remark_code'] : "-"); ?></span></td>
 							<td><span class="rar-code"><?php echo rar_h($visit['reason_code'] != "" ? $visit['reason_code'] : "-"); ?></span></td>
 							<td><?php echo rar_h($desc); ?></td>
-							<td>
+							<td class="rar-stop-remark">
 							<?php echo rar_h($visit['stop_remark']); ?>
 							<?php $visitNote = isset($visit['note']) ? trim($visit['note']) : ''; ?>
 							<?php if ($visitNote != '') { ?>
