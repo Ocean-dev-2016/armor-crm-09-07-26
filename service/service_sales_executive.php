@@ -71,6 +71,13 @@ if ($is_valid_api_key) {
 				$password 		= md5(trim($_REQUEST['password'])) ? $db->clean(md5(trim($_REQUEST['password']))) : "";
 				$imei 			= isset($_REQUEST['imei']) ? $db->clean($_REQUEST['imei']) : "";
 				$refreshToken 	= isset($_REQUEST['refreshToken']) ? $db->clean($_REQUEST['refreshToken']) : "";
+				/* App sends FCM/device notification token as "token" — store in device_id */
+				$device_id = "";
+				if (isset($_REQUEST['token']) && trim($_REQUEST['token']) != "") {
+					$device_id = $db->clean($_REQUEST['token']);
+				} else if (isset($_REQUEST['device_id']) && trim($_REQUEST['device_id']) != "") {
+					$device_id = $db->clean($_REQUEST['device_id']);
+				}
 				$latitude 	= isset($_REQUEST['latitude']) ? $db->clean($_REQUEST['latitude']) : "";
 				$longitude 	= isset($_REQUEST['longitude']) ? $db->clean($_REQUEST['longitude']) : "";
 				$app_address 	= isset($_REQUEST['app_address']) ? $db->clean($_REQUEST['app_address']) : "";
@@ -142,6 +149,7 @@ if ($is_valid_api_key) {
 					$row = array(
 						"imei" => $imei,
 						"refreshToken" => $refreshToken,
+						"device_id" => $device_id,
 						"AppVersionName" => $AppVersionName,
 						"AppName" => $AppName,
 						"BatteryPercent" => $BatteryPercent,
@@ -165,11 +173,12 @@ if ($is_valid_api_key) {
 						"isGps" => $isGps
 					);
 					$dt = $db->rp_update("sales_executive", $row, "id='" . $data['id'] . "'");
-					$inser_row = array("sales_executive_id", "imei", "refreshToken", "AppVersionName", "AppName", "BatteryPercent", "Device", "Hardware", "Manufacturer", "Model", "OsVersion", "SdkVersion", "AvailableInternalMemorySize", "TotalInternalMemorySize", "NetworkType", "Operator", "PhoneNumber", "sIMSerial", "isWifiEnabled", "isNetworkAvailable", "isGps");
+					$inser_row = array("sales_executive_id", "imei", "refreshToken", "device_id", "AppVersionName", "AppName", "BatteryPercent", "Device", "Hardware", "Manufacturer", "Model", "OsVersion", "SdkVersion", "AvailableInternalMemorySize", "TotalInternalMemorySize", "NetworkType", "Operator", "PhoneNumber", "sIMSerial", "isWifiEnabled", "isNetworkAvailable", "isGps");
 					$inser_value = array(
 						$data['id'],
 						$imei,
 						$refreshToken,
+						$device_id,
 						$AppVersionName,
 						$AppName,
 						$BatteryPercent,

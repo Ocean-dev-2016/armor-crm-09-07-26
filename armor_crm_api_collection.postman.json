@@ -12419,6 +12419,11 @@
                                     "type": "text"
                                 },
                                 {
+                                    "key": "token",
+                                    "value": "sample",
+                                    "type": "text"
+                                },
+                                {
                                     "key": "imei",
                                     "value": "123456789123456",
                                     "type": "text"
@@ -12540,7 +12545,7 @@
                                 "service_sales_executive.php"
                             ]
                         },
-                        "description": "**API Code:** 2\n\n**Slug:** customer_login\n\n**Service (s):** 2\n\nTo Login Sales Executive\n\n**Parameters from backend code:** username, password, refreshToken, imei, latitude, longitude, app_address, AppVersionName, AppName, BatteryPercent, Device, Hardware, Manufacturer, Model, OsVersion, SdkVersion, AvailableInternalMemorySize, TotalInternalMemorySize, NetworkType, Operator, PhoneNumber, sIMSerial, isWifiEnabled, isNetworkAvailable, isGps"
+                        "description": "**API Code:** 2\n\n**Slug:** customer_login\n\n**Service (s):** 2\n\nTo Login Sales Executive\n\n**Parameters from backend code:** username, password, refreshToken, token, imei, latitude, longitude, app_address, AppVersionName, AppName, BatteryPercent, Device, Hardware, Manufacturer, Model, OsVersion, SdkVersion, AvailableInternalMemorySize, TotalInternalMemorySize, NetworkType, Operator, PhoneNumber, sIMSerial, isWifiEnabled, isNetworkAvailable, isGps"
                     },
                     "response": []
                 },
@@ -13582,6 +13587,18 @@
                                     "description": "Required ONLY when remark_code=F (Short Note). Free-text remark box. For other codes leave empty — server builds stop_remark from remark/reason."
                                 },
                                 {
+                                    "key": "note",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Optional. Extra note from App (saved in visit.note)."
+                                },
+                                {
+                                    "key": "date",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Optional. App stop date/time. Saved as visit.stop_date_time (e.g. 2026-07-27 14:30:00). If empty, server uses current datetime."
+                                },
+                                {
                                     "key": "remark_code",
                                     "value": "A",
                                     "type": "text",
@@ -13752,7 +13769,7 @@
                                 "service_visit.php"
                             ]
                         },
-                        "description": "**API Code:** 122\n\n**Slug:** update_visit\n\n**Service (s):** 122\n\nStop / update visit (Visit End).\n\n**Flow:**\n1. Call **#231 get_visit_remark_reason** for Select Remark/Reason list\n2. Sales person selects remark → backend creates **Follow-up** automatically\n3. For **C1/C2** open Consultant Detail form (APP), submit with visit end\n4. For **E1** open High Rate Analysis form (APP), submit with visit end\n5. For **F** open Remark Box and send text in `stop_remark`\n\n**C1 Private / C2 Government form fields:** consultant_firm_name, consultant_address, consultant_city, consultant_state, consultant_pincode, consultant_contact_person, consultant_mobile, consultant_email\n\n**E1 High Rate Form fields:** high_rate_customer_name, high_rate_items (JSON array)\n\n**Response extras:** followup_created, followup_id, consultant_form_id, high_rate_form_id\n\n**Parameters:** id, user_id, customer_id, stop_latitude, stop_longitude, remark_code (required), reason_code, approval_type (legacy optional), stop_remark (F only), stop_app_address, inquiry_id, visit_type, visit_stop_flag, product_name, firm_name, client_name, contact_number, name, mobile_no, email_id, designation_id, consultant_*, high_rate_*, latitude, longitude, remark, image"
+                        "description": "**API Code:** 122\n\n**Slug:** update_visit\n\n**Service (s):** 122\n\nStop / update visit (Visit End).\n\n**Flow:**\n1. Call **#231 get_visit_remark_reason** for Select Remark/Reason list\n2. Sales person selects remark → backend creates **Follow-up** automatically\n3. For **C1/C2** open Consultant Detail form (APP), submit with visit end\n4. For **E1** open High Rate Analysis form (APP), submit with visit end\n5. For **F** open Remark Box and send text in `stop_remark`\n\n**C1 Private / C2 Government form fields:** consultant_firm_name, consultant_address, consultant_city, consultant_state, consultant_pincode, consultant_contact_person, consultant_mobile, consultant_email\n\n**E1 High Rate Form fields:** high_rate_customer_name, high_rate_items (JSON array)\n\n**Response extras:** followup_created, followup_id, consultant_form_id, high_rate_form_id\n\n**Parameters:** id, user_id, customer_id, stop_latitude, stop_longitude, remark_code (required), reason_code, approval_type (legacy optional), stop_remark (F only), note (optional), date (optional → stop_date_time), stop_app_address, inquiry_id, visit_type, visit_stop_flag, product_name, firm_name, client_name, contact_number, name, mobile_no, email_id, designation_id, consultant_*, high_rate_*, latitude, longitude, remark, image"
                     },
                     "response": []
                 },

@@ -255,8 +255,14 @@ class RemarkAnalysisReport
 				e.company_name AS customer_company,
 				e.cname AS customer_person,
 				e.client_code AS customer_code,
+				e.turnover AS customer_turnover,
+				e.gst AS customer_gst,
+				e.address AS customer_address,
+				e.main_city AS customer_city,
+				e.mobile AS customer_mobile,
 				noi.company_name AS inquiry_company,
-				noi.person_name AS inquiry_person
+				noi.person_name AS inquiry_person,
+				noi.mobile_number AS inquiry_mobile
 			FROM visit v
 			LEFT JOIN sales_executive se ON se.id = v.user_id
 			LEFT JOIN executive e ON e.id = v.customer_id
@@ -317,6 +323,14 @@ class RemarkAnalysisReport
 				"sales_person" => $row['sales_person_name'],
 				"customer_name" => $customerName,
 				"customer_code" => $row['customer_code'],
+				"customer_person" => isset($row['customer_person']) ? $row['customer_person'] : "",
+				"customer_turnover" => isset($row['customer_turnover']) ? $row['customer_turnover'] : "",
+				"customer_gst" => isset($row['customer_gst']) ? $row['customer_gst'] : "",
+				"customer_address" => isset($row['customer_address']) ? $row['customer_address'] : "",
+				"customer_city" => isset($row['customer_city']) ? $row['customer_city'] : "",
+				"customer_mobile" => isset($row['customer_mobile']) ? $row['customer_mobile'] : "",
+				"inquiry_mobile" => isset($row['inquiry_mobile']) ? $row['inquiry_mobile'] : "",
+				"customer_type" => ((int) $row['customer_id'] > 0) ? "Existing Customer" : (((int) $row['inquiry_id'] > 0) ? "Inquiry" : "New Customer"),
 				"remark_code" => $parent,
 				"reason_code" => $child,
 				"remark_label" => isset($this->remarkLabels[$parent]) ? $this->remarkLabels[$parent] : "",

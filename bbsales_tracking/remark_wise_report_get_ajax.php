@@ -214,14 +214,14 @@ function rar_render_form_html($visit)
 			<table class="table table-striped table-bordered table-hover" style="margin:0;">
 				<thead>
 					<tr>
-						<th style="width:50px;">#</th>
-						<th style="width:100px;">Date</th>
-						<th>Sales Person</th>
-						<th>Customer</th>
-						<th style="width:70px;">Remark</th>
-						<th style="width:70px;">Reason</th>
-						<th>Description</th>
-						<th>Stop Remark</th>
+						<th style="width:40px;">#</th>
+						<th style="width:90px;">Date</th>
+						<th style="min-width:110px;">Sales Person</th>
+						<th style="min-width:200px;">Customer</th>
+						<th style="width:65px;">Remark</th>
+						<th style="width:65px;">Reason</th>
+						<th style="min-width:130px;">Description</th>
+						<th style="min-width:150px;">Stop Remark</th>
 						<th style="width:110px;">Form</th>
 						<th style="width:90px;">Status</th>
 					</tr>
@@ -251,15 +251,47 @@ function rar_render_form_html($visit)
 						} else if ($hasHighRate) {
 							$formTitle = 'High Rate Analysis Form';
 						}
+						/* Customer display values */
+						$custCode    = isset($visit['customer_code']) ? $visit['customer_code'] : "";
+						$custPerson  = isset($visit['customer_person']) ? $visit['customer_person'] : "";
+						$custMobile  = isset($visit['customer_mobile']) ? $visit['customer_mobile'] : "";
+						if ($custMobile == "" && isset($visit['inquiry_mobile'])) {
+							$custMobile = $visit['inquiry_mobile'];
+						}
+						$custTurnover = isset($visit['customer_turnover']) ? $visit['customer_turnover'] : "";
+						$custGst     = isset($visit['customer_gst']) ? $visit['customer_gst'] : "";
+						$custAddress = isset($visit['customer_address']) ? $visit['customer_address'] : "";
+						$custCity    = isset($visit['customer_city']) ? $visit['customer_city'] : "";
+						$custType    = isset($visit['customer_type']) ? $visit['customer_type'] : "";
 						?>
 						<tr>
 							<td><?php echo $sr; ?></td>
 							<td><?php echo rar_h($dateLabel); ?></td>
 							<td><?php echo rar_h($visit['sales_person']); ?></td>
-							<td>
-								<?php echo rar_h($visit['customer_name']); ?>
-								<?php if ($visit['customer_code'] != "") { ?>
-									<br><small class="text-muted"><?php echo rar_h($visit['customer_code']); ?></small>
+							<td style="font-size:12px;">
+								<?php if ($custCode != "") { ?>
+									<strong><?php echo rar_h($custCode); ?></strong> &nbsp;
+								<?php } ?>
+								<strong><?php echo rar_h($visit['customer_name']); ?></strong>
+								<?php if ($custPerson != "" && $custPerson != $visit['customer_name']) { ?>
+									<br><?php echo rar_h($custPerson); ?>
+								<?php } ?>
+								<?php if ($custType != "") { ?>
+									<br><span class="label label-default" style="font-size:10px;"><?php echo rar_h($custType); ?></span>
+								<?php } ?>
+								<?php if ($custMobile != "") { ?>
+									<br><i class="fa fa-phone" style="color:#888;"></i> <?php echo rar_h($custMobile); ?>
+								<?php } ?>
+								<?php if ($custGst != "") { ?>
+									<br><small class="text-muted">GST: <?php echo rar_h($custGst); ?></small>
+								<?php } ?>
+								<?php if ($custTurnover != "") { ?>
+									<br><small class="text-muted">Slab: <?php echo rar_h($custTurnover); ?></small>
+								<?php } ?>
+								<?php if ($custAddress != "") { ?>
+									<br><small class="text-muted"><i class="fa fa-map-marker"></i> <?php echo rar_h($custAddress); ?><?php if ($custCity != "") { echo ", " . rar_h($custCity); } ?></small>
+								<?php } else if ($custCity != "") { ?>
+									<br><small class="text-muted"><i class="fa fa-map-marker"></i> <?php echo rar_h($custCity); ?></small>
 								<?php } ?>
 							</td>
 							<td><span class="rar-code"><?php echo rar_h($visit['remark_code'] != "" ? $visit['remark_code'] : "-"); ?></span></td>

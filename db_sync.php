@@ -563,6 +563,14 @@ db_sync_add_column_if_missing(
 	"int(11) NOT NULL DEFAULT 0 COMMENT 'Auto-created followup.id for Visit Stop Short Note'",
 	array('approval_type', 'reason_code', 'remark_code')
 );
+/* App stopVisit: note + date after stop_remark (date maps to stop_date_time) */
+db_sync_add_column_if_missing(
+	$conn,
+	'visit',
+	'note',
+	"text COMMENT 'Extra note from App stopVisit (after stop_remark)'",
+	array('stop_remark', 'remark')
+);
 
 db_sync_register_api_if_missing($conn, 231, 'get_visit_remark_reason', 'Get Visit Remark Reason', $visitApiBase . '&s=231');
 db_sync_register_api_if_missing($conn, 232, 'get_visit_approval_type', 'Get Visit Approval Type', $visitApiBase . '&s=232');
@@ -675,6 +683,22 @@ db_sync_add_column_if_missing(
 	'product_slug',
 	"varchar(80) NOT NULL DEFAULT '' COMMENT 'High Rate fixed product slug'",
 	array('product_name', 'visit_id')
+);
+
+/* App FCM/device notification token — Android login sends as "token", stored as device_id */
+db_sync_add_column_if_missing(
+	$conn,
+	'sales_executive_login',
+	'device_id',
+	"text COMMENT 'App notification token (Android Query token)'",
+	array('refreshToken', 'imei')
+);
+db_sync_add_column_if_missing(
+	$conn,
+	'sales_executive',
+	'device_id',
+	"text COMMENT 'Latest app notification token (Android Query token)'",
+	array('refreshToken', 'imei')
 );
 
 db_sync_add_column_if_missing(
@@ -915,12 +939,21 @@ if (db_sync_table_exists($conn, 'api_table')) {
 		}
 	}
 
-	foreach (array('remark_code', 'reason_code', 'approval_type', 'visit_followup_id', 'consultant_form_id', 'high_rate_form_id') as $visitCol) {
+	foreach (array('remark_code', 'reason_code', 'approval_type', 'visit_followup_id', 'consultant_form_id', 'high_rate_form_id', 'note') as $visitCol) {
 		if (db_sync_column_exists($conn, 'visit', $visitCol)) {
 			db_sync_log('CHECK', 'READY: visit.' . $visitCol);
 		} else {
 			$allReady = false;
 			db_sync_log('FAIL', 'MISSING: visit.' . $visitCol);
+		}
+	}
+
+	foreach (array('sales_executive' => 'device_id', 'sales_executive_login' => 'device_id') as $devTable => $devCol) {
+		if (db_sync_column_exists($conn, $devTable, $devCol)) {
+			db_sync_log('CHECK', 'READY: ' . $devTable . '.' . $devCol);
+		} else {
+			$allReady = false;
+			db_sync_log('FAIL', 'MISSING: ' . $devTable . '.' . $devCol);
 		}
 	}
 
@@ -1237,6 +1270,8 @@ $environment = isset($config['environment']) ? $config['environment'] : 'unknown
 			<li>Column <code>orders.channel_partner_order_flag</code> (1=Channel Partner Order)</li>
 			<li>Columns <code>orders.cp_portal_order_flag</code>, <code>cp_order_mode</code> (CP portal order → Convert to Order)</li>
 			<li>Columns <code>orders.payment_received_flag</code>, <code>payment_received_date</code>, <code>payment_received_by</code>, <code>payment_received_amount</code>, <code>payment_received_type</code> (Pending Payment 45 days)</li>
+			<li>Column <code>sales_executive.device_id</code> + <code>sales_executive_login.device_id</code> (App login <code>token</code> → device_id for notifications)</li>
+			<li>Column <code>visit.note</code> (App stopVisit <code>note</code>; <code>date</code> → <code>stop_date_time</code>)</li>
 		</ul>
 		<p><strong>Safe:</strong> Idempotent — run multiple times; existing data is not deleted.</p>
 		<p><strong>Security:</strong> Delete <code>db_sync.php</code> from live after final READY confirmation.</p>

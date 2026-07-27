@@ -355,6 +355,7 @@ class Visit extends Functions
 			"stop_longitude"    => $stop_longitude,
 			"stop_app_address"  => $stop_app_address,
 			"stop_remark"       => $stop_remark,
+			"note"              => isset($note) ? $note : "",
 			"remark_code"       => $remark_code,
 			"reason_code"       => $reason_code,
 			"approval_type"     => $approval_type,
