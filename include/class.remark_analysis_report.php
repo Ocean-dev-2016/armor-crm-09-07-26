@@ -271,11 +271,15 @@ class RemarkAnalysisReport
 			WHERE v.isDelete = 0
 				AND v.user_id IN (" . $employeeIdList . ")
 				AND DATE(CASE
+					WHEN v.stop_date_time IS NOT NULL AND v.stop_date_time != '' AND v.stop_date_time != '0000-00-00 00:00:00'
+					THEN v.stop_date_time
 					WHEN v.start_date_time IS NOT NULL AND v.start_date_time != '' AND v.start_date_time != '0000-00-00 00:00:00'
-					THEN v.start_date_time ELSE v.created_date END)
+					THEN v.start_date_time
+					ELSE v.created_date
+				END)
 				BETWEEN '" . $range['from'] . "' AND '" . $range['to'] . "'
 				" . $whereExtra . "
-			ORDER BY v.start_date_time DESC, v.id DESC";
+			ORDER BY v.stop_date_time DESC, v.start_date_time DESC, v.id DESC";
 
 		$result = $this->safeQuery($sql);
 		if (!$result) {
@@ -300,7 +304,10 @@ class RemarkAnalysisReport
 				}
 			}
 
-			$visitDateSource = $this->isValidDateTime($row['start_date_time']) ? $row['start_date_time'] : $row['created_date'];
+			// Prefer stop_date_time because remark_code/reason_code + note are saved after visit stop.
+			$visitDateSource = $this->isValidDateTime($row['stop_date_time'])
+				? $row['stop_date_time']
+				: ($this->isValidDateTime($row['start_date_time']) ? $row['start_date_time'] : $row['created_date']);
 			$visitDate = ($visitDateSource != "" && strtotime($visitDateSource) !== false)
 				? date("Y-m-d", strtotime($visitDateSource))
 				: "";
