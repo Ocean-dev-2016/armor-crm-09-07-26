@@ -225,6 +225,7 @@ class RemarkAnalysisReport
 			"summary" => $summary,
 			"visits" => array(),
 			"total_visits" => 0,
+			"total_duration_minutes" => 0,
 			"employees" => $employees,
 			"query_error" => "",
 		);
@@ -271,10 +272,12 @@ class RemarkAnalysisReport
 				e.cname AS customer_person,
 				e.client_code AS customer_code,
 				e.turnover AS customer_turnover,
+				e.turnover_year AS customer_turnover_year,
 				e.gst AS customer_gst,
 				e.address AS customer_address,
 				e.main_city AS customer_city,
-				e.phone AS customer_mobile,
+				e.phone AS customer_phone,
+				e.mobile_no1 AS customer_mobile_no1,
 				noi.company_name AS inquiry_company,
 				noi.person_name AS inquiry_person,
 				noi.mobile_number AS inquiry_mobile
@@ -336,6 +339,17 @@ class RemarkAnalysisReport
 				$customerName = "-";
 			}
 
+			$custMobile = "";
+			if (isset($row['customer_phone']) && trim((string) $row['customer_phone']) != "") {
+				$custMobile = trim($row['customer_phone']);
+			} else if (isset($row['customer_mobile_no1']) && trim((string) $row['customer_mobile_no1']) != "") {
+				$custMobile = trim($row['customer_mobile_no1']);
+			} else if (isset($row['inquiry_mobile']) && trim((string) $row['inquiry_mobile']) != "") {
+				$custMobile = trim($row['inquiry_mobile']);
+			}
+
+			$durationMinutes = $this->durationMinutes($row['start_date_time'], $row['stop_date_time']);
+
 			$visitId = (int) $row['id'];
 			$visitRows[] = array(
 				"id" => $visitId,
@@ -345,10 +359,11 @@ class RemarkAnalysisReport
 				"customer_code" => $row['customer_code'],
 				"customer_person" => isset($row['customer_person']) ? $row['customer_person'] : "",
 				"customer_turnover" => isset($row['customer_turnover']) ? $row['customer_turnover'] : "",
+				"customer_turnover_year" => isset($row['customer_turnover_year']) ? $row['customer_turnover_year'] : "",
 				"customer_gst" => isset($row['customer_gst']) ? $row['customer_gst'] : "",
 				"customer_address" => isset($row['customer_address']) ? $row['customer_address'] : "",
 				"customer_city" => isset($row['customer_city']) ? $row['customer_city'] : "",
-				"customer_mobile" => isset($row['customer_mobile']) ? $row['customer_mobile'] : "",
+				"customer_mobile" => $custMobile,
 				"inquiry_mobile" => isset($row['inquiry_mobile']) ? $row['inquiry_mobile'] : "",
 				"customer_type" => ((int) $row['customer_id'] > 0) ? "Existing Customer" : (((int) $row['inquiry_id'] > 0) ? "Inquiry" : "New Customer"),
 				"remark_code" => $parent,
@@ -358,6 +373,7 @@ class RemarkAnalysisReport
 				"stop_remark" => $row['stop_remark'],
 				"note" => isset($row['note']) ? $row['note'] : "",
 				"meeting_purpose" => $row['remark'],
+				"duration_minutes" => $durationMinutes,
 				"is_completed" => $this->isValidDateTime($row['stop_date_time']) ? 1 : 0,
 				"consultant_form" => null,
 				"high_rate_form" => null,
@@ -365,6 +381,10 @@ class RemarkAnalysisReport
 				"has_consultant_form" => 0,
 				"has_high_rate_form" => 0,
 			);
+
+			if ($durationMinutes !== null) {
+				$data['total_duration_minutes'] += (int) $durationMinutes;
+			}
 
 			if ($parent != "" && isset($data['summary']['parents'][$parent])) {
 				$data['summary']['parents'][$parent]++;
@@ -523,6 +543,15 @@ class RemarkAnalysisReport
 		return ($value != "" && $value != "0000-00-00 00:00:00" && strtotime($value) !== false);
 	}
 
+	private function durationMinutes($start, $stop)
+	{
+		if (!$this->isValidDateTime($start) || !$this->isValidDateTime($stop)) {
+			return null;
+		}
+		$seconds = strtotime($stop) - strtotime($start);
+		return ($seconds >= 0) ? (int) floor($seconds / 60) : null;
+	}
+
 	private $lastQueryError = "";
 
 	private function safeQuery($sql)
@@ -535,6 +564,15 @@ class RemarkAnalysisReport
 			/* If a new column is missing, retry without it so old data still shows */
 			if (strpos($error, "Unknown column 'v.note'") !== false || strpos($error, "Unknown column `v`.`note`") !== false || strpos($error, "Unknown column 'note'") !== false) {
 				$sqlFallback = preg_replace('/\s*v\.note\s*,?\s*/i', ' ', $sql);
+				$result = @mysqli_query($this->db->myconn, $sqlFallback);
+				if ($result === false) {
+					$this->lastQueryError = mysqli_error($this->db->myconn);
+				} else {
+					$this->lastQueryError = "";
+				}
+			} else if (strpos($error, "Unknown column 'e.mobile_no1'") !== false || strpos($error, "Unknown column 'e.turnover_year'") !== false) {
+				$sqlFallback = str_replace('e.turnover_year AS customer_turnover_year,', "'' AS customer_turnover_year,", $sql);
+				$sqlFallback = str_replace('e.mobile_no1 AS customer_mobile_no1,', "'' AS customer_mobile_no1,", $sqlFallback);
 				$result = @mysqli_query($this->db->myconn, $sqlFallback);
 				if ($result === false) {
 					$this->lastQueryError = mysqli_error($this->db->myconn);

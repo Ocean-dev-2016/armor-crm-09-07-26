@@ -34,6 +34,11 @@ $defaultTo = date("Y-m-t");
 		.rar-parent-row td { font-weight:700; background:#eef6ff; }
 		.rar-child-row td:first-child { padding-left:28px; }
 		.rar-code { font-weight:700; color:#1a7a3a; }
+		.rar-customer-cell { min-width:260px; vertical-align:top !important; }
+		.rar-customer-info { width:100%; margin:0; border-collapse:collapse; font-size:12px; }
+		.rar-customer-info td { padding:2px 4px; border:0 !important; background:transparent !important; vertical-align:top; }
+		.rar-ci-label { width:78px; color:#666; white-space:nowrap; font-weight:600; }
+		.rar-ci-value { color:#333; word-break:break-word; }
 	</style>
 </head>
 <body class="page-md">

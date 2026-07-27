@@ -60,6 +60,23 @@ function rar_payment_label($value)
 	return (string) $value;
 }
 
+function rar_format_duration($minutes)
+{
+	if ($minutes === null || $minutes === "") {
+		return "-";
+	}
+	$minutes = (int) $minutes;
+	if ($minutes < 0) {
+		return "-";
+	}
+	$hours = (int) floor($minutes / 60);
+	$mins = $minutes % 60;
+	if ($hours > 0) {
+		return $hours . "h " . $mins . "m";
+	}
+	return $mins . " min";
+}
+
 function rar_render_form_html($visit)
 {
 	$html = '';
@@ -126,6 +143,8 @@ function rar_render_form_html($visit)
 		<?php echo rar_h(date("d/m/Y", strtotime($data['range']['to']))); ?>
 		&nbsp;|&nbsp;
 		<strong>Total Visits:</strong> <?php echo (int) $data['total_visits']; ?>
+		&nbsp;|&nbsp;
+		<strong>Total Duration:</strong> <?php echo rar_h(rar_format_duration(isset($data['total_duration_minutes']) ? $data['total_duration_minutes'] : 0)); ?>
 		<?php if (!empty($data['range']['was_limited'])) { ?>
 			<span class="text-warning">(Date range limited to max days)</span>
 		<?php } ?>
@@ -220,7 +239,8 @@ function rar_render_form_html($visit)
 						<th style="width:40px;">#</th>
 						<th style="width:90px;">Date</th>
 						<th style="min-width:110px;">Sales Person</th>
-						<th style="min-width:200px;">Customer</th>
+						<th style="min-width:240px;">Customer</th>
+						<th style="width:90px;">Visit Duration</th>
 						<th style="width:65px;">Remark</th>
 						<th style="width:65px;">Reason</th>
 						<th style="min-width:130px;">Description</th>
@@ -255,47 +275,77 @@ function rar_render_form_html($visit)
 							$formTitle = 'High Rate Analysis Form';
 						}
 						/* Customer display values */
-						$custCode    = isset($visit['customer_code']) ? $visit['customer_code'] : "";
-						$custPerson  = isset($visit['customer_person']) ? $visit['customer_person'] : "";
-						$custMobile  = isset($visit['customer_mobile']) ? $visit['customer_mobile'] : "";
+						$custCode    = isset($visit['customer_code']) ? trim((string) $visit['customer_code']) : "";
+						$custPerson  = isset($visit['customer_person']) ? trim((string) $visit['customer_person']) : "";
+						$custMobile  = isset($visit['customer_mobile']) ? trim((string) $visit['customer_mobile']) : "";
 						if ($custMobile == "" && isset($visit['inquiry_mobile'])) {
-							$custMobile = $visit['inquiry_mobile'];
+							$custMobile = trim((string) $visit['inquiry_mobile']);
 						}
-						$custTurnover = isset($visit['customer_turnover']) ? $visit['customer_turnover'] : "";
-						$custGst     = isset($visit['customer_gst']) ? $visit['customer_gst'] : "";
-						$custAddress = isset($visit['customer_address']) ? $visit['customer_address'] : "";
-						$custCity    = isset($visit['customer_city']) ? $visit['customer_city'] : "";
-						$custType    = isset($visit['customer_type']) ? $visit['customer_type'] : "";
+						$custTurnover = isset($visit['customer_turnover']) ? trim((string) $visit['customer_turnover']) : "";
+						$custTurnYear = isset($visit['customer_turnover_year']) ? trim((string) $visit['customer_turnover_year']) : "";
+						$custGst     = isset($visit['customer_gst']) ? trim((string) $visit['customer_gst']) : "";
+						$custAddress = isset($visit['customer_address']) ? trim((string) $visit['customer_address']) : "";
+						$custCity    = isset($visit['customer_city']) ? trim((string) $visit['customer_city']) : "";
+						$custType    = isset($visit['customer_type']) ? trim((string) $visit['customer_type']) : "";
+						$custCompany = isset($visit['customer_name']) ? trim((string) $visit['customer_name']) : "";
+						$disp = function ($v) {
+							$v = trim((string) $v);
+							return ($v === "") ? "-" : $v;
+						};
 						?>
 						<tr>
 							<td><?php echo $sr; ?></td>
 							<td><?php echo rar_h($dateLabel); ?></td>
 							<td><?php echo rar_h($visit['sales_person']); ?></td>
-							<td style="font-size:12px;">
-								<?php if ($custCode != "") { ?>
-									<strong><?php echo rar_h($custCode); ?></strong> &nbsp;
-								<?php } ?>
-								<strong><?php echo rar_h($visit['customer_name']); ?></strong>
-								<?php if ($custPerson != "" && $custPerson != $visit['customer_name']) { ?>
-									<br><?php echo rar_h($custPerson); ?>
-								<?php } ?>
-								<?php if ($custType != "") { ?>
-									<br><span class="label label-default" style="font-size:10px;"><?php echo rar_h($custType); ?></span>
-								<?php } ?>
-								<?php if ($custMobile != "") { ?>
-									<br><i class="fa fa-phone" style="color:#888;"></i> <?php echo rar_h($custMobile); ?>
-								<?php } ?>
-								<?php if ($custGst != "") { ?>
-									<br><small class="text-muted">GST: <?php echo rar_h($custGst); ?></small>
-								<?php } ?>
-								<?php if ($custTurnover != "") { ?>
-									<br><small class="text-muted">Slab: <?php echo rar_h($custTurnover); ?></small>
-								<?php } ?>
-								<?php if ($custAddress != "") { ?>
-									<br><small class="text-muted"><i class="fa fa-map-marker"></i> <?php echo rar_h($custAddress); ?><?php if ($custCity != "") { echo ", " . rar_h($custCity); } ?></small>
-								<?php } else if ($custCity != "") { ?>
-									<br><small class="text-muted"><i class="fa fa-map-marker"></i> <?php echo rar_h($custCity); ?></small>
-								<?php } ?>
+							<td class="rar-customer-cell">
+								<table class="rar-customer-info">
+									<tr>
+										<td class="rar-ci-label">Code</td>
+										<td class="rar-ci-value"><strong><?php echo rar_h($disp($custCode)); ?></strong></td>
+									</tr>
+									<tr>
+										<td class="rar-ci-label">Company</td>
+										<td class="rar-ci-value"><strong><?php echo rar_h($disp($custCompany)); ?></strong></td>
+									</tr>
+									<tr>
+										<td class="rar-ci-label">Person</td>
+										<td class="rar-ci-value"><?php echo rar_h($disp($custPerson)); ?></td>
+									</tr>
+									<tr>
+										<td class="rar-ci-label">Mobile</td>
+										<td class="rar-ci-value"><?php echo rar_h($disp($custMobile)); ?></td>
+									</tr>
+									<tr>
+										<td class="rar-ci-label">Turnover</td>
+										<td class="rar-ci-value"><?php
+											echo rar_h($disp($custTurnover));
+											if ($custTurnYear != "" && $custTurnYear != "0") {
+												echo ' <span class="text-muted">(' . rar_h($custTurnYear) . ')</span>';
+											}
+										?></td>
+									</tr>
+									<tr>
+										<td class="rar-ci-label">GST</td>
+										<td class="rar-ci-value"><?php echo rar_h($disp($custGst)); ?></td>
+									</tr>
+									<tr>
+										<td class="rar-ci-label">City</td>
+										<td class="rar-ci-value"><?php echo rar_h($disp($custCity)); ?></td>
+									</tr>
+									<tr>
+										<td class="rar-ci-label">Address</td>
+										<td class="rar-ci-value"><?php echo rar_h($disp($custAddress)); ?></td>
+									</tr>
+									<?php if ($custType != "") { ?>
+									<tr>
+										<td class="rar-ci-label">Type</td>
+										<td class="rar-ci-value"><span class="label label-default" style="font-size:10px;"><?php echo rar_h($custType); ?></span></td>
+									</tr>
+									<?php } ?>
+								</table>
+							</td>
+							<td style="white-space:nowrap;font-weight:700;color:#1f4e79;">
+								<?php echo rar_h(rar_format_duration(isset($visit['duration_minutes']) ? $visit['duration_minutes'] : null)); ?>
 							</td>
 							<td><span class="rar-code"><?php echo rar_h($visit['remark_code'] != "" ? $visit['remark_code'] : "-"); ?></span></td>
 							<td><span class="rar-code"><?php echo rar_h($visit['reason_code'] != "" ? $visit['reason_code'] : "-"); ?></span></td>

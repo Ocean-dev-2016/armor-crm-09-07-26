@@ -166,7 +166,7 @@ $sheetVisits->setCellValue("A1", "Remark Wise Visit Detail");
 $sheetVisits->mergeCells("A1:J1");
 $sheetVisits->getStyle("A1")->applyFromArray($titleStyle);
 $sheetVisits->setCellValue("A2", "Period: " . $fromLabel . " to " . $toLabel);
-$visitHeaders = array("#", "Date", "Sales Person", "Customer", "Customer Code", "Remark", "Reason", "Description", "Stop Remark", "Status", "Form Available");
+$visitHeaders = array("#", "Date", "Sales Person", "Customer", "Customer Code", "Visit Duration", "Remark", "Reason", "Description", "Stop Remark", "Status", "Form Available");
 rar_excel_write_header($sheetVisits, $visitHeaders, 4, $headerStyle);
 $vr = 5;
 $sr = 0;
@@ -187,17 +187,26 @@ foreach ($visits as $visit) {
 	} else if (!empty($visit['has_high_rate_form'])) {
 		$formAvail = "High Rate Form";
 	}
+	$durMins = isset($visit['duration_minutes']) ? $visit['duration_minutes'] : null;
+	$durLabel = "-";
+	if ($durMins !== null && $durMins !== "") {
+		$durMins = (int) $durMins;
+		$dh = (int) floor($durMins / 60);
+		$dm = $durMins % 60;
+		$durLabel = ($dh > 0) ? ($dh . "h " . $dm . "m") : ($dm . " min");
+	}
 	$sheetVisits->setCellValue("A" . $vr, $sr);
 	$sheetVisits->setCellValue("B" . $vr, $dateLabel);
 	$sheetVisits->setCellValue("C" . $vr, $visit['sales_person']);
 	$sheetVisits->setCellValue("D" . $vr, $visit['customer_name']);
 	$sheetVisits->setCellValue("E" . $vr, $visit['customer_code']);
-	$sheetVisits->setCellValue("F" . $vr, $visit['remark_code']);
-	$sheetVisits->setCellValue("G" . $vr, $visit['reason_code']);
-	$sheetVisits->setCellValue("H" . $vr, $desc);
-	$sheetVisits->setCellValue("I" . $vr, $visit['stop_remark']);
-	$sheetVisits->setCellValue("J" . $vr, $visit['is_completed'] ? "Completed" : "Open");
-	$sheetVisits->setCellValue("K" . $vr, $formAvail);
+	$sheetVisits->setCellValue("F" . $vr, $durLabel);
+	$sheetVisits->setCellValue("G" . $vr, $visit['remark_code']);
+	$sheetVisits->setCellValue("H" . $vr, $visit['reason_code']);
+	$sheetVisits->setCellValue("I" . $vr, $desc);
+	$sheetVisits->setCellValue("J" . $vr, $visit['stop_remark']);
+	$sheetVisits->setCellValue("K" . $vr, $visit['is_completed'] ? "Completed" : "Open");
+	$sheetVisits->setCellValue("L" . $vr, $formAvail);
 	$vr++;
 }
 rar_excel_autosize($sheetVisits, 11);

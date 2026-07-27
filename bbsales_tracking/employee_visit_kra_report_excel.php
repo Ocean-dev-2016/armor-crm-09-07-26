@@ -92,8 +92,8 @@ $book = new PHPExcel();
 $book->removeSheetByIndex(0);
 $usedTitles = array();
 $sheetIndex = 0;
-$masterColCount = 9;
-$firstDateColIndex = 9;
+$masterColCount = 10;
+$firstDateColIndex = 10;
 
 $headerStyle = array(
 	"font" => array("bold" => true, "color" => array("rgb" => "FFFFFF")),
@@ -123,13 +123,18 @@ foreach ($data['employees'] as $employee) {
 	$sheet->setCellValue("A2", date("d/m/Y", strtotime($data['range']['from'])) . " TO " . date("d/m/Y", strtotime($data['range']['to'])));
 	$sheet->getStyle("A1")->applyFromArray($titleStyle);
 
-	$kpiLabels = array("Approved Expense", "Salary", "Expense + Salary", "Total Sales", "Total Visit", "Completed / Open", "Total Quotation", "Total PI Approved");
+	$kpiLabels = array("Approved Expense", "Salary", "Expense + Salary", "Total Sales", "Total Visit", "Total Duration", "Completed / Open", "Total Quotation", "Total PI Approved");
+	$totalDurationMins = isset($employee['kpi']['total_duration_minutes']) ? (int) $employee['kpi']['total_duration_minutes'] : 0;
+	$durH = (int) floor($totalDurationMins / 60);
+	$durM = $totalDurationMins % 60;
+	$totalDurationLabel = ($durH > 0) ? ($durH . "h " . $durM . "m") : ($durM . " min");
 	$kpiValues = array(
 		(float) $employee['kpi']['approved_expense'],
 		"N/A",
 		$db->rp_number_format((float) $employee['kpi']['approved_expense'], 2) . " + N/A",
 		(float) $employee['kpi']['total_sales'],
 		(int) $employee['kpi']['total_visits'],
+		$totalDurationLabel,
 		(int) $employee['kpi']['completed_visits'] . " / " . (int) $employee['kpi']['open_visits'],
 		(int) $employee['kpi']['total_quotations'],
 		(int) $employee['kpi']['approved_pi'],
@@ -139,10 +144,10 @@ foreach ($data['employees'] as $employee) {
 		$sheet->setCellValue($column . "3", $kpiLabels[$i]);
 		$sheet->setCellValue($column . "4", $kpiValues[$i]);
 	}
-	$sheet->getStyle("A3:H3")->getFont()->setBold(true);
+	$sheet->getStyle("A3:I3")->getFont()->setBold(true);
 
 	$headerRow = 6;
-	$headers = array("Sr.", "Code", "Account Name", "Turnover", "GST No.", "Address", "City", "Pincode", "Total Visit");
+	$headers = array("Sr.", "Code", "Account Name", "Turnover", "GST No.", "Address", "City", "Pincode", "Total Visit", "Visit Duration");
 	foreach ($data['range']['dates'] as $date) {
 		$headers[] = date("d/m/Y", strtotime($date));
 	}
@@ -151,9 +156,10 @@ foreach ($data['employees'] as $employee) {
 	}
 	$sheet->getStyle("A" . $headerRow . ":" . $lastColumn . $headerRow)->applyFromArray($headerStyle);
 	$sheet->getStyle("I" . $headerRow)->getFill()->setFillType(PHPExcel_Style_Fill::FILL_SOLID)->getStartColor()->setRGB("C85A12");
+	$sheet->getStyle("J" . $headerRow)->getFill()->setFillType(PHPExcel_Style_Fill::FILL_SOLID)->getStartColor()->setRGB("A84B0F");
 
 	$summaryRow = 7;
-	$sheet->mergeCells("A" . $summaryRow . ":I" . $summaryRow);
+	$sheet->mergeCells("A" . $summaryRow . ":J" . $summaryRow);
 	$sheet->setCellValue("A" . $summaryRow, "Daily Visit Count / Outcome");
 	foreach ($data['range']['dates'] as $dateIndex => $date) {
 		$daily = $employee['daily'][$date];
@@ -174,6 +180,10 @@ foreach ($data['employees'] as $employee) {
 	$sr = 0;
 	foreach ($employee['accounts'] as $account) {
 		$acctVisits = isset($account['total_visits']) ? (int) $account['total_visits'] : 0;
+		$acctDur = isset($account['total_duration_minutes']) ? (int) $account['total_duration_minutes'] : 0;
+		$ah = (int) floor($acctDur / 60);
+		$am = $acctDur % 60;
+		$acctDurLabel = ($ah > 0) ? ($ah . "h " . $am . "m") : ($am . " min");
 		$values = array(
 			++$sr,
 			$account['code'],
@@ -184,6 +194,7 @@ foreach ($data['employees'] as $employee) {
 			$account['city'],
 			$account['pincode'],
 			$acctVisits,
+			$acctDurLabel,
 		);
 		foreach ($values as $index => $value) {
 			$sheet->setCellValue(PHPExcel_Cell::stringFromColumnIndex($index) . $rowNumber, $value);
@@ -205,7 +216,7 @@ foreach ($data['employees'] as $employee) {
 	$accountEndRow = $rowNumber - 1;
 
 	if ($accountEndRow >= $accountStartRow) {
-		$sheet->getStyle("I" . $accountStartRow . ":I" . $accountEndRow)->getFont()->setBold(true)->setSize(14);
+		$sheet->getStyle("I" . $accountStartRow . ":J" . $accountEndRow)->getFont()->setBold(true)->setSize(14);
 		$dateStartCol = PHPExcel_Cell::stringFromColumnIndex($firstDateColIndex);
 		$sheet->getStyle($dateStartCol . $accountStartRow . ":" . $lastColumn . $accountEndRow)->getFont()->setBold(true)->setSize(14);
 		$sheet->getStyle($dateStartCol . $accountStartRow . ":" . $lastColumn . $accountEndRow)->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
@@ -283,7 +294,7 @@ foreach ($data['employees'] as $employee) {
 		}
 	}
 
-	$sheet->freezePane("J8");
+	$sheet->freezePane("K8");
 	$sheet->getColumnDimension("A")->setWidth(8);
 	$sheet->getColumnDimension("B")->setWidth(12);
 	$sheet->getColumnDimension("C")->setWidth(28);
@@ -293,6 +304,7 @@ foreach ($data['employees'] as $employee) {
 	$sheet->getColumnDimension("G")->setWidth(12);
 	$sheet->getColumnDimension("H")->setWidth(10);
 	$sheet->getColumnDimension("I")->setWidth(12);
+	$sheet->getColumnDimension("J")->setWidth(14);
 	for ($index = $firstDateColIndex; $index <= $lastColumnIndex; $index++) {
 		$sheet->getColumnDimension(PHPExcel_Cell::stringFromColumnIndex($index))->setWidth(11);
 	}

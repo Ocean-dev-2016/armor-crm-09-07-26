@@ -20,6 +20,23 @@ function kra_visit_code($visit)
 	return ($code != "") ? $code : ($visit['is_completed'] ? "Done" : "Open");
 }
 
+function kra_format_duration($minutes)
+{
+	if ($minutes === null || $minutes === "") {
+		return "-";
+	}
+	$minutes = (int) $minutes;
+	if ($minutes < 0) {
+		return "-";
+	}
+	$hours = (int) floor($minutes / 60);
+	$mins = $minutes % 60;
+	if ($hours > 0) {
+		return $hours . "h " . $mins . "m";
+	}
+	return $mins . " min";
+}
+
 $report = new EmployeeVisitKraReport($db);
 $data = $report->build(
 	isset($_REQUEST['from_date']) ? $_REQUEST['from_date'] : "",
@@ -27,7 +44,7 @@ $data = $report->build(
 	isset($_REQUEST['employee_ids']) ? $_REQUEST['employee_ids'] : "",
 	$rights
 );
-$fixedColCount = 9; // Sr .. Total Visit
+$fixedColCount = 10; // Sr .. Total Visit + Visit Duration
 ?>
 <style>
 	.kra-employee { border:1px solid #d9e2ea; margin-bottom:24px; background:#fff; }
@@ -58,13 +75,16 @@ $fixedColCount = 9; // Sr .. Total Visit
 	.kra-table .kra-f6 { position:sticky; left:665px; z-index:3; min-width:80px;  width:80px; }
 	.kra-table .kra-f7 { position:sticky; left:745px; z-index:3; min-width:70px;  width:70px; }
 	.kra-table .kra-f8 { position:sticky; left:815px; z-index:3; min-width:78px;  width:78px; text-align:center; }
+	.kra-table .kra-f9 { position:sticky; left:893px; z-index:3; min-width:95px;  width:95px; text-align:center; }
 	.kra-table thead [class*="kra-f"] { z-index:6; background:#e9782e; color:#fff; }
 	.kra-table thead .kra-f8 { background:#c85a12 !important; }
+	.kra-table thead .kra-f9 { background:#a84b0f !important; }
 	.kra-table tbody [class*="kra-f"] {
 		background:#fff;
 		box-shadow:2px 0 3px rgba(0,0,0,0.05);
 	}
 	.kra-table tbody .kra-f8 { background:#e8f4ff !important; }
+	.kra-table tbody .kra-f9 { background:#fff4e8 !important; }
 	.kra-table tbody tr.kra-summary [class*="kra-f"] { background:#eef5ef !important; }
 	.kra-table .kra-summary td { background:#eef5ef; font-weight:700; text-align:center; }
 	.kra-total-num { font-size:16px; font-weight:800; color:#1f4e79; }
@@ -110,6 +130,7 @@ $fixedColCount = 9; // Sr .. Total Visit
 			<div class="kra-kpi"><div class="kra-kpi-label">Expense + Salary</div><div class="kra-kpi-value"><?php echo kra_money($db, $employee['kpi']['approved_expense']); ?> + N/A</div></div>
 			<div class="kra-kpi"><div class="kra-kpi-label">Total Sales</div><div class="kra-kpi-value"><?php echo kra_money($db, $employee['kpi']['total_sales']); ?></div></div>
 			<div class="kra-kpi"><div class="kra-kpi-label">Total Visit</div><div class="kra-kpi-value"><?php echo (int) $employee['kpi']['total_visits']; ?></div></div>
+			<div class="kra-kpi"><div class="kra-kpi-label">Total Duration</div><div class="kra-kpi-value"><?php echo kra_h(kra_format_duration(isset($employee['kpi']['total_duration_minutes']) ? $employee['kpi']['total_duration_minutes'] : 0)); ?></div></div>
 			<div class="kra-kpi"><div class="kra-kpi-label">Completed / Open</div><div class="kra-kpi-value"><?php echo (int) $employee['kpi']['completed_visits']; ?> / <?php echo (int) $employee['kpi']['open_visits']; ?></div></div>
 			<div class="kra-kpi"><div class="kra-kpi-label">Total Quotation</div><div class="kra-kpi-value"><?php echo (int) $employee['kpi']['total_quotations']; ?></div></div>
 			<div class="kra-kpi"><div class="kra-kpi-label">Total PI Approved</div><div class="kra-kpi-value"><?php echo (int) $employee['kpi']['approved_pi']; ?></div></div>
@@ -128,6 +149,7 @@ $fixedColCount = 9; // Sr .. Total Visit
 					<th class="kra-f6">City</th>
 					<th class="kra-f7">Pincode</th>
 					<th class="kra-f8">Total Visit</th>
+					<th class="kra-f9">Visit Duration</th>
 					<?php foreach ($data['range']['dates'] as $date) { ?>
 						<th class="kra-date"><?php echo date("d/m/Y", strtotime($date)); ?></th>
 					<?php } ?>
@@ -135,7 +157,7 @@ $fixedColCount = 9; // Sr .. Total Visit
 				</thead>
 				<tbody>
 				<tr class="kra-summary">
-					<td class="kra-f0" colspan="9">Daily Visit Count / Outcome</td>
+					<td class="kra-f0" colspan="10">Daily Visit Count / Outcome</td>
 					<?php foreach ($data['range']['dates'] as $date) {
 						$daily = $employee['daily'][$date]; ?>
 						<td>
@@ -150,6 +172,7 @@ $fixedColCount = 9; // Sr .. Total Visit
 
 				<?php $sr = 0; foreach ($employee['accounts'] as $account) {
 					$acctVisits = isset($account['total_visits']) ? (int) $account['total_visits'] : 0;
+					$acctDuration = isset($account['total_duration_minutes']) ? (int) $account['total_duration_minutes'] : 0;
 					?>
 					<tr>
 						<td class="kra-f0"><?php echo ++$sr; ?></td>
@@ -161,6 +184,7 @@ $fixedColCount = 9; // Sr .. Total Visit
 						<td class="kra-f6"><?php echo kra_h($account['city']); ?></td>
 						<td class="kra-f7"><?php echo kra_h($account['pincode']); ?></td>
 						<td class="kra-f8"><span class="kra-total-num"><?php echo $acctVisits; ?></span></td>
+						<td class="kra-f9"><span class="kra-total-num" style="font-size:13px;"><?php echo kra_h(kra_format_duration($acctDuration)); ?></span></td>
 						<?php foreach ($data['range']['dates'] as $date) { ?>
 							<td class="kra-date">
 								<?php if (!empty($account['dates'][$date])) {
@@ -172,7 +196,7 @@ $fixedColCount = 9; // Sr .. Total Visit
 												<div><b>Purpose:</b> <?php echo kra_h($visit['purpose_name']); ?></div>
 												<div><b>Start:</b> <?php echo kra_h($visit['start_date_time']); ?></div>
 												<div><b>Stop:</b> <?php echo $visit['is_completed'] ? kra_h($visit['stop_date_time']) : "Open"; ?></div>
-												<div><b>Duration:</b> <?php echo $visit['duration_minutes'] === null ? "N/A" : (int) $visit['duration_minutes'] . " min"; ?></div>
+												<div><b>Duration:</b> <?php echo $visit['duration_minutes'] === null ? "N/A" : kra_h(kra_format_duration($visit['duration_minutes'])); ?></div>
 												<div><b>Outcome:</b> <?php echo kra_h($visit['remark_label']); ?><?php echo $visit['reason_label'] != "" ? " - " . kra_h($visit['reason_label']) : ""; ?></div>
 												<div><b>Remark:</b> <?php echo kra_h($visit['stop_remark']); ?></div>
 												<div><b>Purchasing From:</b> <?php echo kra_h($visit['product_name']); ?></div>

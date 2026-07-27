@@ -193,6 +193,7 @@ class EmployeeVisitKraReport
 				"open_visits" => 0,
 				"total_quotations" => 0,
 				"approved_pi" => 0,
+				"total_duration_minutes" => 0,
 			);
 			$data['employees'][$id] = $employee;
 		}
@@ -293,6 +294,7 @@ class EmployeeVisitKraReport
 			if (!isset($data['employees'][$employeeId]['accounts'][$key])) {
 				$account['dates'] = array();
 				$account['total_visits'] = 0;
+				$account['total_duration_minutes'] = 0;
 				$data['employees'][$employeeId]['accounts'][$key] = $account;
 			}
 			if (!isset($data['employees'][$employeeId]['accounts'][$key]['dates'][$visitDate])) {
@@ -300,6 +302,10 @@ class EmployeeVisitKraReport
 			}
 			$data['employees'][$employeeId]['accounts'][$key]['dates'][$visitDate][] = $row;
 			$data['employees'][$employeeId]['accounts'][$key]['total_visits']++;
+			if ($row['duration_minutes'] !== null) {
+				$data['employees'][$employeeId]['accounts'][$key]['total_duration_minutes'] += (int) $row['duration_minutes'];
+				$data['employees'][$employeeId]['kpi']['total_duration_minutes'] += (int) $row['duration_minutes'];
+			}
 
 			$data['employees'][$employeeId]['daily'][$visitDate]['total']++;
 			$data['employees'][$employeeId]['kpi']['total_visits']++;
