@@ -110,6 +110,24 @@ $defaultTo = date("Y-m-t");
 		</div>
 	</div>
 </div>
+
+<div class="modal fade" id="rarFormModal" tabindex="-1" role="dialog" aria-hidden="true">
+	<div class="modal-dialog modal-lg">
+		<div class="modal-content">
+			<div class="modal-header" style="background:#3598dc;color:#fff;">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true" style="color:#fff;opacity:1;">&times;</button>
+				<h4 class="modal-title" id="rarFormModalTitle">Form Detail</h4>
+			</div>
+			<div class="modal-body" id="rarFormModalBody" style="max-height:70vh;overflow:auto;">
+				<div class="text-center text-muted">Loading...</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+			</div>
+		</div>
+	</div>
+</div>
+
 <?php include("footer.php"); ?>
 <?php include("include_js.php"); ?>
 <script type="text/javascript" src="js/fSelect.js"></script>
@@ -180,6 +198,15 @@ $defaultTo = date("Y-m-t");
 	$("#rar-results").on("change", "#rar_numRecords", function () {
 		pageSize = parseInt($(this).val(), 10) || 10;
 		loadReport(1);
+	});
+
+	$("#rar-results").on("click", ".rar-view-form-btn", function () {
+		var visitId = $(this).data("visit-id");
+		var title = $(this).data("title") || "Form Detail";
+		var content = $("#rar-form-" + visitId).html() || "<div class='alert alert-warning'>Form data not found.</div>";
+		$("#rarFormModalTitle").text(title + " (Visit #" + visitId + ")");
+		$("#rarFormModalBody").html(content);
+		$("#rarFormModal").modal("show");
 	});
 
 	loadReport(1);

@@ -42,10 +42,80 @@ if ($page_number > $total_pages) {
 }
 $page_position = ($page_number - 1) * $item_per_page;
 $visits = array_slice($allVisits, $page_position, $item_per_page);
+$visits = $report->attachFormsToVisits($visits);
 
 function rar_h($value)
 {
 	return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+}
+
+function rar_payment_label($value)
+{
+	if ($value === '0' || $value === 0) {
+		return 'Advance';
+	}
+	if ($value === '1' || $value === 1) {
+		return '30 Days';
+	}
+	return (string) $value;
+}
+
+function rar_render_form_html($visit)
+{
+	$html = '';
+	if (!empty($visit['consultant_form']) && is_array($visit['consultant_form'])) {
+		$vf = $visit['consultant_form'];
+		$typeLabel = (isset($vf['consultant_type']) && $vf['consultant_type'] == 'government')
+			? 'Government Consultant Approval'
+			: 'Private Consultant Approval';
+		if (isset($vf['reason_code']) && strtoupper($vf['reason_code']) == 'C2') {
+			$typeLabel = 'Government Consultant Approval';
+		} else if (isset($vf['reason_code']) && strtoupper($vf['reason_code']) == 'C1') {
+			$typeLabel = 'Private Consultant Approval';
+		}
+		$html .= '<div class="rar-form-block rar-consultant-block">';
+		$html .= '<h4 style="margin-top:0;color:#1a7a3a;"><i class="fa fa-user"></i> Need Approval / Consultant Form</h4>';
+		$html .= '<table class="table table-bordered table-condensed" style="margin-bottom:10px;">';
+		$html .= '<tr><th style="width:160px;">Type</th><td>' . rar_h($typeLabel) . '</td></tr>';
+		$html .= '<tr><th>Firm Name</th><td>' . rar_h($vf['firm_name']) . '</td></tr>';
+		$html .= '<tr><th>Address</th><td>' . nl2br(rar_h($vf['address'])) . '</td></tr>';
+		$html .= '<tr><th>City</th><td>' . rar_h($vf['city']) . '</td></tr>';
+		$html .= '<tr><th>State</th><td>' . rar_h($vf['state']) . '</td></tr>';
+		$html .= '<tr><th>Pincode</th><td>' . rar_h($vf['pincode']) . '</td></tr>';
+		$html .= '<tr><th>Contact Person</th><td>' . rar_h($vf['contact_person']) . '</td></tr>';
+		$html .= '<tr><th>Mobile</th><td>' . rar_h($vf['mobile']) . '</td></tr>';
+		$html .= '<tr><th>Email</th><td>' . rar_h(isset($vf['email']) ? $vf['email'] : '') . '</td></tr>';
+		$html .= '</table></div>';
+	}
+	if (!empty($visit['high_rate_form']) && is_array($visit['high_rate_form'])) {
+		$hf = $visit['high_rate_form'];
+		$payLabel = isset($hf['payment_option']) ? rar_payment_label($hf['payment_option']) : '';
+		$html .= '<div class="rar-form-block rar-highrate-block">';
+		$html .= '<h4 style="margin-top:0;color:#c85a12;"><i class="fa fa-line-chart"></i> High Rate Analysis Form</h4>';
+		$html .= '<table class="table table-bordered table-condensed" style="margin-bottom:10px;">';
+		$html .= '<tr><th style="width:160px;">Customer Name</th><td>' . rar_h($hf['customer_name']) . '</td></tr>';
+		$html .= '<tr><th>Payment</th><td>' . rar_h($payLabel) . '</td></tr>';
+		$html .= '<tr><th>Payment Remark</th><td>' . rar_h(isset($hf['payment_remark']) ? $hf['payment_remark'] : '') . '</td></tr>';
+		$html .= '</table>';
+		if (!empty($visit['high_rate_items'])) {
+			$html .= '<table class="table table-bordered table-striped table-condensed" style="margin-bottom:0;">';
+			$html .= '<thead><tr style="background:#f5f5f5;"><th>Product</th><th>Given Rate</th><th>Qty</th><th>Customer Rate</th><th>Remark</th></tr></thead><tbody>';
+			foreach ($visit['high_rate_items'] as $hi) {
+				$html .= '<tr>';
+				$html .= '<td>' . rar_h($hi['product_name']) . '</td>';
+				$html .= '<td>' . rar_h($hi['given_rate']) . '</td>';
+				$html .= '<td>' . rar_h($hi['qty']) . '</td>';
+				$html .= '<td>' . rar_h($hi['customer_rate']) . '</td>';
+				$html .= '<td>' . rar_h(isset($hi['remark']) ? $hi['remark'] : '') . '</td>';
+				$html .= '</tr>';
+			}
+			$html .= '</tbody></table>';
+		} else {
+			$html .= '<div class="text-muted">No product rows found.</div>';
+		}
+		$html .= '</div>';
+	}
+	return $html;
 }
 ?>
 <div class="row" style="margin-bottom:15px;">
@@ -152,6 +222,7 @@ function rar_h($value)
 						<th style="width:70px;">Reason</th>
 						<th>Description</th>
 						<th>Stop Remark</th>
+						<th style="width:110px;">Form</th>
 						<th style="width:90px;">Status</th>
 					</tr>
 				</thead>
@@ -169,6 +240,17 @@ function rar_h($value)
 							$desc = "-";
 						}
 						$dateLabel = ($visit['visit_date'] != "") ? date("d/m/Y", strtotime($visit['visit_date'])) : "-";
+						$hasConsultant = !empty($visit['has_consultant_form']);
+						$hasHighRate = !empty($visit['has_high_rate_form']);
+						$formHtml = ($hasConsultant || $hasHighRate) ? rar_render_form_html($visit) : '';
+						$formTitle = '';
+						if ($hasConsultant && $hasHighRate) {
+							$formTitle = 'Consultant + High Rate Form';
+						} else if ($hasConsultant) {
+							$formTitle = 'Consultant Approval Form';
+						} else if ($hasHighRate) {
+							$formTitle = 'High Rate Analysis Form';
+						}
 						?>
 						<tr>
 							<td><?php echo $sr; ?></td>
@@ -184,6 +266,23 @@ function rar_h($value)
 							<td><span class="rar-code"><?php echo rar_h($visit['reason_code'] != "" ? $visit['reason_code'] : "-"); ?></span></td>
 							<td><?php echo rar_h($desc); ?></td>
 							<td><?php echo rar_h($visit['stop_remark']); ?></td>
+							<td>
+								<?php if ($formHtml != "") { ?>
+									<button type="button"
+										class="btn btn-xs btn-primary rar-view-form-btn"
+										data-title="<?php echo rar_h($formTitle); ?>"
+										data-visit-id="<?php echo (int) $visit['id']; ?>">
+										<i class="fa fa-eye"></i> View Form
+									</button>
+									<div class="rar-form-content" id="rar-form-<?php echo (int) $visit['id']; ?>" style="display:none;">
+										<?php echo $formHtml; ?>
+									</div>
+								<?php } else if ($visit['remark_code'] == 'C' || $visit['reason_code'] == 'C1' || $visit['reason_code'] == 'C2' || $visit['remark_code'] == 'E' || $visit['reason_code'] == 'E1') { ?>
+									<span class="text-muted">No form</span>
+								<?php } else { ?>
+									-
+								<?php } ?>
+							</td>
 							<td><?php echo $visit['is_completed'] ? '<span class="label label-success">Completed</span>' : '<span class="label label-warning">Open</span>'; ?></td>
 						</tr>
 					<?php } ?>

@@ -275,6 +275,7 @@ class RemarkAnalysisReport
 			return $data;
 		}
 
+		$visitRows = array();
 		while ($row = mysqli_fetch_assoc($result)) {
 			$codes = $this->normalizeRemarkCodes($row);
 			$parent = $codes['remark_code'];
@@ -309,8 +310,9 @@ class RemarkAnalysisReport
 				$customerName = "-";
 			}
 
-			$visit = array(
-				"id" => (int) $row['id'],
+			$visitId = (int) $row['id'];
+			$visitRows[] = array(
+				"id" => $visitId,
 				"visit_date" => $visitDate,
 				"sales_person" => $row['sales_person_name'],
 				"customer_name" => $customerName,
@@ -322,10 +324,12 @@ class RemarkAnalysisReport
 				"stop_remark" => $row['stop_remark'],
 				"meeting_purpose" => $row['remark'],
 				"is_completed" => $this->isValidDateTime($row['stop_date_time']) ? 1 : 0,
+				"consultant_form" => null,
+				"high_rate_form" => null,
+				"high_rate_items" => array(),
+				"has_consultant_form" => 0,
+				"has_high_rate_form" => 0,
 			);
-
-			$data['visits'][] = $visit;
-			$data['total_visits']++;
 
 			if ($parent != "" && isset($data['summary']['parents'][$parent])) {
 				$data['summary']['parents'][$parent]++;
@@ -337,7 +341,112 @@ class RemarkAnalysisReport
 			}
 		}
 
+		$data['visits'] = $visitRows;
+		$data['total_visits'] = count($visitRows);
 		return $data;
+	}
+
+	/**
+	 * Attach consultant / high-rate forms for a subset of visits (e.g. current page).
+	 */
+	public function attachFormsToVisits($visits)
+	{
+		if (empty($visits) || !is_array($visits)) {
+			return $visits;
+		}
+		$visitIds = array();
+		foreach ($visits as $visit) {
+			$id = isset($visit['id']) ? (int) $visit['id'] : 0;
+			if ($id > 0) {
+				$visitIds[] = $id;
+			}
+		}
+		$formsByVisit = $this->loadVisitFormsByVisitIds($visitIds);
+		foreach ($visits as $idx => $visit) {
+			$vid = isset($visit['id']) ? (int) $visit['id'] : 0;
+			$visits[$idx]['consultant_form'] = null;
+			$visits[$idx]['high_rate_form'] = null;
+			$visits[$idx]['high_rate_items'] = array();
+			$visits[$idx]['has_consultant_form'] = 0;
+			$visits[$idx]['has_high_rate_form'] = 0;
+			if ($vid > 0 && isset($formsByVisit[$vid])) {
+				$visits[$idx]['consultant_form'] = $formsByVisit[$vid]['consultant_form'];
+				$visits[$idx]['high_rate_form'] = $formsByVisit[$vid]['high_rate_form'];
+				$visits[$idx]['high_rate_items'] = $formsByVisit[$vid]['high_rate_items'];
+				$visits[$idx]['has_consultant_form'] = !empty($formsByVisit[$vid]['consultant_form']) ? 1 : 0;
+				$visits[$idx]['has_high_rate_form'] = !empty($formsByVisit[$vid]['high_rate_form']) ? 1 : 0;
+			}
+		}
+		return $visits;
+	}
+
+	private function loadVisitFormsByVisitIds($visitIds)
+	{
+		$out = array();
+		if (empty($visitIds)) {
+			return $out;
+		}
+		$ids = array();
+		foreach ($visitIds as $id) {
+			$id = (int) $id;
+			if ($id > 0) {
+				$ids[$id] = $id;
+				$out[$id] = array(
+					"consultant_form" => null,
+					"high_rate_form" => null,
+					"high_rate_items" => array(),
+				);
+			}
+		}
+		if (empty($ids)) {
+			return $out;
+		}
+		$idList = implode(",", $ids);
+
+		$cfRes = $this->safeQuery("SELECT * FROM visit_consultant_form WHERE isDelete=0 AND visit_id IN (" . $idList . ") ORDER BY id DESC");
+		if ($cfRes) {
+			while ($cf = mysqli_fetch_assoc($cfRes)) {
+				$vid = (int) $cf['visit_id'];
+				if (isset($out[$vid]) && $out[$vid]['consultant_form'] === null) {
+					$out[$vid]['consultant_form'] = $cf;
+				}
+			}
+		}
+
+		$hrRes = $this->safeQuery("SELECT * FROM visit_high_rate_form WHERE isDelete=0 AND visit_id IN (" . $idList . ") ORDER BY id DESC");
+		$hrFormIds = array();
+		if ($hrRes) {
+			while ($hr = mysqli_fetch_assoc($hrRes)) {
+				$vid = (int) $hr['visit_id'];
+				if (isset($out[$vid]) && $out[$vid]['high_rate_form'] === null) {
+					$out[$vid]['high_rate_form'] = $hr;
+					$hrFormIds[(int) $hr['id']] = $vid;
+				}
+			}
+		}
+
+		if (!empty($hrFormIds)) {
+			$itemRes = $this->safeQuery(
+				"SELECT * FROM visit_high_rate_form_item
+				 WHERE isDelete=0 AND high_rate_form_id IN (" . implode(",", array_keys($hrFormIds)) . ")
+				 ORDER BY sort_order ASC, id ASC"
+			);
+			if ($itemRes) {
+				while ($it = mysqli_fetch_assoc($itemRes)) {
+					if ($it['given_rate'] == "" && $it['qty'] == "" && $it['customer_rate'] == "" && empty($it['remark'])) {
+						continue;
+					}
+					$fid = (int) $it['high_rate_form_id'];
+					if (!isset($hrFormIds[$fid])) {
+						continue;
+					}
+					$vid = $hrFormIds[$fid];
+					$out[$vid]['high_rate_items'][] = $it;
+				}
+			}
+		}
+
+		return $out;
 	}
 
 	private function emptySummary()
