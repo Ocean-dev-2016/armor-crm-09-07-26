@@ -374,6 +374,9 @@ class Visit extends Functions
 			"designation"   => $designation_id,
 
 		);
+		if (isset($followup_date) && $followup_date != "") {
+			$rows["followup_date"] = $followup_date;
+		}
 
 		$Where = "id='" . $id . "'";
 		$eid = $this->db->rp_update($this->ctable, $rows, $Where, 0);
@@ -590,6 +593,7 @@ class Visit extends Functions
 						}
 					}
 
+					$followupDateValue = (isset($followup_date) && $followup_date != "") ? $followup_date : $stop_date_time;
 					$followupValues = array(
 						$followupReferenceTable,
 						$user_id,
@@ -598,7 +602,7 @@ class Visit extends Functions
 						"",
 						$followupDescription,
 						"5",
-						$stop_date_time,
+						$followupDateValue,
 						0,
 						1,
 						0,

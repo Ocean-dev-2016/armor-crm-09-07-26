@@ -129,6 +129,9 @@ function rar_render_form_html($visit)
 		<?php if (!empty($data['range']['was_limited'])) { ?>
 			<span class="text-warning">(Date range limited to max days)</span>
 		<?php } ?>
+		<?php if ((int) $data['total_visits'] < 1 && !empty($data['query_error'])) { ?>
+			<div class="alert alert-danger" style="margin-top:10px;">Report query error: <?php echo rar_h($data['query_error']); ?></div>
+		<?php } ?>
 	</div>
 </div>
 

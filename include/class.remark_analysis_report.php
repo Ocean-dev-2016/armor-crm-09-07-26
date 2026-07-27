@@ -211,7 +211,8 @@ class RemarkAnalysisReport
 	public function build($fromDate, $toDate, $employeeIds, $customerIds, $remarkFilter, $rights)
 	{
 		$range = $this->normalizeDateRange($fromDate, $toDate);
-		$employees = $this->getAccessibleEmployees($employeeIds, $rights);
+		$requestedEmployeeIds = $this->normalizeIds($employeeIds);
+		$employees = $this->getAccessibleEmployees($requestedEmployeeIds, $rights);
 		$customerIds = $this->normalizeIds($customerIds);
 		$remarkFilter = strtoupper(trim((string) $remarkFilter));
 
@@ -225,14 +226,27 @@ class RemarkAnalysisReport
 			"visits" => array(),
 			"total_visits" => 0,
 			"employees" => $employees,
+			"query_error" => "",
 		);
 
-		if (empty($employees)) {
+		$adminType = isset($_SESSION[SITE_SESS . '_ADMIN_TYPE']) ? (int) $_SESSION[SITE_SESS . '_ADMIN_TYPE'] : 0;
+		$hasEmployeeRestriction = !empty($requestedEmployeeIds);
+		if (!$hasEmployeeRestriction && $adminType != 0 && !empty($rights['personal_flag'])) {
+			$hasEmployeeRestriction = true;
+		}
+		if (!$hasEmployeeRestriction && $adminType != 0 && !empty($rights['chain_vise_flag'])) {
+			$hasEmployeeRestriction = true;
+		}
+
+		if ($hasEmployeeRestriction && empty($employees)) {
 			return $data;
 		}
 
-		$employeeIdList = implode(",", array_keys($employees));
 		$whereExtra = "";
+		if ($hasEmployeeRestriction) {
+			$employeeIdList = implode(",", array_keys($employees));
+			$whereExtra .= " AND v.user_id IN (" . $employeeIdList . ")";
+		}
 		if (!empty($customerIds)) {
 			$whereExtra .= " AND v.customer_id IN (" . implode(",", $customerIds) . ")";
 		}
@@ -269,20 +283,18 @@ class RemarkAnalysisReport
 			LEFT JOIN executive e ON e.id = v.customer_id
 			LEFT JOIN no_order_inquiry noi ON noi.id = v.inquiry_id
 			WHERE v.isDelete = 0
-				AND v.user_id IN (" . $employeeIdList . ")
 				AND DATE(CASE
-					WHEN v.stop_date_time IS NOT NULL AND v.stop_date_time != '' AND v.stop_date_time != '0000-00-00 00:00:00'
-					THEN v.stop_date_time
-					WHEN v.start_date_time IS NOT NULL AND v.start_date_time != '' AND v.start_date_time != '0000-00-00 00:00:00'
+					WHEN v.start_date_time IS NOT NULL AND v.start_date_time != '0000-00-00 00:00:00'
 					THEN v.start_date_time
 					ELSE v.created_date
 				END)
 				BETWEEN '" . $range['from'] . "' AND '" . $range['to'] . "'
 				" . $whereExtra . "
-			ORDER BY v.stop_date_time DESC, v.start_date_time DESC, v.id DESC";
+			ORDER BY v.start_date_time DESC, v.id DESC";
 
 		$result = $this->safeQuery($sql);
 		if (!$result) {
+			$data['query_error'] = $this->lastQueryError;
 			return $data;
 		}
 
@@ -304,10 +316,10 @@ class RemarkAnalysisReport
 				}
 			}
 
-			// Prefer stop_date_time because remark_code/reason_code + note are saved after visit stop.
-			$visitDateSource = $this->isValidDateTime($row['stop_date_time'])
-				? $row['stop_date_time']
-				: ($this->isValidDateTime($row['start_date_time']) ? $row['start_date_time'] : $row['created_date']);
+			// Prefer start_date_time (same as Visit / KRA reports) for display date.
+			$visitDateSource = $this->isValidDateTime($row['start_date_time'])
+				? $row['start_date_time']
+				: $row['created_date'];
 			$visitDate = ($visitDateSource != "" && strtotime($visitDateSource) !== false)
 				? date("Y-m-d", strtotime($visitDateSource))
 				: "";
@@ -511,21 +523,35 @@ class RemarkAnalysisReport
 		return ($value != "" && $value != "0000-00-00 00:00:00" && strtotime($value) !== false);
 	}
 
+	private $lastQueryError = "";
+
 	private function safeQuery($sql)
 	{
+		$this->lastQueryError = "";
 		$result = mysqli_query($this->db->myconn, $sql);
 		if ($result === false) {
 			$error = mysqli_error($this->db->myconn);
+			$this->lastQueryError = $error;
 			/* If a new column is missing, retry without it so old data still shows */
-			if (strpos($error, "Unknown column 'v.note'") !== false || strpos($error, "Unknown column `v`.`note`") !== false) {
+			if (strpos($error, "Unknown column 'v.note'") !== false || strpos($error, "Unknown column `v`.`note`") !== false || strpos($error, "Unknown column 'note'") !== false) {
 				$sqlFallback = preg_replace('/\s*v\.note\s*,?\s*/i', ' ', $sql);
 				$result = @mysqli_query($this->db->myconn, $sqlFallback);
-			} else if (strpos($error, "Unknown column 'v.remark_code'") !== false) {
+				if ($result === false) {
+					$this->lastQueryError = mysqli_error($this->db->myconn);
+				} else {
+					$this->lastQueryError = "";
+				}
+			} else if (strpos($error, "Unknown column 'v.remark_code'") !== false || strpos($error, "Unknown column 'remark_code'") !== false) {
 				/* remark_code column missing — use empty string placeholders */
 				$sqlFallback = str_replace('v.remark_code,', "'' AS remark_code,", $sql);
 				$sqlFallback = str_replace('v.reason_code,', "'' AS reason_code,", $sqlFallback);
 				$sqlFallback = str_replace('v.note,', '', $sqlFallback);
 				$result = @mysqli_query($this->db->myconn, $sqlFallback);
+				if ($result === false) {
+					$this->lastQueryError = mysqli_error($this->db->myconn);
+				} else {
+					$this->lastQueryError = "";
+				}
 			}
 		}
 		return $result;

@@ -766,9 +766,10 @@ if ($is_valid_api_key) {
 			$detail['stop_latitude'] 		= isset($_REQUEST['stop_latitude']) ? $db->clean($_REQUEST['stop_latitude']) : "";
 			$detail['stop_longitude'] 		= isset($_REQUEST['stop_longitude']) ? $db->clean($_REQUEST['stop_longitude']) : "";
 			$detail['stop_remark'] 			= isset($_REQUEST['stop_remark']) ? $db->clean($_REQUEST['stop_remark']) : "";
-			/* App sends note + date after stop_remark (Android stopVisit) */
+			/* App sends note + date after stop_remark (Android stopVisit).
+			 * date format e.g. 2026-07-31 12:50 → visit.followup_date (+ followup.followup_date) */
 			$detail['note'] 				= isset($_REQUEST['note']) ? $db->clean($_REQUEST['note']) : "";
-			$detail['date'] 				= isset($_REQUEST['date']) ? $db->clean($_REQUEST['date']) : "";
+			$appDateRaw 					= isset($_REQUEST['date']) ? $db->clean($_REQUEST['date']) : "";
 			$detail['remark_code'] 			= isset($_REQUEST['remark_code']) ? strtoupper($db->clean($_REQUEST['remark_code'])) : "";
 			$detail['reason_code'] 			= isset($_REQUEST['reason_code']) ? strtoupper($db->clean($_REQUEST['reason_code'])) : "";
 			/*
@@ -787,15 +788,18 @@ if ($is_valid_api_key) {
 				}
 			}
 			$detail['stop_app_address'] 	= isset($_REQUEST['stop_app_address']) ? $db->clean($_REQUEST['stop_app_address']) : "";
-			/* Prefer App date/time when provided; else server now */
-			if ($detail['date'] != "") {
-				$parsedStopDate = strtotime(str_replace('/', '-', $detail['date']));
-				if ($parsedStopDate === false) {
-					$parsedStopDate = strtotime($detail['date']);
+			/* Visit end time = server now */
+			$detail['stop_date_time'] = date("Y-m-d H:i:s");
+			/* App date → followup_date (Y-m-d H:i[:s]) */
+			$detail['followup_date'] = "";
+			if ($appDateRaw != "") {
+				$parsedFollowupDate = strtotime(str_replace('/', '-', $appDateRaw));
+				if ($parsedFollowupDate === false) {
+					$parsedFollowupDate = strtotime($appDateRaw);
 				}
-				$detail['stop_date_time'] = ($parsedStopDate !== false) ? date("Y-m-d H:i:s", $parsedStopDate) : date("Y-m-d H:i:s");
-			} else {
-				$detail['stop_date_time'] = date("Y-m-d H:i:s");
+				if ($parsedFollowupDate !== false) {
+					$detail['followup_date'] = date("Y-m-d H:i:s", $parsedFollowupDate);
+				}
 			}
 			$detail['customer_id'] 			= isset($_REQUEST['customer_id']) ? $db->clean($_REQUEST['customer_id']) : "";
 			$detail['inquiry_id'] 			= isset($_REQUEST['inquiry_id']) ? $db->clean($_REQUEST['inquiry_id']) : "";
