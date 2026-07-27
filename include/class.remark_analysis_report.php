@@ -274,7 +274,7 @@ class RemarkAnalysisReport
 				e.gst AS customer_gst,
 				e.address AS customer_address,
 				e.main_city AS customer_city,
-				e.mobile AS customer_mobile,
+				e.phone AS customer_mobile,
 				noi.company_name AS inquiry_company,
 				noi.person_name AS inquiry_person,
 				noi.mobile_number AS inquiry_mobile
