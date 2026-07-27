@@ -1046,6 +1046,40 @@ if ($adminTypesRes) {
 	}
 }
 
+// page_table id=671 — Remark Wise Report
+$rarPageCheck = mysqli_query($conn, "SELECT id FROM page_table WHERE id=671 LIMIT 1");
+if ($rarPageCheck && mysqli_num_rows($rarPageCheck) > 0) {
+	db_sync_append_page_urls($conn, 671, array(
+		'remark_wise_report.php',
+		'remark_wise_report_get_ajax.php',
+	));
+	db_sync_run_query($conn, "UPDATE page_table SET page_title='Remark Wise Report', page_slug='remark_wise_report', isDelete=0, isActive=1 WHERE id=671", 'Update page_table id=671 Remark Wise Report');
+} else {
+	$now = date('Y-m-d H:i:s');
+	$urls = 'remark_wise_report.php,remark_wise_report_get_ajax.php';
+	db_sync_run_query($conn, "INSERT INTO page_table (id, page_title, page_slug, page_count, page_urls, isActive, isDelete, adate, created_date)
+		VALUES (671, 'Remark Wise Report', 'remark_wise_report', 0, '{$urls}', 1, 0, '{$now}', '{$now}')", 'Insert page_table id=671 Remark Wise Report');
+}
+
+$adminTypesResRar = mysqli_query($conn, "SELECT id FROM admin_type WHERE isDelete=0");
+if ($adminTypesResRar) {
+	while ($at = mysqli_fetch_assoc($adminTypesResRar)) {
+		$aid = (int) $at['id'];
+		if ($aid === 0) {
+			continue;
+		}
+		$chk = mysqli_query($conn, "SELECT id FROM page_admin_right WHERE admin_id='{$aid}' AND page_id=671 AND isDelete=0 LIMIT 1");
+		if ($chk && mysqli_num_rows($chk) > 0) {
+			$rid = (int) mysqli_fetch_assoc($chk)['id'];
+			db_sync_run_query($conn, "UPDATE page_admin_right SET view_flag=1, insert_flag=1, update_flag=1, delete_flag=0, all_data_flag=1 WHERE id='{$rid}'", "Remark Report rights update admin_type {$aid}");
+		} else {
+			$now = date('Y-m-d H:i:s');
+			db_sync_run_query($conn, "INSERT INTO page_admin_right (page_id, admin_id, view_flag, insert_flag, update_flag, delete_flag, all_data_flag, personal_flag, chain_vise_flag, isDelete, created_by, created_by_type, created_date)
+				VALUES (671, {$aid}, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, '{$now}')", "Remark Report rights insert admin_type {$aid}");
+		}
+	}
+}
+
 if (db_sync_table_exists($conn, 'employee_chat_thread') && db_sync_table_exists($conn, 'employee_chat_message')) {
 	db_sync_log('CHECK', 'READY: employee_chat_thread + employee_chat_message');
 } else {

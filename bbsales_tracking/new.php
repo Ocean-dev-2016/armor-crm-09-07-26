@@ -199,7 +199,7 @@ $_SESSION[SITE_SESS.'_ADMIN_TYPE'];
 				if($_SESSION[SITE_SESS.'_ADMIN_TYPE']==0)
 				{
 				?>
-					CRAFTBOX TECHNOLOGY,<br>
+					Ocean Infotech,<br>
 					11-12, 4th Floor, Royal Complex.<br>
 					Satya Sai Main Road, Kalawad Road,<br>
 					Rajkot-360005, Gujarat, India.<br>

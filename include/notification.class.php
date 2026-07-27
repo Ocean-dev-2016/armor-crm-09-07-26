@@ -116,7 +116,7 @@ class Notification extends Functions
 		    $mail->Subject = $Data['subject'];
 		    $mail->Body    = $Data['body'];
 
-		    // $mail->AltBody = 'This is the computer generated reports by craftbox technology'; // This is the body in plain text for non-HTML mail clients
+		    // $mail->AltBody = 'This is the computer generated reports by Ocean Infotech'; // This is the body in plain text for non-HTML mail clients
 
 		    $mail->SMTPDebug  = 0; 
 
@@ -183,7 +183,7 @@ class Notification extends Functions
 		    $mail->Subject = $Data['subject'];
 		    $mail->Body    = $Data['body'];
 
-		    // $mail->AltBody = 'This is the computer generated reports by craftbox technology'; // This is the body in plain text for non-HTML mail clients
+		    // $mail->AltBody = 'This is the computer generated reports by Ocean Infotech'; // This is the body in plain text for non-HTML mail clients
 
 		    $mail->SMTPDebug  = 0; 
 

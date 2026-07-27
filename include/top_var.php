@@ -421,6 +421,16 @@ $left_pages_Sales_Team_reports_array21 = array("1"=>array("Sales Vs Plan Reports
 $left_pages_Sales_Team_reports_array22 = array("1"=>array("Consultant Approval Process Report","Consultant Approval Process Report","consultant_approval_process_report.php",668),);
 $left_pages_Sales_Team_reports_array24 = array("1"=>array("Employee Visit KRA Report","Employee Visit KRA Report","employee_visit_kra_report.php",599),);
 
+/*------------------------------- Remark Analysis Report -------------------------------------*/
+$left_pages_Remark_Analysis_array0 = array("1"=>array("Remark Wise Report","Remark Wise Report","remark_wise_report.php",671),);
+$left_head_Remark_Analysis_array = array(
+	0=>array("Remark Wise Report","Remark Wise Report",$left_pages_Remark_Analysis_array0,671),
+);
+$left_Remark_Analysis_array = array(
+	0=>$left_head_Remark_Analysis_array[0],
+);
+/*------------------------------- Remark Analysis Report -------------------------------------*/
+
 
 /*------------------------------- Sales Team Reports -------------------------------------*/
 

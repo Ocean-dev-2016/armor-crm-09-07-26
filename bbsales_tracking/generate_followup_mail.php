@@ -82,7 +82,7 @@ try {
     $mail->isHTML(true);                                  // Set email format to HTML
     $mail->Subject = 'CMK CRM CRON MAIL';
     $mail->Body    = 'This is the computer generated reports';
-    $mail->AltBody = 'This is the computer generated reports by craftbox technology';
+    $mail->AltBody = 'This is the computer generated reports by Ocean Infotech';
     $mail->SMTPDebug  = 0; 
     $mail->send();
     // echo 'Message has been sent';

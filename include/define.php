@@ -94,7 +94,7 @@ define("DISPATCH_PDF","../".ADMINFOLDER."/pdf/dispatch/");
 define("INVOICE_FILES","../".ADMINFOLDER."/invoice_documents/");
 define("DASHBOARD_STATICAL_PDF","../".ADMINFOLDER."/pdf/dashboard_statical_files/");
 define("DAILY_SALES_PDF","../".ADMINFOLDER."/pdf/daily_sales_report_files/");
-define("SS_NAME","Craftbox Technology");
+define("SS_NAME","Ocean Infotech");
 define("SS_CITY","Rajkot");
 define("SS_STATE","Gujrat");
 define("SS_COUNTRY","India");
@@ -140,7 +140,7 @@ define("SMS_USER_PASSWORD","d96405fb46XX");
 define("SMS_USER_SENDER_ID","INFOSM");
 define("SMS_URL","http://sms.bulkbox.in/submitsms.jsp?user=".SMS_USER_NAME."&key=".SMS_USER_PASSWORD."&senderid=".SMS_USER_SENDER_ID."&accusage=1");
 
-define("EMAIL_FROM_NAME","Craftbox Technology");
+define("EMAIL_FROM_NAME","Ocean Infotech");
 define("EMAIL_FROM_MAIL","info@craftboxtechnology.com");
 define("EMAIL_REPLY_TO","info@craftboxtechnology.com");
 define("EMAIL_CC","info@craftboxtechnology.com");
@@ -391,8 +391,8 @@ define("FOLLOUP_NOTIFICATION_TIME","15"); // here 15 is minit
 define("PENDING_FOLLOWUP_REPORT_MAIL","report/pending_followup_report/");
 
 // added by shivani
-define("DESIGNBY","CraftBox Technology");
-define("DESIGNBY_LINK","http://craftbox.in/");
+define("DESIGNBY","Ocean Infotech");
+define("DESIGNBY_LINK","https://www.oceaninfotech.co.in/");
 
 
 define("ATTENDANCE_INFO_FILES","report/attendance_report/");

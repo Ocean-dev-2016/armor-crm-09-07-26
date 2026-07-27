@@ -623,6 +623,31 @@ $ctableAPK        = "application_info";
 					</a>
 				</li>
 
+				<!-- Remark Analysis Report -->
+				<?php
+				$rarShow = false;
+				if (isset($_SESSION[SITE_SESS . '_ADMIN_TYPE']) && (int) $_SESSION[SITE_SESS . '_ADMIN_TYPE'] === 0) {
+					$rarShow = true;
+				} else if (isset($_SESSION[SITE_SESS . '_ADMIN_SESS_ID']) && $db->checkUserPermission(671, $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'], 'view')) {
+					$rarShow = true;
+				}
+				if ($rarShow) {
+				?>
+				<li class="menu-dropdown classic-menu-dropdown <?php if (isset($main_page) && $main_page == 'remark_analysis_report') { ?> active<?php } ?>">
+					<a data-hover="megamenu-dropdown" data-close-others="true" data-toggle="dropdown" href="javascript:;">
+						Remark Analysis Report <i class="fa fa-angle-down"></i>
+					</a>
+					<ul class="dropdown-menu pull-left">
+						<li class="<?php if (isset($page_slug) && $page_slug == 'remark_wise_report') { ?> active<?php } ?>">
+							<a href="remark_wise_report.php">
+								<i class="icon-list"></i> Remark Wise Report
+							</a>
+						</li>
+					</ul>
+				</li>
+				<?php } ?>
+				<!-- Remark Analysis Report -->
+
 				<!-- 	<li class="menu-dropdown classic-menu-dropdown ">
 					<a data-hover="megamenu-dropdown" data-close-others="true" data-toggle="dropdown" href="javascript:;">
 						Account <i class="fa fa-angle-down"></i>	

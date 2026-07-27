@@ -166,7 +166,7 @@ if((isset($_SESSION[SITE_SESS.'_ADMIN_SESS_ID']) && $_SESSION[SITE_SESS.'_ADMIN_
 	</form>
 </div>
 <div class="copyright">
-	<?php echo date("Y"); ?> &copy; <?php echo SITENAME; ?> by <a href="http://craftbox.in/" target="_blank" title="Web, Mobile And Software Development Company" class="font-yellow">CraftBox Technology</a>
+	<?php echo date("Y"); ?> &copy; <?php echo SITENAME; ?> by <a href="https://www.oceaninfotech.co.in/" target="_blank" title="Web, Mobile And Software Development Company" class="font-yellow">Ocean Infotech</a>
 </div>
 <!--[if lt IE 9]>
 <script src="assets/global/plugins/respond.min.js"></script>
