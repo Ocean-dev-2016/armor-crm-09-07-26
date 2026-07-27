@@ -18,6 +18,47 @@
 			$this->log = new Log();
 		}
 
+		/**
+		 * Visit-stop followups use through=5 and description prefix "[Visit Stop".
+		 * App shows type_slug + " Response" and status_slug as badge.
+		 */
+		private function isVisitStopFollowup($row)
+		{
+			$desc = isset($row['description']) ? (string) $row['description'] : "";
+			$through = isset($row['through']) ? (string) $row['through'] : "";
+			if ($through === "5") {
+				return true;
+			}
+			if (strpos($desc, "[Visit Stop") === 0) {
+				return true;
+			}
+			return false;
+		}
+
+		private function applyFollowupDisplaySlugs(&$row, $statusMap, $statusFollowupMap)
+		{
+			$through = isset($row['through']) ? (string) $row['through'] : "";
+			$row['type_slug'] = isset($statusMap[$through]) ? $statusMap[$through] : "";
+			$statusKey = isset($row['status']) ? (string) $row['status'] : "0";
+			$row['status_slug'] = isset($statusFollowupMap[$statusKey]) ? $statusFollowupMap[$statusKey] : "Followup Created";
+
+			if ($this->isVisitStopFollowup($row)) {
+				$row['type_slug'] = "Visit";
+				if ($statusKey === "0" || $statusKey === "") {
+					$row['status_slug'] = "Visit Follow-up";
+				}
+			}
+
+			if (isset($row['next_action']) && (string) $row['next_action'] === "-1") {
+				$row['status_slug'] = "Followup End";
+			}
+
+			/* Avoid Android showing literal "null Response" */
+			if (!isset($row['response']) || $row['response'] === null) {
+				$row['response'] = "";
+			}
+		}
+
 		public function CreateFollowup($user_id, $visitor_id, $description, $through, $followup_date, $followup_flag, $reference_id, $entry_type, $followup_status)
 		{
 			if ($followup_flag == "no_order_inquiry" || $followup_flag == "inquiry_followup") {
@@ -111,7 +152,7 @@
 			$result = array();
 			$Content = array();
 			$limit = self::getLimit();
-			$status = array("1" => "Call", "2" => "SMS", "3" => "Email");
+			$status = array("1" => "Call", "2" => "SMS", "3" => "Email", "5" => "Visit");
 			$status_followup = array("1" => "Responsed", "0" => "Followup Created");
 			$refrence_media_id = $_REQUEST['refrence_media_id'];
 
@@ -210,11 +251,7 @@
 						} else if ($FollowupContent_d['reference_table'] == "complain") {
 							$FollowupContent_d['followup_slug'] = "Complain Followup";
 						}
-						$FollowupContent_d['type_slug'] = $status[$FollowupContent_d['through']];
-						$FollowupContent_d['status_slug'] = $status_followup[$FollowupContent_d['status']];
-						if ($FollowupContent_d['next_action'] == -1) {
-							$FollowupContent_d['status_slug'] = "Followup End";
-						}
+						$this->applyFollowupDisplaySlugs($FollowupContent_d, $status, $status_followup);
 						$FollowupContent_d['refrence_media_id'] = $FollowupContent_d['refrence_media_id'];
 						$FollowupContent_d['refrence_media_id'] = $this->db->rp_getValue("reference_media", "name", "id='" . $FollowupContent_d['refrence_media_id'] . "'", 0);
 						$FollowupContent_d['followup_date'] = ($FollowupContent_d['followup_date'] != "0000-00-00 00:00:00") ? date('d F Y H:i', strtotime($FollowupContent_d['followup_date'])) : "";
@@ -483,7 +520,7 @@
 			$result = array();
 			$Content = array();
 			$limit = self::getLimit();
-			$status = array("1" => "Call", "2" => "SMS", "3" => "Email");
+			$status = array("1" => "Call", "2" => "SMS", "3" => "Email", "5" => "Visit");
 			$status_followup = array("1" => "Responsed", "0" => "Followup Created");
 			if (!empty($vistors) || !empty($inquiry)) {
 				$salesType = $this->db->rp_getValue("sales_executive", "type", "id='" . $user_id . "'", 0);
@@ -577,13 +614,7 @@
 
 							$FollowupContent_d['customer_id'] = $FollowupContent_d['visitor_id'];
 
-							$FollowupContent_d['type_slug'] = $status[$FollowupContent_d['through']];
-
-							$FollowupContent_d['status_slug'] = $status_followup[$FollowupContent_d['status']];
-
-							if ($FollowupContent_d['next_action'] == -1) {
-								$FollowupContent_d['status_slug'] = "Followup End";
-							}
+							$this->applyFollowupDisplaySlugs($FollowupContent_d, $status, $status_followup);
 
 							$FollowupContent_d['refrence_media_id'] = $FollowupContent_d['refrence_media_id'];
 
@@ -755,7 +786,7 @@
 		public function GetFollowupDetail($followup_id)
 		{
 			$Content = array();
-			$status = array("1" => "Call", "2" => "SMS", "3" => "Email");
+			$status = array("1" => "Call", "2" => "SMS", "3" => "Email", "5" => "Visit");
 
 			$status_followup = array("1" => "Responsed", "0" => "Followup Created");
 
@@ -781,9 +812,7 @@
 					$FollowupContent_d['followup_slug'] = "quotation_followup";
 				}
 
-				$FollowupContent_d['type_slug'] = $status[$FollowupContent_d['through']];
-
-				$FollowupContent_d['status_slug'] = $status_followup[$FollowupContent_d['status']];
+				$this->applyFollowupDisplaySlugs($FollowupContent_d, $status, $status_followup);
 
 				$FollowupContent_d['followup_date'] = ($FollowupContent_d['followup_date'] != "0000-00-00 00:00:00") ? date('d-m-Y H:i:s', strtotime($FollowupContent_d['followup_date'])) : "";
 
