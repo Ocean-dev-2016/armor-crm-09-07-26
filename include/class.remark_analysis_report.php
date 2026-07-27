@@ -245,6 +245,7 @@ class RemarkAnalysisReport
 				v.remark_code,
 				v.reason_code,
 				v.stop_remark,
+				v.note,
 				v.remark,
 				v.start_date_time,
 				v.stop_date_time,
@@ -336,6 +337,7 @@ class RemarkAnalysisReport
 				"remark_label" => isset($this->remarkLabels[$parent]) ? $this->remarkLabels[$parent] : "",
 				"reason_label" => isset($this->reasonLabels[$child]) ? $this->reasonLabels[$child] : "",
 				"stop_remark" => $row['stop_remark'],
+				"note" => isset($row['note']) ? $row['note'] : "",
 				"meeting_purpose" => $row['remark'],
 				"is_completed" => $this->isValidDateTime($row['stop_date_time']) ? 1 : 0,
 				"consultant_form" => null,
@@ -504,6 +506,21 @@ class RemarkAnalysisReport
 
 	private function safeQuery($sql)
 	{
-		return @mysqli_query($this->db->myconn, $sql);
+		$result = mysqli_query($this->db->myconn, $sql);
+		if ($result === false) {
+			$error = mysqli_error($this->db->myconn);
+			/* If a new column is missing, retry without it so old data still shows */
+			if (strpos($error, "Unknown column 'v.note'") !== false || strpos($error, "Unknown column `v`.`note`") !== false) {
+				$sqlFallback = preg_replace('/\s*v\.note\s*,?\s*/i', ' ', $sql);
+				$result = @mysqli_query($this->db->myconn, $sqlFallback);
+			} else if (strpos($error, "Unknown column 'v.remark_code'") !== false) {
+				/* remark_code column missing — use empty string placeholders */
+				$sqlFallback = str_replace('v.remark_code,', "'' AS remark_code,", $sql);
+				$sqlFallback = str_replace('v.reason_code,', "'' AS reason_code,", $sqlFallback);
+				$sqlFallback = str_replace('v.note,', '', $sqlFallback);
+				$result = @mysqli_query($this->db->myconn, $sqlFallback);
+			}
+		}
+		return $result;
 	}
 }

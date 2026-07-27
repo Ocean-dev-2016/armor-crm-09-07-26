@@ -297,7 +297,13 @@ function rar_render_form_html($visit)
 							<td><span class="rar-code"><?php echo rar_h($visit['remark_code'] != "" ? $visit['remark_code'] : "-"); ?></span></td>
 							<td><span class="rar-code"><?php echo rar_h($visit['reason_code'] != "" ? $visit['reason_code'] : "-"); ?></span></td>
 							<td><?php echo rar_h($desc); ?></td>
-							<td><?php echo rar_h($visit['stop_remark']); ?></td>
+							<td>
+							<?php echo rar_h($visit['stop_remark']); ?>
+							<?php $visitNote = isset($visit['note']) ? trim($visit['note']) : ''; ?>
+							<?php if ($visitNote != '') { ?>
+								<br><small class="text-info"><i class="fa fa-sticky-note-o"></i> <em><?php echo rar_h($visitNote); ?></em></small>
+							<?php } ?>
+						</td>
 							<td>
 								<?php if ($formHtml != "") { ?>
 									<button type="button"
