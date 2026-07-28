@@ -78,7 +78,26 @@ if ($status == 1) {
 	$update = $db->rp_update("orders", array("status" => $status), "id='" . $order_id . "'", 0);
 } else if ($status == 5) {
 	$txt = "Dispatch";
+	/* CP supply order: Account Approval required before Dispatch */
+	$cpFlag = (int) $db->rp_getValue("orders", "channel_partner_order_flag", "id='" . (int) $order_id . "'", 0);
+	$cpMode = $db->rp_getValue("orders", "cp_order_mode", "id='" . (int) $order_id . "'", 0);
+	$cpEnd = (int) $db->rp_getValue("orders", "channel_partner_customer_id", "id='" . (int) $order_id . "'", 0);
+	$curStatus = (int) $db->rp_getValue("orders", "status", "id='" . (int) $order_id . "'", 0);
+	$isCpSupply = ($cpFlag === 1 && $cpMode !== 'customer' && $cpEnd <= 0);
+	if ($isCpSupply && $curStatus < 4) {
+		echo json_encode(array(
+			"ack" => 0,
+			"ack_msg" => "Account Approval required before Dispatch for Channel Partner supply order."
+		));
+		require_once 'disconnect.php';
+		exit;
+	}
 	$update = $db->rp_update("orders", array("status" => $status), "id='" . $order_id . "'", 0);
+	if ($update && $isCpSupply) {
+		require_once dirname(__FILE__) . '/../include/class.channel_partner_stock.php';
+		$stockObj = new ChannelPartnerStock($db);
+		$stockObj->creditFromOrder((int) $order_id);
+	}
 } else if ($status == 6) {
 	$txt = "Order Complete";
 	$update = $db->rp_update("orders", array("status" => $status), "id='" . $order_id . "'", 0);

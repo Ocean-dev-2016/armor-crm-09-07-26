@@ -7,7 +7,7 @@ $ctableAPK        = "application_info";
 <div class="page-header-menu">
 	<div class="container">
 		<div class="page-logo" style="width:auto;">
-			<a href="<?php echo ADMINSITEURL; ?>">
+			<a href="dashboard.php">
 				<?php
 				// $logo_r=$db->rp_getValue("dealer_distributor_network","logo_detail","isDelete=0 AND admin_type=0");
 				// if($logo_r!="")
@@ -27,6 +27,32 @@ $ctableAPK        = "application_info";
 		<div class="hor-menu">
 
 			<ul class="nav navbar-nav">
+			<?php
+			$is_cp_menu = function_exists('cp_is_channel_partner_login') && cp_is_channel_partner_login($db);
+			if ($is_cp_menu) {
+				/* Channel Partner portal — only menus from business flow */
+			?>
+				<li class="classic-menu-dropdown <?php if ($page == 'channel_partner_customer') { ?>active<?php } ?>">
+					<a href="channel_partner_customer_manage.php"><i class="fa fa-users"></i> My Customers</a>
+				</li>
+				<li class="classic-menu-dropdown <?php if ($page == 'channel_partner_order' || (isset($_REQUEST['cp_mode']) && $_REQUEST['cp_mode'] == 'customer')) { ?>active<?php } ?>">
+					<a href="channel_partner_order_manage.php"><i class="fa fa-shopping-cart"></i> Customer Order</a>
+				</li>
+				<li class="classic-menu-dropdown <?php if ($page == 'channel_partner_stock') { ?>active<?php } ?>">
+					<a href="channel_partner_stock_manage.php"><i class="fa fa-cubes"></i> My Stock</a>
+				</li>
+				<li class="classic-menu-dropdown <?php if ($page == 'channel_partner_payment') { ?>active<?php } ?>">
+					<a href="channel_partner_payment.php"><i class="fa fa-money"></i> Receive Payment</a>
+				</li>
+				<li class="classic-menu-dropdown <?php if ($page == 'channel_partner_ledger') { ?>active<?php } ?>">
+					<a href="channel_partner_ledger.php"><i class="fa fa-book"></i> Party Ledger</a>
+				</li>
+				<li class="classic-menu-dropdown">
+					<a href="channel_partner_print_settings.php"><i class="fa fa-file-text-o"></i> SO / PI Format</a>
+				</li>
+			<?php
+			} else {
+			?>
 
 				<li <?php if ($main_page == "home") { ?> class="menu-dropdown classic-menu-dropdown" <?php } ?>>
 					<a data-hover="megamenu-dropdown" data-close-others="true" data-toggle="dropdown" href="javascript:;">
@@ -109,8 +135,9 @@ $ctableAPK        = "application_info";
 								if ($is_cp_menu && isset($arr[1]) && $arr[1] == 'channel_partner') {
 									$cp_menu_pages = array(
 										array("My Customers", "channel_partner_customer", "channel_partner_customer_manage.php", 555),
-										array("Add Customer Order", "channel_partner_order", "channel_partner_order_simple.php?cp_mode=customer", 565),
+										array("Customer Order", "channel_partner_order", "channel_partner_order_manage.php", 565),
 										array("My Stock", "channel_partner_stock", "channel_partner_stock_manage.php", 650),
+										array("SO/PI Header-Footer", "channel_partner_print", "channel_partner_print_settings.php", 650),
 									);
 						?>
 								<li class="dropdown-submenu <?php if ($main_page == $arr[1]) { ?> active<?php } ?>">
@@ -202,6 +229,9 @@ $ctableAPK        = "application_info";
 								</li>
 								<li class="">
 									<a href="dealer_orders_manage.php?type=pending_payment" id="mntp_order_pending_pay"><i class="icon-list"></i>Pending Payment</a>
+								</li>
+								<li class="">
+									<a href="armor_payment_receive.php" id="mntp_order_receive_pay"><i class="icon-list"></i>Receive Payment</a>
 								</li>
 						<?php
 							}
@@ -677,6 +707,7 @@ $ctableAPK        = "application_info";
 						?>
 					</ul>
 				</li> -->
+			<?php } /* end non-CP menus */ ?>
 			</ul>
 		</div>
 		<?php
@@ -697,7 +728,8 @@ $ctableAPK        = "application_info";
 				</li>-->
 				<?php
 				$ecUnread = 0;
-				if (isset($_SESSION[SITE_SESS . '_ADMIN_SESS_ID']) && (int) $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'] > 0) {
+				$is_cp_top = function_exists('cp_is_channel_partner_login') && cp_is_channel_partner_login($db);
+				if (!$is_cp_top && isset($_SESSION[SITE_SESS . '_ADMIN_SESS_ID']) && (int) $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'] > 0) {
 					$ecMe = (int) $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'];
 					$ecThreadR = @$db->rp_getData('employee_chat_thread', 'id', "isDelete=0 AND (user_one_id='{$ecMe}' OR user_two_id='{$ecMe}')", '', 0);
 					if ($ecThreadR) {
@@ -706,6 +738,7 @@ $ctableAPK        = "application_info";
 						}
 					}
 				}
+				if (!$is_cp_top) {
 				?>
 				<li id="header_chat_bar" class="dropdown dropdown-extended dropdown-notification">
 					<a class="dropdown-toggle" href="employee_chat_manage.php" title="Employee Chat">
@@ -713,6 +746,7 @@ $ctableAPK        = "application_info";
 						<span class="badge badge-default chat-unread-count" style="<?php echo ($ecUnread > 0) ? '' : 'display:none;'; ?>"><?php echo (int) $ecUnread; ?></span>
 					</a>
 				</li>
+				<?php } ?>
 				<?php
 				if ($_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0) {
 				?>

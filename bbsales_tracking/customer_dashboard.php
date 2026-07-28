@@ -18,6 +18,71 @@ $total_quotation_cart = $db->rp_getTotalRecord("quotation_detail","isDelete=0 AN
 $total_quotation_genrated = $db->rp_getTotalRecord("quotation_detail","isDelete=0 AND status=4",0);
 $total_quotation_lost = $db->rp_getTotalRecord("quotation_detail","isDelete=0 AND status=5",0);
 $total_quotation = $db->rp_getTotalRecord("quotation_detail","isDelete=0",0);
+$is_cp_dashboard = function_exists('cp_is_channel_partner_login') && cp_is_channel_partner_login($db);
+$cp_dashboard_cards = array();
+$cp_recent_orders = array();
+$cp_pending_orders = array();
+if ($is_cp_dashboard) {
+	$cp_id = function_exists('cp_get_login_channel_partner_id') ? (int) cp_get_login_channel_partner_id() : (int) $_SESSION[SITE_SESS . 'REFERANCE_ID'];
+	$cp_dashboard_cards = array(
+		array(
+			'label' => 'My Customers',
+			'value' => (int) $db->rp_getTotalRecord("channel_partner_customer", "channel_partner_id='" . $cp_id . "' AND isDelete=0", 0),
+			'icon' => 'fa-users',
+			'link' => 'channel_partner_customer_manage.php',
+		),
+		array(
+			'label' => 'Customer Orders',
+			'value' => (int) $db->rp_getTotalRecord("orders", "customer_id='" . $cp_id . "' AND channel_partner_order_flag=1 AND channel_partner_customer_id>0 AND isDelete=0 AND status NOT IN (-2,3)", 0),
+			'icon' => 'fa-shopping-cart',
+			'link' => 'channel_partner_order_manage.php',
+		),
+		array(
+			'label' => 'Pending Payments',
+			'value' => (int) $db->rp_getTotalRecord("orders", "customer_id='" . $cp_id . "' AND channel_partner_order_flag=1 AND channel_partner_customer_id>0 AND isDelete=0 AND status NOT IN (-2,3) AND (payment_received_flag=0 OR payment_received_flag IS NULL)", 0),
+			'icon' => 'fa-money',
+			'link' => 'channel_partner_payment.php',
+		),
+		array(
+			'label' => 'Products In Stock',
+			'value' => (int) $db->rp_getValue("customer_inward_stock", "COUNT(DISTINCT pro_id)", "customer_id='" . $cp_id . "' AND isDelete=0", 0),
+			'icon' => 'fa-cubes',
+			'link' => 'channel_partner_stock_manage.php',
+		),
+	);
+	$recentOrderR = $db->rp_getData(
+		"orders",
+		"id,order_no,order_date,grand_total,status,channel_partner_customer_id,payment_received_flag,payment_received_amount",
+		"customer_id='" . $cp_id . "' AND channel_partner_order_flag=1 AND channel_partner_customer_id>0 AND isDelete=0 AND status NOT IN (-2,3)",
+		"id DESC LIMIT 5",
+		0
+	);
+	if ($recentOrderR) {
+		while ($row = mysqli_fetch_assoc($recentOrderR)) {
+			$row['party_name'] = $db->rp_getValue("channel_partner_customer", "company_name", "id='" . (int) $row['channel_partner_customer_id'] . "'", 0);
+			$cp_recent_orders[] = $row;
+			if ((int) $row['payment_received_flag'] !== 1) {
+				$cp_pending_orders[] = $row;
+			}
+		}
+	}
+	if (count($cp_pending_orders) < 5) {
+		$pendingR = $db->rp_getData(
+			"orders",
+			"id,order_no,order_date,grand_total,status,channel_partner_customer_id,payment_received_flag,payment_received_amount",
+			"customer_id='" . $cp_id . "' AND channel_partner_order_flag=1 AND channel_partner_customer_id>0 AND isDelete=0 AND status NOT IN (-2,3) AND (payment_received_flag=0 OR payment_received_flag IS NULL)",
+			"id DESC LIMIT 5",
+			0
+		);
+		$cp_pending_orders = array();
+		if ($pendingR) {
+			while ($row = mysqli_fetch_assoc($pendingR)) {
+				$row['party_name'] = $db->rp_getValue("channel_partner_customer", "company_name", "id='" . (int) $row['channel_partner_customer_id'] . "'", 0);
+				$cp_pending_orders[] = $row;
+			}
+		}
+	}
+}
 // echo $total_quotation; exit();
 ?>
 <!DOCTYPE html>
@@ -60,7 +125,133 @@ $total_quotation = $db->rp_getTotalRecord("quotation_detail","isDelete=0",0);
 	height: 680px;
 }
 
-
+.cp-dash-hero {
+	background: linear-gradient(135deg, #1f4e79 0%, #2f6f44 100%);
+	color: #fff;
+	border-radius: 12px;
+	padding: 24px 28px;
+	margin-bottom: 18px;
+	box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+}
+.cp-dash-hero h2 {
+	margin: 0 0 8px;
+	font-size: 28px;
+	font-weight: 700;
+}
+.cp-dash-hero p {
+	margin: 0;
+	font-size: 14px;
+	opacity: 0.92;
+}
+.cp-dash-actions {
+	margin-top: 16px;
+}
+.cp-dash-actions .btn {
+	margin: 0 8px 8px 0;
+	border-radius: 24px;
+	border: none;
+	background: rgba(255,255,255,0.92);
+	color: #1f3d5a;
+	font-weight: 600;
+}
+.cp-summary-card {
+	background: #fff;
+	border-radius: 12px;
+	padding: 18px 18px 16px;
+	margin-bottom: 18px;
+	box-shadow: 0 8px 20px rgba(20, 35, 64, 0.08);
+	border: 1px solid #e7edf5;
+	min-height: 185px;
+	position: relative;
+}
+.cp-summary-card .icon {
+	width: 48px;
+	height: 48px;
+	border-radius: 50%;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: #eef5fb;
+	color: #1f4e79;
+	font-size: 20px;
+	margin-bottom: 12px;
+}
+.cp-summary-card .value {
+	font-size: 34px;
+	font-weight: 700;
+	color: #1f2d3d;
+	line-height: 1.1;
+	margin-bottom: 6px;
+}
+.cp-summary-card .label {
+	display: block;
+	font-size: 12px;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: #6b7c93;
+	margin: 0 0 16px;
+}
+.cp-summary-card a {
+	font-weight: 600;
+	position: absolute;
+	left: 18px;
+	bottom: 14px;
+}
+.cp-section-card {
+	background: #fff;
+	border: 1px solid #e7edf5;
+	border-radius: 12px;
+	box-shadow: 0 8px 20px rgba(20, 35, 64, 0.08);
+	margin-bottom: 18px;
+	overflow: hidden;
+}
+.cp-section-head {
+	padding: 16px 18px;
+	background: #f8fbff;
+	border-bottom: 1px solid #e7edf5;
+}
+.cp-section-head h4 {
+	margin: 0;
+	font-size: 16px;
+	font-weight: 700;
+	color: #1f2d3d;
+}
+.cp-section-head p {
+	margin: 4px 0 0;
+	font-size: 12px;
+	color: #6b7c93;
+}
+.cp-section-body {
+	padding: 0;
+}
+.cp-mini-table {
+	margin-bottom: 0;
+}
+.cp-mini-table th {
+	font-size: 12px;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: #6b7c93;
+	background: #fff;
+}
+.cp-mini-table td {
+	vertical-align: middle !important;
+}
+.cp-badge {
+	display: inline-block;
+	padding: 4px 8px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 700;
+}
+.cp-badge.pending {
+	background: #fff1f0;
+	color: #c0392b;
+}
+.cp-badge.received {
+	background: #ecf9f1;
+	color: #1e8449;
+}
 </style>
 
 <style type="text/css">
@@ -101,7 +292,7 @@ $total_quotation = $db->rp_getTotalRecord("quotation_detail","isDelete=0",0);
 		<div class="container">
 			<!-- BEGIN PAGE TITLE -->
 			<div class="page-title">
-				<h1>Customer Dashboard</h1>				
+				<h1><?php echo $is_cp_dashboard ? 'Channel Partner Dashboard' : 'Customer Dashboard'; ?></h1>				
 			</div>
 			<!-- <div class="page-title pull-right">
 				<a onclick="sendMailReports()" class="btn btn-success btn-circle"><i class="fa fa-paper-plane"></i> EMAIL DATABASE<div></div></a>
@@ -144,6 +335,99 @@ $total_quotation = $db->rp_getTotalRecord("quotation_detail","isDelete=0",0);
 					
 			?>
 
+			<?php if ($is_cp_dashboard) { ?>
+			<div class="cp-dash-hero">
+				<h2>Welcome to Channel Partner Dashboard</h2>
+				<p>Customer orders, stock, payments ane ledger na main shortcuts ahiya thi fast access ma malse.</p>
+				<div class="cp-dash-actions">
+					<a href="channel_partner_customer_manage.php" class="btn btn-default"><i class="fa fa-users"></i> My Customers</a>
+					<a href="channel_partner_order_manage.php" class="btn btn-default"><i class="fa fa-shopping-cart"></i> Customer Orders</a>
+					<a href="channel_partner_stock_manage.php" class="btn btn-default"><i class="fa fa-cubes"></i> My Stock</a>
+					<a href="channel_partner_payment.php" class="btn btn-default"><i class="fa fa-money"></i> Receive Payment</a>
+					<a href="channel_partner_ledger.php" class="btn btn-default"><i class="fa fa-book"></i> Customer Ledger</a>
+				</div>
+			</div>
+			<div class="row">
+				<?php foreach ($cp_dashboard_cards as $card) { ?>
+				<div class="col-md-3 col-sm-6">
+					<div class="cp-summary-card">
+						<div class="icon"><i class="fa <?php echo $card['icon']; ?>"></i></div>
+						<div class="value"><?php echo number_format((int) $card['value']); ?></div>
+						<span class="label"><?php echo htmlspecialchars($card['label']); ?></span>
+						<a href="<?php echo $card['link']; ?>">Open <i class="fa fa-arrow-right"></i></a>
+					</div>
+				</div>
+				<?php } ?>
+			</div>
+			<div class="row">
+				<div class="col-md-7">
+					<div class="cp-section-card">
+						<div class="cp-section-head">
+							<h4>Recent Customer Orders</h4>
+							<p>Latest CP customer orders with amount and current status.</p>
+						</div>
+						<div class="cp-section-body">
+							<table class="table table-striped cp-mini-table">
+								<thead>
+									<tr>
+										<th>Order No</th>
+										<th>Party</th>
+										<th>Date</th>
+										<th class="text-right">Amount</th>
+									</tr>
+								</thead>
+								<tbody>
+									<?php if (!empty($cp_recent_orders)) { foreach ($cp_recent_orders as $row) { ?>
+									<tr>
+										<td><a href="channel_partner_order_print.php?order_id=<?php echo (int) $row['id']; ?>"><?php echo htmlspecialchars($row['order_no']); ?></a></td>
+										<td><?php echo htmlspecialchars($row['party_name'] ? $row['party_name'] : '-'); ?></td>
+										<td><?php echo date('d-m-Y', strtotime($row['order_date'])); ?></td>
+										<td class="text-right"><?php echo number_format((float) $row['grand_total'], 2); ?></td>
+									</tr>
+									<?php } } else { ?>
+									<tr><td colspan="4" class="text-center">No customer orders yet.</td></tr>
+									<?php } ?>
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-5">
+					<div class="cp-section-card">
+						<div class="cp-section-head">
+							<h4>Payment Follow-up</h4>
+							<p>Pending and latest payment status for customer orders.</p>
+						</div>
+						<div class="cp-section-body">
+							<table class="table table-striped cp-mini-table">
+								<thead>
+									<tr>
+										<th>Party</th>
+										<th>Order</th>
+										<th>Status</th>
+										<th class="text-right">Amount</th>
+									</tr>
+								</thead>
+								<tbody>
+									<?php if (!empty($cp_pending_orders)) { foreach ($cp_pending_orders as $row) { ?>
+									<tr>
+										<td><?php echo htmlspecialchars($row['party_name'] ? $row['party_name'] : '-'); ?></td>
+										<td><?php echo htmlspecialchars($row['order_no']); ?></td>
+										<td><?php if ((int) $row['payment_received_flag'] === 1) { ?><span class="cp-badge received">Received</span><?php } else { ?><span class="cp-badge pending">Pending</span><?php } ?></td>
+										<td class="text-right"><?php echo number_format((float) $row['grand_total'], 2); ?></td>
+									</tr>
+									<?php } } else { ?>
+									<tr><td colspan="4" class="text-center">No pending payments.</td></tr>
+									<?php } ?>
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+			</div>
+			<?php } ?>
+
+	<?php if (!$is_cp_dashboard) { ?>
 	<div class="row">
 		<div class="col-md-12 col-sm-12" >
 			<div class="portlet light ">
@@ -195,11 +479,12 @@ $total_quotation = $db->rp_getTotalRecord("quotation_detail","isDelete=0",0);
 			</div>
 		</div>	
 	</div>
+	<?php } ?>
 			
 			<div class="row">
 					
 				<!-- <div class="col-md-12 col-sm-12 co-xs-12 col-lg-12"> -->
-					<?php include("customer_data_tiles.php"); ?>
+					<?php if (!$is_cp_dashboard) { include("customer_data_tiles.php"); } ?>
 				<!-- </div> -->
 			</div>
 			

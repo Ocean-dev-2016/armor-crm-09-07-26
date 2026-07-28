@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 define('DB_SYNC_KEY', 'armor_cp_sync_2026');
-define('DB_SYNC_VERSION', '2026.07.23.7');
+define('DB_SYNC_VERSION', '2026.07.28.1');
 
 if (!isset($_GET['key']) || $_GET['key'] !== DB_SYNC_KEY) {
 	header('HTTP/1.1 403 Forbidden');
@@ -796,6 +796,118 @@ db_sync_add_column_if_missing(
 db_sync_append_page_urls($conn, 565, array(
 	'order_payment_received_ajax.php',
 	'dealer_orders_manage.php',
+	'ajax_cp_credit_stock.php',
+	'ajax_cp_dispatch_order.php',
+	'channel_partner_sales_report.php',
+	'channel_partner_ledger.php',
+	'channel_partner_payment.php',
+));
+
+/* ------------------------------------------------------------------
+ * STEP 5h — CP stock ledger flags + print header/footer
+ * ------------------------------------------------------------------ */
+db_sync_add_column_if_missing(
+	$conn,
+	'orders',
+	'cp_stock_credited',
+	"tinyint(1) NOT NULL DEFAULT 0 COMMENT '1=Armor order qty credited to CP customer_inward_stock'",
+	array('cp_order_mode', 'channel_partner_order_flag')
+);
+db_sync_add_column_if_missing(
+	$conn,
+	'orders',
+	'cp_stock_debited',
+	"tinyint(1) NOT NULL DEFAULT 0 COMMENT '1=CP customer order qty debited from CP stock'",
+	array('cp_stock_credited', 'cp_order_mode')
+);
+db_sync_add_column_if_missing(
+	$conn,
+	'customer_inward_stock',
+	'txn_type',
+	"varchar(10) NOT NULL DEFAULT '' COMMENT 'in|out for CP stock movements'",
+	array('sales_id', 'customer_id', 'pro_qty')
+);
+db_sync_add_column_if_missing(
+	$conn,
+	'customer_inward_stock',
+	'ref_order_id',
+	"int(11) NOT NULL DEFAULT 0 COMMENT 'Related orders.id for CP stock in/out'",
+	array('txn_type', 'sales_id')
+);
+db_sync_add_column_if_missing(
+	$conn,
+	'executive',
+	'cp_print_header',
+	"text COMMENT 'Channel Partner SO/PI header HTML/text'",
+	array('channel_partner_flag', 'company_name')
+);
+db_sync_add_column_if_missing(
+	$conn,
+	'executive',
+	'cp_print_footer',
+	"text COMMENT 'Channel Partner SO/PI footer HTML/text'",
+	array('cp_print_header', 'channel_partner_flag')
+);
+db_sync_add_column_if_missing(
+	$conn,
+	'executive',
+	'cp_print_company_name',
+	"varchar(255) NOT NULL DEFAULT '' COMMENT 'CP PI display company name'",
+	array('cp_print_footer', 'cp_print_header')
+);
+db_sync_add_column_if_missing(
+	$conn,
+	'executive',
+	'cp_print_gst',
+	"varchar(30) NOT NULL DEFAULT '' COMMENT 'CP PI GSTIN'",
+	array('cp_print_company_name', 'cp_print_footer')
+);
+db_sync_add_column_if_missing(
+	$conn,
+	'executive',
+	'cp_print_pan',
+	"varchar(30) NOT NULL DEFAULT '' COMMENT 'CP PI PAN'",
+	array('cp_print_gst', 'cp_print_company_name')
+);
+db_sync_add_column_if_missing(
+	$conn,
+	'executive',
+	'cp_print_header_image',
+	"varchar(255) NOT NULL DEFAULT '' COMMENT 'CP PI header banner image'",
+	array('cp_print_pan', 'cp_print_gst')
+);
+db_sync_add_column_if_missing(
+	$conn,
+	'executive',
+	'cp_print_footer_image',
+	"varchar(255) NOT NULL DEFAULT '' COMMENT 'CP PI footer banner image'",
+	array('cp_print_header_image', 'cp_print_pan')
+);
+db_sync_add_column_if_missing(
+	$conn,
+	'executive',
+	'cp_print_address',
+	"text COMMENT 'CP PI address HTML'",
+	array('cp_print_footer_image', 'cp_print_header_image')
+);
+db_sync_add_column_if_missing(
+	$conn,
+	'executive',
+	'cp_print_bank_details',
+	"text COMMENT 'CP PI bank details HTML'",
+	array('cp_print_address', 'cp_print_footer_image')
+);
+db_sync_add_column_if_missing(
+	$conn,
+	'executive',
+	'cp_print_terms',
+	"text COMMENT 'CP PI terms and conditions HTML'",
+	array('cp_print_bank_details', 'cp_print_address')
+);
+db_sync_append_page_urls($conn, 650, array(
+	'channel_partner_stock_manage.php',
+	'channel_partner_stock_get_ajax.php',
+	'channel_partner_print_settings.php',
 ));
 
 /* ------------------------------------------------------------------

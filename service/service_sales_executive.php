@@ -2031,7 +2031,8 @@ if ($is_valid_api_key) {
 		else if ($service == 'create_followup' || $service == 91) {
 			$result = array();
 			$user_id = isset($_REQUEST['sales_id']) ? $_REQUEST['sales_id'] : "";
-			$description = isset($_REQUEST['description']) ? $db->clean($_REQUEST['description']) : "";
+			/* description removed from API #91 — keep empty for CreateFollowup signature */
+			$description = "";
 			$through = isset($_REQUEST['through']) ? $_REQUEST['through'] : "";
 			$followup_date = isset($_REQUEST['followup_date']) ? $_REQUEST['followup_date'] : "";
 			$followup_flag = isset($_REQUEST['followup_flag']) ? $_REQUEST['followup_flag'] : "";

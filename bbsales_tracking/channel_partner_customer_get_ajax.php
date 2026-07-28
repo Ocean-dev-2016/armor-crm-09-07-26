@@ -122,9 +122,7 @@ $ctable_r = $db->rp_getData($ctable, "*", $ctable_where, "id DESC limit $page_po
 		$colCount = $is_cp_login ? 8 : 9;
 	?>
 		<tr>
-			<?php for ($i = 0; $i < $colCount; $i++) { ?>
-			<td style="text-align:center;"><?php echo ($i == 0) ? 'No Channel Partner Customer found.' : '&nbsp;'; ?></td>
-			<?php } ?>
+			<td colspan="<?php echo (int) $colCount; ?>" style="text-align:center;">No Channel Partner Customer found.</td>
 		</tr>
 	<?php
 	}

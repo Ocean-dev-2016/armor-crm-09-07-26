@@ -10506,11 +10506,6 @@
                                     "description": "Sales Person / executive seid"
                                 },
                                 {
-                                    "key": "description",
-                                    "value": "this is 26 user followup",
-                                    "type": "text"
-                                },
-                                {
                                     "key": "through",
                                     "value": "1",
                                     "type": "text"
@@ -10557,7 +10552,7 @@
                                 "service_sales_executive.php"
                             ]
                         },
-                        "description": "**API Code:** 91\n\n**Slug:** create_followup\n\n**Service (s):** 91\n\nFor Visitor Create Followup\n\n**Parameters from backend code:** sales_id, description, through, followup_date, followup_flag, reference_id, customer_id, followup_status, user_id"
+                        "description": "**API Code:** 91\n\n**Slug:** create_followup\n\n**Service (s):** 91\n\nFor Visitor Create Followup\n\n**Parameters from backend code:** sales_id, through, followup_date, followup_flag, reference_id, customer_id, followup_status, user_id"
                     },
                     "response": []
                 },

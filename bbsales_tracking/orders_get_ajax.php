@@ -198,10 +198,17 @@ if ($cpPortalColCheck && mysqli_num_rows($cpPortalColCheck) > 0) {
 }
 $is_cp_login_list = function_exists('cp_is_channel_partner_login') && cp_is_channel_partner_login($db);
 
+if (!$is_cp_login_list) {
+	/* Admin / Armor order history should not show CP customer-sale orders. */
+	$ctable_where .= " AND (channel_partner_customer_id=0 OR channel_partner_customer_id IS NULL) ";
+}
+
 if (isset($_REQUEST['type']) && $_REQUEST['type'] != "" && $_REQUEST['type'] != NULL && $_REQUEST['type'] != 'undefined') {
 	if ($_REQUEST['type'] == "channel_partner_portal") {
 		$isCpPortalList = true;
 		$ctable_where .= " AND channel_partner_order_flag=1 ";
+		$ctable_where .= " AND (cp_order_mode='own' OR cp_order_mode='' OR cp_order_mode IS NULL) ";
+		$ctable_where .= " AND (channel_partner_customer_id=0 OR channel_partner_customer_id IS NULL) ";
 		if ($hasCpPortalCol) {
 			$ctable_where .= " AND cp_portal_order_flag=1 ";
 		} else {
@@ -742,7 +749,66 @@ $orders_status = array(/*"-1"=>"Add to Cart",*/"-2" => "Disapproved", "" => "Wai
 												</a>
 											</li>
 											<?php
+											/* Armor: credit stock from CP supply order (not end-customer mode) */
+											$cpModeRow = isset($ctable_d['cp_order_mode']) ? $ctable_d['cp_order_mode'] : '';
+											$cpCredited = isset($ctable_d['cp_stock_credited']) ? (int) $ctable_d['cp_stock_credited'] : 0;
+											$cpDebited = isset($ctable_d['cp_stock_debited']) ? (int) $ctable_d['cp_stock_debited'] : 0;
+											$isCpCustomerOrder = ($cpModeRow === 'customer' || (!empty($ctable_d['channel_partner_customer_id']) && (int) $ctable_d['channel_partner_customer_id'] > 0));
+											if (!$is_cp_login_list
+												&& !empty($ctable_d['channel_partner_order_flag'])
+												&& (int) $ctable_d['channel_partner_order_flag'] === 1
+												&& !$isCpCustomerOrder
+												&& ($rights['update_flag'] == 1 || $_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0)
+											) {
+												if ($cpCredited === 1) {
+													?>
+													<li>
+														<a href="javascript:;" style="cursor:default;opacity:0.75;" title="Already credited">
+															<span class="text-muted"><i class="fa fa-check"></i> Stock Credited to CP</span>
+														</a>
+													</li>
+													<?php
+												} else if ((int) $ctable_d['status'] >= 4) {
+													?>
+													<li>
+														<a href="javascript:;" onClick="CreditCpStock('<?php echo (int) $ctable_d['id']; ?>');">
+															<span class="text-info"><i class="fa fa-truck"></i> Dispatch &amp; Credit Stock to CP</span>
+														</a>
+													</li>
+													<?php
+												} else {
+													?>
+													<li>
+														<a href="javascript:;" style="cursor:default;opacity:0.75;" title="Account Approval required first">
+															<span class="text-warning"><i class="fa fa-lock"></i> Approve Account first for Dispatch</span>
+														</a>
+													</li>
+													<?php
+												}
+											}
+											/* CP login no longer uses My Orders list for dispatch */
+											if (false && $is_cp_login_list && $isCpCustomerOrder) {
+												?>
+												<li>
+													<a href="javascript:;" onClick="CpDispatchOrder('<?php echo (int) $ctable_d['id']; ?>');">
+														<span class="text-primary"><i class="fa fa-truck"></i> Mark Dispatch</span>
+													</a>
+												</li>
+												<?php
+											}
 											$payReceived = isset($ctable_d['payment_received_flag']) ? (int) $ctable_d['payment_received_flag'] : 0;
+											$partyNamePay = '';
+											if (!empty($ctable_d['channel_partner_customer_id']) && (int) $ctable_d['channel_partner_customer_id'] > 0) {
+												$partyNamePay = $db->rp_getValue(
+													"channel_partner_customer",
+													"company_name",
+													"id='" . (int) $ctable_d['channel_partner_customer_id'] . "'",
+													0
+												);
+											}
+											if ($partyNamePay == '') {
+												$partyNamePay = !empty($ctable_d['company_name']) ? $ctable_d['company_name'] : (isset($ctable_d['customer_name']) ? $ctable_d['customer_name'] : '');
+											}
 											if ($payReceived === 1) {
 												$payDateShow = (!empty($ctable_d['payment_received_date']) && $ctable_d['payment_received_date'] != '0000-00-00 00:00:00')
 													? date('d-m-Y', strtotime($ctable_d['payment_received_date']))
@@ -772,7 +838,7 @@ $orders_status = array(/*"-1"=>"Add to Cart",*/"-2" => "Disapproved", "" => "Wai
 													</a>
 												</li>
 												<?php
-											} else if ($rights['update_flag'] == 1 || $_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0) {
+											} else if ($rights['update_flag'] == 1 || $_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0 || $is_cp_login_list) {
 												$orderGrand = isset($ctable_d['grand_total']) ? (float) $ctable_d['grand_total'] : 0;
 												?>
 												<li>
@@ -781,6 +847,7 @@ $orders_status = array(/*"-1"=>"Add to Cart",*/"-2" => "Disapproved", "" => "Wai
 														data-order-id="<?php echo (int) $ctable_d['id']; ?>"
 														data-order-no="<?php echo htmlspecialchars($ctable_d['order_no'], ENT_QUOTES, 'UTF-8'); ?>"
 														data-grand-total="<?php echo $orderGrand; ?>"
+														data-party-name="<?php echo htmlspecialchars($partyNamePay, ENT_QUOTES, 'UTF-8'); ?>"
 														title="Mark Payment Received">
 														<span class="text-success">
 															<i class="fa fa-money"></i>
@@ -799,6 +866,18 @@ $orders_status = array(/*"-1"=>"Add to Cart",*/"-2" => "Disapproved", "" => "Wai
 							</td>
 							<td><?php echo ++$count; ?></td>
 							<td><span class="text-success"><a href="order_viewer.php?order_id=<?= $ctable_d['id'] ?>"><?php echo stripslashes($ctable_d['order_no']); ?></a></span><?php if (!empty($ctable_d['channel_partner_order_flag']) && $ctable_d['channel_partner_order_flag'] == 1) { ?> <span class="label label-info">Channel Partner</span><?php } ?><?php
+							if ($isCpCustomerOrder) {
+								echo ' <span class="label label-success">Customer Sale</span>';
+								if ($partyNamePay != '') {
+									echo '<div style="margin-top:4px;font-size:11px;"><b>Party:</b> ' . htmlspecialchars($partyNamePay) . '</div>';
+								}
+							}
+							if ($cpCredited === 1) {
+								echo ' <span class="label label-default">Stock IN</span>';
+							}
+							if ($cpDebited === 1) {
+								echo ' <span class="label label-default">Stock OUT</span>';
+							}
 							if (!empty($ctable_d['cp_portal_order_flag']) && (int) $ctable_d['cp_portal_order_flag'] === 1) {
 								$cpFromLbl = trim($ctable_d['company_name']);
 								if ($cpFromLbl == '' && !empty($ctable_d['customer_name'])) {

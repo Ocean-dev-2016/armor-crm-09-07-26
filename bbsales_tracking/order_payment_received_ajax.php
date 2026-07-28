@@ -10,6 +10,7 @@ header('Content-Type: application/json; charset=utf-8');
 $canUpdate = (
 	(isset($rights['update_flag']) && (int) $rights['update_flag'] === 1)
 	|| (isset($_SESSION[SITE_SESS . '_ADMIN_TYPE']) && (int) $_SESSION[SITE_SESS . '_ADMIN_TYPE'] === 0)
+	|| (function_exists('cp_is_channel_partner_login') && cp_is_channel_partner_login($db))
 );
 if (!$canUpdate) {
 	echo json_encode(array('ack' => 0, 'ack_msg' => 'Update permission required.'));
@@ -42,7 +43,7 @@ if (!$colCheck || mysqli_num_rows($colCheck) === 0) {
 
 $order = $db->rp_getData(
 	"orders",
-	"id,order_no,customer_id,customer_type,sales_id,grand_total,payment_received_flag,isDelete,status",
+	"id,order_no,customer_id,customer_type,sales_id,grand_total,payment_received_flag,isDelete,status,channel_partner_order_flag,channel_partner_customer_id",
 	"id='" . $orderId . "' AND isDelete=0",
 	"",
 	0
@@ -52,6 +53,15 @@ if (!$order) {
 	exit;
 }
 $row = mysqli_fetch_assoc($order);
+
+/* CP login: only own orders */
+if (function_exists('cp_is_channel_partner_login') && cp_is_channel_partner_login($db)) {
+	$cpId = (int) cp_get_login_channel_partner_id();
+	if ((int) $row['customer_id'] !== $cpId || (int) $row['channel_partner_order_flag'] !== 1) {
+		echo json_encode(array('ack' => 0, 'ack_msg' => 'Not your Channel Partner order.'));
+		exit;
+	}
+}
 if ((int) $row['payment_received_flag'] === 1) {
 	echo json_encode(array('ack' => 1, 'ack_msg' => 'Payment already marked as received for ' . $row['order_no'], 'already' => 1));
 	exit;

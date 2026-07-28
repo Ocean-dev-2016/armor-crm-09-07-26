@@ -1,17 +1,22 @@
 <?php
-$page_id = 555;
-$page_slug = 'channel_partner_customer';
-$ctable = "channel_partner_customer";
-$ctable1 = "Channel Partner Customer";
+$page_id = 565;
+$page_slug = 'channel_partner_order';
+$ctable = "orders";
+$ctable1 = "Customer Order";
 $main_page = "channel_partner";
-$page = "channel_partner_customer";
+$page = "channel_partner_order";
 $page_title = "Manage " . $ctable1;
 $page_hierarchy = array(
 	array("link" => "", "title" => "Sales & Marketing"),
 	array("link" => "channel_partner_customer_manage.php", "title" => "Channel Partner"),
-	array("link" => "channel_partner_customer_manage.php", "title" => "Manage " . $ctable1)
+	array("link" => "channel_partner_order_manage.php", "title" => $page_title)
 );
 include("connect.php");
+
+if (!function_exists('cp_is_channel_partner_login') || !cp_is_channel_partner_login($db)) {
+	$db->addErrorMessage("This page is only for Channel Partner login.");
+	$db->rp_location("dashboard.php");
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -27,7 +32,7 @@ include("connect.php");
 	<div class="page-head bg-grey">
 		<div class="container">
 			<div class="page-title">
-				<h1><a href="<?php echo "dashboard.php"; ?>" class="primary"><i class="fa fa-arrow-circle-o-left" style="font-size: 22px!important;"></i></a> &nbsp;<?php $db->pageBar($page_hierarchy); ?> </h1>
+				<h1><a href="channel_partner_customer_manage.php" class="primary"><i class="fa fa-arrow-circle-o-left" style="font-size: 22px!important;"></i></a> &nbsp;<?php $db->pageBar($page_hierarchy); ?></h1>
 			</div>
 		</div>
 	</div>
@@ -43,14 +48,14 @@ include("connect.php");
 							<div class="tools"><a href="javascript:;" class="collapse"></a></div>
 						</div>
 						<div class="portlet-body">
-							<form class="form-inline" role="form" onSubmit="return searchByName();">
+							<form class="form-inline" role="form" onsubmit="return searchOrders();">
 								<div class="form-group">
 									<label>Search: &nbsp;</label>
-									<input type="text" class="form-control input-medium" name="searchName" id="searchName" placeholder="Name / Mobile / Email" />
+									<input type="text" class="form-control input-medium" name="searchName" id="searchName" placeholder="Order No / Customer" />
 								</div>
 								<div class="form-group">
 									<input class="btn btn-danger btn-sm" type="submit" value="Search">
-									<input class="btn btn-success btn-sm" type="button" value="Clear" onClick="clearSearchByName();">
+									<input class="btn btn-success btn-sm" type="button" value="Clear" onclick="clearSearchOrders();">
 								</div>
 							</form>
 						</div>
@@ -59,19 +64,9 @@ include("connect.php");
 						<div class="table-toolbar">
 							<div class="row">
 								<div class="col-md-6">
-									<?php if ($rights['insert_flag'] == 1) { ?>
-										<a href="channel_partner_customer_crud.php?mode=add" class="btn sbold blue">
-											Add Channel Partner Customer <i class="fa fa-plus"></i>
-										</a>
-									<?php } ?>
-									<?php if (function_exists('cp_is_channel_partner_login') && cp_is_channel_partner_login($db)) { ?>
-										<a href="channel_partner_order_manage.php" class="btn sbold default">
-											View Customer Orders <i class="fa fa-list"></i>
-										</a>
-										<a href="channel_partner_order_simple.php?cp_mode=customer" class="btn sbold green">
-											Add Customer Order <i class="fa fa-shopping-cart"></i>
-										</a>
-									<?php } ?>
+									<a href="channel_partner_order_simple.php?cp_mode=customer" class="btn sbold green">
+										Add Customer Order <i class="fa fa-shopping-cart"></i>
+									</a>
 								</div>
 							</div>
 						</div>
@@ -93,14 +88,14 @@ include("connect.php");
 <script type="text/javascript" src="assets/global/plugins/datatables/plugins/bootstrap/dataTables.bootstrap.js"></script>
 <script type="text/javascript">
 var searchName = "";
-var data_url = "<?php echo $ctable; ?>_get_ajax.php";
+var data_url = "channel_partner_order_get_ajax.php";
 
-function searchByName() {
+function searchOrders() {
 	searchName = $("#searchName").val();
 	displayRecords(100, 1);
 	return false;
 }
-function clearSearchByName() {
+function clearSearchOrders() {
 	searchName = "";
 	$("#searchName").val("");
 	displayRecords(100, 1);
@@ -109,7 +104,6 @@ function loadDataTable() {
 	if (!$('#datatable_1').length) {
 		return;
 	}
-	/* Empty placeholder uses colspan — skip DataTables init */
 	if ($('#datatable_1 tbody tr td[colspan]').length > 0) {
 		return;
 	}
@@ -121,15 +115,15 @@ function loadDataTable() {
 	if ($.fn.DataTable && $.fn.DataTable.fnIsDataTable && $.fn.DataTable.fnIsDataTable('#datatable_1')) {
 		try { $('#datatable_1').dataTable().fnDestroy(); } catch (e) {}
 	}
-	/* Do not pass fixed aoColumns — CP has 8 cols, Admin has 9; fixed arrays caused tn/4 */
 	$('#datatable_1').dataTable({
 		"bPaginate": false,
 		"bFilter": false,
 		"bInfo": false,
 		"bAutoWidth": false,
 		"bDestroy": true,
+		"aaSorting": [[1, "desc"]],
 		"aoColumnDefs": [
-			{ "bSortable": false, "aTargets": [0] }
+			{ "bSortable": false, "aTargets": [0, 7] }
 		]
 	});
 }
@@ -138,7 +132,7 @@ function displayRecords(numRecords) {
 	$("#results").html("");
 	$("#results").load(data_url + "?show=" + numRecords + "&searchName=" + searchName, function(response, status) {
 		if (status === "error") {
-			$("#results").html('<div class="alert alert-danger">Failed to load listing. Please run db_sync.php on live server.</div>');
+			$("#results").html('<div class="alert alert-danger">Failed to load order listing. Please refresh.</div>');
 			return;
 		}
 		loadDataTable();
@@ -153,11 +147,6 @@ function displayRecords(numRecords) {
 			loadDataTable();
 		});
 	});
-}
-function del_conf(id) {
-	if (confirm("Are you sure you want to delete this Channel Partner Customer?")) {
-		window.location.href = "channel_partner_customer_crud.php?mode=delete&id=" + id;
-	}
 }
 $(document).ready(function() {
 	displayRecords(100, 1);

@@ -123,21 +123,6 @@ if((isset($_SESSION[SITE_SESS.'_ADMIN_SESS_ID']) && $_SESSION[SITE_SESS.'_ADMIN_
 		}
 		?>
 		<div class="form-group">
-		<select name="type" id="type" class="form-control">
-		<option value="">-- Select  Login Type --</option>
-		<?php 
-			$data=$db->rp_getData("admin_type","*","isDelete=0");
-			while($row = mysqli_fetch_assoc($data))
-			{ 
-			?>
-				<option id="type" value="<?php echo $row['id']; ?>"><?php echo $row['name']; ?></option>
-				
-			<?php 
-			
-			} ?>
-		</select>
-		</div>
-		<div class="form-group">
 			<!--ie8, ie9 does not support html5 placeholder, so we just show field title for that-->
 			<label class="control-label visible-ie8 visible-ie9">Mobile No.</label>
 			<div class="input-icon"> <i class="fa fa-envelope-o"></i>
@@ -151,9 +136,9 @@ if((isset($_SESSION[SITE_SESS.'_ADMIN_SESS_ID']) && $_SESSION[SITE_SESS.'_ADMIN_
 			</div>
 		</div>
 		<div class="form-actions">
-			<button type="submit" class="btn btn-success uppercase" type="submit">Login</button>
+			<button type="submit" class="btn btn-success uppercase">Login</button>
 			<a class="forget-password" id="forget-password" href="javascript:;">Forgot Password?</a><br/>
-			<a class="forget-password" id="forget-password" href="login_admin.php">Admin Login</a>
+			<a class="forget-password" href="login_admin.php">Admin Login</a>
 		</div>
 	</form>
 	<form class="forget-form" action="pass-recover.php" method="post" onSubmit="return check_form2();">

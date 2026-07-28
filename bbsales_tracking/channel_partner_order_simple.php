@@ -1,16 +1,18 @@
 <?php
 /**
  * Channel Partner simple order form (two separate modes):
- *  - cp_mode=own      → CP's own order (no end-customer)
- *  - cp_mode=customer → order for CP's customer
+ *  - cp_mode=own      -> CP's own order (no end-customer)
+ *  - cp_mode=customer -> order for CP's customer
  */
 $page_id = 565;
 $page_slug = 'page_order';
 include("connect.php");
 include('../include/product.class.php');
 include("../include/orders.class.php");
+require_once dirname(__FILE__) . '/../include/class.channel_partner_stock.php';
 
 $objOrder = new Order();
+$cpStockObj = new ChannelPartnerStock($db);
 
 if (!function_exists('cp_is_channel_partner_login') || !cp_is_channel_partner_login($db)) {
 	$db->addErrorMessage("This page is only for Channel Partner login.");
@@ -28,6 +30,10 @@ if ($cp_r) {
 if (empty($cp_exec_d)) {
 	$db->addErrorMessage("Channel Partner profile not found.");
 	$db->rp_location("dashboard.php");
+}
+if ($cp_mode === 'own') {
+	$db->addErrorMessage("Channel Partner own order can no longer be created from CP login. Please contact Armor Fire Admin / Sales Executive.");
+	$db->rp_location("channel_partner_order_manage.php");
 }
 
 $selected_cp_customer_id = 0;
@@ -55,7 +61,7 @@ $next_id = (int) $db->getLastInsertId("orders");
 $order_no_display = "ORD-" . $next_id;
 $order_date = date("d-m-Y");
 
-$page_title = ($cp_mode == 'own') ? "Add My Order" : "Add Customer Order";
+$page_title = ($cp_mode == 'own') ? "Add My Order (to Armor)" : "Customer Order (CP Format & Pricing)";
 $page_hierarchy = array(
 	array("link" => "", "title" => "Sales & Marketing"),
 	array("link" => "channel_partner_customer_manage.php", "title" => "Channel Partner"),
@@ -72,11 +78,23 @@ if (isset($_REQUEST['btn_save']) || isset($_REQUEST['submit'])) {
 	/* Prefer visible form fields (line_product = product_weight_price.id) */
 	$line_products = isset($_REQUEST['line_product']) ? $_REQUEST['line_product'] : array();
 	$line_qtys = isset($_REQUEST['line_qty']) ? $_REQUEST['line_qty'] : array();
+	$line_prices = isset($_REQUEST['line_price']) ? $_REQUEST['line_price'] : array();
+	$line_discounts = isset($_REQUEST['line_discount']) ? $_REQUEST['line_discount'] : array();
 	if (!is_array($line_products)) {
 		$line_products = array();
 	}
 	if (!is_array($line_qtys)) {
 		$line_qtys = array();
+	}
+	if (!is_array($line_prices)) {
+		$line_prices = array();
+	}
+	if (!is_array($line_discounts)) {
+		$line_discounts = array();
+	}
+	$gst_apply_flag = isset($_REQUEST['gst_apply_flag']) ? (int) $_REQUEST['gst_apply_flag'] : 1;
+	if ($gst_apply_flag !== 0) {
+		$gst_apply_flag = 1;
 	}
 
 	$item = array();
@@ -138,12 +156,36 @@ if (isset($_REQUEST['btn_save']) || isset($_REQUEST['submit'])) {
 			}
 		}
 
+		/* Editable rate from form (CP pricing) */
+		if (isset($line_prices[$i]) && $line_prices[$i] !== '' && is_numeric($line_prices[$i])) {
+			$sell_price = (float) $line_prices[$i];
+			$original_price = (float) $line_prices[$i];
+		}
+
+		$discount = 0;
+		if (isset($line_discounts[$i]) && $line_discounts[$i] !== '' && is_numeric($line_discounts[$i])) {
+			$discount = (float) $line_discounts[$i];
+			if ($discount < 0) {
+				$discount = 0;
+			}
+			if ($discount > 100) {
+				$discount = 100;
+			}
+		} else if ($match && isset($match['discountPer'])) {
+			$discount = $match['discountPer'];
+		}
+
+		/* Apply discount % on rate → net sell price */
+		$rate_before_disc = (float) $sell_price;
+		if ((float) $discount > 0) {
+			$sell_price = $rate_before_disc - (($rate_before_disc * (float) $discount) / 100);
+		}
+		$discount_amount = $rate_before_disc - (float) $sell_price;
+
 		$inner = isset($pwp['inner_size']) && (float) $pwp['inner_size'] > 0 ? (float) $pwp['inner_size'] : 1;
 		$outer = isset($pwp['outer_size']) && (float) $pwp['outer_size'] > 0 ? (float) $pwp['outer_size'] : 1;
 		$bag = $qty / $inner;
 		$cartoon = $bag / $outer;
-		$discount = $match && isset($match['discountPer']) ? $match['discountPer'] : 0;
-		$discount_amount = ((float) $original_price > 0) ? ((float) $original_price - (float) $sell_price) : 0;
 		$pro_name = $match && !empty($match['name']) ? $match['name'] : $db->rp_getValue("product", "name", "id='" . $pid . "'");
 		$brand_id = $match && isset($match['brand_id']) ? $match['brand_id'] : $db->rp_getValue("product", "brand_id", "id='" . $pid . "'");
 		$item_order_unit = $db->rp_getValue("product", "customer_unit_id", "id='" . $pid . "' AND isDelete=0");
@@ -182,6 +224,24 @@ if (isset($_REQUEST['btn_save']) || isset($_REQUEST['submit'])) {
 	if (empty($item)) {
 		$db->addErrorMessage("Please add at least one product with quantity.");
 		$db->rp_location("channel_partner_order_simple.php?cp_mode=" . $cp_mode);
+	}
+
+	/* Customer orders must have enough CP stock */
+	if ($cp_mode == 'customer') {
+		$stockCheckItems = array();
+		foreach ($item as $itRow) {
+			$stockCheckItems[] = array(
+				"pid" => $itRow['pid'],
+				"weight_id" => $itRow['weight_id'],
+				"qty" => $itRow['qty'],
+				"pro_name" => $itRow['pro_name'],
+			);
+		}
+		$stockCheck = $cpStockObj->validateItemsStock($cp_login_id, $stockCheckItems);
+		if (empty($stockCheck['ack'])) {
+			$db->addErrorMessage(isset($stockCheck['ack_msg']) ? $stockCheck['ack_msg'] : "Insufficient stock.");
+			$db->rp_location("channel_partner_order_simple.php?cp_mode=customer");
+		}
 	}
 
 	$billing_address = !empty($cp_exec_d['billing_address']) ? $cp_exec_d['billing_address'] : (isset($cp_exec_d['address']) ? $cp_exec_d['address'] : "");
@@ -254,8 +314,8 @@ if (isset($_REQUEST['btn_save']) || isset($_REQUEST['submit'])) {
 	$detail['additional_discount'] = isset($cp_exec_d['additional_discount']) ? $cp_exec_d['additional_discount'] : "";
 	$detail['cash_discount_amount'] = "";
 	$detail['additional_discount_amount'] = "";
-	$detail['gst_apply_flag'] = "";
-	$detail['tcs_apply_flag'] = "";
+	$detail['gst_apply_flag'] = $gst_apply_flag;
+	$detail['tcs_apply_flag'] = 0;
 	$detail['transport_charge_gst'] = "";
 	$detail['packing_charge_gst'] = "";
 	$detail['cd_gst'] = "";
@@ -285,6 +345,9 @@ if (isset($_REQUEST['btn_save']) || isset($_REQUEST['submit'])) {
 	$detail['channel_partner_order_flag'] = 1;
 	$detail['cp_portal_order_flag'] = 1;
 	$detail['cp_order_mode'] = $cp_mode;
+	/* Print header/footer from CP settings */
+	$detail['terms_comdition'] = !empty($cp_exec_d['cp_print_header']) ? $cp_exec_d['cp_print_header'] : "";
+	$detail['faithfully'] = !empty($cp_exec_d['cp_print_footer']) ? $cp_exec_d['cp_print_footer'] : "";
 	if ($cp_end_id > 0) {
 		$detail['channel_partner_customer_id'] = $cp_end_id;
 	}
@@ -315,10 +378,28 @@ if (isset($_REQUEST['btn_save']) || isset($_REQUEST['submit'])) {
 		if ($cp_end_id > 0) {
 			$portalUpd['channel_partner_customer_id'] = $cp_end_id;
 		}
+		/* Persist header/footer on order */
+		if (!empty($detail['terms_comdition']) || !empty($detail['faithfully'])) {
+			$portalUpd['terms_comdition'] = $detail['terms_comdition'];
+			$portalUpd['faithfully'] = $detail['faithfully'];
+		}
+		$colGst = @mysqli_query($db->myconn, "SHOW COLUMNS FROM `orders` LIKE 'gst_apply_flag'");
+		if ($colGst && mysqli_num_rows($colGst) > 0) {
+			$portalUpd['gst_apply_flag'] = $gst_apply_flag;
+		}
 		$db->rp_update("orders", $portalUpd, "id='" . (int) $reply['order_id'] . "'", 0);
 
-		$db->addSuccessMessage("Order placed successfully.");
-		$db->rp_location("dealer_orders_manage.php?type=channel_partner&msg=inserted");
+		/* Debit CP stock for customer orders */
+		if ($cp_mode == 'customer') {
+			$debitRes = $cpStockObj->debitForCustomerOrder((int) $reply['order_id']);
+			if (empty($debitRes['ack'])) {
+				$db->addErrorMessage("Order saved but stock debit failed: " . (isset($debitRes['ack_msg']) ? $debitRes['ack_msg'] : ''));
+				$db->rp_location("channel_partner_customer_manage.php");
+			}
+		}
+
+		$db->addSuccessMessage("Order placed successfully." . ($cp_mode == 'customer' ? " Stock deducted." : ""));
+		$db->rp_location("channel_partner_order_print.php?order_id=" . (int) $reply['order_id'] . "&saved=1");
 	} else {
 		$err = isset($reply['ack_msg']) ? $reply['ack_msg'] : "Order save failed.";
 		if (!empty($reply['developer_msg']) && $reply['developer_msg'] != $err) {
@@ -336,39 +417,117 @@ if (isset($_REQUEST['btn_save']) || isset($_REQUEST['submit'])) {
 <title><?php echo $page_title; ?> | <?php echo SITETITLE; ?></title>
 <?php include("include_css.php"); ?>
 <style>
+.cp-order-wrap { width: 100%; max-width: none; margin: 0; }
+.page-content > .container,
+.page-head > .container { width: 100% !important; max-width: 100% !important; }
 .cp-order-banner {
-	background: #5bc0de;
+	background: linear-gradient(90deg, #1a6b8a 0%, #2a9bb5 100%);
 	color: #fff;
-	padding: 12px 16px;
-	border-radius: 2px;
+	padding: 14px 18px;
+	border-radius: 4px;
+	margin-bottom: 20px;
+	font-size: 14px;
+	line-height: 1.45;
+}
+.cp-order-section {
+	border: 1px solid #e4e7eb;
+	border-radius: 4px;
+	padding: 16px 18px 8px;
 	margin-bottom: 18px;
-	font-weight: 600;
+	background: #fff;
 }
 .cp-order-section-title {
-	font-size: 13px;
+	font-size: 12px;
 	font-weight: 700;
-	letter-spacing: 0.4px;
-	color: #555;
-	margin: 18px 0 10px;
+	letter-spacing: 0.6px;
+	color: #1a6b8a;
+	margin: 0 0 14px;
 	text-transform: uppercase;
+	border-bottom: 2px solid #e8f4f8;
+	padding-bottom: 8px;
+}
+.cp-gst-box {
+	display: block;
+	padding: 10px 14px;
+	background: #f7fafb;
+	border: 1px solid #d9e8ee;
+	border-radius: 4px;
+}
+.cp-gst-box label {
+	font-weight: 600;
+	margin-right: 16px;
+	cursor: pointer;
+}
+.cp-gst-box input[type="radio"] {
+	margin-right: 4px;
 }
 .cp-product-table th {
-	background: #f5f5f5;
+	background: #1a6b8a;
+	color: #fff;
 	font-weight: 600;
+	font-size: 12px;
+	white-space: nowrap;
 }
 .cp-product-table td, .cp-product-table th {
 	vertical-align: middle !important;
 }
+.cp-product-table .form-control {
+	height: 34px;
+	padding: 4px 8px;
+}
+.cp-product-table .select2-container { width: 100% !important; }
+.cp-customer-wrap .select2-container { width: 100% !important; max-width: 420px; }
+.cp-product-loader {
+	display: none;
+	padding: 18px;
+	text-align: center;
+	background: #f7fafb;
+	border: 1px dashed #b8d4de;
+	border-radius: 4px;
+	margin-bottom: 12px;
+	color: #1a6b8a;
+	font-weight: 600;
+}
+.cp-product-loader img {
+	height: 28px;
+	margin-right: 8px;
+	vertical-align: middle;
+}
+.cp-product-table-wrap { display: none; }
+.cp-totals-box {
+	background: #f7fafb;
+	border: 1px solid #d9e8ee;
+	border-radius: 4px;
+	padding: 12px 16px;
+	margin-top: 8px;
+}
+.cp-totals-box .cp-tot-row {
+	display: flex;
+	justify-content: space-between;
+	padding: 4px 0;
+	font-size: 14px;
+}
+.cp-totals-box .cp-tot-grand {
+	font-size: 16px;
+	font-weight: 700;
+	color: #1a6b8a;
+	border-top: 1px solid #c5dce6;
+	margin-top: 6px;
+	padding-top: 8px;
+}
 .cp-actions {
-	margin-top: 24px;
+	margin-top: 22px;
 	text-align: center;
 }
 .cp-actions .btn {
-	min-width: 140px;
+	min-width: 150px;
 	margin: 0 6px;
 	text-transform: uppercase;
 	font-weight: 600;
+	padding: 10px 18px;
 }
+.cp-amt-cell { font-weight: 600; text-align: right; white-space: nowrap; }
+.cp-rate-input, .cp-disc-input, .cp-qty { text-align: right; }
 </style>
 </head>
 <body class="page-md">
@@ -378,7 +537,7 @@ if (isset($_REQUEST['btn_save']) || isset($_REQUEST['submit'])) {
 		<div class="container">
 			<div class="page-title">
 				<h1>
-					<a href="dealer_orders_manage.php?type=channel_partner" class="primary">
+					<a href="channel_partner_customer_manage.php" class="primary">
 						<i class="fa fa-arrow-circle-o-left" style="font-size:22px!important;"></i>
 					</a>
 					&nbsp;<?php $db->pageBar($page_hierarchy); ?>
@@ -395,8 +554,13 @@ if (isset($_REQUEST['btn_save']) || isset($_REQUEST['submit'])) {
 
 					<div class="portlet light">
 						<div class="portlet-body">
+							<div class="cp-order-wrap">
 							<div class="cp-order-banner">
-								Order Details - Please fill in the <?php echo ($cp_mode == 'own') ? 'product' : 'customer and product'; ?> information below.
+								<?php if ($cp_mode == 'customer') { ?>
+									<strong>Customer Order</strong> — CP format &amp; your pricing. Choose With GST / Without GST. Stock deducts from My Stock after save. Print uses your SO/PI Header–Footer.
+								<?php } else { ?>
+									<strong>Own order to Armor</strong> — for supply stock. Prefer Armor customer login for own purchase orders.
+								<?php } ?>
 							</div>
 
 							<form method="post" action="" id="cpSimpleOrderForm" autocomplete="off">
@@ -405,98 +569,159 @@ if (isset($_REQUEST['btn_save']) || isset($_REQUEST['submit'])) {
 								<input type="hidden" name="channel_partner_order_flag" value="1">
 								<input type="hidden" name="cp_portal_order_flag" value="1">
 								<input type="hidden" name="customer_id" id="customer_id" value="<?php echo (int) $cp_login_id; ?>">
+								<input type="hidden" name="gst_apply_flag" id="gst_apply_flag" value="1">
 
-								<div class="row">
-									<div class="col-md-6">
-										<div class="form-group">
-											<label>Order No</label>
-											<input type="text" class="form-control" value="<?php echo htmlspecialchars($order_no_display); ?>" readonly>
+								<div class="cp-order-section">
+									<div class="cp-order-section-title">Order Details</div>
+									<div class="row">
+										<div class="col-md-3 col-sm-6">
+											<div class="form-group">
+												<label>Order No</label>
+												<input type="text" class="form-control" value="<?php echo htmlspecialchars($order_no_display); ?>" readonly>
+											</div>
 										</div>
-									</div>
-									<div class="col-md-6">
-										<div class="form-group">
-											<label>Order Date</label>
-											<input type="text" class="form-control" name="order_date" id="order_date" value="<?php echo htmlspecialchars($order_date); ?>" readonly>
+										<div class="col-md-3 col-sm-6">
+											<div class="form-group">
+												<label>Order Date</label>
+												<input type="text" class="form-control" name="order_date" id="order_date" value="<?php echo htmlspecialchars($order_date); ?>" readonly>
+											</div>
+										</div>
+										<div class="col-md-4 col-sm-12">
+											<div class="form-group">
+												<label>Pricing Type <code>*</code></label>
+												<div class="cp-gst-box">
+													<label>
+														<input type="radio" name="gst_apply_ui" value="1" checked class="cp-gst-radio"> With GST
+													</label>
+													<label>
+														<input type="radio" name="gst_apply_ui" value="0" class="cp-gst-radio"> Without GST
+													</label>
+												</div>
+											</div>
 										</div>
 									</div>
 								</div>
 
 								<?php if ($cp_mode == 'customer') { ?>
-								<div class="cp-order-section-title">Customer Selection</div>
-								<div class="row">
-									<div class="col-md-12">
-										<div class="form-group">
-											<label>Customer <code>*</code></label>
-											<select class="form-control" name="channel_partner_customer_id" id="channel_partner_customer_id" required>
-												<option value="">Select Customer</option>
-												<?php
-												foreach ($cp_customers as $cust) {
-													$label = trim($cust['company_name']);
-													if ($label == '' && !empty($cust['person_name'])) {
-														$label = $cust['person_name'];
+								<div class="cp-order-section">
+									<div class="cp-order-section-title">Customer Selection</div>
+									<div class="row">
+										<div class="col-md-4 col-sm-6 cp-customer-wrap">
+											<div class="form-group">
+												<label>Customer <code>*</code></label>
+												<select class="form-control" name="channel_partner_customer_id" id="channel_partner_customer_id" required>
+													<option value="">Select Customer</option>
+													<?php
+													foreach ($cp_customers as $cust) {
+														$label = trim($cust['company_name']);
+														if ($label == '' && !empty($cust['person_name'])) {
+															$label = $cust['person_name'];
+														}
+														if ($label == '' && !empty($cust['mobile_no'])) {
+															$label = $cust['mobile_no'];
+														}
+														$sel = ($selected_cp_customer_id == $cust['id']) ? 'selected' : '';
+														echo '<option value="' . (int) $cust['id'] . '" ' . $sel . '>' . htmlspecialchars($label) . '</option>';
 													}
-													if ($label == '' && !empty($cust['mobile_no'])) {
-														$label = $cust['mobile_no'];
-													}
-													$sel = ($selected_cp_customer_id == $cust['id']) ? 'selected' : '';
-													echo '<option value="' . (int) $cust['id'] . '" ' . $sel . '>' . htmlspecialchars($label) . '</option>';
-												}
-												?>
-											</select>
-											<?php if (empty($cp_customers)) { ?>
-												<p class="help-block text-danger">No customers found. Please add from <a href="channel_partner_customer_manage.php">My Customers</a>.</p>
-											<?php } ?>
+													?>
+												</select>
+												<?php if (empty($cp_customers)) { ?>
+													<p class="help-block text-danger">No customers found. Please add from <a href="channel_partner_customer_manage.php">My Customers</a>.</p>
+												<?php } ?>
+											</div>
 										</div>
 									</div>
 								</div>
 								<?php } else { ?>
-								<div class="cp-order-section-title">Order For</div>
-								<div class="row">
-									<div class="col-md-12">
-										<div class="form-group">
-											<label>Channel Partner</label>
-											<input type="text" class="form-control" value="<?php echo htmlspecialchars($cp_exec_d['company_name'] . (!empty($cp_exec_d['cname']) ? ' - ' . $cp_exec_d['cname'] : '')); ?>" readonly>
+								<div class="cp-order-section">
+									<div class="cp-order-section-title">Order For</div>
+									<div class="row">
+										<div class="col-md-4 col-sm-6">
+											<div class="form-group">
+												<label>Channel Partner</label>
+												<input type="text" class="form-control" value="<?php echo htmlspecialchars($cp_exec_d['company_name'] . (!empty($cp_exec_d['cname']) ? ' - ' . $cp_exec_d['cname'] : '')); ?>" readonly>
+											</div>
 										</div>
 									</div>
 								</div>
 								<?php } ?>
 
-								<div class="cp-order-section-title">Product Information</div>
-								<div class="table-responsive">
-									<table class="table table-bordered cp-product-table" id="cpProductTable">
-										<thead>
-											<tr>
-												<th style="width:55%;">Product <code>*</code></th>
-												<th style="width:25%;">Qty <code>*</code></th>
-												<th style="width:20%;">Action</th>
-											</tr>
-										</thead>
-										<tbody id="cpProductBody">
-											<tr class="cp-product-row">
-												<td>
-													<select class="form-control cp-product-select noSelect2" name="line_product[]" style="width:100%;">
-														<option value="">Select Product</option>
-													</select>
-												</td>
-												<td>
-													<input type="text" class="form-control cp-qty" name="line_qty[]" placeholder="Qty" onkeypress="return isNumberKey(event);">
-												</td>
-												<td>
-													<button type="button" class="btn btn-success btn-sm cp-add-row" title="Add row"><i class="fa fa-plus"></i></button>
-													<button type="button" class="btn btn-danger btn-sm cp-remove-row" title="Remove" style="display:none;"><i class="fa fa-minus"></i></button>
-												</td>
-											</tr>
-										</tbody>
-									</table>
+								<div class="cp-order-section">
+									<div class="cp-order-section-title">Product Information</div>
+
+									<div class="cp-product-loader" id="cpProductLoader">
+										<img src="assets/admin/layout/img/ajax-loader.gif" alt=""> Loading products... Please wait
+									</div>
+
+									<div class="cp-product-table-wrap" id="cpProductTableWrap">
+									<div class="table-responsive">
+										<table class="table table-bordered cp-product-table" id="cpProductTable">
+											<thead>
+												<tr>
+													<th style="width:32%;">Product <code>*</code></th>
+													<th style="width:10%;">Qty <code>*</code></th>
+													<th style="width:11%;">Rate <code>*</code></th>
+													<th style="width:10%;">Disc %</th>
+													<th style="width:9%;">GST %</th>
+													<th style="width:14%;">Amount</th>
+													<th style="width:10%;">Action</th>
+												</tr>
+											</thead>
+											<tbody id="cpProductBody">
+												<tr class="cp-product-row">
+													<td>
+														<select class="form-control cp-product-select noSelect2" name="line_product[]" style="width:100%;" disabled>
+															<option value="">Select Product</option>
+														</select>
+													</td>
+													<td>
+														<input type="text" class="form-control cp-qty" name="line_qty[]" placeholder="Qty" onkeypress="return isNumberKey(event);">
+													</td>
+													<td>
+														<input type="text" class="form-control cp-rate cp-rate-input" name="line_price[]" placeholder="0.00" onkeypress="return isNumberKey(event);">
+													</td>
+													<td>
+														<input type="text" class="form-control cp-disc cp-disc-input" name="line_discount[]" placeholder="0" value="0" onkeypress="return isNumberKey(event);">
+													</td>
+													<td class="text-center">
+														<span class="cp-gst-pct">—</span>
+														<input type="hidden" class="cp-gst-val" value="0">
+													</td>
+													<td class="cp-amt-cell">
+														<span class="cp-line-amt">0.00</span>
+													</td>
+													<td class="text-center">
+														<button type="button" class="btn btn-success btn-sm cp-add-row" title="Add row"><i class="fa fa-plus"></i></button>
+														<button type="button" class="btn btn-danger btn-sm cp-remove-row" title="Remove" style="display:none;"><i class="fa fa-minus"></i></button>
+													</td>
+												</tr>
+											</tbody>
+										</table>
+									</div>
+
+									<div class="row">
+										<div class="col-md-4 col-md-offset-8">
+											<div class="cp-totals-box">
+												<div class="cp-tot-row"><span>Sub Total</span><span id="cpSubTotal">0.00</span></div>
+												<div class="cp-tot-row" id="cpDiscRow" style="display:none;"><span>Total Discount</span><span id="cpDiscTotal">0.00</span></div>
+												<div class="cp-tot-row" id="cpGstRow"><span>Estimated GST</span><span id="cpGstTotal">0.00</span></div>
+												<div class="cp-tot-row cp-tot-grand"><span>Grand Total</span><span id="cpGrandTotal">0.00</span></div>
+												<p class="help-block" style="margin:8px 0 0;font-size:11px;color:#888;">Final GST is calculated on save as per product &amp; customer state (same as Admin SO).</p>
+											</div>
+										</div>
+									</div>
+									</div>
 								</div>
 
 								<div id="cpHiddenItems"></div>
 
 								<div class="cp-actions">
-									<button type="submit" name="btn_save" value="1" class="btn btn-success" id="btnSubmitOrder">Submit Order</button>
-									<a href="dealer_orders_manage.php?type=channel_partner" class="btn btn-default">Cancel</a>
+									<button type="submit" name="btn_save" value="1" class="btn btn-success" id="btnSubmitOrder" disabled>Submit Order</button>
+									<a href="channel_partner_customer_manage.php" class="btn btn-default">Cancel</a>
+									<a href="channel_partner_print_settings.php" class="btn btn-info">SO/PI Format Settings</a>
 								</div>
 							</form>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -509,6 +734,7 @@ if (isset($_REQUEST['btn_save']) || isset($_REQUEST['submit'])) {
 <script type="text/javascript">
 var cpCustomerId = "<?php echo (int) $cp_login_id; ?>";
 var productOptionsHtml = '<option value="">Select Product</option>';
+var cpProductsReady = false;
 
 function isNumberKey(evt) {
 	var charCode = (evt.which) ? evt.which : evt.keyCode;
@@ -518,26 +744,48 @@ function isNumberKey(evt) {
 	return true;
 }
 
+function fmtAmt(n) {
+	n = parseFloat(n) || 0;
+	return n.toFixed(2);
+}
+
 function initCpProductSelect($el) {
-	if (!$el || !$el.length) {
+	if (!$el || !$el.length || !cpProductsReady) {
 		return;
 	}
 	if ($el.hasClass("select2-hidden-accessible") || $el.data("select2")) {
 		try { $el.select2("destroy"); } catch (e) {}
 	}
+	$el.prop("disabled", false);
 	$el.select2({
 		width: "100%",
-		placeholder: "Select Product"
+		placeholder: "Select Product",
+		allowClear: true
 	});
 }
 
+function showProductLoader(show) {
+	if (show) {
+		$("#cpProductLoader").show();
+		$("#cpProductTableWrap").hide();
+		$("#btnSubmitOrder").prop("disabled", true);
+	} else {
+		$("#cpProductLoader").hide();
+		$("#cpProductTableWrap").show();
+		$("#btnSubmitOrder").prop("disabled", false);
+	}
+}
+
 function loadCpProducts() {
+	showProductLoader(true);
+	cpProductsReady = false;
 	$.ajax({
 		url: "ajax_get_cp_products.php",
 		type: "POST",
 		data: { cid: cpCustomerId },
 		success: function (html) {
-			productOptionsHtml = html;
+			productOptionsHtml = html || '<option value="">Select Product</option>';
+			cpProductsReady = true;
 			$("#cpProductBody .cp-product-select").each(function () {
 				var $sel = $(this);
 				var cur = $sel.val();
@@ -550,8 +798,10 @@ function loadCpProducts() {
 				}
 				initCpProductSelect($sel);
 			});
+			showProductLoader(false);
 		},
 		error: function () {
+			showProductLoader(false);
 			toastr.error("Product list load failed. Please refresh.");
 		}
 	});
@@ -586,37 +836,115 @@ function getRowProductId($row) {
 	return (pwpId === null || pwpId === undefined) ? "" : String(pwpId);
 }
 
+function fillRowFromProduct($row) {
+	var $opt = $row.find(".cp-product-select option:selected");
+	var rate = $opt.data("pricelist");
+	var gst = $opt.data("gst");
+	var disc = $opt.data("discount");
+	if (rate === undefined || rate === null || rate === "") {
+		rate = $opt.attr("data-pricelist");
+	}
+	if (gst === undefined || gst === null || gst === "") {
+		gst = $opt.attr("data-gst");
+	}
+	if (disc === undefined || disc === null || disc === "") {
+		disc = $opt.attr("data-discount");
+	}
+	rate = parseFloat(rate) || 0;
+	gst = parseFloat(gst) || 0;
+	disc = parseFloat(disc) || 0;
+	$row.find(".cp-rate").val(rate > 0 ? fmtAmt(rate) : "");
+	$row.find(".cp-disc").val(disc > 0 ? fmtAmt(disc) : "0");
+	$row.find(".cp-gst-val").val(gst);
+	$row.find(".cp-gst-pct").text(gst > 0 ? gst + "%" : "—");
+	recalcRow($row);
+}
+
+function recalcRow($row) {
+	var qty = parseFloat($row.find(".cp-qty").val()) || 0;
+	var rate = parseFloat($row.find(".cp-rate").val()) || 0;
+	var disc = parseFloat($row.find(".cp-disc").val()) || 0;
+	if (disc < 0) { disc = 0; }
+	if (disc > 100) { disc = 100; }
+	var gst = parseFloat($row.find(".cp-gst-val").val()) || 0;
+	var withGst = parseInt($("#gst_apply_flag").val(), 10) === 1;
+	var gross = qty * rate;
+	var discAmt = gross * disc / 100;
+	var base = gross - discAmt;
+	var gstAmt = withGst ? (base * gst / 100) : 0;
+	$row.find(".cp-line-amt").text(fmtAmt(base + gstAmt));
+	$row.data("gross", gross);
+	$row.data("discamt", discAmt);
+	$row.data("base", base);
+	$row.data("gstamt", gstAmt);
+	recalcTotals();
+}
+
+function recalcTotals() {
+	var sub = 0, gstTot = 0, discTot = 0;
+	$("#cpProductBody .cp-product-row").each(function () {
+		sub += parseFloat($(this).data("base")) || 0;
+		gstTot += parseFloat($(this).data("gstamt")) || 0;
+		discTot += parseFloat($(this).data("discamt")) || 0;
+	});
+	var withGst = parseInt($("#gst_apply_flag").val(), 10) === 1;
+	$("#cpSubTotal").text(fmtAmt(sub));
+	$("#cpDiscTotal").text(fmtAmt(discTot));
+	$("#cpDiscRow").toggle(discTot > 0);
+	$("#cpGstTotal").text(fmtAmt(withGst ? gstTot : 0));
+	$("#cpGstRow").toggle(withGst);
+	$("#cpGrandTotal").text(fmtAmt(sub + (withGst ? gstTot : 0)));
+}
+
 function prepareCpOrderSubmit() {
 	var $wrap = $("#cpHiddenItems");
 	$wrap.empty();
 	var count = 0;
+	var gstFlag = $(".cp-gst-radio:checked").val();
+	$("#gst_apply_flag").val(gstFlag === "0" ? "0" : "1");
 
 	$("#cpProductBody .cp-product-row").each(function () {
 		var $row = $(this);
 		var $sel = $row.find(".cp-product-select");
 		var pwpId = getRowProductId($row);
 		var qty = $.trim($row.find(".cp-qty").val());
+		var rate = $.trim($row.find(".cp-rate").val());
+		var disc = $.trim($row.find(".cp-disc").val());
 
 		if (pwpId !== "" && pwpId !== "0" && qty !== "" && parseFloat(qty) > 0) {
-			/* Keep native select in sync for Select2 */
 			$sel.val(pwpId);
 			$wrap.append($('<input type="hidden" name="line_product[]" />').val(pwpId));
 			$wrap.append($('<input type="hidden" name="line_qty[]" />').val(qty));
+			$wrap.append($('<input type="hidden" name="line_price[]" />').val(rate !== "" ? rate : "0"));
+			$wrap.append($('<input type="hidden" name="line_discount[]" />').val(disc !== "" ? disc : "0"));
 			count++;
 		}
 	});
 
-	/* Avoid duplicate empty posts from visible fields */
 	if (count > 0) {
 		$("#cpProductBody .cp-product-select").removeAttr("name");
 		$("#cpProductBody .cp-qty").removeAttr("name");
+		$("#cpProductBody .cp-rate").removeAttr("name");
+		$("#cpProductBody .cp-disc").removeAttr("name");
 	}
 	return count > 0;
 }
 
 $(document).ready(function () {
+	showProductLoader(true);
 	loadCpProducts();
 	refreshRowActions();
+	recalcTotals();
+
+	<?php if ($cp_mode == 'customer') { ?>
+	if ($.fn.select2) {
+		$("#channel_partner_customer_id").select2({
+			width: "100%",
+			placeholder: "Select Customer",
+			allowClear: true
+		});
+	}
+	<?php } ?>
 
 	if ($.fn.datepicker) {
 		$("#order_date").datepicker({
@@ -626,7 +954,26 @@ $(document).ready(function () {
 		});
 	}
 
+	$(document).on("change", ".cp-gst-radio", function () {
+		$("#gst_apply_flag").val($(this).val());
+		$("#cpProductBody .cp-product-row").each(function () {
+			recalcRow($(this));
+		});
+	});
+
+	$(document).on("change", ".cp-product-select", function () {
+		fillRowFromProduct($(this).closest("tr"));
+	});
+
+	$(document).on("keyup change", ".cp-qty, .cp-rate, .cp-disc", function () {
+		recalcRow($(this).closest("tr"));
+	});
+
 	$(document).on("click", ".cp-add-row", function () {
+		if (!cpProductsReady) {
+			toastr.warning("Please wait, products are still loading.");
+			return;
+		}
 		var $src = $(this).closest("tr");
 		var $row = $src.clone();
 		$row.find(".select2-container").remove();
@@ -637,9 +984,16 @@ $(document).ready(function () {
 		$sel.attr("name", "line_product[]");
 		$sel.html(productOptionsHtml).val("");
 		$row.find(".cp-qty").attr("name", "line_qty[]").val("");
+		$row.find(".cp-rate").attr("name", "line_price[]").val("");
+		$row.find(".cp-disc").attr("name", "line_discount[]").val("0");
+		$row.find(".cp-gst-pct").text("—");
+		$row.find(".cp-gst-val").val("0");
+		$row.find(".cp-line-amt").text("0.00");
+		$row.removeData("base").removeData("gstamt").removeData("discamt").removeData("gross");
 		$("#cpProductBody").append($row);
 		initCpProductSelect($sel);
 		refreshRowActions();
+		recalcTotals();
 	});
 
 	$(document).on("click", ".cp-remove-row", function () {
@@ -654,9 +1008,15 @@ $(document).ready(function () {
 		$row.find(".select2-container").remove();
 		$row.remove();
 		refreshRowActions();
+		recalcTotals();
 	});
 
 	$("#cpSimpleOrderForm").on("submit", function (e) {
+		if (!cpProductsReady) {
+			toastr.error("Please wait until products finish loading.");
+			e.preventDefault();
+			return false;
+		}
 		<?php if ($cp_mode == 'customer') { ?>
 		if (!$("#channel_partner_customer_id").val()) {
 			toastr.error("Please Select Customer.");
@@ -664,11 +1024,26 @@ $(document).ready(function () {
 			return false;
 		}
 		<?php } ?>
+		var missingRate = false;
+		$("#cpProductBody .cp-product-row").each(function () {
+			var pwpId = getRowProductId($(this));
+			var qty = $.trim($(this).find(".cp-qty").val());
+			var rate = $.trim($(this).find(".cp-rate").val());
+			if (pwpId && qty && parseFloat(qty) > 0 && (rate === "" || isNaN(parseFloat(rate)))) {
+				missingRate = true;
+			}
+		});
+		if (missingRate) {
+			toastr.error("Please enter Rate for all selected products.");
+			e.preventDefault();
+			return false;
+		}
 		if (!prepareCpOrderSubmit()) {
 			toastr.error("Please add at least one Product with Qty.");
-			/* restore names if blocked */
 			$("#cpProductBody .cp-product-select").attr("name", "line_product[]");
 			$("#cpProductBody .cp-qty").attr("name", "line_qty[]");
+			$("#cpProductBody .cp-rate").attr("name", "line_price[]");
+			$("#cpProductBody .cp-disc").attr("name", "line_discount[]");
 			e.preventDefault();
 			return false;
 		}
@@ -678,3 +1053,4 @@ $(document).ready(function () {
 </script>
 </body>
 </html>
+<?php include("disconnect.php"); ?>

@@ -387,7 +387,7 @@ if(isset($_REQUEST['lr_add_submit'])){
 </div>
 <!-- lr attachment modal end -->
 
-<!-- Payment Received against Order -->
+<!-- Payment Received against Order (Tally-like: Party + Against Order) -->
 <div id="paymentReceivedModal" class="modal fade" tabindex="-1" role="dialog">
 	<div class="modal-dialog">
 		<div class="modal-content">
@@ -398,7 +398,11 @@ if(isset($_REQUEST['lr_add_submit'])){
 			<div class="modal-body">
 				<input type="hidden" id="pr_order_id" value="">
 				<div class="form-group">
-					<label>Order Number</label>
+					<label>Party / Customer Name</label>
+					<input type="text" class="form-control" id="pr_party_name" readonly style="font-weight:600;background:#f7f7f7;">
+				</div>
+				<div class="form-group">
+					<label>Against Order Number</label>
 					<input type="text" class="form-control" id="pr_order_no" readonly>
 				</div>
 				<div class="form-group">
@@ -459,7 +463,7 @@ if(isset($_REQUEST['lr_add_submit'])){
 </script>
 <script type="text/javascript">
 var searchName="";
-var data_url = "orders_get_ajax.php";
+var data_url = "<?= (isset($_REQUEST['type']) && $_REQUEST['type'] == 'pending_payment') ? 'pending_payment_get_ajax.php' : 'orders_get_ajax.php'; ?>";
 // var data_url_outlets = "outlet_orders_get_ajax.php";
 $('#ToDate').datepicker({  datepicker: true, autoclose: true });
 $('#FromDate').datepicker({  datepicker: true, autoclose: true });
@@ -593,23 +597,36 @@ function getSubCat(cid){
 		// displayRecords_outlets(500,1);
 }
 function loadDataTable(){
-	$('#datatable_1').dataTable({
+	var $table = $('#datatable_1');
+	if (!$table.length) {
+		return;
+	}
+	if ($.fn.dataTable && $.fn.dataTable.isDataTable('#datatable_1')) {
+		$table.dataTable().fnDestroy();
+	}
+	var colCount = $table.find('thead th').length;
+	var canInit = colCount > 0;
+	$table.find('tbody tr').each(function () {
+		var tdCount = $(this).children('td').length;
+		var colspanCount = $(this).children('td[colspan]').length;
+		if (colspanCount > 0 || (tdCount > 0 && tdCount !== colCount)) {
+			canInit = false;
+			return false;
+		}
+	});
+	if (!canInit) {
+		return;
+	}
+	var aoColumns = [];
+	for (var i = 0; i < colCount; i++) {
+		aoColumns.push({ "bSortable": false });
+	}
+	$table.dataTable({
 		"bPaginate": false,
 		"bFilter": false,
 		"bInfo": false,
-		"bAutoWidth": false, 
-		"aoColumns": [
-			  { "sWidth": "5%" }, 
-			  { "sWidth": "5%" },
-			  { "sWidth": "5%" },
-			  { "sWidth": "20%" },
-			  { "sWidth": "30%" },
-			  { "sWidth": "5%" },
-			  { "sWidth": "5%" },
-			  { "sWidth": "5%" },
-			  { "sWidth": "5%"},
-			  { "sWidth": "5%" ,"bSortable": false },
-			]
+		"bAutoWidth": false,
+		"aoColumns": aoColumns
 	});
 }
 function displayRecords(numRecords) {
@@ -772,12 +789,14 @@ $('#paymentReceivedModal').on('show.bs.modal', function (event) {
 	var orderId = button.data('order-id') || '';
 	var orderNo = button.data('order-no') || '';
 	var grandTotal = button.data('grand-total') || 0;
+	var partyName = button.data('party-name') || '';
 	$('#pr_order_id').val(orderId);
 	$('#pr_order_no').val(orderNo);
 	$('#pr_order_amount').val(grandTotal);
+	$('#pr_party_name').val(partyName);
 	$('#pr_paid_amount').val(grandTotal > 0 ? grandTotal : '');
 	$('#pr_payment_type').val('');
-	$('#pr_remark').val('');
+	$('#pr_remark').val(partyName ? ('Payment received from ' + partyName + ' against Order ' + orderNo) : '');
 });
 
 $('#pr_save_btn').on('click', function () {
@@ -1029,6 +1048,56 @@ function ConvertCpPortalOrder(oid) {
 		error: function () {
 			$(".transCover").fadeOut(100);
 			toastr.error("Convert request failed");
+		}
+	});
+}
+
+function CreditCpStock(oid) {
+	if (!confirm("Account Approved order — Dispatch and credit quantity to Channel Partner stock?")) {
+		return;
+	}
+	$.ajax({
+		type: "POST",
+		url: "ajax_cp_credit_stock.php",
+		data: { order_id: oid, mark_dispatch: 1 },
+		dataType: "json",
+		success: function (result) {
+			if (result && result.ack == 1) {
+				toastr.success(result.ack_msg);
+				if (typeof displayRecords === "function") {
+					displayRecords(typeof numRecords !== "undefined" ? numRecords : 100, 1);
+				}
+			} else {
+				toastr.error((result && result.ack_msg) ? result.ack_msg : "Credit failed");
+			}
+		},
+		error: function () {
+			toastr.error("Credit stock request failed");
+		}
+	});
+}
+
+function CpDispatchOrder(oid) {
+	if (!confirm("Mark this customer order as Dispatched?")) {
+		return;
+	}
+	$.ajax({
+		type: "POST",
+		url: "ajax_cp_dispatch_order.php",
+		data: { order_id: oid, dispatch_status: 1 },
+		dataType: "json",
+		success: function (result) {
+			if (result && result.ack == 1) {
+				toastr.success(result.ack_msg);
+				if (typeof displayRecords === "function") {
+					displayRecords(typeof numRecords !== "undefined" ? numRecords : 100, 1);
+				}
+			} else {
+				toastr.error((result && result.ack_msg) ? result.ack_msg : "Dispatch failed");
+			}
+		},
+		error: function () {
+			toastr.error("Dispatch request failed");
 		}
 	});
 }
