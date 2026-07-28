@@ -123,13 +123,15 @@ foreach ($data['employees'] as $employee) {
 	$sheet->setCellValue("A2", date("d/m/Y", strtotime($data['range']['from'])) . " TO " . date("d/m/Y", strtotime($data['range']['to'])));
 	$sheet->getStyle("A1")->applyFromArray($titleStyle);
 
-	$kpiLabels = array("Approved Expense", "Salary", "Expense + Salary", "Total Sales", "Total Visit", "Total Duration", "Completed / Open", "Total Quotation", "Total PI Approved");
+	$kpiLabels = array("Approved Expense", "Total KM", "Expense / KM", "Salary", "Expense + Salary", "Total Sales", "Total Visit", "Total Duration", "Completed / Open", "Total Quotation", "Total PI Approved");
 	$totalDurationMins = isset($employee['kpi']['total_duration_minutes']) ? (int) $employee['kpi']['total_duration_minutes'] : 0;
 	$durH = (int) floor($totalDurationMins / 60);
 	$durM = $totalDurationMins % 60;
 	$totalDurationLabel = ($durH > 0) ? ($durH . "h " . $durM . "m") : ($durM . " min");
 	$kpiValues = array(
 		(float) $employee['kpi']['approved_expense'],
+		(float) $employee['kpi']['total_kilometer'],
+		(float) $employee['kpi']['expense_per_km'],
 		"N/A",
 		$db->rp_number_format((float) $employee['kpi']['approved_expense'], 2) . " + N/A",
 		(float) $employee['kpi']['total_sales'],
@@ -144,7 +146,9 @@ foreach ($data['employees'] as $employee) {
 		$sheet->setCellValue($column . "3", $kpiLabels[$i]);
 		$sheet->setCellValue($column . "4", $kpiValues[$i]);
 	}
-	$sheet->getStyle("A3:I3")->getFont()->setBold(true);
+	$sheet->getStyle("A3:K3")->getFont()->setBold(true);
+	$sheet->getStyle("B3:C4")->getFill()->setFillType(PHPExcel_Style_Fill::FILL_SOLID)->getStartColor()->setRGB("FCEBD6");
+	$sheet->getStyle("B3:C4")->getFont()->setBold(true);
 
 	$headerRow = 6;
 	$headers = array("Sr.", "Code", "Account Name", "Turnover", "GST No.", "Address", "City", "Pincode", "Total Visit", "Visit Duration");

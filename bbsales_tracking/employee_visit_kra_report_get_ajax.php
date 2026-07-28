@@ -52,6 +52,8 @@ $fixedColCount = 10; // Sr .. Total Visit + Visit Duration
 	.kra-subtitle { font-size:12px; font-weight:400; margin-top:3px; }
 	.kra-kpis { display:flex; flex-wrap:wrap; gap:8px; padding:10px; background:#f5f7f9; }
 	.kra-kpi { min-width:145px; border:1px solid #dce3e8; background:#fff; padding:8px 10px; }
+	.kra-kpi.kra-kpi-km { background:#f4fbf4; border-color:#cfe6cf; }
+	.kra-kpi.kra-kpi-ekm { background:#fff8ef; border-color:#f2d1a7; }
 	.kra-kpi-label { color:#63717c; font-size:11px; text-transform:uppercase; }
 	.kra-kpi-value { font-size:17px; font-weight:700; margin-top:3px; }
 	.kra-scroll { overflow:auto; max-height:620px; border-top:1px solid #ddd; }
@@ -126,6 +128,8 @@ $fixedColCount = 10; // Sr .. Total Visit + Visit Duration
 		</div>
 		<div class="kra-kpis">
 			<div class="kra-kpi"><div class="kra-kpi-label">Approved Expense</div><div class="kra-kpi-value"><?php echo kra_money($db, $employee['kpi']['approved_expense']); ?></div></div>
+			<div class="kra-kpi kra-kpi-km"><div class="kra-kpi-label">Total KM</div><div class="kra-kpi-value"><?php echo $db->rp_number_format((float) $employee['kpi']['total_kilometer'], 2); ?></div></div>
+			<div class="kra-kpi kra-kpi-ekm"><div class="kra-kpi-label">Expense / KM</div><div class="kra-kpi-value"><?php echo kra_money($db, $employee['kpi']['expense_per_km']); ?></div></div>
 			<div class="kra-kpi"><div class="kra-kpi-label">Salary</div><div class="kra-kpi-value">N/A</div></div>
 			<div class="kra-kpi"><div class="kra-kpi-label">Expense + Salary</div><div class="kra-kpi-value"><?php echo kra_money($db, $employee['kpi']['approved_expense']); ?> + N/A</div></div>
 			<div class="kra-kpi"><div class="kra-kpi-label">Total Sales</div><div class="kra-kpi-value"><?php echo kra_money($db, $employee['kpi']['total_sales']); ?></div></div>

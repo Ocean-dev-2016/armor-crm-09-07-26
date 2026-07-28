@@ -226,6 +226,9 @@ class RemarkAnalysisReport
 			"visits" => array(),
 			"total_visits" => 0,
 			"total_duration_minutes" => 0,
+			"total_approved_expense" => 0,
+			"total_kilometer" => 0,
+			"expense_per_km" => 0,
 			"employees" => $employees,
 			"query_error" => "",
 		);
@@ -374,12 +377,16 @@ class RemarkAnalysisReport
 				"note" => isset($row['note']) ? $row['note'] : "",
 				"meeting_purpose" => $row['remark'],
 				"duration_minutes" => $durationMinutes,
+				"user_id" => (int) $row['user_id'],
 				"is_completed" => $this->isValidDateTime($row['stop_date_time']) ? 1 : 0,
 				"consultant_form" => null,
 				"high_rate_form" => null,
 				"high_rate_items" => array(),
 				"has_consultant_form" => 0,
 				"has_high_rate_form" => 0,
+				"approved_expense" => 0,
+				"total_kilometer" => 0,
+				"expense_per_km" => 0,
 			);
 
 			if ($durationMinutes !== null) {
@@ -396,9 +403,74 @@ class RemarkAnalysisReport
 			}
 		}
 
+		$this->attachExpenseMetrics($data, $visitRows);
 		$data['visits'] = $visitRows;
 		$data['total_visits'] = count($visitRows);
 		return $data;
+	}
+
+	private function attachExpenseMetrics(&$data, &$visitRows)
+	{
+		if (empty($visitRows)) {
+			return;
+		}
+		$employeeIds = array();
+		$dayKeysUsed = array();
+		foreach ($visitRows as $row) {
+			if (!empty($row['user_id'])) {
+				$employeeIds[(int) $row['user_id']] = (int) $row['user_id'];
+			}
+		}
+		if (empty($employeeIds)) {
+			return;
+		}
+		$expenseMap = $this->loadExpenseMetricMap(array_values($employeeIds), $data['range']['from'], $data['range']['to']);
+		foreach ($visitRows as $idx => $row) {
+			$key = ((int) $row['user_id']) . '|' . $row['visit_date'];
+			if (isset($expenseMap[$key])) {
+				$visitRows[$idx]['approved_expense'] = (float) $expenseMap[$key]['approved_expense'];
+				$visitRows[$idx]['total_kilometer'] = (float) $expenseMap[$key]['total_kilometer'];
+				$visitRows[$idx]['expense_per_km'] = (float) $expenseMap[$key]['expense_per_km'];
+				$dayKeysUsed[$key] = $expenseMap[$key];
+			}
+		}
+		foreach ($dayKeysUsed as $metric) {
+			$data['total_approved_expense'] += (float) $metric['approved_expense'];
+			$data['total_kilometer'] += (float) $metric['total_kilometer'];
+		}
+		$data['expense_per_km'] = ($data['total_kilometer'] > 0) ? ($data['total_approved_expense'] / $data['total_kilometer']) : 0;
+	}
+
+	private function loadExpenseMetricMap($employeeIds, $from, $to)
+	{
+		$map = array();
+		if (empty($employeeIds)) {
+			return $map;
+		}
+		$sql = "SELECT sales_executive_id AS employee_id,
+				DATE(expense_date) AS expense_day,
+				SUM(pass_expense_amount) AS approved_expense,
+				SUM(total_kilometer) AS total_kilometer
+			FROM expense
+			WHERE isDelete=0 AND expense_status=1
+				AND sales_executive_id IN (" . implode(",", $employeeIds) . ")
+				AND DATE(expense_date) BETWEEN '" . $from . "' AND '" . $to . "'
+			GROUP BY sales_executive_id, DATE(expense_date)";
+		$result = $this->safeQuery($sql);
+		if (!$result) {
+			return $map;
+		}
+		while ($row = mysqli_fetch_assoc($result)) {
+			$key = (int) $row['employee_id'] . '|' . $row['expense_day'];
+			$expense = (float) $row['approved_expense'];
+			$km = (float) $row['total_kilometer'];
+			$map[$key] = array(
+				'approved_expense' => $expense,
+				'total_kilometer' => $km,
+				'expense_per_km' => ($km > 0) ? ($expense / $km) : 0,
+			);
+		}
+		return $map;
 	}
 
 	/**

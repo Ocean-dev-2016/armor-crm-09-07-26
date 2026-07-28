@@ -151,6 +151,12 @@ function rar_render_form_html($visit)
 		<strong>Total Visits:</strong> <?php echo (int) $data['total_visits']; ?>
 		&nbsp;|&nbsp;
 		<strong>Total Duration:</strong> <?php echo rar_h(rar_format_duration(isset($data['total_duration_minutes']) ? $data['total_duration_minutes'] : 0)); ?>
+		&nbsp;|&nbsp;
+		<strong>Approved Expense:</strong> <?php echo CURR . ' ' . $db->rp_number_format((float) $data['total_approved_expense'], 2); ?>
+		&nbsp;|&nbsp;
+		<strong>Total KM:</strong> <?php echo $db->rp_number_format((float) $data['total_kilometer'], 2); ?>
+		&nbsp;|&nbsp;
+		<strong>Expense / KM:</strong> <?php echo CURR . ' ' . $db->rp_number_format((float) $data['expense_per_km'], 2); ?>
 		<?php if (!empty($data['range']['was_limited'])) { ?>
 			<span class="text-warning">(Date range limited to max days)</span>
 		<?php } ?>
@@ -280,8 +286,24 @@ function rar_render_form_html($visit)
 				.rar-c-reason { width:5%; text-align:center !important; }
 				.rar-c-desc { width:10%; }
 				.rar-c-stop { width:14%; }
+				.rar-c-expense { width:8%; text-align:right !important; }
+				.rar-c-km { width:7%; text-align:right !important; }
+				.rar-c-ekm { width:8%; text-align:right !important; }
 				.rar-c-form { width:7%; text-align:center !important; }
 				.rar-c-status { width:7%; text-align:center !important; }
+				.rar-detail-table > thead > tr > th.rar-c-expense,
+				.rar-detail-table > thead > tr > th.rar-c-km,
+				.rar-detail-table > thead > tr > th.rar-c-ekm {
+					background:#8e44ad !important;
+					border-color:#7d3c98 !important;
+				}
+				.rar-detail-table > tbody > tr > td.rar-c-expense,
+				.rar-detail-table > tbody > tr > td.rar-c-km,
+				.rar-detail-table > tbody > tr > td.rar-c-ekm {
+					background:#fbf5ff !important;
+					font-weight:700;
+					color:#5b2c6f;
+				}
 				.rar-cust-box {
 					background:#f4f8fb;
 					border:1px solid #d9e6f2;
@@ -309,6 +331,9 @@ function rar_render_form_html($visit)
 						<th class="rar-c-reason">Reason</th>
 						<th class="rar-c-desc">Description</th>
 						<th class="rar-c-stop">Stop Remark</th>
+						<th class="rar-c-expense">Expense</th>
+						<th class="rar-c-km">KM</th>
+						<th class="rar-c-ekm">Expense / KM</th>
 						<th class="rar-c-form">Form</th>
 						<th class="rar-c-status">Status</th>
 					</tr>
@@ -392,6 +417,9 @@ function rar_render_form_html($visit)
 									<br><small class="text-info"><i class="fa fa-sticky-note-o"></i> <?php echo rar_h($visitNote); ?></small>
 								<?php } ?>
 							</td>
+							<td class="rar-c-expense"><?php echo CURR . ' ' . $db->rp_number_format((float) $visit['approved_expense'], 2); ?></td>
+							<td class="rar-c-km"><?php echo $db->rp_number_format((float) $visit['total_kilometer'], 2); ?></td>
+							<td class="rar-c-ekm"><?php echo CURR . ' ' . $db->rp_number_format((float) $visit['expense_per_km'], 2); ?></td>
 							<td class="rar-c-form">
 								<?php if ($formHtml != "") { ?>
 									<button type="button"

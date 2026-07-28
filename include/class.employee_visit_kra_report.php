@@ -186,6 +186,8 @@ class EmployeeVisitKraReport
 			}
 			$employee['kpi'] = array(
 				"approved_expense" => 0,
+				"total_kilometer" => 0,
+				"expense_per_km" => 0,
 				"salary" => null,
 				"total_sales" => 0,
 				"total_visits" => 0,
@@ -496,6 +498,15 @@ class EmployeeVisitKraReport
 		);
 		$this->applyGroupedKpi(
 			$data,
+			"SELECT sales_executive_id AS employee_id,SUM(total_kilometer) AS metric
+			 FROM expense
+			 WHERE isDelete=0 AND expense_status=1 AND sales_executive_id IN (" . $ids . ")
+			 AND DATE(expense_date) BETWEEN '" . $from . "' AND '" . $to . "'
+			 GROUP BY sales_executive_id",
+			"total_kilometer"
+		);
+		$this->applyGroupedKpi(
+			$data,
 			"SELECT sales_id AS employee_id,SUM(grand_total) AS metric
 			 FROM orders
 			 WHERE isDelete=0 AND status NOT IN (-1,-2,3) AND sales_id IN (" . $ids . ")
@@ -532,6 +543,11 @@ class EmployeeVisitKraReport
 			) pi_sales
 			GROUP BY pi_sales.employee_id";
 		$this->applyGroupedKpi($data, $piSql, "approved_pi");
+		foreach ($data['employees'] as $employeeId => $employee) {
+			$totalKm = isset($employee['kpi']['total_kilometer']) ? (float) $employee['kpi']['total_kilometer'] : 0;
+			$expense = isset($employee['kpi']['approved_expense']) ? (float) $employee['kpi']['approved_expense'] : 0;
+			$data['employees'][$employeeId]['kpi']['expense_per_km'] = ($totalKm > 0) ? ($expense / $totalKm) : 0;
+		}
 	}
 
 	private function applyGroupedKpi(&$data, $sql, $key)
