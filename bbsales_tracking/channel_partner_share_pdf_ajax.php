@@ -232,6 +232,9 @@ if (!file_exists(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'mpdf60' . DIRECTORY_
 	cp_share_json(array('ack' => 0, 'ack_msg' => 'mPDF library missing (mpdf60).'));
 }
 
+/* Live host may not have php_mbstring — polyfill before mPDF */
+include_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'include' . DIRECTORY_SEPARATOR . 'mbstring_polyfill.php';
+
 /* Same require style as working expense / stock report ajax */
 require('mpdf60/mpdf.php');
 
