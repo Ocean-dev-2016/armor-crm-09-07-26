@@ -24,30 +24,45 @@ $cp_recent_orders = array();
 $cp_pending_orders = array();
 if ($is_cp_dashboard) {
 	$cp_id = function_exists('cp_get_login_channel_partner_id') ? (int) cp_get_login_channel_partner_id() : (int) $_SESSION[SITE_SESS . 'REFERANCE_ID'];
+	$cp_dash_name = $db->rp_getValue("executive", "company_name", "id='" . $cp_id . "'", 0);
+	if ($cp_dash_name == '') {
+		$cp_dash_name = $db->rp_getValue("executive", "cname", "id='" . $cp_id . "'", 0);
+	}
+	if ($cp_dash_name == '') {
+		$cp_dash_name = isset($_SESSION[SITE_SESS . 'SESS_NAME']) ? $_SESSION[SITE_SESS . 'SESS_NAME'] : 'Channel Partner';
+	}
 	$cp_dashboard_cards = array(
 		array(
 			'label' => 'My Customers',
 			'value' => (int) $db->rp_getTotalRecord("channel_partner_customer", "channel_partner_id='" . $cp_id . "' AND isDelete=0", 0),
 			'icon' => 'fa-users',
 			'link' => 'channel_partner_customer_manage.php',
+			'hint' => 'Parties under you',
+			'theme' => 'blue',
 		),
 		array(
 			'label' => 'Customer Orders',
 			'value' => (int) $db->rp_getTotalRecord("orders", "customer_id='" . $cp_id . "' AND channel_partner_order_flag=1 AND channel_partner_customer_id>0 AND isDelete=0 AND status NOT IN (-2,3)", 0),
 			'icon' => 'fa-shopping-cart',
 			'link' => 'channel_partner_order_manage.php',
+			'hint' => 'All customer SOs',
+			'theme' => 'teal',
 		),
 		array(
 			'label' => 'Pending Payments',
 			'value' => (int) $db->rp_getTotalRecord("orders", "customer_id='" . $cp_id . "' AND channel_partner_order_flag=1 AND channel_partner_customer_id>0 AND isDelete=0 AND status NOT IN (-2,3) AND (payment_received_flag=0 OR payment_received_flag IS NULL)", 0),
-			'icon' => 'fa-money',
+			'icon' => 'fa-inr',
 			'link' => 'channel_partner_payment.php',
+			'hint' => 'Baki payments',
+			'theme' => 'amber',
 		),
 		array(
 			'label' => 'Products In Stock',
 			'value' => (int) $db->rp_getValue("customer_inward_stock", "COUNT(DISTINCT pro_id)", "customer_id='" . $cp_id . "' AND isDelete=0", 0),
 			'icon' => 'fa-cubes',
 			'link' => 'channel_partner_stock_manage.php',
+			'hint' => 'Available items',
+			'theme' => 'green',
 		),
 	);
 	$recentOrderR = $db->rp_getData(
@@ -125,134 +140,244 @@ if ($is_cp_dashboard) {
 	height: 680px;
 }
 
-.cp-dash-hero {
-	background: linear-gradient(135deg, #1f4e79 0%, #2f6f44 100%);
+/* CP Dashboard — Bootstrap-safe layout (no .label class) */
+.cp-dash-wrap {
+	--cp-ink: #1b2a3a;
+	--cp-muted: #6a7c8f;
+	--cp-line: #e5ebf2;
+	--cp-accent: #e4572e;
+	--cp-steel: #1c3d5a;
+	clear: both;
+	margin: 0 0 20px;
+}
+.cp-dash-wrap * { box-sizing: border-box; }
+.cp-welcome {
+	background: #1c3d5a;
 	color: #fff;
-	border-radius: 12px;
-	padding: 24px 28px;
-	margin-bottom: 18px;
-	box-shadow: 0 10px 30px rgba(0,0,0,0.12);
-}
-.cp-dash-hero h2 {
-	margin: 0 0 8px;
-	font-size: 28px;
-	font-weight: 700;
-}
-.cp-dash-hero p {
-	margin: 0;
-	font-size: 14px;
-	opacity: 0.92;
-}
-.cp-dash-actions {
-	margin-top: 16px;
-}
-.cp-dash-actions .btn {
-	margin: 0 8px 8px 0;
-	border-radius: 24px;
-	border: none;
-	background: rgba(255,255,255,0.92);
-	color: #1f3d5a;
-	font-weight: 600;
-}
-.cp-summary-card {
-	background: #fff;
-	border-radius: 12px;
-	padding: 18px 18px 16px;
-	margin-bottom: 18px;
-	box-shadow: 0 8px 20px rgba(20, 35, 64, 0.08);
-	border: 1px solid #e7edf5;
-	min-height: 185px;
-	position: relative;
-}
-.cp-summary-card .icon {
-	width: 48px;
-	height: 48px;
-	border-radius: 50%;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	background: #eef5fb;
-	color: #1f4e79;
-	font-size: 20px;
-	margin-bottom: 12px;
-}
-.cp-summary-card .value {
-	font-size: 34px;
-	font-weight: 700;
-	color: #1f2d3d;
-	line-height: 1.1;
-	margin-bottom: 6px;
-}
-.cp-summary-card .label {
-	display: block;
-	font-size: 12px;
-	text-transform: uppercase;
-	letter-spacing: 0.08em;
-	color: #6b7c93;
-	margin: 0 0 16px;
-}
-.cp-summary-card a {
-	font-weight: 600;
-	position: absolute;
-	left: 18px;
-	bottom: 14px;
-}
-.cp-section-card {
-	background: #fff;
-	border: 1px solid #e7edf5;
-	border-radius: 12px;
-	box-shadow: 0 8px 20px rgba(20, 35, 64, 0.08);
+	border-radius: 8px;
+	padding: 22px 24px;
 	margin-bottom: 18px;
 	overflow: hidden;
 }
-.cp-section-head {
-	padding: 16px 18px;
-	background: #f8fbff;
-	border-bottom: 1px solid #e7edf5;
+.cp-welcome:after { content: ""; display: table; clear: both; }
+.cp-welcome-left { float: left; width: 65%; padding-right: 16px; }
+.cp-welcome-right { float: right; width: 35%; text-align: right; padding-top: 8px; }
+.cp-welcome .cp-tag {
+	display: inline-block;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	opacity: 0.8;
+	margin-bottom: 6px;
 }
-.cp-section-head h4 {
+.cp-welcome h2 {
+	margin: 0 0 6px;
+	font-size: 24px;
+	font-weight: 700;
+	color: #fff;
+	line-height: 1.25;
+}
+.cp-welcome p {
+	margin: 0;
+	font-size: 13px;
+	opacity: 0.88;
+	line-height: 1.45;
+}
+.cp-welcome .cp-btn-new {
+	display: inline-block;
+	background: #e4572e;
+	color: #fff !important;
+	font-weight: 700;
+	font-size: 13px;
+	padding: 10px 16px;
+	border-radius: 6px;
+	text-decoration: none !important;
+	margin-top: 4px;
+}
+.cp-welcome .cp-btn-new:hover { background: #cf4a24; color: #fff !important; }
+.cp-stat-box {
+	background: #fff;
+	border: 1px solid #e5ebf2;
+	border-radius: 8px;
+	padding: 16px;
+	margin-bottom: 18px;
+	min-height: 118px;
+	display: block;
+	text-decoration: none !important;
+	color: inherit !important;
+	box-shadow: 0 2px 8px rgba(27,42,58,0.04);
+	position: relative;
+	padding-left: 18px;
+}
+.cp-stat-box:before {
+	content: "";
+	position: absolute;
+	left: 0;
+	top: 0;
+	bottom: 0;
+	width: 4px;
+	border-radius: 8px 0 0 8px;
+	background: #1c3d5a;
+}
+.cp-stat-box.t-blue:before { background: #2f6fed; }
+.cp-stat-box.t-teal:before { background: #0f766e; }
+.cp-stat-box.t-amber:before { background: #e4572e; }
+.cp-stat-box.t-green:before { background: #1f8a5b; }
+.cp-stat-box .cp-stat-ico {
+	float: right;
+	width: 36px;
+	height: 36px;
+	line-height: 36px;
+	text-align: center;
+	border-radius: 8px;
+	background: #f0f4f8;
+	color: #1c3d5a;
+	font-size: 16px;
+}
+.cp-stat-box .cp-stat-num {
+	display: block;
+	clear: both;
+	font-size: 28px;
+	font-weight: 700;
+	color: #1b2a3a;
+	line-height: 1.15;
+	margin: 8px 0 4px;
+}
+.cp-stat-box .cp-stat-title {
+	display: block;
+	font-size: 14px;
+	font-weight: 700;
+	color: #1b2a3a;
+	margin: 0;
+	padding: 0;
+	background: none !important;
+	border: 0 !important;
+	border-radius: 0 !important;
+	text-shadow: none !important;
+	white-space: normal;
+	line-height: 1.3;
+}
+.cp-stat-box .cp-stat-sub {
+	display: block;
+	font-size: 12px;
+	color: #6a7c8f;
+	margin-top: 2px;
+}
+.cp-box {
+	background: #fff;
+	border: 1px solid #e5ebf2;
+	border-radius: 8px;
+	margin-bottom: 18px;
+	box-shadow: 0 2px 8px rgba(27,42,58,0.04);
+}
+.cp-box-hd {
+	padding: 14px 16px;
+	border-bottom: 1px solid #eef2f6;
+	overflow: hidden;
+}
+.cp-box-hd h4 {
 	margin: 0;
 	font-size: 16px;
 	font-weight: 700;
-	color: #1f2d3d;
+	color: #1b2a3a;
+	float: left;
 }
-.cp-section-head p {
-	margin: 4px 0 0;
+.cp-box-hd .cp-sub {
+	display: block;
+	clear: both;
 	font-size: 12px;
-	color: #6b7c93;
+	color: #6a7c8f;
+	margin-top: 3px;
 }
-.cp-section-body {
-	padding: 0;
-}
-.cp-mini-table {
-	margin-bottom: 0;
-}
-.cp-mini-table th {
+.cp-box-hd .cp-more {
+	float: right;
 	font-size: 12px;
-	text-transform: uppercase;
-	letter-spacing: 0.06em;
-	color: #6b7c93;
-	background: #fff;
+	font-weight: 700;
+	color: #1c3d5a;
+	text-decoration: none;
+	margin-top: 2px;
 }
-.cp-mini-table td {
-	vertical-align: middle !important;
+.cp-box-bd { padding: 8px 0; }
+.cp-ord {
+	padding: 12px 16px;
+	border-bottom: 1px solid #f1f4f8;
+	overflow: hidden;
 }
-.cp-badge {
+.cp-ord:last-child { border-bottom: 0; }
+.cp-ord .l { float: left; width: 62%; padding-right: 8px; }
+.cp-ord .r { float: right; width: 38%; text-align: right; }
+.cp-ord .ono {
+	display: block;
+	font-weight: 700;
+	color: #1c3d5a;
+	font-size: 14px;
+	text-decoration: none;
+}
+.cp-ord .ometa {
+	display: block;
+	font-size: 12px;
+	color: #6a7c8f;
+	margin-top: 2px;
+}
+.cp-ord .oamt {
+	display: block;
+	font-weight: 700;
+	color: #1b2a3a;
+	font-size: 14px;
+}
+.cp-pill {
 	display: inline-block;
-	padding: 4px 8px;
-	border-radius: 999px;
+	margin-top: 4px;
+	padding: 2px 8px;
+	border-radius: 12px;
 	font-size: 11px;
 	font-weight: 700;
+	line-height: 1.4;
 }
-.cp-badge.pending {
-	background: #fff1f0;
-	color: #c0392b;
+.cp-pill.pending { background: #fff3d6; color: #9a6700; }
+.cp-pill.pending-pay { background: #ffe8e1; color: #b23a18; }
+.cp-pill.completed { background: #e4f7ee; color: #146c43; }
+.cp-pay {
+	padding: 12px 16px;
+	border-bottom: 1px solid #f1f4f8;
+	overflow: hidden;
 }
-.cp-badge.received {
-	background: #ecf9f1;
-	color: #1e8449;
+.cp-pay:last-child { border-bottom: 0; }
+.cp-pay .l { float: left; width: 60%; }
+.cp-pay .r { float: right; width: 40%; text-align: right; }
+.cp-pay .pname { display: block; font-weight: 700; color: #1b2a3a; font-size: 14px; }
+.cp-pay .pord { display: block; font-size: 12px; color: #6a7c8f; margin-top: 2px; }
+.cp-pay .pamt { display: block; font-weight: 700; color: #e4572e; font-size: 15px; }
+.cp-pay .plink { display: inline-block; font-size: 12px; font-weight: 700; color: #1c3d5a; margin-top: 2px; text-decoration: none; }
+.cp-empty {
+	text-align: center;
+	padding: 36px 16px;
+	color: #6a7c8f;
 }
-</style>
+.cp-empty i {
+	display: block;
+	font-size: 28px;
+	margin-bottom: 8px;
+	color: #1c3d5a;
+	opacity: 0.45;
+}
+@media (max-width: 767px) {
+	.cp-welcome-left,
+	.cp-welcome-right {
+		float: none;
+		width: 100%;
+		text-align: left;
+		padding: 0;
+	}
+	.cp-welcome-right { margin-top: 12px; }
+	.cp-ord .l, .cp-ord .r, .cp-pay .l, .cp-pay .r {
+		float: none;
+		width: 100%;
+		text-align: left;
+	}
+	.cp-ord .r, .cp-pay .r { margin-top: 6px; }
+}</style>
 
 <style type="text/css">
 	.horizontal-scrollable > .row {
@@ -335,98 +460,125 @@ if ($is_cp_dashboard) {
 					
 			?>
 
-			<?php if ($is_cp_dashboard) { ?>
-			<div class="cp-dash-hero">
-				<h2>Welcome to Channel Partner Dashboard</h2>
-				<p>Customer orders, stock, payments ane ledger na main shortcuts ahiya thi fast access ma malse.</p>
-				<div class="cp-dash-actions">
-					<a href="channel_partner_customer_manage.php" class="btn btn-default"><i class="fa fa-users"></i> My Customers</a>
-					<a href="channel_partner_order_manage.php" class="btn btn-default"><i class="fa fa-shopping-cart"></i> Customer Orders</a>
-					<a href="channel_partner_stock_manage.php" class="btn btn-default"><i class="fa fa-cubes"></i> My Stock</a>
-					<a href="channel_partner_payment.php" class="btn btn-default"><i class="fa fa-money"></i> Receive Payment</a>
-					<a href="channel_partner_ledger.php" class="btn btn-default"><i class="fa fa-book"></i> Customer Ledger</a>
+			<?php if ($is_cp_dashboard) {
+				if (!function_exists('cp_dash_order_status')) {
+					function cp_dash_order_status($row)
+					{
+						$status = isset($row['status']) ? (int) $row['status'] : 0;
+						$paidFlag = isset($row['payment_received_flag']) ? (int) $row['payment_received_flag'] : 0;
+						$paidAmt = isset($row['payment_received_amount']) ? (float) $row['payment_received_amount'] : 0;
+						$grand = isset($row['grand_total']) ? (float) $row['grand_total'] : 0;
+						$isPaid = ($paidFlag === 1 && $paidAmt > 0);
+						$isDispatched = ($status >= 5 && $status != 3 && $status != -2);
+						if ($isPaid) {
+							return array('Completed', 'completed', 0);
+						}
+						if ($isDispatched) {
+							$baki = max(0, $grand - $paidAmt);
+							return array('Pending Payment', 'pending-pay', $baki);
+						}
+						return array('Pending', 'pending', max(0, $grand));
+					}
+				}
+			?>
+			<div class="cp-dash-wrap">
+			<div class="cp-welcome">
+				<div class="cp-welcome-left">
+					<span class="cp-tag">Channel Partner Dashboard</span>
+					<h2><?php echo htmlspecialchars($cp_dash_name); ?></h2>
+					<p>Customers, orders, stock ane payments — ahiya thi manage kari sakay.</p>
+				</div>
+				<div class="cp-welcome-right">
+					<a class="cp-btn-new" href="channel_partner_order_simple.php?cp_mode=customer">
+						<i class="fa fa-plus"></i> New Customer Order
+					</a>
 				</div>
 			</div>
+
 			<div class="row">
 				<?php foreach ($cp_dashboard_cards as $card) { ?>
 				<div class="col-md-3 col-sm-6">
-					<div class="cp-summary-card">
-						<div class="icon"><i class="fa <?php echo $card['icon']; ?>"></i></div>
-						<div class="value"><?php echo number_format((int) $card['value']); ?></div>
-						<span class="label"><?php echo htmlspecialchars($card['label']); ?></span>
-						<a href="<?php echo $card['link']; ?>">Open <i class="fa fa-arrow-right"></i></a>
-					</div>
+					<a class="cp-stat-box t-<?php echo htmlspecialchars($card['theme']); ?>" href="<?php echo $card['link']; ?>">
+						<span class="cp-stat-ico"><i class="fa <?php echo $card['icon']; ?>"></i></span>
+						<span class="cp-stat-num"><?php echo number_format((int) $card['value']); ?></span>
+						<span class="cp-stat-title"><?php echo htmlspecialchars($card['label']); ?></span>
+						<span class="cp-stat-sub"><?php echo htmlspecialchars($card['hint']); ?></span>
+					</a>
 				</div>
 				<?php } ?>
 			</div>
+
 			<div class="row">
 				<div class="col-md-7">
-					<div class="cp-section-card">
-						<div class="cp-section-head">
-							<h4>Recent Customer Orders</h4>
-							<p>Latest CP customer orders with amount and current status.</p>
+					<div class="cp-box">
+						<div class="cp-box-hd">
+							<a class="cp-more" href="channel_partner_order_manage.php">View all</a>
+							<h4>Recent Orders</h4>
+							<span class="cp-sub">Latest customer orders with status</span>
 						</div>
-						<div class="cp-section-body">
-							<table class="table table-striped cp-mini-table">
-								<thead>
-									<tr>
-										<th>Order No</th>
-										<th>Party</th>
-										<th>Date</th>
-										<th class="text-right">Amount</th>
-									</tr>
-								</thead>
-								<tbody>
-									<?php if (!empty($cp_recent_orders)) { foreach ($cp_recent_orders as $row) { ?>
-									<tr>
-										<td><a href="channel_partner_order_print.php?order_id=<?php echo (int) $row['id']; ?>"><?php echo htmlspecialchars($row['order_no']); ?></a></td>
-										<td><?php echo htmlspecialchars($row['party_name'] ? $row['party_name'] : '-'); ?></td>
-										<td><?php echo date('d-m-Y', strtotime($row['order_date'])); ?></td>
-										<td class="text-right"><?php echo number_format((float) $row['grand_total'], 2); ?></td>
-									</tr>
-									<?php } } else { ?>
-									<tr><td colspan="4" class="text-center">No customer orders yet.</td></tr>
-									<?php } ?>
-								</tbody>
-							</table>
+						<div class="cp-box-bd">
+							<?php if (!empty($cp_recent_orders)) { foreach ($cp_recent_orders as $row) {
+								list($stLabel, $stClass, $stBaki) = cp_dash_order_status($row);
+							?>
+							<div class="cp-ord">
+								<div class="l">
+									<a class="ono" href="channel_partner_order_print.php?order_id=<?php echo (int) $row['id']; ?>"><?php echo htmlspecialchars($row['order_no']); ?></a>
+									<span class="ometa"><?php echo htmlspecialchars($row['party_name'] ? $row['party_name'] : '-'); ?> · <?php echo date('d-m-Y', strtotime($row['order_date'])); ?></span>
+								</div>
+								<div class="r">
+									<span class="oamt"><?php echo number_format((float) $row['grand_total'], 2); ?></span>
+									<span class="cp-pill <?php echo $stClass; ?>"><?php echo htmlspecialchars($stLabel); ?></span>
+								</div>
+							</div>
+							<?php } } else { ?>
+							<div class="cp-empty">
+								<i class="fa fa-shopping-cart"></i>
+								No customer orders yet.
+								<div style="margin-top:10px;">
+									<a class="btn btn-sm green" href="channel_partner_order_simple.php?cp_mode=customer"><i class="fa fa-plus"></i> Add Order</a>
+								</div>
+							</div>
+							<?php } ?>
 						</div>
 					</div>
 				</div>
 				<div class="col-md-5">
-					<div class="cp-section-card">
-						<div class="cp-section-head">
+					<div class="cp-box">
+						<div class="cp-box-hd">
+							<a class="cp-more" href="channel_partner_payment.php">Receive</a>
 							<h4>Payment Follow-up</h4>
-							<p>Pending and latest payment status for customer orders.</p>
+							<span class="cp-sub">Pending / baki payments</span>
 						</div>
-						<div class="cp-section-body">
-							<table class="table table-striped cp-mini-table">
-								<thead>
-									<tr>
-										<th>Party</th>
-										<th>Order</th>
-										<th>Status</th>
-										<th class="text-right">Amount</th>
-									</tr>
-								</thead>
-								<tbody>
-									<?php if (!empty($cp_pending_orders)) { foreach ($cp_pending_orders as $row) { ?>
-									<tr>
-										<td><?php echo htmlspecialchars($row['party_name'] ? $row['party_name'] : '-'); ?></td>
-										<td><?php echo htmlspecialchars($row['order_no']); ?></td>
-										<td><?php if ((int) $row['payment_received_flag'] === 1) { ?><span class="cp-badge received">Received</span><?php } else { ?><span class="cp-badge pending">Pending</span><?php } ?></td>
-										<td class="text-right"><?php echo number_format((float) $row['grand_total'], 2); ?></td>
-									</tr>
-									<?php } } else { ?>
-									<tr><td colspan="4" class="text-center">No pending payments.</td></tr>
-									<?php } ?>
-								</tbody>
-							</table>
+						<div class="cp-box-bd">
+							<?php if (!empty($cp_pending_orders)) { foreach ($cp_pending_orders as $row) {
+								$partyId = (int) $row['channel_partner_customer_id'];
+								$baki = max(0, (float) $row['grand_total'] - (float) $row['payment_received_amount']);
+							?>
+							<div class="cp-pay">
+								<div class="l">
+									<span class="pname"><?php echo htmlspecialchars($row['party_name'] ? $row['party_name'] : '-'); ?></span>
+									<span class="pord"><?php echo htmlspecialchars($row['order_no']); ?></span>
+								</div>
+								<div class="r">
+									<span class="pamt"><?php echo number_format($baki, 2); ?></span>
+									<a class="plink" href="channel_partner_payment.php?party_id=<?php echo $partyId; ?>">Receive now</a>
+								</div>
+							</div>
+							<?php } } else { ?>
+							<div class="cp-empty">
+								<i class="fa fa-check-circle"></i>
+								All payments are clear.
+								<div style="margin-top:10px;">
+									<a class="btn btn-sm blue" href="channel_partner_payment.php"><i class="fa fa-money"></i> Payment page</a>
+								</div>
+							</div>
+							<?php } ?>
 						</div>
 					</div>
 				</div>
 			</div>
+			</div>
 			<?php } ?>
-
 	<?php if (!$is_cp_dashboard) { ?>
 	<div class="row">
 		<div class="col-md-12 col-sm-12" >
