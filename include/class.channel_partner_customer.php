@@ -164,7 +164,37 @@ class ChannelPartnerCustomer extends Functions
 		if (empty($detail['id'])) {
 			return array("ack" => 0, "ack_msg" => "Customer id is required.");
 		}
-		return $this->GetEditDataChannelPartnerCustomer($detail);
+		$reply = $this->GetEditDataChannelPartnerCustomer($detail, true);
+		if ($reply['ack'] != 1) {
+			return $reply;
+		}
+		/* Optional ownership check for CP App */
+		$cpId = isset($detail['channel_partner_id']) ? (int) $detail['channel_partner_id'] : 0;
+		if ($cpId > 0 && (int) $reply['result']['channel_partner_id'] !== $cpId) {
+			return array("ack" => 0, "ack_msg" => "Customer does not belong to this Channel Partner.");
+		}
+		return $reply;
+	}
+
+	/**
+	 * Ensure customer id belongs to given channel_partner_id.
+	 */
+	public function AssertCustomerBelongsToCp($customerId, $channelPartnerId)
+	{
+		$customerId = (int) $customerId;
+		$channelPartnerId = (int) $channelPartnerId;
+		if ($customerId <= 0 || $channelPartnerId <= 0) {
+			return array("ack" => 0, "ack_msg" => "Invalid customer / channel partner.");
+		}
+		$own = $this->db->rp_getTotalRecord(
+			$this->ctable,
+			"id='" . $customerId . "' AND channel_partner_id='" . $channelPartnerId . "' AND isDelete=0",
+			0
+		);
+		if ($own <= 0) {
+			return array("ack" => 0, "ack_msg" => "Customer does not belong to this Channel Partner.");
+		}
+		return array("ack" => 1);
 	}
 
 	private function validateRequiredFields($detail, $is_update = false)
@@ -209,6 +239,11 @@ class ChannelPartnerCustomer extends Functions
 		$tableCheck = $this->ensureTableReady();
 		if ($tableCheck['ack'] != 1) {
 			return $tableCheck;
+		}
+
+		/* Web form defaults country to India */
+		if (!isset($detail['country']) || trim($detail['country']) === '') {
+			$detail['country'] = 'India';
 		}
 
 		$fieldCheck = $this->validateRequiredFields($detail);
@@ -272,6 +307,10 @@ class ChannelPartnerCustomer extends Functions
 			return $tableCheck;
 		}
 
+		if (!isset($detail['country']) || trim($detail['country']) === '') {
+			$detail['country'] = 'India';
+		}
+
 		$fieldCheck = $this->validateRequiredFields($detail, true);
 		if ($fieldCheck['ack'] != 1) {
 			return $fieldCheck;
@@ -282,6 +321,11 @@ class ChannelPartnerCustomer extends Functions
 		$cpCheck = $this->validateChannelPartnerId($channel_partner_id);
 		if ($cpCheck['ack'] != 1) {
 			return array("ack" => 0, "developer_msg" => "Invalid channel partner", "ack_msg" => $cpCheck['ack_msg']);
+		}
+
+		$ownCheck = $this->AssertCustomerBelongsToCp($id, $channel_partner_id);
+		if ($ownCheck['ack'] != 1) {
+			return $ownCheck;
 		}
 
 		$dup_where = "mobile_no = '" . $mobile_no . "' AND id!='" . $id . "' AND isDelete=0";
@@ -312,7 +356,7 @@ class ChannelPartnerCustomer extends Functions
 		return array("ack" => 0, "developer_msg" => "Update failed", "ack_msg" => "Failed to update Channel Partner Customer.");
 	}
 
-	public function GetEditDataChannelPartnerCustomer($detail)
+	public function GetEditDataChannelPartnerCustomer($detail, $forApi = false)
 	{
 		$where = " id='" . $detail['id'] . "' AND isDelete=0";
 		$ctable_r = $this->db->rp_getData($this->ctable, "*", $where, 0);
@@ -324,17 +368,23 @@ class ChannelPartnerCustomer extends Functions
 		$created_display = !empty($ctable_d['created_date']) ? $ctable_d['created_date'] : $ctable_d['created_at'];
 		$updated_display = !empty($ctable_d['modified_date']) ? $ctable_d['modified_date'] : $ctable_d['updated_at'];
 
+		$enc = function ($v) use ($forApi) {
+			$v = ($v === null) ? '' : $v;
+			return $forApi ? $v : htmlentities($v);
+		};
+
 		$result = array(
-			'channel_partner_id' => $ctable_d['channel_partner_id'],
-			'company_name' => htmlentities($ctable_d['company_name']),
-			'person_name' => htmlentities($ctable_d['person_name']),
-			'mobile_no' => htmlentities($ctable_d['mobile_no']),
-			'email' => htmlentities($ctable_d['email']),
-			'gst' => htmlentities($ctable_d['gst']),
-			'country' => htmlentities($ctable_d['country']),
-			'state' => htmlentities($ctable_d['state']),
-			'city' => htmlentities($ctable_d['city']),
-			'pincode' => htmlentities($ctable_d['pincode']),
+			'id' => (int) $ctable_d['id'],
+			'channel_partner_id' => (int) $ctable_d['channel_partner_id'],
+			'company_name' => $enc($ctable_d['company_name']),
+			'person_name' => $enc($ctable_d['person_name']),
+			'mobile_no' => $enc($ctable_d['mobile_no']),
+			'email' => $enc($ctable_d['email']),
+			'gst' => $enc($ctable_d['gst']),
+			'country' => $enc($ctable_d['country']),
+			'state' => $enc($ctable_d['state']),
+			'city' => $enc($ctable_d['city']),
+			'pincode' => $enc($ctable_d['pincode']),
 			'created_at' => $created_display,
 			'updated_at' => $updated_display,
 		);
@@ -353,8 +403,19 @@ class ChannelPartnerCustomer extends Functions
 		}
 
 		extract($detail);
+		$cpId = isset($channel_partner_id) ? (int) $channel_partner_id : 0;
+		if ($cpId > 0) {
+			$ownCheck = $this->AssertCustomerBelongsToCp($id, $cpId);
+			if ($ownCheck['ack'] != 1) {
+				return $ownCheck;
+			}
+		}
+
 		$rows = array("isDelete" => "1", "modified_date" => date('Y-m-d H:i:s'));
 		$where = "id='" . $id . "' AND isDelete=0";
+		if ($cpId > 0) {
+			$where .= " AND channel_partner_id='" . $cpId . "'";
+		}
 		$uid = $this->db->rp_update($this->ctable, $rows, $where, 0);
 
 		if ($uid != 0) {

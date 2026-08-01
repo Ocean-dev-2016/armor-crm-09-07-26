@@ -293,6 +293,16 @@ if ($is_valid_api_key) {
 								'party_ledger' => 1,
 								'so_pi_format' => 1,
 							),
+							/* App developer — My Customers APIs (service_channel_partner.php) */
+							'cp_apis' => array(
+								'endpoint' => 'service/service_channel_partner.php',
+								'my_customers_list' => 241,
+								'my_customers_add' => 242,
+								'my_customers_update' => 243,
+								'my_customers_detail' => 244,
+								'my_customers_delete' => 245,
+								'my_customers_form_masters' => 246,
+							),
 						);
 
 						$ack = array(

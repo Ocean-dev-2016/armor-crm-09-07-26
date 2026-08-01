@@ -1,10 +1,365 @@
 {
     "info": {
         "name": "Armor Fire CRM - Full API Collection (Backend Verified)",
-        "description": "Complete API collection generated from live PHP service source code.\n\nGenerated: 2026-07-10 13:59:58\nUpdated: 2026-08-01 — Common Login API #2 supports Sales Executive + Channel Partner (same App login screen)\nAll requests: POST multipart/form-data\nAuth: `key` (API key) + `s` (service id or slug)\n\nEnvironments:\n- Live: https://armor-crm.oceanhub.co.in\n- Local: http://localhost:8080/armor_crm_08_07/202526\n\nSet collection variable `base_url` before testing.\nAPI key: 1226\n\n**Common Login (#2):** `service_sales_executive.php` — result.user_type = sales_executive | channel_partner\nEmployee Chat folder: service_employee_chat.php (#236-#240)\nService #39 (sync_offline_customers) includes all CRM columns + channel_partner_flag.",
+        "description": "Complete API collection generated from live PHP service source code.\n\nGenerated: 2026-07-10 13:59:58\nUpdated: 2026-08-01 \u2014 Common Login #2 + CP App My Customers APIs #241-#246 (service_channel_partner.php)\nAll requests: POST multipart/form-data\nAuth: `key` (API key) + `s` (service id or slug)\n\nEnvironments:\n- Live: https://armor-crm.oceanhub.co.in\n- Local: http://localhost:8080/armor_crm_08_07/202526\n\nSet collection variable `base_url` before testing.\nAPI key: 1226\n\n**Common Login (#2):** `service_sales_executive.php` \u2014 result.user_type = sales_executive | channel_partner\nEmployee Chat folder: service_employee_chat.php (#236-#240)\nService #39 (sync_offline_customers) includes all CRM columns + channel_partner_flag.",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "item": [
+        {
+            "name": "Channel Partner App \u2014 My Customers (#241-#246)",
+            "description": "Same as web My Customers.\n1) Login API #2 \u2192 result.channel_partner_id\n2) List #241 / Add #242\nEndpoint: service/service_channel_partner.php\nkey=1226",
+            "item": [
+                {
+                    "name": "CP My Customers List (#241)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "241",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "channel_partner_id",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "search_name",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "ul",
+                                    "value": "0",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "ll",
+                                    "value": "50",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_channel_partner.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_channel_partner.php"
+                            ]
+                        },
+                        "description": "Required: channel_partner_id from Login #2"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "CP Add My Customer (#242)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "242",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "channel_partner_id",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "company_name",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "person_name",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "mobile_no",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "email",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "gst",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "country",
+                                    "value": "India",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "state",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "city",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "pincode",
+                                    "value": "",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_channel_partner.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_channel_partner.php"
+                            ]
+                        },
+                        "description": "Same fields as web Add Customer form"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "CP Update My Customer (#243)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "243",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "id",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "channel_partner_id",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "company_name",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "person_name",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "mobile_no",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "email",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "gst",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "country",
+                                    "value": "India",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "state",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "city",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "pincode",
+                                    "value": "",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_channel_partner.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_channel_partner.php"
+                            ]
+                        },
+                        "description": "Update customer"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "CP My Customer Detail (#244)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "244",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "id",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "channel_partner_id",
+                                    "value": "",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_channel_partner.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_channel_partner.php"
+                            ]
+                        },
+                        "description": "Load one customer"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "CP Delete My Customer (#245)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "245",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "id",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "channel_partner_id",
+                                    "value": "",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_channel_partner.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_channel_partner.php"
+                            ]
+                        },
+                        "description": "Soft delete"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "CP Customer Form Masters (#246)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "246",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_channel_partner.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_channel_partner.php"
+                            ]
+                        },
+                        "description": "Countries + field map"
+                    },
+                    "response": []
+                }
+            ]
+        },
         {
             "name": "sales_executive.php (1)",
             "item": [
@@ -814,7 +1169,7 @@
                                 "service_customer.php"
                             ]
                         },
-                        "description": "**API Code:** 65\n\n**Slug:** customer_change_new_password\n\n**Service (s):** 65\n\nChange New  Password Of Customer\n\n**Parameters from backend code:** id, password, new_password"
+                        "description": "**API Code:** 65\n\n**Slug:** customer_change_new_password\n\n**Service (s):** 65\n\nChange New\u00a0 Password Of Customer\n\n**Parameters from backend code:** id, password, new_password"
                     },
                     "response": []
                 },
@@ -1795,7 +2150,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 225\n\n**Slug:** add_channel_partner_customer\n\n**Service (s):** 225\n\nAdd Channel Partner Customer (web Channel Partner Customer module).\n\n**Required:** channel_partner_id, company_name, person_name, mobile_no, country, state, city\n\n**Optional:** email, gst, pincode\n\n**Get channel_partner_id from:** API #223\n\n**Flow:** #223 list CP → #225 add customer → #224 verify list"
+                        "description": "**API Code:** 225\n\n**Slug:** add_channel_partner_customer\n\n**Service (s):** 225\n\nAdd Channel Partner Customer (web Channel Partner Customer module).\n\n**Required:** channel_partner_id, company_name, person_name, mobile_no, country, state, city\n\n**Optional:** email, gst, pincode\n\n**Get channel_partner_id from:** API #223\n\n**Flow:** #223 list CP \u2192 #225 add customer \u2192 #224 verify list"
                     },
                     "response": []
                 },
@@ -2752,7 +3107,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 211\n\n**Slug:** change_inquiry_status\n\n**Service (s):** 211\n\nFor Change Inquiry Status\n\n**Parameters from backend code:** inquiry_id, sales_id"
+                        "description": "**API Code:** 211\n\n**Slug:** change_inquiry_status\n\n**Service (s):** 211\n\nFor\u00a0Change Inquiry Status\n\n**Parameters from backend code:** inquiry_id, sales_id"
                     },
                     "response": []
                 },
@@ -3631,7 +3986,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 223\n\n**Slug:** get_channel_partner_list\n\n**Service (s):** 223\n\nGet Channel Partner List\n\n**Channel Partner Customer APIs (223-228) — same as web CRM form:**\n| Web Field | API Parameter |\n|-----------|---------------|\n| Select Channel Partner | channel_partner_id |\n| Customer Name | company_name |\n| Person Name | person_name |\n| Mobile No | mobile_no |\n| Email | email |\n| GST | gst |\n| Country | country |\n| State | state |\n| City | city |\n| Pincode | pincode |\n| Edit/Delete id | id |\n"
+                        "description": "**API Code:** 223\n\n**Slug:** get_channel_partner_list\n\n**Service (s):** 223\n\nGet Channel Partner List\n\n**Channel Partner Customer APIs (223-228) \u2014 same as web CRM form:**\n| Web Field | API Parameter |\n|-----------|---------------|\n| Select Channel Partner | channel_partner_id |\n| Customer Name | company_name |\n| Person Name | person_name |\n| Mobile No | mobile_no |\n| Email | email |\n| GST | gst |\n| Country | country |\n| State | state |\n| City | city |\n| Pincode | pincode |\n| Edit/Delete id | id |\n"
                     },
                     "response": []
                 },
@@ -4485,7 +4840,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 52\n\n**Slug:** get_product\n\n**Service (s):** 51\n\nGet all product by ul (Upper Limit ) & ll (Lower Limit) \r\n\tGet all product of given cid (category id)\n\n**Parameters from backend code:** tcid, sales_id, uid, cid, ul, ll, search_name"
+                        "description": "**API Code:** 52\n\n**Slug:** get_product\n\n**Service (s):** 51\n\nGet all product by ul (Upper Limit ) & ll (Lower Limit)\u00a0\r\n\tGet all product of given cid (category id)\n\n**Parameters from backend code:** tcid, sales_id, uid, cid, ul, ll, search_name"
                     },
                     "response": []
                 },
@@ -4539,7 +4894,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 202\n\n**Slug:** get_product_varient\n\n**Service (s):** 202\n\nFor Get Product Varient\n\n**Parameters from backend code:** searchName, ul, ll, uid"
+                        "description": "**API Code:** 202\n\n**Slug:** get_product_varient\n\n**Service (s):** 202\n\nFor Get\u00a0Product Varient\n\n**Parameters from backend code:** searchName, ul, ll, uid"
                     },
                     "response": []
                 },
@@ -4647,7 +5002,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 200\n\n**Slug:** get_purpose_master\n\n**Service (s):** 200\n\nGet Purpose Master "
+                        "description": "**API Code:** 200\n\n**Slug:** get_purpose_master\n\n**Service (s):** 200\n\nGet Purpose Master\u00a0"
                     },
                     "response": []
                 },
@@ -4681,7 +5036,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 142\n\n**Slug:** get_source_of_inquiry\n\n**Service (s):** 142\n\nGet Source of Inquiry\r\n\r\n "
+                        "description": "**API Code:** 142\n\n**Slug:** get_source_of_inquiry\n\n**Service (s):** 142\n\nGet Source of Inquiry\r\n\r\n\u00a0"
                     },
                     "response": []
                 },
@@ -5495,7 +5850,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 206\n\n**Slug:** order_brand_item\n\n**Service (s):** 206\n\nOrder Item Wise Brand Add API "
+                        "description": "**API Code:** 206\n\n**Slug:** order_brand_item\n\n**Service (s):** 206\n\nOrder Item Wise Brand Add API\u00a0"
                     },
                     "response": []
                 },
@@ -8741,7 +9096,7 @@
                                 "service_meeting.php"
                             ]
                         },
-                        "description": "**API Code:** 103\n\n**Slug:** member_vs_meeting\n\n**Service (s):** 103\n\nadd/delete member in meeting\r\n\r\nmode = add_member\r\n\r\nmode = delete_member\r\n\r\n \n\n**Parameters from backend code:** mode, meeting_id, member_name, member_phone, member_id"
+                        "description": "**API Code:** 103\n\n**Slug:** member_vs_meeting\n\n**Service (s):** 103\n\nadd/delete member in meeting\r\n\r\nmode = add_member\r\n\r\nmode =\u00a0delete_member\r\n\r\n\u00a0\n\n**Parameters from backend code:** mode, meeting_id, member_name, member_phone, member_id"
                     },
                     "response": []
                 },
@@ -8861,7 +9216,7 @@
                                 "service_meeting.php"
                             ]
                         },
-                        "description": "**API Code:** 111\n\n**Slug:** customer_type\n\n**Service (s):** 111\n\nGet customer type"
+                        "description": "**API Code:** 111\n\n**Slug:** customer_type\n\n**Service (s):** 111\n\nGet customer\u00a0type"
                     },
                     "response": []
                 },
@@ -10724,7 +11079,7 @@
                                 "service_sales_executive.php"
                             ]
                         },
-                        "description": "**API Code:** 193\n\n**Slug:** document_type_get\n\n**Service (s):** 193\n\ndocument Type add \n\n**Parameters from backend code:** document_type"
+                        "description": "**API Code:** 193\n\n**Slug:** document_type_get\n\n**Service (s):** 193\n\ndocument Type add\u00a0\n\n**Parameters from backend code:** document_type"
                     },
                     "response": []
                 },
@@ -11941,7 +12296,7 @@
                                 "service_sales_executive.php"
                             ]
                         },
-                        "description": "**API Code:** 95\n\n**Slug:** get_today_followup\n\n**Service (s):** 95\n\nGet Todays Followup for Visitor\r\n\r\n \n\n**Parameters from backend code:** sales_id, visitor_id, todate, fromdate, user_id, project_id"
+                        "description": "**API Code:** 95\n\n**Slug:** get_today_followup\n\n**Service (s):** 95\n\nGet Todays Followup for Visitor\r\n\r\n\u00a0\n\n**Parameters from backend code:** sales_id, visitor_id, todate, fromdate, user_id, project_id"
                     },
                     "response": []
                 },
@@ -12381,7 +12736,7 @@
                     "response": []
                 },
                 {
-                    "name": "Common Login — SE + Channel Partner  (#2) *Updated*",
+                    "name": "Common Login \u2014 SE + Channel Partner  (#2) *Updated*",
                     "request": {
                         "method": "POST",
                         "header": [],
@@ -12542,7 +12897,7 @@
                                 "service_sales_executive.php"
                             ]
                         },
-                        "description": "**API Code:** 2\n\n**Slug:** customer_login / sales_executive_login\n\n**Endpoint:** `POST {{base_url}}/service/service_sales_executive.php`\n\n**Common Login (ONE App screen)** — same API for:\n1. Sales Executive (`sales_executive` table)\n2. Channel Partner (`dealer_distributor_network` type=3 + `executive.channel_partner_flag=1`)\n\n**Flow:**\n1. Try Sales Executive username+password\n2. If not found → try Channel Partner username/phone+password\n\n**Required params:** key, s=2, username, password, refreshToken\n\n**Response:**\n- `ack=1` success\n- `result.user_type` = `sales_executive` OR `channel_partner`  ← App must read this\n- SE: existing SE fields + user_type\n- CP: id/channel_partner_id, company_name, phone, cp_modules{...}\n\n**Demo CP:** username=`900000101` password=`Armor@123`\n\n**App note:** Keep one Login UI. After login, branch menus using `result.user_type`. CP module APIs (customers/orders/stock/payment) can be built next by App developer."
+                        "description": "**API Code:** 2\n\n**Slug:** customer_login / sales_executive_login\n\n**Endpoint:** `POST {{base_url}}/service/service_sales_executive.php`\n\n**Common Login (ONE App screen)** \u2014 same API for:\n1. Sales Executive (`sales_executive` table)\n2. Channel Partner (`dealer_distributor_network` type=3 + `executive.channel_partner_flag=1`)\n\n**Flow:**\n1. Try Sales Executive username+password\n2. If not found \u2192 try Channel Partner username/phone+password\n\n**Required params:** key, s=2, username, password, refreshToken\n\n**Response:**\n- `ack=1` success\n- `result.user_type` = `sales_executive` OR `channel_partner`  \u2190 App must read this\n- SE: existing SE fields + user_type\n- CP: id/channel_partner_id, company_name, phone, cp_modules{...}\n\n**Demo CP:** username=`900000101` password=`Armor@123`\n\n**App note:** Keep one Login UI. After login, branch menus using `result.user_type`. CP module APIs (customers/orders/stock/payment) can be built next by App developer."
                     },
                     "response": []
                 },
@@ -12979,7 +13334,7 @@
                                 "service_system.php"
                             ]
                         },
-                        "description": "**API Code:** 36\n\n**Slug:** get_area\n\n**Service (s):** 36\n\nFetch All Areas\r\n\r\n \r\n\r\n "
+                        "description": "**API Code:** 36\n\n**Slug:** get_area\n\n**Service (s):** 36\n\nFetch All Areas\r\n\r\n\u00a0\r\n\r\n\u00a0"
                     },
                     "response": []
                 },
@@ -13315,7 +13670,7 @@
                                 "service_visit.php"
                             ]
                         },
-                        "description": "**API Code:** 77\n\n**Slug:** get_expence_category\n\n**Service (s):** 77\n\nGet expense category list.\n\n**Parameters:** expense_claim_type (optional) — 1=Regular, 2=Advance"
+                        "description": "**API Code:** 77\n\n**Slug:** get_expence_category\n\n**Service (s):** 77\n\nGet expense category list.\n\n**Parameters:** expense_claim_type (optional) \u2014 1=Regular, 2=Advance"
                     },
                     "response": []
                 },
@@ -13485,7 +13840,7 @@
                                 "service_visit.php"
                             ]
                         },
-                        "description": "**API Code:** 76\n\n**Slug:** get_visit\n\n**Service (s):** 76\n\nGet visit list for sales user.\n\n**Important:**\n- Send only `user_id` to get list (old + new)\n- Leave `customer_id`, `visit_no`, `company_id`, dates empty unless filtering\n- `visit_no` must be numeric visit id — `sample` is ignored\n- Pending/open visits have `is_pending=1` (stop_date_time empty)\n\n**Parameters:** user_id (required), customer_id, visit_no, company_id, ToDate, FromDate, ul, ll"
+                        "description": "**API Code:** 76\n\n**Slug:** get_visit\n\n**Service (s):** 76\n\nGet visit list for sales user.\n\n**Important:**\n- Send only `user_id` to get list (old + new)\n- Leave `customer_id`, `visit_no`, `company_id`, dates empty unless filtering\n- `visit_no` must be numeric visit id \u2014 `sample` is ignored\n- Pending/open visits have `is_pending=1` (stop_date_time empty)\n\n**Parameters:** user_id (required), customer_id, visit_no, company_id, ToDate, FromDate, ul, ll"
                     },
                     "response": []
                 },
@@ -13581,7 +13936,7 @@
                                     "key": "stop_remark",
                                     "value": "",
                                     "type": "text",
-                                    "description": "Required ONLY when remark_code=F (Short Note). Free-text remark box. For other codes leave empty — server builds stop_remark from remark/reason."
+                                    "description": "Required ONLY when remark_code=F (Short Note). Free-text remark box. For other codes leave empty \u2014 server builds stop_remark from remark/reason."
                                 },
                                 {
                                     "key": "note",
@@ -13766,7 +14121,7 @@
                                 "service_visit.php"
                             ]
                         },
-                        "description": "**API Code:** 122\n\n**Slug:** update_visit\n\n**Service (s):** 122\n\nStop / update visit (Visit End).\n\n**Flow:**\n1. Call **#231 get_visit_remark_reason** for Select Remark/Reason list\n2. Sales person selects remark → backend creates **Follow-up** automatically\n3. For **C1/C2** open Consultant Detail form (APP), submit with visit end\n4. For **E1** open High Rate Analysis form (APP), submit with visit end\n5. For **F** open Remark Box and send text in `stop_remark`\n\n**C1 Private / C2 Government form fields:** consultant_firm_name, consultant_address, consultant_city, consultant_state, consultant_pincode, consultant_contact_person, consultant_mobile, consultant_email\n\n**E1 High Rate Form fields:** high_rate_customer_name, high_rate_items (JSON array)\n\n**Response extras:** followup_created, followup_id, consultant_form_id, high_rate_form_id\n\n**Parameters:** id, user_id, customer_id, stop_latitude, stop_longitude, remark_code (required), reason_code, approval_type (legacy optional), stop_remark (F only), note (optional), date (optional → stop_date_time), stop_app_address, inquiry_id, visit_type, visit_stop_flag, product_name, firm_name, client_name, contact_number, name, mobile_no, email_id, designation_id, consultant_*, high_rate_*, latitude, longitude, remark, image"
+                        "description": "**API Code:** 122\n\n**Slug:** update_visit\n\n**Service (s):** 122\n\nStop / update visit (Visit End).\n\n**Flow:**\n1. Call **#231 get_visit_remark_reason** for Select Remark/Reason list\n2. Sales person selects remark \u2192 backend creates **Follow-up** automatically\n3. For **C1/C2** open Consultant Detail form (APP), submit with visit end\n4. For **E1** open High Rate Analysis form (APP), submit with visit end\n5. For **F** open Remark Box and send text in `stop_remark`\n\n**C1 Private / C2 Government form fields:** consultant_firm_name, consultant_address, consultant_city, consultant_state, consultant_pincode, consultant_contact_person, consultant_mobile, consultant_email\n\n**E1 High Rate Form fields:** high_rate_customer_name, high_rate_items (JSON array)\n\n**Response extras:** followup_created, followup_id, consultant_form_id, high_rate_form_id\n\n**Parameters:** id, user_id, customer_id, stop_latitude, stop_longitude, remark_code (required), reason_code, approval_type (legacy optional), stop_remark (F only), note (optional), date (optional \u2192 stop_date_time), stop_app_address, inquiry_id, visit_type, visit_stop_flag, product_name, firm_name, client_name, contact_number, name, mobile_no, email_id, designation_id, consultant_*, high_rate_*, latitude, longitude, remark, image"
                     },
                     "response": []
                 },
@@ -13800,7 +14155,7 @@
                                 "service_visit.php"
                             ]
                         },
-                        "description": "**API Code:** 231\n\n**Slug:** get_visit_remark_reason\n\n**Service (s):** 231\n\nVisit End — Select Remark / Reason list (codes A–G) with child reasons.\n\n**Need Approval is direct in this response:**\n- `C1` = Private Consultant (`action_type=consultant_form`) — App designs form UI\n- `C2` = Government Consultant (`action_type=consultant_form`) — App designs form UI\n- No `form` schema for C1/C2 in this API\n\n**High Rate:**\n- `E1` = High Rate Form (`action_type=open_form`) — App designs form UI\n- No `form` schema for E1 in this API\n\n**Android action_type:**\n- `select_reason` → show child reasons (including C1/C2/E1)\n- `open_remark_box` → open free-text Remark Box — code F\n- `consultant_form` → open App-side consultant form — C1/C2\n- `open_form` → open App-side High Rate Form — E1\n- `none` → no further UI\n\n**On Visit End (#122):** every selected remark creates Follow-up; C1/C2/E1 also store form data.\n\n**No extra parameters.**"
+                        "description": "**API Code:** 231\n\n**Slug:** get_visit_remark_reason\n\n**Service (s):** 231\n\nVisit End \u2014 Select Remark / Reason list (codes A\u2013G) with child reasons.\n\n**Need Approval is direct in this response:**\n- `C1` = Private Consultant (`action_type=consultant_form`) \u2014 App designs form UI\n- `C2` = Government Consultant (`action_type=consultant_form`) \u2014 App designs form UI\n- No `form` schema for C1/C2 in this API\n\n**High Rate:**\n- `E1` = High Rate Form (`action_type=open_form`) \u2014 App designs form UI\n- No `form` schema for E1 in this API\n\n**Android action_type:**\n- `select_reason` \u2192 show child reasons (including C1/C2/E1)\n- `open_remark_box` \u2192 open free-text Remark Box \u2014 code F\n- `consultant_form` \u2192 open App-side consultant form \u2014 C1/C2\n- `open_form` \u2192 open App-side High Rate Form \u2014 E1\n- `none` \u2192 no further UI\n\n**On Visit End (#122):** every selected remark creates Follow-up; C1/C2/E1 also store form data.\n\n**No extra parameters.**"
                     },
                     "response": []
                 },
@@ -13918,13 +14273,13 @@
                                     "key": "mobile",
                                     "value": "",
                                     "type": "text",
-                                    "description": "Mo — also accepts key: mo"
+                                    "description": "Mo \u2014 also accepts key: mo"
                                 },
                                 {
                                     "key": "email",
                                     "value": "",
                                     "type": "text",
-                                    "description": "Mail ID — also accepts key: mail_id"
+                                    "description": "Mail ID \u2014 also accepts key: mail_id"
                                 }
                             ]
                         },
@@ -13938,7 +14293,7 @@
                                 "service_visit.php"
                             ]
                         },
-                        "description": "**API Code:** 233\n\n**Slug:** save_visit_consultant_form\n\n**Service (s):** 233\n\nSave Consultant Detail form (App SAVE AND NEXT).\n\n**App flow:**\n1. Types of Approval → Private / Government (`approval_type` 1 or 2, or `reason_code` C1/C2)\n2. Show Consultant Detail form (App UI)\n3. Call **#233** on SAVE AND NEXT\n4. Later call **#122 update_visit** to end visit (form already saved)\n\n**Required:** visit_id, user_id, approval_type OR reason_code, firm_name, address, city, state, pincode, contact_person, mobile\n\n**Optional:** customer_id, inquiry_id, email / mail_id\n\n**Aliases accepted:** mo→mobile, mail_id→email, consultant_* field names\n\n**Success response:** ack=1, consultant_form_id, reason_code, approval_type, result"
+                        "description": "**API Code:** 233\n\n**Slug:** save_visit_consultant_form\n\n**Service (s):** 233\n\nSave Consultant Detail form (App SAVE AND NEXT).\n\n**App flow:**\n1. Types of Approval \u2192 Private / Government (`approval_type` 1 or 2, or `reason_code` C1/C2)\n2. Show Consultant Detail form (App UI)\n3. Call **#233** on SAVE AND NEXT\n4. Later call **#122 update_visit** to end visit (form already saved)\n\n**Required:** visit_id, user_id, approval_type OR reason_code, firm_name, address, city, state, pincode, contact_person, mobile\n\n**Optional:** customer_id, inquiry_id, email / mail_id\n\n**Aliases accepted:** mo\u2192mobile, mail_id\u2192email, consultant_* field names\n\n**Success response:** ack=1, consultant_form_id, reason_code, approval_type, result"
                     },
                     "response": []
                 },
@@ -13996,7 +14351,7 @@
                                     "key": "items",
                                     "value": "[{\"productName\":\"BRANCH PIPE HEAVY\",\"givenRate\":\"100\",\"qty\":\"2\",\"customerRate\":\"90\",\"remark\":\"\"},{\"productName\":\"HYDRANT (SINGLE / DOUBLE)\",\"givenRate\":\"50\",\"qty\":\"1\",\"customerRate\":\"45\",\"remark\":\"\"}]",
                                     "type": "text",
-                                    "description": "JSON array — Android camelCase: productName, givenRate, qty, customerRate, remark. slug also accepted."
+                                    "description": "JSON array \u2014 Android camelCase: productName, givenRate, qty, customerRate, remark. slug also accepted."
                                 }
                             ]
                         },
@@ -14010,7 +14365,7 @@
                                 "service_visit.php"
                             ]
                         },
-                        "description": "**API Code:** 234\n\n**Slug:** save_visit_high_rate_form\n\n**Service (s):** 234\n\nSave High Rate Analysis (E1) — **ONE-SHOT submit by visit_id**.\n\n**Android does NOT send `high_rate_form_id`.** Backend creates/updates form from `visit_id`.\n\n**Required:** visit_id, user_id, items (JSON)\n**Optional:** customer_id, customer_name, payment_option (`0`=Advance, `1`=30 Days), payment_remark\n\n**items JSON (Android camelCase):**\n```json\n[\n  {\"productName\":\"BRANCH PIPE HEAVY\",\"givenRate\":\"100\",\"qty\":\"2\",\"customerRate\":\"90\",\"remark\":\"\"},\n  {\"productName\":\"HYDRANT (SINGLE / DOUBLE)\",\"givenRate\":\"50\",\"qty\":\"1\",\"customerRate\":\"45\",\"remark\":\"\"}\n]\n```\n\nAlso accepts `slug` or snake_case keys.\n\n**Success:** ack=1, high_rate_form_id, reason_code=E1, result"
+                        "description": "**API Code:** 234\n\n**Slug:** save_visit_high_rate_form\n\n**Service (s):** 234\n\nSave High Rate Analysis (E1) \u2014 **ONE-SHOT submit by visit_id**.\n\n**Android does NOT send `high_rate_form_id`.** Backend creates/updates form from `visit_id`.\n\n**Required:** visit_id, user_id, items (JSON)\n**Optional:** customer_id, customer_name, payment_option (`0`=Advance, `1`=30 Days), payment_remark\n\n**items JSON (Android camelCase):**\n```json\n[\n  {\"productName\":\"BRANCH PIPE HEAVY\",\"givenRate\":\"100\",\"qty\":\"2\",\"customerRate\":\"90\",\"remark\":\"\"},\n  {\"productName\":\"HYDRANT (SINGLE / DOUBLE)\",\"givenRate\":\"50\",\"qty\":\"1\",\"customerRate\":\"45\",\"remark\":\"\"}\n]\n```\n\nAlso accepts `slug` or snake_case keys.\n\n**Success:** ack=1, high_rate_form_id, reason_code=E1, result"
                     },
                     "response": []
                 },
@@ -14044,7 +14399,7 @@
                                 "service_visit.php"
                             ]
                         },
-                        "description": "**API Code:** 235\n\n**Slug:** get_visit_high_rate_products\n\n**Service (s):** 235\n\nFixed High Rate product list for Android UI.\n\n**No required params** (only `key` + `s=235`).\n\n**Response:**\n- `columns`: productName, givenRate, qty, customerRate, remark\n- `payment_options`: [{\"value\":\"0\",\"label\":\"Advance\"},{\"value\":\"1\",\"label\":\"30 Days\"}]\n- `result`: 18 products with slug, productName, empty rate fields\n\nFill rates in App → send all rows in **#234 items** JSON with same camelCase keys.\n\n**payment_option in #234:** send `0` or `1`"
+                        "description": "**API Code:** 235\n\n**Slug:** get_visit_high_rate_products\n\n**Service (s):** 235\n\nFixed High Rate product list for Android UI.\n\n**No required params** (only `key` + `s=235`).\n\n**Response:**\n- `columns`: productName, givenRate, qty, customerRate, remark\n- `payment_options`: [{\"value\":\"0\",\"label\":\"Advance\"},{\"value\":\"1\",\"label\":\"30 Days\"}]\n- `result`: 18 products with slug, productName, empty rate fields\n\nFill rates in App \u2192 send all rows in **#234 items** JSON with same camelCase keys.\n\n**payment_option in #234:** send `0` or `1`"
                     },
                     "response": []
                 },

@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 define('DB_SYNC_KEY', 'armor_cp_sync_2026');
-define('DB_SYNC_VERSION', '2026.08.01.2');
+define('DB_SYNC_VERSION', '2026.08.01.3');
 
 if (!isset($_GET['key']) || $_GET['key'] !== DB_SYNC_KEY) {
 	header('HTTP/1.1 403 Forbidden');
@@ -1265,6 +1265,36 @@ db_sync_register_api_if_missing($conn, 237, 'get_employee_chat_threads', 'Get Em
 db_sync_register_api_if_missing($conn, 238, 'get_employee_chat_messages', 'Get Employee Chat Messages', $chatApiBase . '&s=238&sales_executive_id=&thread_id=&after_id=0');
 db_sync_register_api_if_missing($conn, 239, 'send_employee_chat_message', 'Send Employee Chat Message', $chatApiBase . '&s=239&sales_executive_id=&thread_id=&message_text=');
 db_sync_register_api_if_missing($conn, 240, 'get_employee_chat_unread', 'Get Employee Chat Unread Count', $chatApiBase . '&s=240&sales_executive_id=');
+
+/* Channel Partner App — My Customers (same as web) */
+$cpAppApiBase = 'service_channel_partner.php?key=1226';
+db_sync_register_api_if_missing($conn, 241, 'get_cp_my_customers', 'CP App My Customers List', $cpAppApiBase . '&s=241&channel_partner_id=&search_name=&ul=0&ll=50');
+db_sync_register_api_if_missing($conn, 242, 'add_cp_my_customer', 'CP App Add My Customer', $cpAppApiBase . '&s=242&channel_partner_id=&company_name=&person_name=&mobile_no=&email=&gst=&country=India&state=&city=&pincode=');
+db_sync_register_api_if_missing($conn, 243, 'update_cp_my_customer', 'CP App Update My Customer', $cpAppApiBase . '&s=243&id=&channel_partner_id=&company_name=&person_name=&mobile_no=&email=&gst=&country=&state=&city=&pincode=');
+db_sync_register_api_if_missing($conn, 244, 'get_cp_my_customer_detail', 'CP App My Customer Detail', $cpAppApiBase . '&s=244&id=&channel_partner_id=');
+db_sync_register_api_if_missing($conn, 245, 'delete_cp_my_customer', 'CP App Delete My Customer', $cpAppApiBase . '&s=245&id=&channel_partner_id=');
+db_sync_register_api_if_missing($conn, 246, 'get_cp_customer_form_masters', 'CP App Customer Form Masters', $cpAppApiBase . '&s=246');
+foreach (array(241, 242, 243, 244, 245, 246) as $cpAppApiId) {
+	$slugMap = array(
+		241 => 'get_cp_my_customers',
+		242 => 'add_cp_my_customer',
+		243 => 'update_cp_my_customer',
+		244 => 'get_cp_my_customer_detail',
+		245 => 'delete_cp_my_customer',
+		246 => 'get_cp_customer_form_masters',
+	);
+	$urlMap = array(
+		241 => $cpAppApiBase . '&s=241&channel_partner_id=&search_name=&ul=0&ll=50',
+		242 => $cpAppApiBase . '&s=242&channel_partner_id=&company_name=&person_name=&mobile_no=&country=India&state=&city=',
+		243 => $cpAppApiBase . '&s=243&id=&channel_partner_id=&company_name=&person_name=&mobile_no=&country=&state=&city=',
+		244 => $cpAppApiBase . '&s=244&id=&channel_partner_id=',
+		245 => $cpAppApiBase . '&s=245&id=&channel_partner_id=',
+		246 => $cpAppApiBase . '&s=246',
+	);
+	$escSlug = mysqli_real_escape_string($conn, $slugMap[$cpAppApiId]);
+	$escUrl = mysqli_real_escape_string($conn, $urlMap[$cpAppApiId]);
+	mysqli_query($conn, "UPDATE `api_table` SET api_slug='" . $escSlug . "', api_url='" . $escUrl . "', isDelete=0 WHERE id='" . (int) $cpAppApiId . "'");
+}
 
 $apiKeyCountRes = mysqli_query($conn, "SELECT COUNT(*) AS total FROM `api_key_table` WHERE api_key='1226' AND isDelete=0");
 if ($apiKeyCountRes) {
