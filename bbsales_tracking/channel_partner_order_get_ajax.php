@@ -40,34 +40,59 @@ $sql = "SELECT o.id, o.order_no, o.order_date, o.grand_total, o.payment_received
 	LIMIT $page_position, $item_per_page";
 $res = mysqli_query($db->myconn, $sql);
 
-function cp_order_status_label($status)
+/**
+ * CP customer-order workflow status for list:
+ * Pending → Dispatched → Pending Payment (baki) → Completed
+ */
+function cp_customer_order_workflow($status, $paidFlag, $grandTotal, $paidAmount)
 {
 	$status = (int) $status;
-	$map = array(
-		-2 => array('Disapproved', 'danger'),
-		-1 => array('Draft', 'default'),
-		0 => array('Pending', 'warning'),
-		1 => array('Approved', 'info'),
-		2 => array('Dispatch', 'primary'),
-		3 => array('Cancelled', 'danger'),
-		4 => array('Account Approved', 'success'),
-		5 => array('Dispatched', 'primary'),
+	$paidFlag = (int) $paidFlag;
+	$grandTotal = (float) $grandTotal;
+	$paidAmount = (float) $paidAmount;
+	$isPaid = ($paidFlag === 1 && $paidAmount > 0);
+	$isDispatched = ($status >= 5 && $status != 3 && $status != -2);
+	$baki = $isPaid ? 0 : max(0, $grandTotal - $paidAmount);
+
+	if ($isPaid) {
+		return array(
+			'phase' => 'completed',
+			'label' => 'Completed',
+			'class' => 'success',
+			'baki' => 0,
+			'can_dispatch' => false,
+		);
+	}
+	if ($isDispatched) {
+		return array(
+			'phase' => 'pending_payment',
+			'label' => 'Pending Payment',
+			'class' => 'warning',
+			'baki' => $baki,
+			'can_dispatch' => false,
+		);
+	}
+	return array(
+		'phase' => 'pending',
+		'label' => 'Pending',
+		'class' => 'warning',
+		'baki' => $baki,
+		'can_dispatch' => true,
 	);
-	return isset($map[$status]) ? $map[$status] : array('Status ' . $status, 'default');
 }
 ?>
 <table id="datatable_1" class="table table-bordered table-striped dataTable">
 	<thead>
 		<tr>
-			<th style="width:6%;">#</th>
-			<th style="width:13%;">Order No</th>
-			<th style="width:12%;">Date</th>
+			<th style="width:5%;">#</th>
+			<th style="width:12%;">Order No</th>
+			<th style="width:10%;">Date</th>
 			<th>Customer / Party</th>
-			<th style="width:10%;">Qty</th>
-			<th style="width:12%;">Amount</th>
-			<th style="width:13%;">Payment</th>
-			<th style="width:12%;">Status</th>
-			<th style="width:12%;">Action</th>
+			<th style="width:8%;">Qty</th>
+			<th style="width:11%;">Amount</th>
+			<th style="width:12%;">Payment</th>
+			<th style="width:18%;">Status</th>
+			<th style="width:10%;">Action</th>
 		</tr>
 	</thead>
 	<tbody>
@@ -86,10 +111,13 @@ function cp_order_status_label($status)
 			if ($qty === '' || $qty === null) {
 				$qty = $db->rp_getValue("order_product_item", "SUM(pro_qty)", "order_id='" . (int) $row['id'] . "'", 0);
 			}
-			$paid = ((int) $row['payment_received_flag'] === 1 && (float) $row['payment_received_amount'] > 0)
-				? 'Received ' . number_format((float) $row['payment_received_amount'], 2)
+			$paidAmt = (float) $row['payment_received_amount'];
+			$paidFlag = (int) $row['payment_received_flag'];
+			$paid = ($paidFlag === 1 && $paidAmt > 0)
+				? 'Received ' . number_format($paidAmt, 2)
 				: 'Pending';
-			list($statusText, $statusClass) = cp_order_status_label($row['status']);
+			$wf = cp_customer_order_workflow($row['status'], $paidFlag, $row['grand_total'], $paidAmt);
+			$partyId = (int) $row['channel_partner_customer_id'];
 			?>
 			<tr>
 				<td><?php echo $sr++; ?></td>
@@ -103,7 +131,31 @@ function cp_order_status_label($status)
 				<td><?php echo ($qty !== '' && $qty !== null) ? number_format((float) $qty, 2) : '0.00'; ?></td>
 				<td><?php echo number_format((float) $row['grand_total'], 2); ?></td>
 				<td><?php echo $paid; ?></td>
-				<td><span class="label label-<?php echo $statusClass; ?>"><?php echo htmlspecialchars($statusText); ?></span></td>
+				<td>
+					<?php if ($wf['can_dispatch']) { ?>
+						<select class="form-control input-sm cp-status-update"
+							data-order-id="<?php echo (int) $row['id']; ?>"
+							data-order-no="<?php echo htmlspecialchars($row['order_no']); ?>"
+							style="min-width:140px;">
+							<option value="pending" selected>Pending</option>
+							<option value="dispatch">Dispatched</option>
+						</select>
+					<?php } else if ($wf['phase'] === 'pending_payment') { ?>
+						<span class="label label-warning">Pending Payment</span>
+						<?php if ($wf['baki'] > 0) { ?>
+							<div style="margin-top:4px;font-size:11px;color:#c0392b;font-weight:600;">
+								Baki: <?php echo number_format($wf['baki'], 2); ?>
+							</div>
+						<?php } ?>
+						<div style="margin-top:4px;">
+							<a class="btn btn-xs green" href="channel_partner_payment.php?party_id=<?php echo $partyId; ?>" title="Receive Payment">
+								<i class="fa fa-inr"></i> Receive
+							</a>
+						</div>
+					<?php } else { ?>
+						<span class="label label-success">Completed</span>
+					<?php } ?>
+				</td>
 				<td>
 					<a class="btn btn-xs blue" target="_blank" href="channel_partner_order_print.php?order_id=<?php echo (int) $row['id']; ?>">
 						<i class="fa fa-print"></i> Print

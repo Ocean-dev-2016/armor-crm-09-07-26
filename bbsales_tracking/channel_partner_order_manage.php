@@ -123,7 +123,7 @@ function loadDataTable() {
 		"bDestroy": true,
 		"aaSorting": [[1, "desc"]],
 		"aoColumnDefs": [
-			{ "bSortable": false, "aTargets": [0, 7] }
+			{ "bSortable": false, "aTargets": [0, 7, 8] }
 		]
 	});
 }
@@ -148,6 +148,44 @@ function displayRecords(numRecords) {
 		});
 	});
 }
+/* Status update: Pending → Dispatched (then list shows Pending Payment / Baki) */
+$("#results").off("change", ".cp-status-update").on("change", ".cp-status-update", function () {
+	var $sel = $(this);
+	var orderId = $sel.data("order-id");
+	var orderNo = $sel.data("order-no") || "";
+	var val = $sel.val();
+	if (val !== "dispatch") {
+		return;
+	}
+	if (!confirm("Mark order " + orderNo + " as Dispatched?\nAfter dispatch, status will show as Pending Payment (Baki).")) {
+		$sel.val("pending");
+		return;
+	}
+	$sel.prop("disabled", true);
+	$.ajax({
+		url: "ajax_cp_dispatch_order.php",
+		type: "POST",
+		dataType: "json",
+		data: { order_id: orderId },
+		success: function (res) {
+			if (res && parseInt(res.ack, 10) === 1) {
+				if (typeof toastr !== "undefined") {
+					toastr.success(res.ack_msg || "Dispatched");
+				} else {
+					alert(res.ack_msg || "Dispatched");
+				}
+				displayRecords(100, 1);
+			} else {
+				$sel.prop("disabled", false).val("pending");
+				alert((res && res.ack_msg) ? res.ack_msg : "Status update failed");
+			}
+		},
+		error: function () {
+			$sel.prop("disabled", false).val("pending");
+			alert("Status update request failed");
+		}
+	});
+});
 $(document).ready(function() {
 	displayRecords(100, 1);
 });
