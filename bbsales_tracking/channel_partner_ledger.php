@@ -13,6 +13,7 @@ $page_hierarchy = array(
 	array("link" => "channel_partner_ledger.php", "title" => $page_title)
 );
 include("connect.php");
+include("include/channel_partner_ledger_data.php");
 
 $is_cp = function_exists('cp_is_channel_partner_login') && cp_is_channel_partner_login($db);
 $cp_login_id = $is_cp ? (int) cp_get_login_channel_partner_id() : 0;
@@ -42,62 +43,7 @@ if ($cpFilter > 0) {
 	}
 }
 
-/* Build ledger lines: orders (debit) + payments (credit) */
-$ledger = array();
-$opening = 0;
-if ($cpFilter > 0) {
-	$w = "customer_id='" . $cpFilter . "' AND channel_partner_order_flag=1 AND cp_order_mode='customer' AND channel_partner_customer_id>0 AND isDelete=0 AND status NOT IN (-2,3)";
-	if ($partyFilter > 0) {
-		$w .= " AND channel_partner_customer_id='" . $partyFilter . "'";
-	}
-	$or = $db->rp_getData(
-		"orders",
-		"id,order_no,order_date,grand_total,payment_received_flag,payment_received_amount,payment_received_date,channel_partner_customer_id,payment_received_type",
-		$w,
-		"order_date ASC, id ASC",
-		0
-	);
-	if ($or) {
-		while ($o = mysqli_fetch_assoc($or)) {
-			$partyName = $db->rp_getValue("channel_partner_customer", "company_name", "id='" . (int) $o['channel_partner_customer_id'] . "'", 0);
-			$ledger[] = array(
-				'date' => $o['order_date'],
-				'sort' => strtotime($o['order_date']) . '1' . str_pad($o['id'], 8, '0', STR_PAD_LEFT),
-				'particular' => 'Sales Order ' . $o['order_no'] . ' — ' . $partyName,
-				'party' => $partyName,
-				'vch' => $o['order_no'],
-				'debit' => (float) $o['grand_total'],
-				'credit' => 0,
-				'type' => 'order',
-				'order_id' => (int) $o['id'],
-			);
-			if ((int) $o['payment_received_flag'] === 1 && (float) $o['payment_received_amount'] > 0) {
-				$pdate = (!empty($o['payment_received_date']) && $o['payment_received_date'] != '0000-00-00 00:00:00')
-					? date('Y-m-d', strtotime($o['payment_received_date']))
-					: $o['order_date'];
-				$ptypeLabels = array(1 => 'Cash', 2 => 'Cheque', 3 => 'Online', 4 => 'Other');
-				$pt = isset($ptypeLabels[$o['payment_received_type']]) ? $ptypeLabels[$o['payment_received_type']] : 'Payment';
-				$ledger[] = array(
-					'date' => $pdate,
-					'sort' => strtotime($pdate) . '2' . str_pad($o['id'], 8, '0', STR_PAD_LEFT),
-					'particular' => 'Payment Received (' . $pt . ') against ' . $o['order_no'] . ' — ' . $partyName,
-					'party' => $partyName,
-					'vch' => 'RCPT/' . $o['order_no'],
-					'debit' => 0,
-					'credit' => (float) $o['payment_received_amount'],
-					'type' => 'payment',
-					'order_id' => (int) $o['id'],
-				);
-			}
-		}
-	}
-	usort($ledger, function ($a, $b) {
-		if ($a['sort'] == $b['sort']) {
-			return 0;
-		}
-		return ($a['sort'] < $b['sort']) ? -1 : 1;
-	});
-}
+list($ledger, $opening) = cp_build_customer_ledger($db, $cpFilter, $partyFilter);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -160,6 +106,22 @@ if ($cpFilter > 0) {
 					<a class="btn blue" href="channel_partner_sales_report.php?cp_id=<?php echo (int) $cpFilter; ?>">Sales Report</a>
 				<?php } else { ?>
 					<a class="btn green" href="channel_partner_payment.php">Receive Payment</a>
+				<?php } ?>
+				<?php if ($cpFilter > 0) {
+					$exportQs = $is_cp
+						? 'party_id=' . (int) $partyFilter
+						: 'cp_id=' . (int) $cpFilter . '&party_id=' . (int) $partyFilter;
+				?>
+					<a class="btn red-haze" target="_blank"
+						href="channel_partner_ledger_print.php?<?php echo $exportQs; ?>"
+						title="Print / Save as PDF">
+						<i class="fa fa-file-pdf-o"></i> Print PDF
+					</a>
+					<a class="btn yellow-crusta" style="color:#fff;"
+						href="channel_partner_ledger_excel.php?<?php echo $exportQs; ?>"
+						title="Export Excel">
+						<i class="fa fa-file-excel-o"></i> Export Excel
+					</a>
 				<?php } ?>
 			</form>
 

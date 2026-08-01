@@ -117,9 +117,27 @@ if ($payTable && mysqli_num_rows($payTable) > 0) {
 }
 
 $typeLabel = isset($paymentTypes[$paymentType]) ? $paymentTypes[$paymentType] : '';
+
+/* CP customer order: ensure stock outward if not yet debited (dispatch may not have run) */
+$stockMsg = '';
+$isCpOrder = (isset($row['channel_partner_order_flag']) && (int) $row['channel_partner_order_flag'] === 1);
+$endCustId = isset($row['channel_partner_customer_id']) ? (int) $row['channel_partner_customer_id'] : 0;
+if ($isCpOrder && $endCustId > 0) {
+	require_once dirname(__FILE__) . '/../include/class.channel_partner_stock.php';
+	$stockObj = new ChannelPartnerStock($db);
+	$debitRes = $stockObj->debitForCustomerOrder($orderId);
+	if (!empty($debitRes['ack'])) {
+		if (empty($debitRes['already'])) {
+			$stockMsg = ' Stock outward posted.';
+		}
+	} else if (!empty($debitRes['ack_msg'])) {
+		$stockMsg = ' (Stock: ' . $debitRes['ack_msg'] . ')';
+	}
+}
+
 echo json_encode(array(
 	'ack' => 1,
-	'ack_msg' => 'Payment Received saved for Order ' . $orderNo . ' — Amount: ' . number_format($paidAmount, 2) . ($typeLabel != '' ? ' (' . $typeLabel . ')' : ''),
+	'ack_msg' => 'Payment Received saved for Order ' . $orderNo . ' — Amount: ' . number_format($paidAmount, 2) . ($typeLabel != '' ? ' (' . $typeLabel . ')' : '') . $stockMsg,
 	'order_no' => $orderNo,
 	'paid_amount' => $paidAmount,
 	'payment_type' => $paymentType,

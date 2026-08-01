@@ -17,7 +17,7 @@ require_once('../include/notification.class.php');
 	>>>>>>>>>Services List<<<<<<<<<
 	Key			Name
 	
-	2 	sales_executive_login
+	2 	sales_executive_login  (COMMON LOGIN — Sales Executive + Channel Partner)
 	3 	get_product
 	4 	get_category_product_discount_detail
 	5 	get_class
@@ -45,6 +45,12 @@ require_once('../include/notification.class.php');
 	32  add_sales_executive_tracking
 	33  get_notification
 	34  get_reject_expense
+
+	COMMON LOGIN (#2) notes for App:
+	- Same screen / same API for Sales Executive and Channel Partner
+	- Request: username, password, refreshToken (+ optional device fields)
+	- Response result.user_type = "sales_executive" OR "channel_partner"
+	- Channel Partner: result.id / result.channel_partner_id = executive.id (CP)
 */
 if ($is_valid_api_key) {
 	if ($is_valid_service) {
@@ -203,11 +209,103 @@ if ($is_valid_api_key) {
 					/*update Token in dealer distributor table*/
 					$Update = $db->rp_update("dealer_distributor_network", array("refresh_token_android_app" => $refreshToken), "sales_executive_id='" . $data['id'] . "'", 0);
 					/*update Token in dealer distributor table*/
-					$ack = array("ack" => 1, "ack_msg" => "Successfully Login !!", "developer_msg" => "You got it!!", "result" => $data,);
+
+					/* App common login: identify Sales Executive */
+					$data['user_type'] = 'sales_executive';
+					$data['login_role'] = 'sales_executive';
+					$data['channel_partner_flag'] = 0;
+					$data['channel_partner_id'] = 0;
+
+					$ack = array("ack" => 1, "ack_msg" => "Successfully Login !!", "developer_msg" => "Sales Executive login OK", "result" => $data,);
 					$db->printJSON($ack);
 				} else {
-					$ack = array("ack" => 0, "ack_msg" => "Username or password incorrect !!", "developer_msg" => "Wrong email or password",);
-					$db->printJSON($ack);
+					/*
+					 * COMMON LOGIN fallback — Channel Partner (web same credentials):
+					 * dealer_distributor_network.type=3 + executive.channel_partner_flag=1
+					 * username OR phone + password (md5) / MASTERPWD
+					 */
+					$safeUser = $db->clean($_REQUEST['username']);
+					$cpWhere = "isDelete=0 AND type='3' AND (username='" . $safeUser . "' OR phone='" . $safeUser . "')";
+					if (!(defined('MASTERPWD') && $_REQUEST['password'] == MASTERPWD)) {
+						$cpWhere .= " AND password='" . $password . "'";
+					}
+					$cpLoginR = $db->rp_getData("dealer_distributor_network", "*", $cpWhere, "", 0);
+					$cpLoginOk = false;
+					$cpData = null;
+					$cpExec = null;
+					if ($cpLoginR) {
+						$cpData = mysqli_fetch_assoc($cpLoginR);
+						$cpExecId = isset($cpData['customer_id']) ? (int) $cpData['customer_id'] : 0;
+						if ($cpExecId > 0) {
+							$cpExecR = $db->rp_getData(
+								"executive",
+								"*",
+								"id='" . $cpExecId . "' AND isDelete=0 AND channel_partner_flag=1",
+								"",
+								0
+							);
+							if ($cpExecR) {
+								$cpExec = mysqli_fetch_assoc($cpExecR);
+								$cpLoginOk = true;
+							}
+						}
+					}
+
+					if ($cpLoginOk && $cpData && $cpExec) {
+						/* Save app token on login row */
+						$db->rp_update(
+							"dealer_distributor_network",
+							array(
+								"refresh_token_android_app" => $refreshToken,
+								"last_login" => date('Y-m-d H:i:s'),
+							),
+							"id='" . (int) $cpData['id'] . "'",
+							0
+						);
+
+						$result = array(
+							'user_type' => 'channel_partner',
+							'login_role' => 'channel_partner',
+							'id' => (int) $cpExec['id'],
+							'channel_partner_id' => (int) $cpExec['id'],
+							'channel_partner_flag' => 1,
+							'login_network_id' => (int) $cpData['id'],
+							'username' => isset($cpData['username']) ? $cpData['username'] : '',
+							'phone' => isset($cpData['phone']) ? $cpData['phone'] : (isset($cpExec['mobile_no1']) ? $cpExec['mobile_no1'] : ''),
+							'name' => isset($cpData['name']) ? $cpData['name'] : (isset($cpExec['cname']) ? $cpExec['cname'] : ''),
+							'cname' => isset($cpExec['cname']) ? $cpExec['cname'] : '',
+							'company_name' => isset($cpExec['company_name']) ? $cpExec['company_name'] : '',
+							'email' => isset($cpData['email']) ? $cpData['email'] : (isset($cpExec['email']) ? $cpExec['email'] : ''),
+							'client_code' => isset($cpExec['client_code']) ? $cpExec['client_code'] : '',
+							'gst' => isset($cpExec['gst']) ? $cpExec['gst'] : '',
+							'type' => 'channel_partner',
+							'slug' => 'Channel Partner',
+							'ismasterpassword' => (defined('MASTERPWD') && $_REQUEST['password'] == MASTERPWD) ? '1' : '0',
+							'refreshToken' => $refreshToken,
+							'device_id' => $device_id,
+							'imei' => $imei,
+							/* Menus for App developer (web CP modules) */
+							'cp_modules' => array(
+								'my_customers' => 1,
+								'customer_order' => 1,
+								'my_stock' => 1,
+								'receive_payment' => 1,
+								'party_ledger' => 1,
+								'so_pi_format' => 1,
+							),
+						);
+
+						$ack = array(
+							"ack" => 1,
+							"ack_msg" => "Successfully Login !!",
+							"developer_msg" => "Channel Partner login OK (common login API #2)",
+							"result" => $result,
+						);
+						$db->printJSON($ack);
+					} else {
+						$ack = array("ack" => 0, "ack_msg" => "Username or password incorrect !!", "developer_msg" => "Wrong username/password for Sales Executive and Channel Partner",);
+						$db->printJSON($ack);
+					}
 				}
 			} else {
 				$ack = array("ack" => 0, "ack_msg" => "Internal error!!", "developer_msg" => "Service Parameter missing or not valid!!",);

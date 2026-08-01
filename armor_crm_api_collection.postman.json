@@ -1,7 +1,7 @@
 {
     "info": {
         "name": "Armor Fire CRM - Full API Collection (Backend Verified)",
-        "description": "Complete API collection generated from live PHP service source code.\n\nGenerated: 2026-07-10 13:59:58\nUpdated: 2026-07-23 — Employee Chat APIs #236-#240 added\nAll requests: POST multipart/form-data\nAuth: `key` (API key) + `s` (service id or slug)\n\nEnvironments:\n- Live: https://armor-crm.oceanhub.co.in\n- Local: http://localhost:8080/armor_crm_08_07/202526\n\nSet collection variable `base_url` before testing.\nAPI key: 1226\n\nEmployee Chat folder: service_employee_chat.php (#236-#240)\nService #39 (sync_offline_customers) includes all CRM columns + channel_partner_flag.",
+        "description": "Complete API collection generated from live PHP service source code.\n\nGenerated: 2026-07-10 13:59:58\nUpdated: 2026-08-01 — Common Login API #2 supports Sales Executive + Channel Partner (same App login screen)\nAll requests: POST multipart/form-data\nAuth: `key` (API key) + `s` (service id or slug)\n\nEnvironments:\n- Live: https://armor-crm.oceanhub.co.in\n- Local: http://localhost:8080/armor_crm_08_07/202526\n\nSet collection variable `base_url` before testing.\nAPI key: 1226\n\n**Common Login (#2):** `service_sales_executive.php` — result.user_type = sales_executive | channel_partner\nEmployee Chat folder: service_employee_chat.php (#236-#240)\nService #39 (sync_offline_customers) includes all CRM columns + channel_partner_flag.",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "item": [
@@ -12381,7 +12381,7 @@
                     "response": []
                 },
                 {
-                    "name": "Sales Executive Login  (#2)",
+                    "name": "Common Login — SE + Channel Partner  (#2) *Updated*",
                     "request": {
                         "method": "POST",
                         "header": [],
@@ -12400,13 +12400,15 @@
                                 },
                                 {
                                     "key": "username",
-                                    "value": "tejas",
-                                    "type": "text"
+                                    "value": "900000101",
+                                    "type": "text",
+                                    "description": "SE username OR CP mobile/username (same field)"
                                 },
                                 {
                                     "key": "password",
-                                    "value": "admin",
-                                    "type": "text"
+                                    "value": "Armor@123",
+                                    "type": "text",
+                                    "description": "SE password OR CP password (demo CP: Armor@123)"
                                 },
                                 {
                                     "key": "refreshToken",
@@ -12540,7 +12542,7 @@
                                 "service_sales_executive.php"
                             ]
                         },
-                        "description": "**API Code:** 2\n\n**Slug:** customer_login\n\n**Service (s):** 2\n\nTo Login Sales Executive\n\n**Parameters from backend code:** username, password, refreshToken, token, imei, latitude, longitude, app_address, AppVersionName, AppName, BatteryPercent, Device, Hardware, Manufacturer, Model, OsVersion, SdkVersion, AvailableInternalMemorySize, TotalInternalMemorySize, NetworkType, Operator, PhoneNumber, sIMSerial, isWifiEnabled, isNetworkAvailable, isGps"
+                        "description": "**API Code:** 2\n\n**Slug:** customer_login / sales_executive_login\n\n**Endpoint:** `POST {{base_url}}/service/service_sales_executive.php`\n\n**Common Login (ONE App screen)** — same API for:\n1. Sales Executive (`sales_executive` table)\n2. Channel Partner (`dealer_distributor_network` type=3 + `executive.channel_partner_flag=1`)\n\n**Flow:**\n1. Try Sales Executive username+password\n2. If not found → try Channel Partner username/phone+password\n\n**Required params:** key, s=2, username, password, refreshToken\n\n**Response:**\n- `ack=1` success\n- `result.user_type` = `sales_executive` OR `channel_partner`  ← App must read this\n- SE: existing SE fields + user_type\n- CP: id/channel_partner_id, company_name, phone, cp_modules{...}\n\n**Demo CP:** username=`900000101` password=`Armor@123`\n\n**App note:** Keep one Login UI. After login, branch menus using `result.user_type`. CP module APIs (customers/orders/stock/payment) can be built next by App developer."
                     },
                     "response": []
                 },

@@ -45,6 +45,153 @@ class ChannelPartnerStock
 	}
 
 	/**
+	 * Product + Cat No wise main stock (aggregates all weight variants of same product/code).
+	 */
+	public function getMainStockByProductCode($cpId)
+	{
+		$cpId = (int) $cpId;
+		$summary = $this->getStockSummary($cpId);
+		$grouped = array();
+		foreach ($summary as $r) {
+			$proId = (int) $r['pro_id'];
+			$weightId = isset($r['weight_id']) ? (string) $r['weight_id'] : '-1';
+			$catno = $this->db->rp_getValue(
+				"product_weight_price",
+				"catno",
+				"product_id='" . $proId . "' AND weight_id='" . mysqli_real_escape_string($this->db->myconn, $weightId) . "'",
+				0
+			);
+			if ($catno === '' || $catno === null) {
+				$catno = $this->db->rp_getValue("product_weight_price", "catno", "product_id='" . $proId . "' AND isDelete=0", 0);
+			}
+			$key = $proId . '|' . ($catno ? $catno : '-');
+			if (!isset($grouped[$key])) {
+				$grouped[$key] = array(
+					'pro_id' => $proId,
+					'pro_name' => $r['pro_name'],
+					'catno' => $catno ? $catno : '-',
+					'total_qty' => 0,
+				);
+			}
+			$grouped[$key]['total_qty'] += (float) $r['total_qty'];
+		}
+		$rows = array_values($grouped);
+		usort($rows, function ($a, $b) {
+			return strcasecmp($a['pro_name'], $b['pro_name']);
+		});
+		return $rows;
+	}
+
+	/**
+	 * Inward / Outward ledger rows with bill no + date.
+	 */
+	public function getStockMovements($cpId)
+	{
+		$cpId = (int) $cpId;
+		$rows = array();
+		$hasRef = false;
+		$colRef = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `customer_inward_stock` LIKE 'ref_order_id'");
+		if ($colRef && mysqli_num_rows($colRef) > 0) {
+			$hasRef = true;
+		}
+		$hasTxn = false;
+		$colTxn = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `customer_inward_stock` LIKE 'txn_type'");
+		if ($colTxn && mysqli_num_rows($colTxn) > 0) {
+			$hasTxn = true;
+		}
+
+		$select = "id, pro_id, weight_id, pro_name, pro_qty, planning_date, remark, created_date";
+		if ($hasTxn) {
+			$select .= ", txn_type";
+		}
+		if ($hasRef) {
+			$select .= ", ref_order_id";
+		}
+
+		$r = $this->db->rp_getData(
+			"customer_inward_stock",
+			$select,
+			"customer_id='" . $cpId . "' AND isDelete=0",
+			"planning_date ASC, id ASC",
+			0
+		);
+		if (!$r) {
+			return $rows;
+		}
+
+		while ($d = mysqli_fetch_assoc($r)) {
+			$qty = (float) $d['pro_qty'];
+			$txn = '';
+			if ($hasTxn && !empty($d['txn_type'])) {
+				$txn = strtolower($d['txn_type']);
+			} else {
+				$txn = ($qty >= 0) ? 'in' : 'out';
+			}
+
+			$billNo = '';
+			$billDate = '';
+			$refOrderId = ($hasRef && isset($d['ref_order_id'])) ? (int) $d['ref_order_id'] : 0;
+			if ($refOrderId > 0) {
+				$ord = $this->db->rp_getData("orders", "order_no,order_date", "id='" . $refOrderId . "'", "", 0);
+				if ($ord && $o = mysqli_fetch_assoc($ord)) {
+					$billNo = $o['order_no'];
+					$billDate = $o['order_date'];
+				}
+			}
+			if ($billNo === '' && !empty($d['remark'])) {
+				if (preg_match('/(?:Order|order)\s+([A-Za-z0-9\-\/]+)/', $d['remark'], $m)) {
+					$billNo = $m[1];
+				}
+			}
+
+			$date = !empty($d['planning_date']) ? $d['planning_date'] : '';
+			if ($date === '' && !empty($d['created_date'])) {
+				$date = date('Y-m-d', strtotime($d['created_date']));
+			}
+			if ($billDate === '') {
+				$billDate = $date;
+			}
+
+			$weightId = isset($d['weight_id']) ? (string) $d['weight_id'] : '-1';
+			$catno = $this->db->rp_getValue(
+				"product_weight_price",
+				"catno",
+				"product_id='" . (int) $d['pro_id'] . "' AND weight_id='" . mysqli_real_escape_string($this->db->myconn, $weightId) . "'",
+				0
+			);
+			if ($catno === '' || $catno === null) {
+				$catno = $this->db->rp_getValue("product_weight_price", "catno", "product_id='" . (int) $d['pro_id'] . "' AND isDelete=0", 0);
+			}
+
+			$wname = '';
+			if ($weightId !== '' && $weightId !== '-1') {
+				$wCheck = @mysqli_query($this->db->myconn, "SHOW TABLES LIKE 'weight'");
+				if ($wCheck && mysqli_num_rows($wCheck) > 0) {
+					$wname = $this->db->rp_getValue("weight", "name", "id='" . mysqli_real_escape_string($this->db->myconn, $weightId) . "'", 0);
+				}
+			}
+
+			$rows[] = array(
+				'id' => (int) $d['id'],
+				'date' => $date,
+				'bill_no' => $billNo,
+				'bill_date' => $billDate,
+				'ref_order_id' => $refOrderId,
+				'txn_type' => $txn,
+				'pro_id' => (int) $d['pro_id'],
+				'pro_name' => $d['pro_name'],
+				'catno' => $catno ? $catno : '-',
+				'weight' => $wname ? $wname : '',
+				'qty_in' => ($qty > 0) ? $qty : 0,
+				'qty_out' => ($qty < 0) ? abs($qty) : 0,
+				'qty' => $qty,
+				'remark' => isset($d['remark']) ? $d['remark'] : '',
+			);
+		}
+		return $rows;
+	}
+
+	/**
 	 * Insert one stock movement row.
 	 * $qty > 0 credit, $qty < 0 debit.
 	 */
@@ -299,5 +446,46 @@ class ChannelPartnerStock
 			return false;
 		}
 		return $this->db->rp_update("orders", array($col => (int) $val), "id='" . (int) $orderId . "'", 0);
+	}
+
+	/**
+	 * Backfill outward for CP customer orders already dispatched and/or paid but not stock-debited.
+	 */
+	public function backfillMissingOutward($cpId = 0)
+	{
+		$cpId = (int) $cpId;
+		$where = "channel_partner_order_flag=1 AND isDelete=0
+			AND (cp_order_mode='customer' OR channel_partner_customer_id>0)
+			AND (IFNULL(cp_stock_debited,0)=0)
+			AND (
+				IFNULL(dispatch_status,0)>0
+				OR IFNULL(payment_received_flag,0)=1
+				OR status>=5
+			)";
+		if ($cpId > 0) {
+			$where .= " AND customer_id='" . $cpId . "'";
+		}
+		$done = 0;
+		$fail = 0;
+		$msgs = array();
+		$r = $this->db->rp_getData("orders", "id,order_no", $where, "id ASC", 0);
+		if ($r) {
+			while ($o = mysqli_fetch_assoc($r)) {
+				$res = $this->debitForCustomerOrder((int) $o['id']);
+				if (!empty($res['ack'])) {
+					$done++;
+				} else {
+					$fail++;
+					$msgs[] = $o['order_no'] . ': ' . (isset($res['ack_msg']) ? $res['ack_msg'] : 'fail');
+				}
+			}
+		}
+		return array(
+			'ack' => 1,
+			'ack_msg' => 'Backfill outward: ' . $done . ' order(s) posted' . ($fail ? (', ' . $fail . ' failed') : ''),
+			'done' => $done,
+			'fail' => $fail,
+			'errors' => $msgs,
+		);
 	}
 }

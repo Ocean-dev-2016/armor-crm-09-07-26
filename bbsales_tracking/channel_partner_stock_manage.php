@@ -16,6 +16,17 @@ include("connect.php");
 $is_cp_login = function_exists('cp_is_channel_partner_login') && cp_is_channel_partner_login($db);
 $cp_login_id = function_exists('cp_get_login_channel_partner_id') ? cp_get_login_channel_partner_id() : 0;
 $selected_cp = $is_cp_login ? (int) $cp_login_id : (isset($_REQUEST['cp_id']) ? (int) $_REQUEST['cp_id'] : 0);
+$view = isset($_REQUEST['view']) ? strtolower(trim($_REQUEST['view'])) : 'main';
+if ($view !== 'inout') {
+	$view = 'main';
+}
+if ($is_cp_login) {
+	$page_title = "My Stock";
+	$page_hierarchy = array(
+		array("link" => "", "title" => "Channel Partner"),
+		array("link" => "channel_partner_stock_manage.php", "title" => $page_title)
+	);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -24,6 +35,18 @@ $selected_cp = $is_cp_login ? (int) $cp_login_id : (isset($_REQUEST['cp_id']) ? 
 <title><?php echo $page_title; ?> | <?php echo SITETITLE; ?></title>
 <?php include("include_css.php"); ?>
 <link rel="stylesheet" type="text/css" href="assets/global/plugins/datatables/plugins/bootstrap/dataTables.bootstrap.css"/>
+<style>
+.cp-stock-tabs { margin-bottom: 14px; border-bottom: 2px solid #ddd; }
+.cp-stock-tabs .nav-tabs { border-bottom: 0; }
+.cp-stock-tabs .nav-tabs > li > a {
+	font-weight: 600; color: #555; border-radius: 0; margin-right: 4px;
+}
+.cp-stock-tabs .nav-tabs > li.active > a,
+.cp-stock-tabs .nav-tabs > li.active > a:hover,
+.cp-stock-tabs .nav-tabs > li.active > a:focus {
+	background: #1f4e79; color: #fff; border-color: #1f4e79;
+}
+</style>
 </head>
 <body class="page-md">
 <?php include("header.php"); ?>
@@ -31,7 +54,12 @@ $selected_cp = $is_cp_login ? (int) $cp_login_id : (isset($_REQUEST['cp_id']) ? 
 	<div class="page-head bg-grey">
 		<div class="container">
 			<div class="page-title">
-				<h1><a href="channel_partner_customer_manage.php" class="primary"><i class="fa fa-arrow-circle-o-left" style="font-size: 22px!important;"></i></a> &nbsp;<?php $db->pageBar($page_hierarchy); ?> </h1>
+				<h1>
+					<?php if (!$is_cp_login) { ?>
+					<a href="channel_partner_customer_manage.php" class="primary"><i class="fa fa-arrow-circle-o-left" style="font-size: 22px!important;"></i></a> &nbsp;
+					<?php } ?>
+					<?php $db->pageBar($page_hierarchy); ?>
+				</h1>
 			</div>
 		</div>
 	</div>
@@ -43,7 +71,7 @@ $selected_cp = $is_cp_login ? (int) $cp_login_id : (isset($_REQUEST['cp_id']) ? 
 					<?php $db->printSuccessMessage(); ?>
 					<div class="portlet light">
 						<div class="portlet-title">
-							<div class="caption"><i class="fa fa-cubes"></i> Product-wise Stock</div>
+							<div class="caption"><i class="fa fa-cubes"></i> <?php echo $is_cp_login ? 'My Stock' : 'Channel Partner Stock'; ?></div>
 							<?php if ($is_cp_login) { ?>
 							<div class="actions">
 								<a href="channel_partner_print_settings.php" class="btn btn-sm blue"><i class="fa fa-file-text-o"></i> SO/PI Format</a>
@@ -73,6 +101,18 @@ $selected_cp = $is_cp_login ? (int) $cp_login_id : (isset($_REQUEST['cp_id']) ? 
 								</div>
 							</div>
 							<?php } ?>
+
+							<div class="cp-stock-tabs" id="cp_stock_view_tabs" style="<?php echo (!$is_cp_login && $selected_cp <= 0) ? 'display:none;' : ''; ?>">
+								<ul class="nav nav-tabs">
+									<li class="<?php echo ($view === 'main') ? 'active' : ''; ?>">
+										<a href="javascript:;" data-view="main"><i class="fa fa-cubes"></i> 1. Main Stock <small>(Product &amp; Code)</small></a>
+									</li>
+									<li class="<?php echo ($view === 'inout') ? 'active' : ''; ?>">
+										<a href="javascript:;" data-view="inout"><i class="fa fa-exchange"></i> 2. Inward / Outward <small>(Bill No &amp; Date)</small></a>
+									</li>
+								</ul>
+							</div>
+
 							<div class="loading-div" style="display:none;">
 								<img src="assets/admin/layout/img/ajax-loader.gif" alt="" style="margin:10% auto;display:block;">
 							</div>
@@ -87,21 +127,35 @@ $selected_cp = $is_cp_login ? (int) $cp_login_id : (isset($_REQUEST['cp_id']) ? 
 <?php include("footer.php"); ?>
 <?php include("include_js.php"); ?>
 <script type="text/javascript">
+var currentStockView = "<?php echo $view === 'inout' ? 'inout' : 'main'; ?>";
+
 function displayRecords() {
 	$(".loading-div").show();
 	$("#results").hide();
 	var cpId = <?php echo $is_cp_login ? (int) $cp_login_id : 0; ?>;
 	<?php if (!$is_cp_login) { ?>
 	cpId = $("#cp_id").val() || 0;
+	if (parseInt(cpId, 10) > 0) {
+		$("#cp_stock_view_tabs").show();
+	} else {
+		$("#cp_stock_view_tabs").hide();
+		currentStockView = "main";
+		$("#cp_stock_view_tabs .nav-tabs li").removeClass("active");
+		$("#cp_stock_view_tabs .nav-tabs li:first").addClass("active");
+	}
 	<?php } ?>
 	$.ajax({
 		url: "channel_partner_stock_get_ajax.php",
 		type: "POST",
-		data: { cp_id: cpId },
+		data: { cp_id: cpId, view: currentStockView },
 		success: function (html) {
 			$("#results").html(html);
 			$(".loading-div").hide();
 			$("#results").show();
+		},
+		error: function () {
+			$(".loading-div").hide();
+			$("#results").html('<div class="alert alert-danger">Failed to load stock.</div>').show();
 		}
 	});
 }
@@ -109,6 +163,13 @@ $(document).ready(function () {
 	displayRecords();
 	$("#btn_load_stock").on("click", function () { displayRecords(); });
 	$("#cp_id").on("change", function () { displayRecords(); });
+	$("#cp_stock_view_tabs").on("click", "a[data-view]", function (e) {
+		e.preventDefault();
+		currentStockView = $(this).data("view");
+		$("#cp_stock_view_tabs .nav-tabs li").removeClass("active");
+		$(this).closest("li").addClass("active");
+		displayRecords();
+	});
 });
 </script>
 </body>

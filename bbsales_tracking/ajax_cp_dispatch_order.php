@@ -65,11 +65,27 @@ if ($dispatchStatus > 0 && (int) $order['status'] < 5) {
 
 $ok = $db->rp_update("orders", $upd, "id='" . $orderId . "' AND customer_id='" . $cpId . "'", 0);
 if ($ok) {
+	/* Outward stock when CP dispatches customer order (idempotent) */
+	require_once dirname(__FILE__) . '/../include/class.channel_partner_stock.php';
+	$stockObj = new ChannelPartnerStock($db);
+	$debitRes = $stockObj->debitForCustomerOrder($orderId);
+	$debitMsg = '';
+	if (!empty($debitRes['ack'])) {
+		if (!empty($debitRes['already'])) {
+			$debitMsg = ' Stock already deducted.';
+		} else {
+			$debitMsg = ' Stock outward posted.';
+		}
+	} else {
+		$debitMsg = ' Stock outward failed: ' . (isset($debitRes['ack_msg']) ? $debitRes['ack_msg'] : '');
+	}
+
 	echo json_encode(array(
 		'ack' => 1,
-		'ack_msg' => 'Dispatch status updated for ' . $order['order_no'],
+		'ack_msg' => 'Dispatch status updated for ' . $order['order_no'] . $debitMsg,
 		'order_id' => $orderId,
 		'dispatch_status' => $dispatchStatus,
+		'stock' => $debitRes,
 	));
 } else {
 	echo json_encode(array('ack' => 0, 'ack_msg' => 'Update failed.'));

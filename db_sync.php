@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 define('DB_SYNC_KEY', 'armor_cp_sync_2026');
-define('DB_SYNC_VERSION', '2026.07.28.1');
+define('DB_SYNC_VERSION', '2026.08.01.2');
 
 if (!isset($_GET['key']) || $_GET['key'] !== DB_SYNC_KEY) {
 	header('HTTP/1.1 403 Forbidden');
@@ -801,7 +801,25 @@ db_sync_append_page_urls($conn, 565, array(
 	'channel_partner_sales_report.php',
 	'channel_partner_ledger.php',
 	'channel_partner_payment.php',
+	'channel_partner_payment_print.php',
+	'channel_partner_payment_excel.php',
+	'channel_partner_ledger_print.php',
+	'channel_partner_ledger_excel.php',
 ));
+
+/* ------------------------------------------------------------------
+ * STEP 5g2 — Common Login API #2 metadata (SE + Channel Partner)
+ * ------------------------------------------------------------------ */
+if (db_sync_table_exists($conn, 'api_table')) {
+	$apiTitle = mysqli_real_escape_string($conn, 'Common Login (Sales Executive + Channel Partner)');
+	$apiDesc = mysqli_real_escape_string($conn, 'ONE App login screen. Tries sales_executive first, then Channel Partner (dealer_distributor_network type=3 + channel_partner_flag=1). Response result.user_type = sales_executive | channel_partner.');
+	$apiUrl = mysqli_real_escape_string($conn, 'service_sales_executive.php?key=1226&s=2&username=900000101&password=Armor@123&imei=123456789123456&refreshToken=1559865893');
+	db_sync_run_query(
+		$conn,
+		"UPDATE `api_table` SET `api_title`='{$apiTitle}', `api_description`='{$apiDesc}', `api_url`='{$apiUrl}' WHERE `id`=2",
+		'Update api_table id=2 Common Login (SE + CP)'
+	);
+}
 
 /* ------------------------------------------------------------------
  * STEP 5h — CP stock ledger flags + print header/footer

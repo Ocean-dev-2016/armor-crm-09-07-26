@@ -112,7 +112,21 @@ if ($selected_party > 0) {
 				}
 			?>
 			<div class="cp-pay-card">
-				<h4><i class="fa fa-file-text-o"></i> 2. Against Order — Payment Receive</h4>
+				<h4>
+					<i class="fa fa-file-text-o"></i> 2. Against Order — Payment Receive
+					<span class="pull-right" style="margin-top:-4px;">
+						<a class="btn btn-sm red-haze" target="_blank"
+							href="channel_partner_payment_print.php?party_id=<?php echo (int) $selected_party; ?>"
+							title="Print / Save as PDF">
+							<i class="fa fa-file-pdf-o"></i> Print PDF
+						</a>
+						<a class="btn btn-sm yellow-crusta" style="color:#fff;"
+							href="channel_partner_payment_excel.php?party_id=<?php echo (int) $selected_party; ?>"
+							title="Export Excel">
+							<i class="fa fa-file-excel-o"></i> Export Excel
+						</a>
+					</span>
+				</h4>
 				<p class="cp-party-label">Party: <?php echo htmlspecialchars($partyRow ? $partyRow['company_name'] : ''); ?></p>
 				<?php if (empty($orders)) { ?>
 					<div class="alert alert-warning">No orders found for this party.</div>
