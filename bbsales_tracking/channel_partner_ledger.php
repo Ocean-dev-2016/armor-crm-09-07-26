@@ -111,7 +111,35 @@ list($ledger, $opening) = cp_build_customer_ledger($db, $cpFilter, $partyFilter)
 					$exportQs = $is_cp
 						? 'party_id=' . (int) $partyFilter
 						: 'cp_id=' . (int) $cpFilter . '&party_id=' . (int) $partyFilter;
+					$pdfAbsUrl = rtrim(ADMINSITEURL, '/') . '/channel_partner_ledger_print.php?' . $exportQs;
+					$partyNameShare = 'All Parties';
+					$waPhone = '';
+					if ($partyFilter > 0) {
+						foreach ($parties as $p) {
+							if ((int) $p['id'] === $partyFilter) {
+								$partyNameShare = $p['company_name'];
+								if (!empty($p['mobile_no'])) {
+									$waPhone = preg_replace('/\D+/', '', $p['mobile_no']);
+									if (strlen($waPhone) === 10) {
+										$waPhone = '91' . $waPhone;
+									}
+								}
+								break;
+							}
+						}
+					}
+					$waText = "Party Ledger\nParty: " . $partyNameShare;
+					if ($cp_name != '') {
+						$waText .= "\nChannel Partner: " . $cp_name;
+					}
+					$waText .= "\n\nOpen / Print PDF:\n" . $pdfAbsUrl;
+					$waHref = 'https://api.whatsapp.com/send?' . ($waPhone != '' ? ('phone=' . $waPhone . '&') : '') . 'text=' . rawurlencode($waText);
 				?>
+					<a class="btn green" target="_blank" rel="noopener"
+						href="<?php echo htmlspecialchars($waHref); ?>"
+						title="Share PDF on WhatsApp">
+						<i class="fa fa-whatsapp"></i> Share PDF
+					</a>
 					<a class="btn red-haze" target="_blank"
 						href="channel_partner_ledger_print.php?<?php echo $exportQs; ?>"
 						title="Print / Save as PDF">

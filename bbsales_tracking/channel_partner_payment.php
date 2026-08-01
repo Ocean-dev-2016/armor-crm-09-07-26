@@ -110,11 +110,27 @@ if ($selected_party > 0) {
 						break;
 					}
 				}
+				$pdfAbsUrl = rtrim(ADMINSITEURL, '/') . '/channel_partner_payment_print.php?party_id=' . (int) $selected_party;
+				$partyNameShare = $partyRow ? $partyRow['company_name'] : 'Party';
+				$waText = "Payment Receive Statement\nParty: " . $partyNameShare . "\n\nOpen / Print PDF:\n" . $pdfAbsUrl;
+				$waPhone = '';
+				if ($partyRow && !empty($partyRow['mobile_no'])) {
+					$waPhone = preg_replace('/\D+/', '', $partyRow['mobile_no']);
+					if (strlen($waPhone) === 10) {
+						$waPhone = '91' . $waPhone;
+					}
+				}
+				$waHref = 'https://api.whatsapp.com/send?' . ($waPhone != '' ? ('phone=' . $waPhone . '&') : '') . 'text=' . rawurlencode($waText);
 			?>
 			<div class="cp-pay-card">
 				<h4>
 					<i class="fa fa-file-text-o"></i> 2. Against Order — Payment Receive
 					<span class="pull-right" style="margin-top:-4px;">
+						<a class="btn btn-sm green" target="_blank" rel="noopener"
+							href="<?php echo htmlspecialchars($waHref); ?>"
+							title="Share PDF on WhatsApp">
+							<i class="fa fa-whatsapp"></i> Share PDF
+						</a>
 						<a class="btn btn-sm red-haze" target="_blank"
 							href="channel_partner_payment_print.php?party_id=<?php echo (int) $selected_party; ?>"
 							title="Print / Save as PDF">
