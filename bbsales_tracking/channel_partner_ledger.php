@@ -111,35 +111,14 @@ list($ledger, $opening) = cp_build_customer_ledger($db, $cpFilter, $partyFilter)
 					$exportQs = $is_cp
 						? 'party_id=' . (int) $partyFilter
 						: 'cp_id=' . (int) $cpFilter . '&party_id=' . (int) $partyFilter;
-					$pdfAbsUrl = rtrim(ADMINSITEURL, '/') . '/channel_partner_ledger_print.php?' . $exportQs;
-					$partyNameShare = 'All Parties';
-					$waPhone = '';
-					if ($partyFilter > 0) {
-						foreach ($parties as $p) {
-							if ((int) $p['id'] === $partyFilter) {
-								$partyNameShare = $p['company_name'];
-								if (!empty($p['mobile_no'])) {
-									$waPhone = preg_replace('/\D+/', '', $p['mobile_no']);
-									if (strlen($waPhone) === 10) {
-										$waPhone = '91' . $waPhone;
-									}
-								}
-								break;
-							}
-						}
-					}
-					$waText = "Party Ledger\nParty: " . $partyNameShare;
-					if ($cp_name != '') {
-						$waText .= "\nChannel Partner: " . $cp_name;
-					}
-					$waText .= "\n\nOpen / Print PDF:\n" . $pdfAbsUrl;
-					$waHref = 'https://api.whatsapp.com/send?' . ($waPhone != '' ? ('phone=' . $waPhone . '&') : '') . 'text=' . rawurlencode($waText);
 				?>
-					<a class="btn green" target="_blank" rel="noopener"
-						href="<?php echo htmlspecialchars($waHref); ?>"
-						title="Share PDF on WhatsApp">
+					<button type="button" class="btn green" id="btn_share_ledger_pdf"
+						data-type="ledger"
+						data-party-id="<?php echo (int) $partyFilter; ?>"
+						data-cp-id="<?php echo (int) $cpFilter; ?>"
+						title="Share PDF on WhatsApp (CP number)">
 						<i class="fa fa-whatsapp"></i> Share PDF
-					</a>
+					</button>
 					<a class="btn red-haze" target="_blank"
 						href="channel_partner_ledger_print.php?<?php echo $exportQs; ?>"
 						title="Print / Save as PDF">
@@ -212,5 +191,17 @@ list($ledger, $opening) = cp_build_customer_ledger($db, $cpFilter, $partyFilter)
 </div>
 <?php include("footer.php"); ?>
 <?php include("include_js.php"); ?>
+<script src="js/cp_share_pdf.js"></script>
+<script>
+$('#btn_share_ledger_pdf').on('click', function () {
+	var $btn = $(this);
+	cpSharePdfFile({
+		$btn: $btn,
+		type: 'ledger',
+		party_id: $btn.data('party-id') || 0,
+		cp_id: $btn.data('cp-id') || 0
+	});
+});
+</script>
 </body>
 </html>

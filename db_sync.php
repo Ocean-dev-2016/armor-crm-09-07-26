@@ -805,6 +805,7 @@ db_sync_append_page_urls($conn, 565, array(
 	'channel_partner_payment_excel.php',
 	'channel_partner_ledger_print.php',
 	'channel_partner_ledger_excel.php',
+	'channel_partner_share_pdf_ajax.php',
 ));
 
 /* ------------------------------------------------------------------
