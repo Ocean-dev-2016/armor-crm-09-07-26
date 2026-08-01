@@ -1,41 +1,53 @@
 <?php
 /**
- * CP Share PDF for WhatsApp (PHP 5.6 compatible).
- * Creates PDF via mPDF when possible; otherwise returns Print page URL.
- * Always returns clean JSON.
+ * CP Share PDF — generate real PDF, store temporarily, return WhatsApp share data.
+ * PHP 5.6 compatible. Always returns clean JSON.
  */
 $page_id = 565;
 $page_slug = 'channel_partner_payment';
 error_reporting(0);
 @ini_set('display_errors', 0);
+@ini_set('log_errors', 1);
 ob_start();
 
-include("connect.php");
-include("include/channel_partner_ledger_data.php");
-
-/* clear any accidental output from includes */
-while (ob_get_level()) {
-	ob_end_clean();
-}
-header('Content-Type: application/json; charset=utf-8');
+$GLOBALS['cp_share_json_sent'] = 0;
 
 function cp_share_json($arr)
 {
+	if (!empty($GLOBALS['cp_share_json_sent'])) {
+		return;
+	}
+	$GLOBALS['cp_share_json_sent'] = 1;
+	while (ob_get_level()) {
+		ob_end_clean();
+	}
+	if (!headers_sent()) {
+		header('Content-Type: application/json; charset=utf-8');
+		header('Cache-Control: no-store, no-cache, must-revalidate');
+	}
 	echo json_encode($arr);
 	exit;
 }
 
-function cp_share_normalize_phone($phone)
-{
-	$digits = preg_replace('/\D+/', '', (string) $phone);
-	if (strlen($digits) === 10) {
-		return '91' . $digits;
+register_shutdown_function(function () {
+	if (!empty($GLOBALS['cp_share_json_sent'])) {
+		return;
 	}
-	if (strlen($digits) === 12 && substr($digits, 0, 2) === '91') {
-		return $digits;
+	$err = error_get_last();
+	$msg = 'PDF generation failed on server.';
+	if ($err && isset($err['message'])) {
+		$msg .= ' ' . $err['message'];
 	}
-	return '';
+	cp_share_json(array('ack' => 0, 'ack_msg' => $msg));
+});
+
+include("connect.php");
+include("include/channel_partner_ledger_data.php");
+
+while (ob_get_level() > 1) {
+	ob_end_clean();
 }
+ob_clean();
 
 $type = isset($_REQUEST['type']) ? strtolower(trim($_REQUEST['type'])) : '';
 if ($type != 'payment' && $type != 'ledger') {
@@ -66,28 +78,9 @@ if ($cpFilter <= 0) {
 	cp_share_json(array('ack' => 0, 'ack_msg' => 'Channel Partner required.'));
 }
 
-/* CP WhatsApp number */
-$cpPhone = '';
-$ddn = $db->rp_getData(
-	"dealer_distributor_network",
-	"phone,username",
-	"customer_id='" . $cpFilter . "' AND type='3' AND isDelete=0",
-	"id DESC",
-	0
-);
-if ($ddn) {
-	$dd = mysqli_fetch_assoc($ddn);
-	if ($dd) {
-		$cpPhone = !empty($dd['phone']) ? $dd['phone'] : $dd['username'];
-	}
-}
-if ($cpPhone == '') {
-	$cpPhone = $db->rp_getValue("executive", "mobile_no1", "id='" . $cpFilter . "'", 0);
-}
-if ($cpPhone == '') {
-	$cpPhone = $db->rp_getValue("executive", "phone", "id='" . $cpFilter . "'", 0);
-}
-$cpPhoneDigits = cp_share_normalize_phone($cpPhone);
+$cpPhoneDigits = function_exists('cp_whatsapp_phone_digits')
+	? cp_whatsapp_phone_digits($db, $cpFilter)
+	: '';
 
 $cp_r = $db->rp_getData("executive", "company_name,cp_print_company_name,cp_print_gst,gst", "id='" . $cpFilter . "' AND isDelete=0", "", 0);
 $cp = $cp_r ? mysqli_fetch_assoc($cp_r) : array();
@@ -122,7 +115,6 @@ td,th{border:1px solid #595959;padding:5px 6px;vertical-align:top;}
 
 if ($type == 'payment') {
 	$docTitle = 'PAYMENT RECEIVE STATEMENT';
-	$printUrl = $baseAdmin . '/channel_partner_payment_print.php?party_id=' . (int) $partyFilter;
 	$orders = array();
 	$or = $db->rp_getData(
 		"orders",
@@ -193,10 +185,6 @@ if ($type == 'payment') {
 	$shareText = "Payment Receive Statement\nParty: " . $partyLabel . "\nFrom: " . $pi_company;
 } else {
 	$docTitle = 'PARTY LEDGER';
-	$printUrl = $baseAdmin . '/channel_partner_ledger_print.php?party_id=' . (int) $partyFilter;
-	if (!$is_cp) {
-		$printUrl .= '&cp_id=' . (int) $cpFilter;
-	}
 	$ledgerData = cp_build_customer_ledger($db, $cpFilter, $partyFilter);
 	$ledger = isset($ledgerData[0]) ? $ledgerData[0] : array();
 	$opening = isset($ledgerData[1]) ? $ledgerData[1] : 0;
@@ -238,48 +226,64 @@ if ($type == 'payment') {
 	$shareText = "Party Ledger\nParty: " . $partyLabel . "\nFrom: " . $pi_company;
 }
 
-$fileUrl = $printUrl;
-$fileName = $fileBase . '.pdf';
-$pdfOk = 0;
-
-$saveDir = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'inquiry_documents' . DIRECTORY_SEPARATOR;
+/* Temporary PDF folder */
+$tmpRel = 'inquiry_documents/cp_share_tmp';
+$saveDir = dirname(__FILE__) . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $tmpRel) . DIRECTORY_SEPARATOR;
 if (!is_dir($saveDir)) {
-	@mkdir($saveDir, 0777, true);
+	if (!@mkdir($saveDir, 0777, true)) {
+		cp_share_json(array('ack' => 0, 'ack_msg' => 'Cannot create temp folder on server.'));
+	}
+}
+if (!is_writable($saveDir)) {
+	cp_share_json(array('ack' => 0, 'ack_msg' => 'Temp folder not writable on server.'));
 }
 
+/* Cleanup temp PDFs older than 24 hours */
+$now = time();
+$oldFiles = @glob($saveDir . '*.pdf');
+if ($oldFiles) {
+	foreach ($oldFiles as $old) {
+		if (is_file($old) && ($now - @filemtime($old)) > 86400) {
+			@unlink($old);
+		}
+	}
+}
+
+$fileName = $fileBase . '_' . substr(md5(uniqid((string) mt_rand(), true)), 0, 8) . '.pdf';
+$savePath = $saveDir . $fileName;
 $mpdfFile = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'mpdf60' . DIRECTORY_SEPARATOR . 'mpdf.php';
-if (is_writable($saveDir) && file_exists($mpdfFile)) {
-	$savePath = $saveDir . $fileName;
-	/* Isolate mPDF — fatal errors cannot be caught; use output buffer + shut off display */
-	$prevDisplay = ini_get('display_errors');
-	@ini_set('display_errors', 0);
-	ob_start();
-	$mpdfLoaded = false;
-	include_once $mpdfFile;
-	if (class_exists('mPDF')) {
-		$mpdfLoaded = true;
-		$mpdf = new mPDF('', 'A4', 10, 'Arial', 8, 8, 8, 8, 0, 0, 'P');
-		$mpdf->WriteHTML($html);
-		$mpdf->Output($savePath, 'F');
-	}
-	$junk = ob_get_clean();
-	@ini_set('display_errors', $prevDisplay);
 
-	if ($mpdfLoaded && file_exists($savePath) && filesize($savePath) > 50) {
-		$fileUrl = $baseAdmin . '/inquiry_documents/' . $fileName;
-		$pdfOk = 1;
-	}
+if (!file_exists($mpdfFile)) {
+	cp_share_json(array('ack' => 0, 'ack_msg' => 'mPDF library missing on server (mpdf60).'));
 }
 
-/* Always succeed for WhatsApp — PDF file URL or Print URL */
+ob_start();
+include_once $mpdfFile;
+$junk = ob_get_clean();
+
+if (!class_exists('mPDF')) {
+	cp_share_json(array('ack' => 0, 'ack_msg' => 'mPDF class not loaded.'));
+}
+
+ob_start();
+$mpdf = new mPDF('', 'A4', 10, 'Arial', 8, 8, 8, 8, 0, 0, 'P');
+$mpdf->WriteHTML($html);
+$mpdf->Output($savePath, 'F');
+$junk2 = ob_get_clean();
+
+if (!file_exists($savePath) || filesize($savePath) < 50) {
+	cp_share_json(array('ack' => 0, 'ack_msg' => 'PDF file was not created. Check mPDF / folder permissions.'));
+}
+
+$fileUrl = $baseAdmin . '/' . $tmpRel . '/' . rawurlencode($fileName);
+
 cp_share_json(array(
 	'ack' => 1,
-	'ack_msg' => $pdfOk ? 'PDF ready' : 'Share link ready',
+	'ack_msg' => 'PDF ready',
 	'file_url' => $fileUrl,
 	'file_name' => $fileName,
 	'phone' => $cpPhoneDigits,
 	'title' => $shareTitle,
 	'text' => $shareText,
-	'pdf_ok' => $pdfOk,
+	'pdf_ok' => 1,
 ));
-?>
