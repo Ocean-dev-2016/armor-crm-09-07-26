@@ -111,14 +111,25 @@ list($ledger, $opening) = cp_build_customer_ledger($db, $cpFilter, $partyFilter)
 					$exportQs = $is_cp
 						? 'party_id=' . (int) $partyFilter
 						: 'cp_id=' . (int) $cpFilter . '&party_id=' . (int) $partyFilter;
+					$partyNameShare = 'All Parties';
+					if ($partyFilter > 0) {
+						foreach ($parties as $p) {
+							if ((int) $p['id'] === $partyFilter) {
+								$partyNameShare = $p['company_name'];
+								break;
+							}
+						}
+					}
+					$cp_wa_phone = cp_whatsapp_phone_digits($db, $cpFilter);
+					$pdfShareUrl = rtrim(ADMINSITEURL, '/') . '/channel_partner_ledger_print.php?' . $exportQs;
+					$waText = "Party Ledger\nParty: " . $partyNameShare . "\nFrom: " . $cp_name . "\n\nOpen / Print PDF:\n" . $pdfShareUrl;
+					$waHref = cp_whatsapp_share_url($cp_wa_phone, $waText);
 				?>
-					<button type="button" class="btn green" id="btn_share_ledger_pdf"
-						data-type="ledger"
-						data-party-id="<?php echo (int) $partyFilter; ?>"
-						data-cp-id="<?php echo (int) $cpFilter; ?>"
+					<a class="btn green" target="_blank" rel="noopener"
+						href="<?php echo htmlspecialchars($waHref); ?>"
 						title="Share PDF on WhatsApp (CP number)">
 						<i class="fa fa-whatsapp"></i> Share PDF
-					</button>
+					</a>
 					<a class="btn red-haze" target="_blank"
 						href="channel_partner_ledger_print.php?<?php echo $exportQs; ?>"
 						title="Print / Save as PDF">
@@ -191,17 +202,5 @@ list($ledger, $opening) = cp_build_customer_ledger($db, $cpFilter, $partyFilter)
 </div>
 <?php include("footer.php"); ?>
 <?php include("include_js.php"); ?>
-<script src="js/cp_share_pdf.js"></script>
-<script>
-$('#btn_share_ledger_pdf').on('click', function () {
-	var $btn = $(this);
-	cpSharePdfFile({
-		$btn: $btn,
-		type: 'ledger',
-		party_id: $btn.data('party-id') || 0,
-		cp_id: $btn.data('cp-id') || 0
-	});
-});
-</script>
 </body>
 </html>
