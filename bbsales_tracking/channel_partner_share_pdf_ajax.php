@@ -1,63 +1,35 @@
 <?php
 /**
- * CP Share PDF — generate real PDF, store temporarily, return WhatsApp share data.
- * PHP 5.6 compatible. Always returns clean JSON.
+ * CP Share PDF — generate PDF (mPDF), store in inquiry_documents (temp), return JSON.
+ * Pattern matches working reports (expense_genReport_ajax / productStockReport_gen_ajax).
+ * PHP 5.6 compatible.
  */
 $page_id = 565;
 $page_slug = 'channel_partner_payment';
 error_reporting(0);
 @ini_set('display_errors', 0);
-@ini_set('log_errors', 1);
-ob_start();
 
-$GLOBALS['cp_share_json_sent'] = 0;
-
-function cp_share_json($arr)
-{
-	if (!empty($GLOBALS['cp_share_json_sent'])) {
-		return;
-	}
-	$GLOBALS['cp_share_json_sent'] = 1;
-	while (ob_get_level()) {
-		ob_end_clean();
-	}
-	if (!headers_sent()) {
-		header('Content-Type: application/json; charset=utf-8');
-		header('Cache-Control: no-store, no-cache, must-revalidate');
-	}
-	echo json_encode($arr);
-	exit;
-}
-
-function cp_share_shutdown_handler()
-{
-	if (!empty($GLOBALS['cp_share_json_sent'])) {
-		return;
-	}
-	$err = error_get_last();
-	/* Only real fatals — ignore notices like "Constant already defined" */
-	$fatalTypes = array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR);
-	if ($err && isset($err['type']) && in_array((int) $err['type'], $fatalTypes, true)) {
-		$msg = 'PDF generation failed on server.';
-		if (!empty($err['message'])) {
-			$msg .= ' ' . $err['message'];
-		}
-		cp_share_json(array('ack' => 0, 'ack_msg' => $msg));
-		return;
-	}
-	/* Script ended without JSON and without fatal — still return JSON */
-	cp_share_json(array('ack' => 0, 'ack_msg' => 'PDF generation stopped unexpectedly. Check mPDF and temp folder permissions.'));
-}
-
-register_shutdown_function('cp_share_shutdown_handler');
+/* Skip page-rights redirect; we verify login ourselves below */
+$_REQUEST['skip_security'] = 1224;
 
 include("connect.php");
 include("include/channel_partner_ledger_data.php");
 
-while (ob_get_level() > 1) {
-	ob_end_clean();
+if (!headers_sent()) {
+	header('Content-Type: application/json; charset=utf-8');
+	header('Cache-Control: no-store, no-cache, must-revalidate');
 }
-ob_clean();
+
+function cp_share_json($arr)
+{
+	echo json_encode($arr);
+	exit;
+}
+
+/* Must be logged in */
+if (!isset($_SESSION[SITE_SESS . '_ADMIN_SESS_ID']) || $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'] == '') {
+	cp_share_json(array('ack' => 0, 'ack_msg' => 'Please login again.'));
+}
 
 $type = isset($_REQUEST['type']) ? strtolower(trim($_REQUEST['type'])) : '';
 if ($type != 'payment' && $type != 'ledger') {
@@ -114,8 +86,7 @@ if ($partyFilter > 0) {
 	}
 }
 
-$baseAdmin = rtrim(ADMINSITEURL, '/');
-$css = 'table{width:100%;border-collapse:collapse;font-size:11px;font-family:Arial,sans-serif;}
+$css = 'table{width:100%;border-collapse:collapse;font-size:11px;font-family:dejavusans,Arial,sans-serif;}
 td,th{border:1px solid #595959;padding:5px 6px;vertical-align:top;}
 .th{background:#1a6b8a;color:#fff;text-align:center;}
 .title{background:#A9A9A9;text-align:center;font-weight:bold;font-size:14px;}
@@ -124,7 +95,6 @@ td,th{border:1px solid #595959;padding:5px 6px;vertical-align:top;}
 .gray{background:#f0f0f0;}';
 
 if ($type == 'payment') {
-	$docTitle = 'PAYMENT RECEIVE STATEMENT';
 	$orders = array();
 	$or = $db->rp_getData(
 		"orders",
@@ -176,7 +146,7 @@ if ($type == 'payment') {
 		$partyGst = isset($partyRow['gst']) ? $partyRow['gst'] : '';
 	}
 	$html = '<html><head><style>' . $css . '</style></head><body>';
-	$html .= '<table><tr><td colspan="6" class="title">' . $docTitle . '</td></tr><tr>'
+	$html .= '<table><tr><td colspan="6" class="title">PAYMENT RECEIVE STATEMENT</td></tr><tr>'
 		. '<td colspan="3"><b>Party / Buyer</b><br><b>' . htmlspecialchars($partyLabel) . '</b><br>'
 		. htmlspecialchars($partyAddr)
 		. ($partyMobile != '' ? '<br>Mobile: ' . htmlspecialchars($partyMobile) : '')
@@ -194,7 +164,6 @@ if ($type == 'payment') {
 	$shareTitle = 'Payment Receive Statement - ' . $partyLabel;
 	$shareText = "Payment Receive Statement\nParty: " . $partyLabel . "\nFrom: " . $pi_company;
 } else {
-	$docTitle = 'PARTY LEDGER';
 	$ledgerData = cp_build_customer_ledger($db, $cpFilter, $partyFilter);
 	$ledger = isset($ledgerData[0]) ? $ledgerData[0] : array();
 	$opening = isset($ledgerData[1]) ? $ledgerData[1] : 0;
@@ -220,7 +189,7 @@ if ($type == 'payment') {
 	$closingAbs = abs($bal);
 	$closingSide = ($bal >= 0) ? 'Dr' : 'Cr';
 	$html = '<html><head><style>' . $css . '</style></head><body>';
-	$html .= '<table><tr><td colspan="6" class="title">' . $docTitle . '</td></tr><tr>'
+	$html .= '<table><tr><td colspan="6" class="title">PARTY LEDGER</td></tr><tr>'
 		. '<td colspan="3"><b>Party</b><br><b>' . htmlspecialchars($partyLabel) . '</b></td>'
 		. '<td colspan="3"><b>From:</b> ' . htmlspecialchars($pi_company) . '<br>'
 		. ($pi_gst != '' ? '<b>GSTIN:</b> ' . htmlspecialchars($pi_gst) . '<br>' : '')
@@ -236,21 +205,18 @@ if ($type == 'payment') {
 	$shareText = "Party Ledger\nParty: " . $partyLabel . "\nFrom: " . $pi_company;
 }
 
-/* Temporary PDF folder */
-$tmpRel = 'inquiry_documents/cp_share_tmp';
-$saveDir = dirname(__FILE__) . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $tmpRel) . DIRECTORY_SEPARATOR;
+/* Same folder used by other CRM PDF reports */
+$saveDir = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'inquiry_documents' . DIRECTORY_SEPARATOR;
 if (!is_dir($saveDir)) {
-	if (!@mkdir($saveDir, 0777, true)) {
-		cp_share_json(array('ack' => 0, 'ack_msg' => 'Cannot create temp folder on server.'));
-	}
+	@mkdir($saveDir, 0777, true);
 }
-if (!is_writable($saveDir)) {
-	cp_share_json(array('ack' => 0, 'ack_msg' => 'Temp folder not writable on server.'));
+if (!is_dir($saveDir) || !is_writable($saveDir)) {
+	cp_share_json(array('ack' => 0, 'ack_msg' => 'inquiry_documents folder missing or not writable.'));
 }
 
-/* Cleanup temp PDFs older than 24 hours */
+/* Cleanup old share PDFs (24 hours) */
 $now = time();
-$oldFiles = @glob($saveDir . '*.pdf');
+$oldFiles = @glob($saveDir . 'CP_*.pdf');
 if ($oldFiles) {
 	foreach ($oldFiles as $old) {
 		if (is_file($old) && ($now - @filemtime($old)) > 86400) {
@@ -261,31 +227,35 @@ if ($oldFiles) {
 
 $fileName = $fileBase . '_' . substr(md5(uniqid((string) mt_rand(), true)), 0, 8) . '.pdf';
 $savePath = $saveDir . $fileName;
-$mpdfFile = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'mpdf60' . DIRECTORY_SEPARATOR . 'mpdf.php';
 
-if (!file_exists($mpdfFile)) {
-	cp_share_json(array('ack' => 0, 'ack_msg' => 'mPDF library missing on server (mpdf60).'));
+if (!file_exists(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'mpdf60' . DIRECTORY_SEPARATOR . 'mpdf.php')) {
+	cp_share_json(array('ack' => 0, 'ack_msg' => 'mPDF library missing (mpdf60).'));
 }
 
-ob_start();
-include_once $mpdfFile;
-$junk = ob_get_clean();
+/* Same require style as working expense / stock report ajax */
+require('mpdf60/mpdf.php');
 
-if (!class_exists('mPDF')) {
-	cp_share_json(array('ack' => 0, 'ack_msg' => 'mPDF class not loaded.'));
-}
-
-ob_start();
-$mpdf = new mPDF('', 'A4', 10, 'Arial', 8, 8, 8, 8, 0, 0, 'P');
+$mpdf = new mPDF(
+	'',
+	'A4',
+	10,
+	'sans-serif',
+	8,
+	8,
+	8,
+	8,
+	0,
+	0,
+	'P'
+);
 $mpdf->WriteHTML($html);
 $mpdf->Output($savePath, 'F');
-$junk2 = ob_get_clean();
 
-if (!file_exists($savePath) || filesize($savePath) < 50) {
-	cp_share_json(array('ack' => 0, 'ack_msg' => 'PDF file was not created. Check mPDF / folder permissions.'));
+if (!file_exists($savePath) || @filesize($savePath) < 50) {
+	cp_share_json(array('ack' => 0, 'ack_msg' => 'PDF file was not created. Check folder permissions.'));
 }
 
-$fileUrl = $baseAdmin . '/' . $tmpRel . '/' . rawurlencode($fileName);
+$fileUrl = rtrim(ADMINSITEURL, '/') . '/inquiry_documents/' . $fileName;
 
 cp_share_json(array(
 	'ack' => 1,

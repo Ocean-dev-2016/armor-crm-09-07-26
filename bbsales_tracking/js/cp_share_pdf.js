@@ -93,7 +93,8 @@ function cpSharePdfFile(opts) {
 				if ($btn) {
 					$btn.prop('disabled', false).html(btnHtml);
 				}
-				alert('Share failed. Server response invalid. Re-upload channel_partner_share_pdf_ajax.php');
+				var preview = (typeof raw === 'string') ? $.trim(raw).substring(0, 180) : '';
+				alert('Share failed. Server did not return JSON.\n' + preview);
 				return;
 			}
 			if (!res || parseInt(res.ack, 10) !== 1 || !res.file_url) {
