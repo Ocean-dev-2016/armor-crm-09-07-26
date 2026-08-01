@@ -29,17 +29,27 @@ function cp_share_json($arr)
 	exit;
 }
 
-register_shutdown_function(function () {
+function cp_share_shutdown_handler()
+{
 	if (!empty($GLOBALS['cp_share_json_sent'])) {
 		return;
 	}
 	$err = error_get_last();
-	$msg = 'PDF generation failed on server.';
-	if ($err && isset($err['message'])) {
-		$msg .= ' ' . $err['message'];
+	/* Only real fatals — ignore notices like "Constant already defined" */
+	$fatalTypes = array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR);
+	if ($err && isset($err['type']) && in_array((int) $err['type'], $fatalTypes, true)) {
+		$msg = 'PDF generation failed on server.';
+		if (!empty($err['message'])) {
+			$msg .= ' ' . $err['message'];
+		}
+		cp_share_json(array('ack' => 0, 'ack_msg' => $msg));
+		return;
 	}
-	cp_share_json(array('ack' => 0, 'ack_msg' => $msg));
-});
+	/* Script ended without JSON and without fatal — still return JSON */
+	cp_share_json(array('ack' => 0, 'ack_msg' => 'PDF generation stopped unexpectedly. Check mPDF and temp folder permissions.'));
+}
+
+register_shutdown_function('cp_share_shutdown_handler');
 
 include("connect.php");
 include("include/channel_partner_ledger_data.php");

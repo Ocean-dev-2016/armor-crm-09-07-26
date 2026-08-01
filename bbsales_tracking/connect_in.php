@@ -11,5 +11,7 @@ $system = new System();
 // include("../include/security.php");
 
 // added by shivani
-define('DO_NOT_CHANGE',$db->rp_getValue("licence_key","licence_key_date","id=1"));
+if (!defined('DO_NOT_CHANGE')) {
+	define('DO_NOT_CHANGE', $db->rp_getValue("licence_key", "licence_key_date", "id=1"));
+}
 ?>
