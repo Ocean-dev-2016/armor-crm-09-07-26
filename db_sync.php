@@ -215,6 +215,7 @@ $createTableSql = "CREATE TABLE IF NOT EXISTS `channel_partner_customer` (
 	`state` varchar(100) DEFAULT NULL,
 	`city` varchar(100) DEFAULT NULL,
 	`pincode` varchar(20) DEFAULT NULL,
+	`address` text DEFAULT NULL COMMENT 'Optional customer address',
 	`created_by` int(11) NOT NULL DEFAULT 0,
 	`created_by_type` varchar(20) NOT NULL DEFAULT '',
 	`modified_by` int(11) NOT NULL DEFAULT 0,
@@ -259,7 +260,8 @@ if (db_sync_table_exists($conn, 'channel_partner_customer')) {
 		'state' => array("varchar(100) DEFAULT NULL", array('country', 'gst')),
 		'city' => array("varchar(100) DEFAULT NULL", array('state')),
 		'pincode' => array("varchar(20) DEFAULT NULL", array('city')),
-		'created_by' => array("int(11) NOT NULL DEFAULT 0", array('pincode', 'city')),
+		'address' => array("text DEFAULT NULL COMMENT 'Optional customer address'", array('pincode', 'city')),
+		'created_by' => array("int(11) NOT NULL DEFAULT 0", array('address', 'pincode', 'city')),
 		'created_by_type' => array("varchar(20) NOT NULL DEFAULT ''", array('created_by')),
 		'modified_by' => array("int(11) NOT NULL DEFAULT 0", array('created_by_type', 'created_by')),
 		'modified_by_type' => array("varchar(20) NOT NULL DEFAULT ''", array('modified_by')),
@@ -401,8 +403,8 @@ db_sync_append_page_urls($conn, 599, array(
 $cpApiBase = 'service_genral.php?key=1226';
 db_sync_register_api_if_missing($conn, 223, 'get_channel_partner_list', 'Get Channel Partner List', $cpApiBase . '&s=223');
 db_sync_register_api_if_missing($conn, 224, 'get_channel_partner_customer_list', 'Get Channel Partner Customer List', $cpApiBase . '&s=224&channel_partner_id=&search_name=&ul=0&ll=50');
-db_sync_register_api_if_missing($conn, 225, 'add_channel_partner_customer', 'Add Channel Partner Customer', $cpApiBase . '&s=225&channel_partner_id=&company_name=&person_name=&mobile_no=&email=&gst=&country=India&state=&city=&pincode=');
-db_sync_register_api_if_missing($conn, 226, 'update_channel_partner_customer', 'Update Channel Partner Customer', $cpApiBase . '&s=226&id=&channel_partner_id=&company_name=&person_name=&mobile_no=&email=&gst=&country=&state=&city=&pincode=');
+db_sync_register_api_if_missing($conn, 225, 'add_channel_partner_customer', 'Add Channel Partner Customer', $cpApiBase . '&s=225&channel_partner_id=&company_name=&person_name=&mobile_no=&email=&gst=&country=India&state=&city=&pincode=&address=');
+db_sync_register_api_if_missing($conn, 226, 'update_channel_partner_customer', 'Update Channel Partner Customer', $cpApiBase . '&s=226&id=&channel_partner_id=&company_name=&person_name=&mobile_no=&email=&gst=&country=&state=&city=&pincode=&address=');
 db_sync_register_api_if_missing($conn, 227, 'delete_channel_partner_customer', 'Delete Channel Partner Customer', $cpApiBase . '&s=227&id=');
 db_sync_register_api_if_missing($conn, 228, 'get_channel_partner_customer_detail', 'Get Channel Partner Customer Detail', $cpApiBase . '&s=228&id=');
 
@@ -935,7 +937,7 @@ db_sync_append_page_urls($conn, 650, array(
 $requiredExecutiveColumns = array('channel_partner_flag');
 $requiredCpColumns = array(
 	'id', 'channel_partner_id', 'company_name', 'person_name', 'mobile_no',
-	'email', 'gst', 'country', 'state', 'city', 'pincode',
+	'email', 'gst', 'country', 'state', 'city', 'pincode', 'address',
 	'created_by', 'created_by_type', 'modified_by', 'modified_by_type',
 	'created_date', 'modified_date', 'isActive', 'isDelete'
 );
@@ -1269,8 +1271,8 @@ db_sync_register_api_if_missing($conn, 240, 'get_employee_chat_unread', 'Get Emp
 /* Channel Partner App — My Customers (same as web) */
 $cpAppApiBase = 'service_channel_partner.php?key=1226';
 db_sync_register_api_if_missing($conn, 241, 'get_cp_my_customers', 'CP App My Customers List', $cpAppApiBase . '&s=241&channel_partner_id=&search_name=&ul=0&ll=50');
-db_sync_register_api_if_missing($conn, 242, 'add_cp_my_customer', 'CP App Add My Customer', $cpAppApiBase . '&s=242&channel_partner_id=&company_name=&person_name=&mobile_no=&email=&gst=&country=India&state=&city=&pincode=');
-db_sync_register_api_if_missing($conn, 243, 'update_cp_my_customer', 'CP App Update My Customer', $cpAppApiBase . '&s=243&id=&channel_partner_id=&company_name=&person_name=&mobile_no=&email=&gst=&country=&state=&city=&pincode=');
+db_sync_register_api_if_missing($conn, 242, 'add_cp_my_customer', 'CP App Add My Customer', $cpAppApiBase . '&s=242&channel_partner_id=&company_name=&person_name=&mobile_no=&email=&gst=&country=India&state=&city=&pincode=&address=');
+db_sync_register_api_if_missing($conn, 243, 'update_cp_my_customer', 'CP App Update My Customer', $cpAppApiBase . '&s=243&id=&channel_partner_id=&company_name=&person_name=&mobile_no=&email=&gst=&country=&state=&city=&pincode=&address=');
 db_sync_register_api_if_missing($conn, 244, 'get_cp_my_customer_detail', 'CP App My Customer Detail', $cpAppApiBase . '&s=244&id=&channel_partner_id=');
 db_sync_register_api_if_missing($conn, 245, 'delete_cp_my_customer', 'CP App Delete My Customer', $cpAppApiBase . '&s=245&id=&channel_partner_id=');
 db_sync_register_api_if_missing($conn, 246, 'get_cp_customer_form_masters', 'CP App Customer Form Masters', $cpAppApiBase . '&s=246');
@@ -1287,8 +1289,8 @@ foreach (array(241, 242, 243, 244, 245, 246, 247) as $cpAppApiId) {
 	);
 	$urlMap = array(
 		241 => $cpAppApiBase . '&s=241&channel_partner_id=&search_name=&ul=0&ll=50',
-		242 => $cpAppApiBase . '&s=242&channel_partner_id=&company_name=&person_name=&mobile_no=&country=India&state=&city=',
-		243 => $cpAppApiBase . '&s=243&id=&channel_partner_id=&company_name=&person_name=&mobile_no=&country=&state=&city=',
+		242 => $cpAppApiBase . '&s=242&channel_partner_id=&company_name=&person_name=&mobile_no=&email=&gst=&country=India&state=&city=&pincode=&address=',
+		243 => $cpAppApiBase . '&s=243&id=&channel_partner_id=&company_name=&person_name=&mobile_no=&email=&gst=&country=&state=&city=&pincode=&address=',
 		244 => $cpAppApiBase . '&s=244&id=&channel_partner_id=',
 		245 => $cpAppApiBase . '&s=245&id=&channel_partner_id=',
 		246 => $cpAppApiBase . '&s=246',

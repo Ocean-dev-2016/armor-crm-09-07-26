@@ -28,6 +28,7 @@ $country = "";
 $state = "";
 $city = "";
 $pincode = "";
+$address = "";
 $channel_partner_id = "";
 
 $country_r = $db->rp_getData("country", "*", "isDelete=0", "name ASC", 0);
@@ -55,6 +56,7 @@ if (isset($_REQUEST['submit'])) {
 	$detail['state'] = $db->clean($_REQUEST['state']);
 	$detail['city'] = $db->clean($_REQUEST['city']);
 	$detail['pincode'] = $db->clean($_REQUEST['pincode']);
+	$detail['address'] = isset($_REQUEST['address']) ? $db->clean($_REQUEST['address']) : "";
 	$detail['channel_partner_id'] = $db->clean($_REQUEST['channel_partner_id']);
 	if ($is_cp_login && $cp_login_id > 0) {
 		$detail['channel_partner_id'] = (int) $cp_login_id;
@@ -242,6 +244,14 @@ if (isset($_REQUEST['id']) && $_REQUEST['id'] > 0 && $_REQUEST['mode'] == "delet
 											<div class="form-group">
 												<label>GST</label>
 												<input type="text" class="form-control" name="gst" id="gst" value="<?php echo $gst; ?>">
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div class="col-md-12">
+											<div class="form-group">
+												<label>Address</label>
+												<textarea class="form-control" name="address" id="address" rows="3"><?php echo $address; ?></textarea>
 											</div>
 										</div>
 									</div>

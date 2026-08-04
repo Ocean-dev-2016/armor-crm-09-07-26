@@ -158,6 +158,12 @@
                                     "type": "text"
                                 },
                                 {
+                                    "key": "address",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Optional. Customer address"
+                                },
+                                {
                                     "key": "country",
                                     "value": "India",
                                     "type": "text"
@@ -189,7 +195,7 @@
                                 "service_channel_partner.php"
                             ]
                         },
-                        "description": "Same fields as web Add Customer form"
+                        "description": "Same fields as web Add Customer form.\n\n**Required:** channel_partner_id, company_name, person_name, mobile_no, country, state, city\n\n**Optional:** email, gst, address, pincode"
                     },
                     "response": []
                 },
@@ -247,6 +253,12 @@
                                     "type": "text"
                                 },
                                 {
+                                    "key": "address",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Optional. Customer address"
+                                },
+                                {
                                     "key": "country",
                                     "value": "India",
                                     "type": "text"
@@ -278,7 +290,7 @@
                                 "service_channel_partner.php"
                             ]
                         },
-                        "description": "Update customer"
+                        "description": "Update customer.\n\n**Required:** id, channel_partner_id, company_name, person_name, mobile_no, country, state, city\n\n**Optional:** email, gst, address, pincode"
                     },
                     "response": []
                 },
@@ -2161,6 +2173,12 @@
                                     "description": "Optional"
                                 },
                                 {
+                                    "key": "address",
+                                    "value": "Near Bus Stand, Kalavad Road",
+                                    "type": "text",
+                                    "description": "Optional. Customer address"
+                                },
+                                {
                                     "key": "country",
                                     "value": "India",
                                     "type": "text",
@@ -2196,7 +2214,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 225\n\n**Slug:** add_channel_partner_customer\n\n**Service (s):** 225\n\nAdd Channel Partner Customer (web Channel Partner Customer module).\n\n**Required:** channel_partner_id, company_name, person_name, mobile_no, country, state, city\n\n**Optional:** email, gst, pincode\n\n**Get channel_partner_id from:** API #223\n\n**Flow:** #223 list CP \u2192 #225 add customer \u2192 #224 verify list"
+                        "description": "**API Code:** 225\n\n**Slug:** add_channel_partner_customer\n\n**Service (s):** 225\n\nAdd Channel Partner Customer (web Channel Partner Customer module).\n\n**Required:** channel_partner_id, company_name, person_name, mobile_no, country, state, city\n\n**Optional:** email, gst, address, pincode\n\n**Get channel_partner_id from:** API #223\n\n**Flow:** #223 list CP \u2192 #225 add customer \u2192 #224 verify list"
                     },
                     "response": []
                 },
@@ -4032,7 +4050,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 223\n\n**Slug:** get_channel_partner_list\n\n**Service (s):** 223\n\nGet Channel Partner List\n\n**Channel Partner Customer APIs (223-228) \u2014 same as web CRM form:**\n| Web Field | API Parameter |\n|-----------|---------------|\n| Select Channel Partner | channel_partner_id |\n| Customer Name | company_name |\n| Person Name | person_name |\n| Mobile No | mobile_no |\n| Email | email |\n| GST | gst |\n| Country | country |\n| State | state |\n| City | city |\n| Pincode | pincode |\n| Edit/Delete id | id |\n"
+                        "description": "**API Code:** 223\n\n**Slug:** get_channel_partner_list\n\n**Service (s):** 223\n\nGet Channel Partner List\n\n**Channel Partner Customer APIs (223-228) \u2014 same as web CRM form:**\n| Web Field | API Parameter |\n|-----------|---------------|\n| Select Channel Partner | channel_partner_id |\n| Customer Name | company_name |\n| Person Name | person_name |\n| Mobile No | mobile_no |\n| Email | email |\n| GST | gst |\n| Address | address (optional) |\n| Country | country |\n| State | state |\n| City | city |\n| Pincode | pincode |\n| Edit/Delete id | id |\n"
                     },
                     "response": []
                 },
@@ -6747,6 +6765,12 @@
                                     "type": "text"
                                 },
                                 {
+                                    "key": "address",
+                                    "value": "Near Bus Stand, Kalavad Road",
+                                    "type": "text",
+                                    "description": "Optional. Customer address"
+                                },
+                                {
                                     "key": "country",
                                     "value": "India",
                                     "type": "text",
@@ -6781,7 +6805,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 226\n\n**Slug:** update_channel_partner_customer\n\nUpdate Channel Partner Customer.\n\n**Required:** id, channel_partner_id, company_name, person_name, mobile_no, country, state, city"
+                        "description": "**API Code:** 226\n\n**Slug:** update_channel_partner_customer\n\nUpdate Channel Partner Customer.\n\n**Required:** id, channel_partner_id, company_name, person_name, mobile_no, country, state, city\n\n**Optional:** email, gst, address, pincode"
                     },
                     "response": []
                 },

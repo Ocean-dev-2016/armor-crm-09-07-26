@@ -4327,6 +4327,7 @@ if ($is_valid_api_key) {
 				'state' => isset($_REQUEST['state']) ? $db->clean($_REQUEST['state']) : "",
 				'city' => isset($_REQUEST['city']) ? $db->clean($_REQUEST['city']) : "",
 				'pincode' => isset($_REQUEST['pincode']) ? $db->clean($_REQUEST['pincode']) : "",
+				'address' => isset($_REQUEST['address']) ? $db->clean($_REQUEST['address']) : "",
 			);
 			$ack = $objCP->InsertChannelPartnerCustomer($detail);
 			$db->printJSON($ack);
@@ -4345,6 +4346,7 @@ if ($is_valid_api_key) {
 				'state' => isset($_REQUEST['state']) ? $db->clean($_REQUEST['state']) : "",
 				'city' => isset($_REQUEST['city']) ? $db->clean($_REQUEST['city']) : "",
 				'pincode' => isset($_REQUEST['pincode']) ? $db->clean($_REQUEST['pincode']) : "",
+				'address' => isset($_REQUEST['address']) ? $db->clean($_REQUEST['address']) : "",
 			);
 			$ack = $objCP->UpdateChannelPartnerCustomer($detail);
 			$db->printJSON($ack);

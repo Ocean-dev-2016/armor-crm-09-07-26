@@ -127,7 +127,7 @@ $PARAM_NOTES = array(
 
 $SERVICE_CP_CUSTOMER_PARAMS = array(
     'channel_partner_id', 'company_name', 'person_name', 'mobile_no', 'email', 'gst',
-    'country', 'state', 'city', 'pincode', 'id', 'search_name', 'ul', 'll',
+    'address', 'country', 'state', 'city', 'pincode', 'id', 'search_name', 'ul', 'll',
 );
 
 $SERVICE_CP_CUSTOMER_MAP = "**Channel Partner Customer APIs (223-228) — same as web CRM form:**\n"
@@ -138,6 +138,7 @@ $SERVICE_CP_CUSTOMER_MAP = "**Channel Partner Customer APIs (223-228) — same a
     . "| Mobile No | mobile_no |\n"
     . "| Email | email |\n"
     . "| GST | gst |\n"
+    . "| Address | address (optional) |\n"
     . "| Country | country |\n"
     . "| State | state |\n"
     . "| City | city |\n"

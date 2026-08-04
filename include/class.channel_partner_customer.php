@@ -141,6 +141,7 @@ class ChannelPartnerCustomer extends Functions
 					"state" => $row['state'],
 					"city" => $row['city'],
 					"pincode" => $row['pincode'],
+					"address" => isset($row['address']) ? $row['address'] : "",
 				);
 			}
 		}
@@ -263,6 +264,10 @@ class ChannelPartnerCustomer extends Functions
 			return array("ack" => 0, "developer_msg" => "Mobile already exists", "ack_msg" => "This mobile number is already registered.");
 		}
 
+		if (!isset($address) || $address === null) {
+			$address = "";
+		}
+
 		$rows = array(
 			"channel_partner_id",
 			"company_name",
@@ -274,6 +279,7 @@ class ChannelPartnerCustomer extends Functions
 			"state",
 			"city",
 			"pincode",
+			"address",
 			"isActive",
 			"isDelete"
 		);
@@ -288,6 +294,7 @@ class ChannelPartnerCustomer extends Functions
 			$state,
 			$city,
 			$pincode,
+			$address,
 			1,
 			0
 		);
@@ -344,6 +351,7 @@ class ChannelPartnerCustomer extends Functions
 			"state" => $state,
 			"city" => $city,
 			"pincode" => $pincode,
+			"address" => isset($address) ? $address : "",
 			"modified_date" => date('Y-m-d H:i:s'),
 		);
 		$where = "id='" . $id . "' AND isDelete=0";
@@ -385,6 +393,7 @@ class ChannelPartnerCustomer extends Functions
 			'state' => $enc($ctable_d['state']),
 			'city' => $enc($ctable_d['city']),
 			'pincode' => $enc($ctable_d['pincode']),
+			'address' => $enc(isset($ctable_d['address']) ? $ctable_d['address'] : ''),
 			'created_at' => $created_display,
 			'updated_at' => $updated_display,
 		);

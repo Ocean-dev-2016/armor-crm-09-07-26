@@ -408,3 +408,6 @@ ALTER TABLE `executive` ADD `channel_partner_flag` TINYINT NOT NULL DEFAULT 0 AF
 // Channel Partner Customer module â€” run on live after deploy:
 // https://armor-crm.oceanhub.co.in/db_sync.php?key=armor_cp_sync_2026
 // Creates: channel_partner_customer table, executive.channel_partner_flag, page_table URLs, api_table 223-228
+// 04-08-2026 — Optional Address on Channel Partner Customer
+ALTER TABLE `channel_partner_customer` ADD `address` TEXT NULL DEFAULT NULL COMMENT 'Optional customer address' AFTER `pincode`;
+

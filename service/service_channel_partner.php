@@ -60,6 +60,7 @@ if ($is_valid_api_key) {
 					'state' => isset($_REQUEST['state']) ? $db->clean($_REQUEST['state']) : '',
 					'city' => isset($_REQUEST['city']) ? $db->clean($_REQUEST['city']) : '',
 					'pincode' => isset($_REQUEST['pincode']) ? $db->clean($_REQUEST['pincode']) : '',
+					'address' => isset($_REQUEST['address']) ? $db->clean($_REQUEST['address']) : '',
 				);
 				$db->printJSON($objCP->InsertChannelPartnerCustomer($detail));
 			}
@@ -82,6 +83,7 @@ if ($is_valid_api_key) {
 					'state' => isset($_REQUEST['state']) ? $db->clean($_REQUEST['state']) : '',
 					'city' => isset($_REQUEST['city']) ? $db->clean($_REQUEST['city']) : '',
 					'pincode' => isset($_REQUEST['pincode']) ? $db->clean($_REQUEST['pincode']) : '',
+					'address' => isset($_REQUEST['address']) ? $db->clean($_REQUEST['address']) : '',
 				);
 				$db->printJSON($objCP->UpdateChannelPartnerCustomer($detail));
 			}
@@ -119,6 +121,7 @@ if ($is_valid_api_key) {
 					array('key' => 'mobile_no', 'label' => 'Mobile No', 'required' => 1),
 					array('key' => 'email', 'label' => 'Email', 'required' => 0),
 					array('key' => 'gst', 'label' => 'GST', 'required' => 0),
+					array('key' => 'address', 'label' => 'Address', 'required' => 0),
 					array('key' => 'country', 'label' => 'Country', 'required' => 1),
 					array('key' => 'state', 'label' => 'State', 'required' => 1),
 					array('key' => 'city', 'label' => 'City', 'required' => 1),
