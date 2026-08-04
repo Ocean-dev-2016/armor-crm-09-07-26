@@ -14,10 +14,14 @@ service/error_log
 # --- User uploads / generated exports ---
 bbsales_tracking/expence_documents/
 bbsales_tracking/order_documents/
+bbsales_tracking/inquiry_documents/
 bbsales_tracking/sheet_import/uploads/
 bbsales_tracking/report/
 resource/image/*
 !resource/image/.gitkeep
+
+# --- mPDF runtime font cache (auto-generated on PDF print) ---
+bbsales_tracking/mpdf60/ttfontdata/
 
 # --- Database dumps ---
 *.sql
