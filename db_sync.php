@@ -1277,7 +1277,16 @@ db_sync_register_api_if_missing($conn, 244, 'get_cp_my_customer_detail', 'CP App
 db_sync_register_api_if_missing($conn, 245, 'delete_cp_my_customer', 'CP App Delete My Customer', $cpAppApiBase . '&s=245&id=&channel_partner_id=');
 db_sync_register_api_if_missing($conn, 246, 'get_cp_customer_form_masters', 'CP App Customer Form Masters', $cpAppApiBase . '&s=246');
 db_sync_register_api_if_missing($conn, 247, 'get_cp_dashboard', 'CP App Login Dashboard', $cpAppApiBase . '&s=247&channel_partner_id=&recent_limit=5');
-foreach (array(241, 242, 243, 244, 245, 246, 247) as $cpAppApiId) {
+db_sync_register_api_if_missing($conn, 248, 'get_cp_customer_order_products', 'CP Customer Order Products', $cpAppApiBase . '&s=248&channel_partner_id=&search_name=&only_in_stock=0');
+db_sync_register_api_if_missing($conn, 249, 'get_cp_customer_order_cart', 'CP Customer Order Get Cart', $cpAppApiBase . '&s=249&channel_partner_id=');
+db_sync_register_api_if_missing($conn, 250, 'add_cp_customer_order_cart', 'CP Customer Order Add Cart', $cpAppApiBase . '&s=250&channel_partner_id=&channel_partner_customer_id=&pwp_id=&qty=&rate=&discount=&gst_apply_flag=1');
+db_sync_register_api_if_missing($conn, 251, 'update_cp_customer_order_cart_item', 'CP Customer Order Update Cart Item', $cpAppApiBase . '&s=251&channel_partner_id=&cart_item_id=&qty=&rate=&discount=');
+db_sync_register_api_if_missing($conn, 252, 'remove_cp_customer_order_cart_item', 'CP Customer Order Remove Cart Item', $cpAppApiBase . '&s=252&channel_partner_id=&cart_item_id=');
+db_sync_register_api_if_missing($conn, 253, 'clear_cp_customer_order_cart', 'CP Customer Order Clear Cart', $cpAppApiBase . '&s=253&channel_partner_id=');
+db_sync_register_api_if_missing($conn, 254, 'place_cp_customer_order', 'CP Place Customer Order', $cpAppApiBase . '&s=254&channel_partner_id=&channel_partner_customer_id=&gst_apply_flag=1&address=');
+db_sync_register_api_if_missing($conn, 255, 'get_cp_customer_orders', 'CP Customer Orders List', $cpAppApiBase . '&s=255&channel_partner_id=&search_name=&ul=0&ll=50');
+db_sync_register_api_if_missing($conn, 256, 'get_cp_customer_order_detail', 'CP Customer Order Detail', $cpAppApiBase . '&s=256&channel_partner_id=&order_id=');
+foreach (array(241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 256) as $cpAppApiId) {
 	$slugMap = array(
 		241 => 'get_cp_my_customers',
 		242 => 'add_cp_my_customer',
@@ -1286,6 +1295,15 @@ foreach (array(241, 242, 243, 244, 245, 246, 247) as $cpAppApiId) {
 		245 => 'delete_cp_my_customer',
 		246 => 'get_cp_customer_form_masters',
 		247 => 'get_cp_dashboard',
+		248 => 'get_cp_customer_order_products',
+		249 => 'get_cp_customer_order_cart',
+		250 => 'add_cp_customer_order_cart',
+		251 => 'update_cp_customer_order_cart_item',
+		252 => 'remove_cp_customer_order_cart_item',
+		253 => 'clear_cp_customer_order_cart',
+		254 => 'place_cp_customer_order',
+		255 => 'get_cp_customer_orders',
+		256 => 'get_cp_customer_order_detail',
 	);
 	$urlMap = array(
 		241 => $cpAppApiBase . '&s=241&channel_partner_id=&search_name=&ul=0&ll=50',
@@ -1295,6 +1313,15 @@ foreach (array(241, 242, 243, 244, 245, 246, 247) as $cpAppApiId) {
 		245 => $cpAppApiBase . '&s=245&id=&channel_partner_id=',
 		246 => $cpAppApiBase . '&s=246',
 		247 => $cpAppApiBase . '&s=247&channel_partner_id=&recent_limit=5',
+		248 => $cpAppApiBase . '&s=248&channel_partner_id=&search_name=&only_in_stock=0',
+		249 => $cpAppApiBase . '&s=249&channel_partner_id=',
+		250 => $cpAppApiBase . '&s=250&channel_partner_id=&channel_partner_customer_id=&pwp_id=&qty=&rate=&discount=&gst_apply_flag=1',
+		251 => $cpAppApiBase . '&s=251&channel_partner_id=&cart_item_id=&qty=&rate=&discount=',
+		252 => $cpAppApiBase . '&s=252&channel_partner_id=&cart_item_id=',
+		253 => $cpAppApiBase . '&s=253&channel_partner_id=',
+		254 => $cpAppApiBase . '&s=254&channel_partner_id=&channel_partner_customer_id=&gst_apply_flag=1&address=',
+		255 => $cpAppApiBase . '&s=255&channel_partner_id=&search_name=&ul=0&ll=50',
+		256 => $cpAppApiBase . '&s=256&channel_partner_id=&order_id=',
 	);
 	$escSlug = mysqli_real_escape_string($conn, $slugMap[$cpAppApiId]);
 	$escUrl = mysqli_real_escape_string($conn, $urlMap[$cpAppApiId]);

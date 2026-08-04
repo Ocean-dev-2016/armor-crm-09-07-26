@@ -1,7 +1,7 @@
 {
     "info": {
         "name": "Armor Fire CRM - Full API Collection (Backend Verified)",
-        "description": "Complete API collection generated from live PHP service source code.\n\nGenerated: 2026-07-10 13:59:58\nUpdated: 2026-08-04 \u2014 CP Login Dashboard API #247 + My Customers #241-#246 (service_channel_partner.php)\nAll requests: POST multipart/form-data\nAuth: `key` (API key) + `s` (service id or slug)\n\nEnvironments:\n- Live: https://armor-crm.oceanhub.co.in\n- Local: http://localhost:8080/armor_crm_08_07/202526\n\nSet collection variable `base_url` before testing.\nAPI key: 1226\n\n**Common Login (#2):** `service_sales_executive.php` \u2014 result.user_type = sales_executive | channel_partner\n**CP Dashboard (#247):** Login #2 \u2192 result.cp_apis.dashboard = 247\nEmployee Chat folder: service_employee_chat.php (#236-#240)\nService #39 (sync_offline_customers) includes all CRM columns + channel_partner_flag.",
+        "description": "Complete API collection generated from live PHP service source code.\n\nGenerated: 2026-07-10 13:59:58\nUpdated: 2026-08-04 \u2014 CP Login Dashboard #247 + My Customers #241-#246 + Customer Order Cart #248-#256 (service_channel_partner.php)\nAll requests: POST multipart/form-data\nAuth: `key` (API key) + `s` (service id or slug)\n\nEnvironments:\n- Live: https://armor-crm.oceanhub.co.in\n- Local: http://localhost:8080/armor_crm_08_07/202526\n\nSet collection variable `base_url` before testing.\nAPI key: 1226\n\n**Common Login (#2):** `service_sales_executive.php` \u2014 result.user_type = sales_executive | channel_partner\n**CP Dashboard (#247):** Login #2 \u2192 result.cp_apis.dashboard = 247\nEmployee Chat folder: service_employee_chat.php (#236-#240)\nService #39 (sync_offline_customers) includes all CRM columns + channel_partner_flag.",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "item": [
@@ -414,6 +414,491 @@
                             ]
                         },
                         "description": "Countries + field map"
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Channel Partner App \u2014 Customer Order + Cart (#248-#256)",
+            "description": "CP Customer Order (same as web channel_partner_order_simple.php?cp_mode=customer).\n\n**App flow:**\n1) Login #2 \u2192 channel_partner_id\n2) Customers #241\n3) Products #248 (pwp_id, rate, gst, available_stock)\n4) Add Cart #250 (pwp_id + qty + rate + discount)\n5) Get Cart #249\n6) Place Order #254 (stock deduct from My Stock)\n7) Orders List #255 / Detail #256\n\nEndpoint: service/service_channel_partner.php\nkey=1226\n\n**products JSON (optional batch):** [{\"pwp_id\":123,\"qty\":2,\"rate\":100,\"discount\":0}]",
+            "item": [
+                {
+                    "name": "CP Order Products (#248)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "248",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "channel_partner_id",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "From Login #2"
+                                },
+                                {
+                                    "key": "search_name",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "only_in_stock",
+                                    "value": "0",
+                                    "type": "text",
+                                    "description": "1 = only products with CP My Stock > 0"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_channel_partner.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_channel_partner.php"
+                            ]
+                        },
+                        "description": "Product list for Customer Order form. Returns pwp_id, pid, weight_id, product_name, rate, discount, gst_percent, available_stock."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "CP Order Get Cart (#249)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "249",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "channel_partner_id",
+                                    "value": "",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_channel_partner.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_channel_partner.php"
+                            ]
+                        },
+                        "description": "Get current draft cart (status=-1). Returns items[], sub_total, estimated_gst, grand_total."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "CP Order Add Cart (#250)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "250",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "channel_partner_id",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "channel_partner_customer_id",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Required. From #241"
+                                },
+                                {
+                                    "key": "gst_apply_flag",
+                                    "value": "1",
+                                    "type": "text",
+                                    "description": "1=With GST, 0=Without GST"
+                                },
+                                {
+                                    "key": "pwp_id",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "From #248 result.pwp_id"
+                                },
+                                {
+                                    "key": "qty",
+                                    "value": "1",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "rate",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Optional editable rate"
+                                },
+                                {
+                                    "key": "discount",
+                                    "value": "0",
+                                    "type": "text",
+                                    "description": "Optional Disc %"
+                                },
+                                {
+                                    "key": "products",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Optional JSON array batch add"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_channel_partner.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_channel_partner.php"
+                            ]
+                        },
+                        "description": "Add product to CP Customer Order cart. Checks My Stock. Same pricing as web."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "CP Order Update Cart Item (#251)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "251",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "channel_partner_id",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "cart_item_id",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "From #249 items[].cart_item_id"
+                                },
+                                {
+                                    "key": "qty",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "rate",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "discount",
+                                    "value": "",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_channel_partner.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_channel_partner.php"
+                            ]
+                        },
+                        "description": "Update cart line qty / rate / discount."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "CP Order Remove Cart Item (#252)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "252",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "channel_partner_id",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "cart_item_id",
+                                    "value": "",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_channel_partner.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_channel_partner.php"
+                            ]
+                        },
+                        "description": "Remove one cart item."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "CP Order Clear Cart (#253)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "253",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "channel_partner_id",
+                                    "value": "",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_channel_partner.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_channel_partner.php"
+                            ]
+                        },
+                        "description": "Clear entire draft cart."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "CP Place Customer Order (#254)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "254",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "channel_partner_id",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "channel_partner_customer_id",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Required if not already on cart"
+                                },
+                                {
+                                    "key": "gst_apply_flag",
+                                    "value": "1",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "address",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Optional shipping/billing override"
+                                },
+                                {
+                                    "key": "remark",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "products",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Optional one-shot place without prior cart"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_channel_partner.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_channel_partner.php"
+                            ]
+                        },
+                        "description": "Place Customer Order (same as web Submit). Debits CP My Stock. Returns order_id, order_no."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "CP Customer Orders List (#255)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "255",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "channel_partner_id",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "search_name",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Order No / Customer"
+                                },
+                                {
+                                    "key": "ul",
+                                    "value": "0",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "ll",
+                                    "value": "50",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_channel_partner.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_channel_partner.php"
+                            ]
+                        },
+                        "description": "Same as web Manage Customer Order list. Status: pending | pending_payment | completed"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "CP Customer Order Detail (#256)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "256",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "channel_partner_id",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "order_id",
+                                    "value": "",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_channel_partner.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_channel_partner.php"
+                            ]
+                        },
+                        "description": "Order header + items[] + print_url"
                     },
                     "response": []
                 }
