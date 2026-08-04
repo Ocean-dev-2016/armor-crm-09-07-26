@@ -23,6 +23,9 @@ resource/image/*
 # --- mPDF runtime font cache (auto-generated on PDF print) ---
 bbsales_tracking/mpdf60/ttfontdata/
 
+# --- Attendance / selfie uploads (App punch In-Out photos) ---
+images/attendance/
+
 # --- Database dumps ---
 *.sql
 *.SQL
