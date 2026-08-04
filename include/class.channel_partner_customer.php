@@ -204,11 +204,14 @@ class ChannelPartnerCustomer extends Functions
 			'channel_partner_id' => 'Channel Partner',
 			'company_name' => 'Customer Name',
 			'person_name' => 'Person Name',
-			'mobile_no' => 'Mobile No',
 			'country' => 'Country',
 			'state' => 'State',
 			'city' => 'City',
 		);
+		/* mobile_no required on Add only; optional on Update (API #243 / #226) */
+		if (!$is_update) {
+			$required['mobile_no'] = 'Mobile No';
+		}
 		if ($is_update) {
 			$required['id'] = 'Customer id';
 		}
@@ -335,9 +338,15 @@ class ChannelPartnerCustomer extends Functions
 			return $ownCheck;
 		}
 
-		$dup_where = "mobile_no = '" . $mobile_no . "' AND id!='" . $id . "' AND isDelete=0";
-		if ($this->db->rp_dupCheck($this->ctable, $dup_where)) {
-			return array("ack" => 0, "developer_msg" => "Mobile already exists", "ack_msg" => "This mobile number is already registered.");
+		/* Edit: if mobile_no blank/omitted, keep existing value */
+		if (!isset($mobile_no) || trim($mobile_no) === '') {
+			$existing_mobile = $this->db->rp_getValue($this->ctable, "mobile_no", "id='" . (int) $id . "' AND isDelete=0", 0);
+			$mobile_no = ($existing_mobile !== false && $existing_mobile !== null) ? $existing_mobile : "";
+		} else {
+			$dup_where = "mobile_no = '" . $mobile_no . "' AND id!='" . $id . "' AND isDelete=0";
+			if ($this->db->rp_dupCheck($this->ctable, $dup_where)) {
+				return array("ack" => 0, "developer_msg" => "Mobile already exists", "ack_msg" => "This mobile number is already registered.");
+			}
 		}
 
 		$rows = array(

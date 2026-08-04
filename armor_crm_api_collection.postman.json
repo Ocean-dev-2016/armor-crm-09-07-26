@@ -240,7 +240,8 @@
                                 {
                                     "key": "mobile_no",
                                     "value": "",
-                                    "type": "text"
+                                    "type": "text",
+                                    "description": "Optional on update. Blank/omit = keep existing mobile"
                                 },
                                 {
                                     "key": "email",
@@ -290,7 +291,7 @@
                                 "service_channel_partner.php"
                             ]
                         },
-                        "description": "Update customer.\n\n**Required:** id, channel_partner_id, company_name, person_name, mobile_no, country, state, city\n\n**Optional:** email, gst, address, pincode"
+                        "description": "Update customer.\n\n**Required:** id, channel_partner_id, company_name, person_name, country, state, city\n\n**Optional:** mobile_no (blank = keep existing), email, gst, address, pincode"
                     },
                     "response": []
                 },
@@ -6805,7 +6806,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 226\n\n**Slug:** update_channel_partner_customer\n\nUpdate Channel Partner Customer.\n\n**Required:** id, channel_partner_id, company_name, person_name, mobile_no, country, state, city\n\n**Optional:** email, gst, address, pincode"
+                        "description": "**API Code:** 226\n\n**Slug:** update_channel_partner_customer\n\nUpdate Channel Partner Customer.\n\n**Required:** id, channel_partner_id, company_name, person_name, country, state, city\n\n**Optional:** mobile_no (blank = keep existing), email, gst, address, pincode"
                     },
                     "response": []
                 },
