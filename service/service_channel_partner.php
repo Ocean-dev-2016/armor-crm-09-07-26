@@ -13,6 +13,7 @@
  * #244 get_cp_my_customer_detail    — One customer (edit form)
  * #245 delete_cp_my_customer        — Soft delete
  * #246 get_cp_customer_form_masters — Country list + form field map
+ * #247 get_cp_dashboard             — Login Dashboard (Web + Mobile same)
  *
  * Also available (older): service_genral.php #224/#225 same table.
  */
@@ -138,16 +139,28 @@ if ($is_valid_api_key) {
 				),
 				'list_api' => array('s' => 241, 'slug' => 'get_cp_my_customers'),
 				'add_api' => array('s' => 242, 'slug' => 'add_cp_my_customer'),
+				'dashboard_api' => array('s' => 247, 'slug' => 'get_cp_dashboard'),
 			));
+		} else if ($service == 'get_cp_dashboard' || $service == 247) {
+			if ($channel_partner_id <= 0) {
+				$db->printJSON(array(
+					'ack' => 0,
+					'ack_msg' => 'channel_partner_id is required. Use value from Login API #2 result.channel_partner_id',
+					'developer_msg' => 'Missing channel_partner_id',
+				));
+			} else {
+				$limit = isset($_REQUEST['recent_limit']) ? (int) $_REQUEST['recent_limit'] : 5;
+				$db->printJSON($objCP->GetChannelPartnerDashboard($channel_partner_id, $limit));
+			}
 		} else {
 			$db->printJSON(array(
 				'ack' => 0,
-				'ack_msg' => 'Invalid Channel Partner service. Use s=241 to 246.',
+				'ack_msg' => 'Invalid Channel Partner service. Use s=241 to 247.',
 				'developer_msg' => 'Unknown service: ' . $service,
 			));
 		}
 	} else {
-		$db->printJSON(array('ack' => 0, 'ack_msg' => 'Invalid Service.', 'developer_msg' => 'Register APIs 241-246 via db_sync'));
+		$db->printJSON(array('ack' => 0, 'ack_msg' => 'Invalid Service.', 'developer_msg' => 'Register APIs 241-247 via db_sync'));
 	}
 } else {
 	$db->printJSON(array('ack' => 0, 'ack_msg' => 'Invalid API key.', 'developer_msg' => 'Use key=1226'));

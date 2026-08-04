@@ -296,6 +296,7 @@ if ($is_valid_api_key) {
 							/* App developer — My Customers APIs (service_channel_partner.php) */
 							'cp_apis' => array(
 								'endpoint' => 'service/service_channel_partner.php',
+								'dashboard' => 247,
 								'my_customers_list' => 241,
 								'my_customers_add' => 242,
 								'my_customers_update' => 243,

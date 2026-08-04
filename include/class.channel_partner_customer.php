@@ -424,4 +424,203 @@ class ChannelPartnerCustomer extends Functions
 
 		return array("ack" => 0, "developer_msg" => "Delete failed", "ack_msg" => "Failed to delete Channel Partner Customer.");
 	}
+
+	/**
+	 * CP Login Dashboard — same data for Web + Mobile App.
+	 * Summary cards + recent orders + payment follow-up.
+	 */
+	public function GetChannelPartnerDashboard($channel_partner_id, $recent_limit = 5)
+	{
+		$cpId = (int) $channel_partner_id;
+		$recent_limit = (int) $recent_limit;
+		if ($recent_limit <= 0 || $recent_limit > 20) {
+			$recent_limit = 5;
+		}
+		if ($cpId <= 0) {
+			return array("ack" => 0, "ack_msg" => "channel_partner_id is required.");
+		}
+
+		$cpCheck = $this->validateChannelPartnerId($cpId);
+		if ($cpCheck['ack'] != 1) {
+			return array("ack" => 0, "ack_msg" => $cpCheck['ack_msg']);
+		}
+
+		$cp_r = $this->db->rp_getData(
+			"executive",
+			"id,company_name,cname,mobile_no1,phone,email,client_code,gst",
+			"id='" . $cpId . "' AND isDelete=0",
+			"",
+			0
+		);
+		$cp = $cp_r ? mysqli_fetch_assoc($cp_r) : array();
+		$company_name = !empty($cp['company_name']) ? $cp['company_name'] : (!empty($cp['cname']) ? $cp['cname'] : 'Channel Partner');
+		$person_name = !empty($cp['cname']) ? $cp['cname'] : '';
+		$phone = !empty($cp['mobile_no1']) ? $cp['mobile_no1'] : (isset($cp['phone']) ? $cp['phone'] : '');
+
+		$orderWhere = "customer_id='" . $cpId . "' AND channel_partner_order_flag=1 AND channel_partner_customer_id>0 AND isDelete=0 AND status NOT IN (-2,3)";
+		$pendingPayWhere = $orderWhere . " AND (payment_received_flag=0 OR payment_received_flag IS NULL)";
+
+		$my_customers = (int) $this->db->rp_getTotalRecord($this->ctable, "channel_partner_id='" . $cpId . "' AND isDelete=0", 0);
+		$customer_orders = (int) $this->db->rp_getTotalRecord("orders", $orderWhere, 0);
+		$pending_payments = (int) $this->db->rp_getTotalRecord("orders", $pendingPayWhere, 0);
+		$products_in_stock = (int) $this->db->rp_getValue("customer_inward_stock", "COUNT(DISTINCT pro_id)", "customer_id='" . $cpId . "' AND isDelete=0", 0);
+
+		$recent_orders = array();
+		$recentR = $this->db->rp_getData(
+			"orders",
+			"id,order_no,order_date,grand_total,status,channel_partner_customer_id,payment_received_flag,payment_received_amount",
+			$orderWhere,
+			"id DESC LIMIT " . $recent_limit,
+			0
+		);
+		if ($recentR) {
+			while ($row = mysqli_fetch_assoc($recentR)) {
+				$recent_orders[] = $this->formatDashboardOrderRow($row);
+			}
+		}
+
+		$payment_followup = array();
+		$pendR = $this->db->rp_getData(
+			"orders",
+			"id,order_no,order_date,grand_total,status,channel_partner_customer_id,payment_received_flag,payment_received_amount",
+			$pendingPayWhere,
+			"id DESC LIMIT " . $recent_limit,
+			0
+		);
+		if ($pendR) {
+			while ($row = mysqli_fetch_assoc($pendR)) {
+				$fmt = $this->formatDashboardOrderRow($row);
+				$payment_followup[] = array(
+					'order_id' => $fmt['order_id'],
+					'order_no' => $fmt['order_no'],
+					'party_id' => $fmt['party_id'],
+					'party_name' => $fmt['party_name'],
+					'order_date' => $fmt['order_date'],
+					'order_date_display' => $fmt['order_date_display'],
+					'amount' => $fmt['amount'],
+					'amount_display' => $fmt['amount_display'],
+					'baki_amount' => $fmt['baki_amount'],
+					'baki_amount_display' => number_format($fmt['baki_amount'], 2),
+					'status' => $fmt['status'],
+					'status_label' => $fmt['status_label'],
+				);
+			}
+		}
+
+		return array(
+			'ack' => 1,
+			'ack_msg' => 'Dashboard ready',
+			'developer_msg' => 'CP dashboard (web + mobile)',
+			'result' => array(
+				'channel_partner_id' => $cpId,
+				'company_name' => $company_name,
+				'person_name' => $person_name,
+				'phone' => $phone,
+				'email' => isset($cp['email']) ? $cp['email'] : '',
+				'client_code' => isset($cp['client_code']) ? $cp['client_code'] : '',
+				'gst' => isset($cp['gst']) ? $cp['gst'] : '',
+				'welcome_title' => $company_name,
+				'welcome_subtitle' => 'Customers, orders, stock ane payments — ahiya thi manage kari sakay.',
+				'summary' => array(
+					'my_customers' => array(
+						'key' => 'my_customers',
+						'label' => 'My Customers',
+						'hint' => 'Parties under you',
+						'value' => $my_customers,
+						'icon' => 'users',
+					),
+					'customer_orders' => array(
+						'key' => 'customer_orders',
+						'label' => 'Customer Orders',
+						'hint' => 'All customer SOs',
+						'value' => $customer_orders,
+						'icon' => 'cart',
+					),
+					'pending_payments' => array(
+						'key' => 'pending_payments',
+						'label' => 'Pending Payments',
+						'hint' => 'Baki payments',
+						'value' => $pending_payments,
+						'icon' => 'rupee',
+					),
+					'products_in_stock' => array(
+						'key' => 'products_in_stock',
+						'label' => 'Products In Stock',
+						'hint' => 'Available items',
+						'value' => $products_in_stock,
+						'icon' => 'stock',
+					),
+				),
+				/* Flat counts for easy App binding */
+				'counts' => array(
+					'my_customers' => $my_customers,
+					'customer_orders' => $customer_orders,
+					'pending_payments' => $pending_payments,
+					'products_in_stock' => $products_in_stock,
+				),
+				'recent_orders' => $recent_orders,
+				'payment_followup' => $payment_followup,
+				'menus' => array(
+					array('key' => 'my_customers', 'label' => 'My Customers', 'api' => 241),
+					array('key' => 'customer_order', 'label' => 'Customer Order', 'api' => 0),
+					array('key' => 'my_stock', 'label' => 'My Stock', 'api' => 0),
+					array('key' => 'receive_payment', 'label' => 'Receive Payment', 'api' => 0),
+					array('key' => 'party_ledger', 'label' => 'Party Ledger', 'api' => 0),
+					array('key' => 'so_pi_format', 'label' => 'SO / PI Format', 'api' => 0),
+				),
+				'actions' => array(
+					'new_customer_order' => array('label' => 'New Customer Order', 'hint' => 'Create customer SO'),
+					'view_all_orders' => array('label' => 'View all'),
+					'receive_payment' => array('label' => 'Receive'),
+				),
+			),
+		);
+	}
+
+	private function formatDashboardOrderRow($row)
+	{
+		$partyId = isset($row['channel_partner_customer_id']) ? (int) $row['channel_partner_customer_id'] : 0;
+		$partyName = '';
+		if ($partyId > 0) {
+			$partyName = $this->db->rp_getValue($this->ctable, "company_name", "id='" . $partyId . "'", 0);
+		}
+		$status = isset($row['status']) ? (int) $row['status'] : 0;
+		$paidFlag = isset($row['payment_received_flag']) ? (int) $row['payment_received_flag'] : 0;
+		$paidAmt = isset($row['payment_received_amount']) ? (float) $row['payment_received_amount'] : 0;
+		$grand = isset($row['grand_total']) ? (float) $row['grand_total'] : 0;
+		$isPaid = ($paidFlag === 1 && $paidAmt > 0);
+		$isDispatched = ($status >= 5 && $status != 3 && $status != -2);
+		if ($isPaid) {
+			$statusKey = 'completed';
+			$statusLabel = 'Completed';
+			$baki = 0;
+		} else if ($isDispatched) {
+			$statusKey = 'pending_payment';
+			$statusLabel = 'Pending Payment';
+			$baki = max(0, $grand - $paidAmt);
+		} else {
+			$statusKey = 'pending';
+			$statusLabel = 'Pending';
+			$baki = max(0, $grand - $paidAmt);
+		}
+		$orderDate = isset($row['order_date']) ? $row['order_date'] : '';
+		$dateDisplay = ($orderDate != '' && $orderDate != '0000-00-00') ? date('d-m-Y', strtotime($orderDate)) : '-';
+
+		return array(
+			'order_id' => (int) $row['id'],
+			'order_no' => $row['order_no'],
+			'party_id' => $partyId,
+			'party_name' => $partyName != '' ? $partyName : '-',
+			'order_date' => $orderDate,
+			'order_date_display' => $dateDisplay,
+			'amount' => round($grand, 2),
+			'amount_display' => number_format($grand, 2),
+			'payment_received_flag' => $paidFlag,
+			'payment_received_amount' => round($paidAmt, 2),
+			'baki_amount' => round($baki, 2),
+			'status' => $statusKey,
+			'status_label' => $statusLabel,
+			'order_status_code' => $status,
+		);
+	}
 }

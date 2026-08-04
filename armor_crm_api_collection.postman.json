@@ -1,14 +1,60 @@
 {
     "info": {
         "name": "Armor Fire CRM - Full API Collection (Backend Verified)",
-        "description": "Complete API collection generated from live PHP service source code.\n\nGenerated: 2026-07-10 13:59:58\nUpdated: 2026-08-01 \u2014 Common Login #2 + CP App My Customers APIs #241-#246 (service_channel_partner.php)\nAll requests: POST multipart/form-data\nAuth: `key` (API key) + `s` (service id or slug)\n\nEnvironments:\n- Live: https://armor-crm.oceanhub.co.in\n- Local: http://localhost:8080/armor_crm_08_07/202526\n\nSet collection variable `base_url` before testing.\nAPI key: 1226\n\n**Common Login (#2):** `service_sales_executive.php` \u2014 result.user_type = sales_executive | channel_partner\nEmployee Chat folder: service_employee_chat.php (#236-#240)\nService #39 (sync_offline_customers) includes all CRM columns + channel_partner_flag.",
+        "description": "Complete API collection generated from live PHP service source code.\n\nGenerated: 2026-07-10 13:59:58\nUpdated: 2026-08-04 \u2014 CP Login Dashboard API #247 + My Customers #241-#246 (service_channel_partner.php)\nAll requests: POST multipart/form-data\nAuth: `key` (API key) + `s` (service id or slug)\n\nEnvironments:\n- Live: https://armor-crm.oceanhub.co.in\n- Local: http://localhost:8080/armor_crm_08_07/202526\n\nSet collection variable `base_url` before testing.\nAPI key: 1226\n\n**Common Login (#2):** `service_sales_executive.php` \u2014 result.user_type = sales_executive | channel_partner\n**CP Dashboard (#247):** Login #2 \u2192 result.cp_apis.dashboard = 247\nEmployee Chat folder: service_employee_chat.php (#236-#240)\nService #39 (sync_offline_customers) includes all CRM columns + channel_partner_flag.",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "item": [
         {
-            "name": "Channel Partner App \u2014 My Customers (#241-#246)",
-            "description": "Same as web My Customers.\n1) Login API #2 \u2192 result.channel_partner_id\n2) List #241 / Add #242\nEndpoint: service/service_channel_partner.php\nkey=1226",
+            "name": "Channel Partner App \u2014 Dashboard + My Customers (#241-#247)",
+            "description": "CP Login Dashboard (#247) + My Customers (#241-#246).\n1) Login API #2 \u2192 result.channel_partner_id + result.cp_apis.dashboard\n2) Dashboard #247 (Web + Mobile same JSON)\n3) List #241 / Add #242\nEndpoint: service/service_channel_partner.php\nkey=1226",
             "item": [
+                {
+                    "name": "CP Login Dashboard (#247)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "247",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "channel_partner_id",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "From Login #2 result.channel_partner_id"
+                                },
+                                {
+                                    "key": "recent_limit",
+                                    "value": "5",
+                                    "type": "text",
+                                    "description": "Recent orders + payment follow-up limit (1-20, default 5)"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_channel_partner.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_channel_partner.php"
+                            ]
+                        },
+                        "description": "Channel Partner Login Dashboard (Web + Mobile same).\nReturns: partner info, summary cards (my_customers, customer_orders, pending_payments, products_in_stock), recent_orders[], payment_followup[], menus, actions.\nStatus: pending | pending_payment | completed"
+                    },
+                    "response": []
+                },
                 {
                     "name": "CP My Customers List (#241)",
                     "request": {

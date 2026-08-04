@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 define('DB_SYNC_KEY', 'armor_cp_sync_2026');
-define('DB_SYNC_VERSION', '2026.08.01.3');
+define('DB_SYNC_VERSION', '2026.08.04.1');
 
 if (!isset($_GET['key']) || $_GET['key'] !== DB_SYNC_KEY) {
 	header('HTTP/1.1 403 Forbidden');
@@ -1274,7 +1274,8 @@ db_sync_register_api_if_missing($conn, 243, 'update_cp_my_customer', 'CP App Upd
 db_sync_register_api_if_missing($conn, 244, 'get_cp_my_customer_detail', 'CP App My Customer Detail', $cpAppApiBase . '&s=244&id=&channel_partner_id=');
 db_sync_register_api_if_missing($conn, 245, 'delete_cp_my_customer', 'CP App Delete My Customer', $cpAppApiBase . '&s=245&id=&channel_partner_id=');
 db_sync_register_api_if_missing($conn, 246, 'get_cp_customer_form_masters', 'CP App Customer Form Masters', $cpAppApiBase . '&s=246');
-foreach (array(241, 242, 243, 244, 245, 246) as $cpAppApiId) {
+db_sync_register_api_if_missing($conn, 247, 'get_cp_dashboard', 'CP App Login Dashboard', $cpAppApiBase . '&s=247&channel_partner_id=&recent_limit=5');
+foreach (array(241, 242, 243, 244, 245, 246, 247) as $cpAppApiId) {
 	$slugMap = array(
 		241 => 'get_cp_my_customers',
 		242 => 'add_cp_my_customer',
@@ -1282,6 +1283,7 @@ foreach (array(241, 242, 243, 244, 245, 246) as $cpAppApiId) {
 		244 => 'get_cp_my_customer_detail',
 		245 => 'delete_cp_my_customer',
 		246 => 'get_cp_customer_form_masters',
+		247 => 'get_cp_dashboard',
 	);
 	$urlMap = array(
 		241 => $cpAppApiBase . '&s=241&channel_partner_id=&search_name=&ul=0&ll=50',
@@ -1290,6 +1292,7 @@ foreach (array(241, 242, 243, 244, 245, 246) as $cpAppApiId) {
 		244 => $cpAppApiBase . '&s=244&id=&channel_partner_id=',
 		245 => $cpAppApiBase . '&s=245&id=&channel_partner_id=',
 		246 => $cpAppApiBase . '&s=246',
+		247 => $cpAppApiBase . '&s=247&channel_partner_id=&recent_limit=5',
 	);
 	$escSlug = mysqli_real_escape_string($conn, $slugMap[$cpAppApiId]);
 	$escUrl = mysqli_real_escape_string($conn, $urlMap[$cpAppApiId]);
