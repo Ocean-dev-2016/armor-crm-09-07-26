@@ -105,7 +105,102 @@ class ChannelPartnerOrder
 	}
 
 	/**
-	 * Build one order line item from product_weight_price.id (same as web form).
+	 * Resolve product_weight_price.id (pwp_id) — same key web uses as line_product[].
+	 * Accepts: pwp_id | catno | product_id/pid (+ optional weight_id).
+	 */
+	private function resolvePwpId($input)
+	{
+		if (!is_array($input)) {
+			$input = array();
+		}
+		$pwpId = 0;
+		if (isset($input['pwp_id']) && (int) $input['pwp_id'] > 0) {
+			$pwpId = (int) $input['pwp_id'];
+		} else if (isset($input['line_product']) && (int) $input['line_product'] > 0) {
+			$pwpId = (int) $input['line_product'];
+		}
+		if ($pwpId > 0) {
+			$ok = (int) $this->db->rp_getTotalRecord('product_weight_price', "id='" . $pwpId . "' AND isDelete=0", 0);
+			if ($ok <= 0) {
+				return array('ack' => 0, 'ack_msg' => 'Invalid pwp_id. Use product_weight_price.id from Products API #248.');
+			}
+			return array('ack' => 1, 'pwp_id' => $pwpId);
+		}
+
+		$catno = '';
+		if (isset($input['catno']) && trim($input['catno']) !== '') {
+			$catno = trim($input['catno']);
+		} else if (isset($input['cat_no']) && trim($input['cat_no']) !== '') {
+			$catno = trim($input['cat_no']);
+		}
+		if ($catno !== '') {
+			$s = $this->db->clean($catno);
+			/* Exact Cat No first (web Cat No), then LIKE */
+			$pwpId = (int) $this->db->rp_getValue(
+				'product_weight_price',
+				'id',
+				"catno='" . $s . "' AND isDelete=0",
+				0
+			);
+			if ($pwpId <= 0) {
+				$pwpId = (int) $this->db->rp_getValue(
+					'product_weight_price',
+					'id',
+					"catno LIKE '%" . $s . "%' AND isDelete=0",
+					0
+				);
+			}
+			if ($pwpId <= 0) {
+				return array('ack' => 0, 'ack_msg' => 'No product found for Cat No: ' . $catno);
+			}
+			return array('ack' => 1, 'pwp_id' => $pwpId);
+		}
+
+		$pid = 0;
+		if (isset($input['product_id']) && (int) $input['product_id'] > 0) {
+			$pid = (int) $input['product_id'];
+		} else if (isset($input['pid']) && (int) $input['pid'] > 0) {
+			$pid = (int) $input['pid'];
+		} else if (isset($input['pro_id']) && (int) $input['pro_id'] > 0) {
+			$pid = (int) $input['pro_id'];
+		}
+		$weightId = '';
+		if (isset($input['weight_id']) && $input['weight_id'] !== '' && $input['weight_id'] !== null) {
+			$weightId = $input['weight_id'];
+		}
+
+		if ($pid > 0) {
+			$w = "product_id='" . $pid . "' AND isDelete=0";
+			if ($weightId !== '') {
+				$w .= " AND weight_id='" . $this->db->clean($weightId) . "'";
+			}
+			$cnt = (int) $this->db->rp_getTotalRecord('product_weight_price', $w, 0);
+			if ($cnt <= 0) {
+				return array('ack' => 0, 'ack_msg' => 'No variant found for product_id=' . $pid);
+			}
+			if ($cnt > 1 && $weightId === '') {
+				return array(
+					'ack' => 0,
+					'ack_msg' => 'Multiple variants for this product. Send pwp_id from #248, or product_id + weight_id, or catno.',
+					'product_id' => $pid,
+					'hint' => 'Call #248 with search_name=product_id to pick pwp_id',
+				);
+			}
+			$pwpId = (int) $this->db->rp_getValue('product_weight_price', 'id', $w, 0);
+			if ($pwpId <= 0) {
+				return array('ack' => 0, 'ack_msg' => 'Could not resolve pwp_id for product_id=' . $pid);
+			}
+			return array('ack' => 1, 'pwp_id' => $pwpId);
+		}
+
+		return array(
+			'ack' => 0,
+			'ack_msg' => 'Send pwp_id (preferred), OR catno, OR product_id (+ weight_id if multiple sizes).',
+		);
+	}
+
+	/**
+	 * Build one order line item from product_weight_price.id (same as web form line_product).
 	 */
 	public function buildItemFromPwp($cpId, $pwpId, $qty, $rate = null, $discount = null)
 	{
@@ -285,7 +380,32 @@ class ChannelPartnerOrder
 		}
 		if ($search != '') {
 			$s = $this->db->clean($search);
-			$where .= " AND name LIKE '%" . $s . "%'";
+			$matchIds = array();
+			/* Product id exact */
+			if (ctype_digit($search)) {
+				$matchIds[(int) $search] = (int) $search;
+			}
+			/* Cat No → product_ids (same as product_get_ajax search) */
+			$cr = $this->db->rp_getData(
+				'product_weight_price',
+				'DISTINCT product_id',
+				"catno LIKE '%" . $s . "%' AND isDelete=0",
+				'',
+				0
+			);
+			if ($cr) {
+				while ($crow = mysqli_fetch_assoc($cr)) {
+					$mid = (int) $crow['product_id'];
+					if ($mid > 0) {
+						$matchIds[$mid] = $mid;
+					}
+				}
+			}
+			if (!empty($matchIds)) {
+				$where .= " AND (name LIKE '%" . $s . "%' OR id IN (" . implode(',', $matchIds) . "))";
+			} else {
+				$where .= " AND name LIKE '%" . $s . "%'";
+			}
 		}
 
 		$product_list_d = $this->db->rp_getData('product', '*', $where, 'name ASC', 0);
@@ -293,20 +413,51 @@ class ChannelPartnerOrder
 			if (!empty($tcids)) {
 				$where2 = $where_base . ' AND tcid IN (' . implode(',', $tcids) . ')';
 				if ($search != '') {
-					$where2 .= " AND name LIKE '%" . $this->db->clean($search) . "%'";
+					$s2 = $this->db->clean($search);
+					$where2 .= " AND (name LIKE '%" . $s2 . "%'";
+					if (ctype_digit($search)) {
+						$where2 .= " OR id='" . (int) $search . "'";
+					}
+					$cr2 = $this->db->rp_getData('product_weight_price', 'DISTINCT product_id', "catno LIKE '%" . $s2 . "%' AND isDelete=0", '', 0);
+					$ids2 = array();
+					if ($cr2) {
+						while ($x = mysqli_fetch_assoc($cr2)) {
+							$ids2[] = (int) $x['product_id'];
+						}
+					}
+					if (!empty($ids2)) {
+						$where2 .= " OR id IN (" . implode(',', $ids2) . ")";
+					}
+					$where2 .= ')';
 				}
 				$product_list_d = $this->db->rp_getData('product', '*', $where2, 'name ASC', 0);
 			}
 			if (!$product_list_d || mysqli_num_rows($product_list_d) == 0) {
 				$where3 = $where_base;
 				if ($search != '') {
-					$where3 .= " AND name LIKE '%" . $this->db->clean($search) . "%'";
+					$s3 = $this->db->clean($search);
+					$where3 .= " AND (name LIKE '%" . $s3 . "%'";
+					if (ctype_digit($search)) {
+						$where3 .= " OR id='" . (int) $search . "'";
+					}
+					$cr3 = $this->db->rp_getData('product_weight_price', 'DISTINCT product_id', "catno LIKE '%" . $s3 . "%' AND isDelete=0", '', 0);
+					$ids3 = array();
+					if ($cr3) {
+						while ($x = mysqli_fetch_assoc($cr3)) {
+							$ids3[] = (int) $x['product_id'];
+						}
+					}
+					if (!empty($ids3)) {
+						$where3 .= " OR id IN (" . implode(',', $ids3) . ")";
+					}
+					$where3 .= ')';
 				}
 				$product_list_d = $this->db->rp_getData('product', '*', $where3, 'name ASC', 0);
 			}
 		}
 
 		$result = array();
+		$searchLower = ($search != '') ? strtolower($search) : '';
 		if ($product_list_d) {
 			while ($product_list_r = mysqli_fetch_assoc($product_list_d)) {
 				$variants = $this->objProduct->aj_getProductDetail($product_list_r['id'], $cpId);
@@ -322,15 +473,41 @@ class ChannelPartnerOrder
 						continue;
 					}
 					$cat_no = isset($product_detail['catno']) ? $product_detail['catno'] : '';
+					if ($cat_no === '' || $cat_no === null) {
+						$cat_no = $this->db->rp_getValue(
+							'product_weight_price',
+							'catno',
+							"id='" . (int) $product_detail['id'] . "' AND isDelete=0",
+							0
+						);
+					}
+					/* If searching by Cat No / product id, keep matching variants only when possible */
+					if ($searchLower !== '') {
+						$nameHay = strtolower($product_list_r['name'] . ' ' . (isset($product_detail['name']) ? $product_detail['name'] : ''));
+						$catHay = strtolower((string) $cat_no);
+						$idMatch = (ctype_digit($search) && ((int) $search === $pid || (int) $search === (int) $product_detail['id']));
+						$catMatch = ($catHay !== '' && strpos($catHay, $searchLower) !== false);
+						$nameMatch = (strpos($nameHay, $searchLower) !== false);
+						if (!$idMatch && !$catMatch && !$nameMatch) {
+							continue;
+						}
+					}
 					$label = !empty($product_detail['name']) ? $product_detail['name'] : $product_list_r['name'];
+					$display = $label;
+					if ($cat_no != '') {
+						$display .= ' - #' . $cat_no;
+					}
 					$rate = isset($product_detail['sell_price']) ? (float) $product_detail['sell_price'] : 0;
 					$disc = isset($product_detail['discountPer']) ? (float) $product_detail['discountPer'] : 0;
 					$result[] = array(
 						'pwp_id' => (int) $product_detail['id'],
+						'product_id' => $pid,
 						'pid' => $pid,
 						'weight_id' => $weight_id,
 						'product_name' => $label,
+						'display_name' => $display,
 						'catno' => $cat_no,
+						'cat_no' => $cat_no,
 						'rate' => round($rate, 2),
 						'original_price' => isset($product_detail['orignal_price']) ? round((float) $product_detail['orignal_price'], 2) : round($rate, 2),
 						'discount' => round($disc, 2),
@@ -347,6 +524,9 @@ class ChannelPartnerOrder
 			'ack' => 1,
 			'ack_msg' => 'Products ready',
 			'total' => count($result),
+			'search_name' => $search,
+			'search_hint' => 'search_name matches Product Name, Cat No (catno), or Product id',
+			'pwp_id_note' => 'pwp_id = product_weight_price.id (same as web line_product). Use this when adding to cart.',
 			'result' => $result,
 		);
 	}
@@ -424,13 +604,18 @@ class ChannelPartnerOrder
 				'ack' => 1,
 				'ack_msg' => 'Cart empty',
 				'cart_id' => 0,
+				'channel_partner_id' => (int) $cpId,
 				'channel_partner_customer_id' => 0,
+				'party_id' => 0,
+				'customer_name' => '',
 				'gst_apply_flag' => 1,
 				'items' => array(),
 				'sub_total' => 0,
 				'estimated_gst' => 0,
 				'grand_total' => 0,
 				'total_qty' => 0,
+				'total_items' => 0,
+				'app_note' => 'Select party then call #249 with channel_partner_customer_id to bind party, OR send it with #250 Add Cart.',
 			);
 		}
 		$order = mysqli_fetch_assoc($order_r);
@@ -459,13 +644,20 @@ class ChannelPartnerOrder
 					"product_id='" . $pid . "' AND weight_id='" . $this->db->clean($row['weight_id']) . "' AND isDelete=0",
 					0
 				);
+				$catno = '';
+				if ($pwpId > 0) {
+					$catno = $this->db->rp_getValue('product_weight_price', 'catno', "id='" . $pwpId . "'", 0);
+				}
 				$available = $this->objStock->getAvailableQty($cpId, $pid, $row['weight_id']);
 				$items[] = array(
 					'cart_item_id' => (int) $row['id'],
 					'pwp_id' => $pwpId,
+					'product_id' => $pid,
 					'pid' => $pid,
 					'weight_id' => $row['weight_id'],
 					'product_name' => $row['pro_name'],
+					'catno' => $catno ? $catno : '',
+					'cat_no' => $catno ? $catno : '',
 					'qty' => round($qty, 2),
 					'rate' => round($rate, 2),
 					'discount' => round($disc, 2),
@@ -483,8 +675,10 @@ class ChannelPartnerOrder
 
 		$partyId = isset($order['channel_partner_customer_id']) ? (int) $order['channel_partner_customer_id'] : 0;
 		$partyName = '';
+		$partyMobile = '';
 		if ($partyId > 0) {
 			$partyName = $this->db->rp_getValue('channel_partner_customer', 'company_name', "id='" . $partyId . "'", 0);
+			$partyMobile = $this->db->rp_getValue('channel_partner_customer', 'mobile_no', "id='" . $partyId . "'", 0);
 		}
 
 		return array(
@@ -493,7 +687,9 @@ class ChannelPartnerOrder
 			'cart_id' => $cartId,
 			'channel_partner_id' => (int) $cpId,
 			'channel_partner_customer_id' => $partyId,
+			'party_id' => $partyId,
 			'customer_name' => $partyName ? $partyName : '',
+			'customer_mobile' => $partyMobile ? $partyMobile : '',
 			'gst_apply_flag' => $gstFlag,
 			'items' => $items,
 			'sub_total' => round($sub, 2),
@@ -504,6 +700,9 @@ class ChannelPartnerOrder
 		);
 	}
 
+	/**
+	 * Get draft cart. Optionally bind/set party with channel_partner_customer_id (App party dropdown).
+	 */
 	public function GetCart($detail)
 	{
 		$cpId = isset($detail['channel_partner_id']) ? (int) $detail['channel_partner_id'] : 0;
@@ -511,6 +710,32 @@ class ChannelPartnerOrder
 		if ($cpCheck['ack'] != 1) {
 			return $cpCheck;
 		}
+
+		$custId = 0;
+		if (isset($detail['channel_partner_customer_id']) && (int) $detail['channel_partner_customer_id'] > 0) {
+			$custId = (int) $detail['channel_partner_customer_id'];
+		} else if (isset($detail['party_id']) && (int) $detail['party_id'] > 0) {
+			$custId = (int) $detail['party_id'];
+		}
+
+		if ($custId > 0) {
+			$custCheck = $this->assertCustomer($cpId, $custId);
+			if ($custCheck['ack'] != 1) {
+				return $custCheck;
+			}
+			$gstFlag = isset($detail['gst_apply_flag']) ? (int) $detail['gst_apply_flag'] : 1;
+			if ($gstFlag !== 0) {
+				$gstFlag = 1;
+			}
+			$ens = $this->ensureDraftCart($cpId, $custId, $gstFlag);
+			if ($ens['ack'] != 1) {
+				return $ens;
+			}
+			$cart = $this->formatCartResponse($cpId, (int) $ens['cart_id']);
+			$cart['ack_msg'] = 'Cart ready (party set)';
+			return $cart;
+		}
+
 		$cartId = $this->getDraftCartId($cpId);
 		if ($cartId <= 0) {
 			return $this->formatCartResponse($cpId, 0);
@@ -521,7 +746,12 @@ class ChannelPartnerOrder
 	public function AddToCart($detail)
 	{
 		$cpId = isset($detail['channel_partner_id']) ? (int) $detail['channel_partner_id'] : 0;
-		$custId = isset($detail['channel_partner_customer_id']) ? (int) $detail['channel_partner_customer_id'] : 0;
+		$custId = 0;
+		if (isset($detail['channel_partner_customer_id']) && (int) $detail['channel_partner_customer_id'] > 0) {
+			$custId = (int) $detail['channel_partner_customer_id'];
+		} else if (isset($detail['party_id']) && (int) $detail['party_id'] > 0) {
+			$custId = (int) $detail['party_id'];
+		}
 		$gstFlag = isset($detail['gst_apply_flag']) ? (int) $detail['gst_apply_flag'] : 1;
 		if ($gstFlag !== 0) {
 			$gstFlag = 1;
@@ -531,33 +761,62 @@ class ChannelPartnerOrder
 		if ($cpCheck['ack'] != 1) {
 			return $cpCheck;
 		}
+
+		/* If App forgot party, reuse party already saved on draft cart */
+		if ($custId <= 0) {
+			$existingCartId = $this->getDraftCartId($cpId);
+			if ($existingCartId > 0) {
+				$custId = (int) $this->db->rp_getValue(
+					'orders',
+					'channel_partner_customer_id',
+					"id='" . $existingCartId . "' AND isDelete=0",
+					0
+				);
+			}
+		}
+
 		$custCheck = $this->assertCustomer($cpId, $custId);
 		if ($custCheck['ack'] != 1) {
 			return $custCheck;
 		}
 
 		$itemsIn = array();
-		if (!empty($detail['products'])) {
+		/* Batch: products must be JSON array of objects.
+		 * If products is blank / number / invalid → use single pwp_id path (normal App Add button). */
+		$useBatch = false;
+		if (isset($detail['products']) && $detail['products'] !== '' && $detail['products'] !== null) {
 			$products = is_array($detail['products']) ? $detail['products'] : json_decode($detail['products'], true);
-			if (is_array($products)) {
+			if (is_array($products) && !empty($products) && isset($products[0]) && is_array($products[0])) {
+				$useBatch = true;
 				foreach ($products as $p) {
-					$pwpId = isset($p['pwp_id']) ? (int) $p['pwp_id'] : 0;
+					$resolved = $this->resolvePwpId($p);
+					if ($resolved['ack'] != 1) {
+						return $resolved;
+					}
 					$qty = isset($p['qty']) ? (float) $p['qty'] : 0;
 					$rate = isset($p['rate']) ? $p['rate'] : (isset($p['price']) ? $p['price'] : null);
 					$disc = isset($p['discount']) ? $p['discount'] : null;
-					$built = $this->buildItemFromPwp($cpId, $pwpId, $qty, $rate, $disc);
+					$built = $this->buildItemFromPwp($cpId, (int) $resolved['pwp_id'], $qty, $rate, $disc);
 					if ($built['ack'] != 1) {
 						return $built;
 					}
 					$itemsIn[] = $built['item'];
 				}
 			}
-		} else {
-			$pwpId = isset($detail['pwp_id']) ? (int) $detail['pwp_id'] : 0;
+		}
+
+		if (!$useBatch) {
+			$resolved = $this->resolvePwpId($detail);
+			if ($resolved['ack'] != 1) {
+				return $resolved;
+			}
 			$qty = isset($detail['qty']) ? (float) $detail['qty'] : 0;
+			if ($qty <= 0) {
+				return array('ack' => 0, 'ack_msg' => 'qty is required and must be > 0.');
+			}
 			$rate = isset($detail['rate']) ? $detail['rate'] : null;
 			$disc = isset($detail['discount']) ? $detail['discount'] : null;
-			$built = $this->buildItemFromPwp($cpId, $pwpId, $qty, $rate, $disc);
+			$built = $this->buildItemFromPwp($cpId, (int) $resolved['pwp_id'], $qty, $rate, $disc);
 			if ($built['ack'] != 1) {
 				return $built;
 			}
@@ -565,7 +824,15 @@ class ChannelPartnerOrder
 		}
 
 		if (empty($itemsIn)) {
-			return array('ack' => 0, 'ack_msg' => 'Please add at least one product.');
+			return array(
+				'ack' => 0,
+				'ack_msg' => 'Please add at least one product. Send pwp_id + qty (do NOT send products unless JSON array).',
+				'example' => array(
+					'pwp_id' => 2095,
+					'qty' => 1,
+					'channel_partner_customer_id' => 28,
+				),
+			);
 		}
 
 		/* Stock check against My Stock */

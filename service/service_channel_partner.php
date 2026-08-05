@@ -187,18 +187,31 @@ if ($is_valid_api_key) {
 		} else if ($service == 'get_cp_customer_order_products' || $service == 248) {
 			$detail = array(
 				'channel_partner_id' => $channel_partner_id,
-				'search_name' => isset($_REQUEST['search_name']) ? $db->clean($_REQUEST['search_name']) : '',
+				'search_name' => isset($_REQUEST['search_name']) ? $db->clean($_REQUEST['search_name']) : (isset($_REQUEST['search']) ? $db->clean($_REQUEST['search']) : ''),
 				'only_in_stock' => isset($_REQUEST['only_in_stock']) ? (int) $_REQUEST['only_in_stock'] : 0,
 			);
 			$db->printJSON($objCPOrder->GetOrderProducts($detail));
 		} else if ($service == 'get_cp_customer_order_cart' || $service == 249) {
-			$db->printJSON($objCPOrder->GetCart(array('channel_partner_id' => $channel_partner_id)));
+			$detail = array(
+				'channel_partner_id' => $channel_partner_id,
+				'channel_partner_customer_id' => isset($_REQUEST['channel_partner_customer_id'])
+					? (int) $_REQUEST['channel_partner_customer_id']
+					: (isset($_REQUEST['party_id']) ? (int) $_REQUEST['party_id'] : 0),
+				'gst_apply_flag' => isset($_REQUEST['gst_apply_flag']) ? (int) $_REQUEST['gst_apply_flag'] : 1,
+			);
+			$db->printJSON($objCPOrder->GetCart($detail));
 		} else if ($service == 'add_cp_customer_order_cart' || $service == 250) {
 			$detail = array(
 				'channel_partner_id' => $channel_partner_id,
-				'channel_partner_customer_id' => isset($_REQUEST['channel_partner_customer_id']) ? (int) $_REQUEST['channel_partner_customer_id'] : 0,
+				'channel_partner_customer_id' => isset($_REQUEST['channel_partner_customer_id'])
+					? (int) $_REQUEST['channel_partner_customer_id']
+					: (isset($_REQUEST['party_id']) ? (int) $_REQUEST['party_id'] : 0),
 				'gst_apply_flag' => isset($_REQUEST['gst_apply_flag']) ? (int) $_REQUEST['gst_apply_flag'] : 1,
-				'pwp_id' => isset($_REQUEST['pwp_id']) ? (int) $_REQUEST['pwp_id'] : 0,
+				'pwp_id' => isset($_REQUEST['pwp_id']) ? (int) $_REQUEST['pwp_id'] : (isset($_REQUEST['line_product']) ? (int) $_REQUEST['line_product'] : 0),
+				'catno' => isset($_REQUEST['catno']) ? $db->clean($_REQUEST['catno']) : (isset($_REQUEST['cat_no']) ? $db->clean($_REQUEST['cat_no']) : ''),
+				'product_id' => isset($_REQUEST['product_id']) ? (int) $_REQUEST['product_id'] : (isset($_REQUEST['pid']) ? (int) $_REQUEST['pid'] : (isset($_REQUEST['pro_id']) ? (int) $_REQUEST['pro_id'] : 0)),
+				'pid' => isset($_REQUEST['pid']) ? (int) $_REQUEST['pid'] : (isset($_REQUEST['product_id']) ? (int) $_REQUEST['product_id'] : 0),
+				'weight_id' => isset($_REQUEST['weight_id']) ? $_REQUEST['weight_id'] : '',
 				'qty' => isset($_REQUEST['qty']) ? $_REQUEST['qty'] : '',
 				'rate' => isset($_REQUEST['rate']) ? $_REQUEST['rate'] : null,
 				'discount' => isset($_REQUEST['discount']) ? $_REQUEST['discount'] : null,
