@@ -23,6 +23,12 @@
  * #254 place_cp_customer_order             — Place order (stock debit)
  * #255 get_cp_customer_orders              — List Customer Orders
  * #256 get_cp_customer_order_detail        — Order detail + items
+ * #257 get_cp_my_stock                     — My Stock Main (Product & Code)
+ * #258 get_cp_my_stock_movements           — My Stock Inward / Outward ledger
+ * #259 get_cp_payment_parties              — Receive Payment: party list + payment types
+ * #260 get_cp_payment_orders               — Receive Payment: orders for party
+ * #261 save_cp_receive_payment             — Save payment received against order
+ * #262 get_cp_party_ledger                 — Party Ledger / CP Customer Ledger (Tally style)
  *
  * Also available (older): service_genral.php #224/#225 same customer table.
  */
@@ -32,8 +38,14 @@ if ($is_valid_api_key) {
 	if ($is_valid_service) {
 		require_once('../include/class.channel_partner_customer.php');
 		require_once('../include/class.channel_partner_order.php');
+		require_once('../include/class.channel_partner_stock.php');
+		require_once('../include/class.channel_partner_payment.php');
+		require_once('../include/class.channel_partner_ledger.php');
 		$objCP = new ChannelPartnerCustomer();
 		$objCPOrder = new ChannelPartnerOrder();
+		$objCPStock = new ChannelPartnerStock($db);
+		$objCPPay = new ChannelPartnerPayment($db);
+		$objCPLedger = new ChannelPartnerLedger($db);
 
 		$channel_partner_id = isset($_REQUEST['channel_partner_id']) ? (int) $_REQUEST['channel_partner_id'] : 0;
 
@@ -240,15 +252,90 @@ if ($is_valid_api_key) {
 				'order_id' => isset($_REQUEST['order_id']) ? (int) $_REQUEST['order_id'] : (isset($_REQUEST['id']) ? (int) $_REQUEST['id'] : 0),
 			);
 			$db->printJSON($objCPOrder->GetOrderDetail($detail));
+		} else if ($service == 'get_cp_my_stock' || $service == 257) {
+			if ($channel_partner_id <= 0) {
+				$db->printJSON(array(
+					'ack' => 0,
+					'ack_msg' => 'channel_partner_id is required. Use value from Login API #2 result.channel_partner_id',
+				));
+			} else {
+				$search = isset($_REQUEST['search_name']) ? $db->clean($_REQUEST['search_name']) : '';
+				$db->printJSON($objCPStock->GetMyStockMain($channel_partner_id, $search));
+			}
+		} else if ($service == 'get_cp_my_stock_movements' || $service == 258) {
+			if ($channel_partner_id <= 0) {
+				$db->printJSON(array(
+					'ack' => 0,
+					'ack_msg' => 'channel_partner_id is required. Use value from Login API #2 result.channel_partner_id',
+				));
+			} else {
+				$search = isset($_REQUEST['search_name']) ? $db->clean($_REQUEST['search_name']) : '';
+				$db->printJSON($objCPStock->GetMyStockMovements($channel_partner_id, $search));
+			}
+		} else if ($service == 'get_cp_payment_parties' || $service == 259) {
+			if ($channel_partner_id <= 0) {
+				$db->printJSON(array(
+					'ack' => 0,
+					'ack_msg' => 'channel_partner_id is required. Use value from Login API #2 result.channel_partner_id',
+				));
+			} else {
+				$detail = array(
+					'channel_partner_id' => $channel_partner_id,
+					'search_name' => isset($_REQUEST['search_name']) ? $db->clean($_REQUEST['search_name']) : '',
+				);
+				$db->printJSON($objCPPay->GetPaymentParties($detail));
+			}
+		} else if ($service == 'get_cp_payment_orders' || $service == 260) {
+			if ($channel_partner_id <= 0) {
+				$db->printJSON(array(
+					'ack' => 0,
+					'ack_msg' => 'channel_partner_id is required. Use value from Login API #2 result.channel_partner_id',
+				));
+			} else {
+				$detail = array(
+					'channel_partner_id' => $channel_partner_id,
+					'party_id' => isset($_REQUEST['party_id']) ? (int) $_REQUEST['party_id'] : (isset($_REQUEST['channel_partner_customer_id']) ? (int) $_REQUEST['channel_partner_customer_id'] : 0),
+				);
+				$db->printJSON($objCPPay->GetPaymentOrders($detail));
+			}
+		} else if ($service == 'save_cp_receive_payment' || $service == 261) {
+			if ($channel_partner_id <= 0) {
+				$db->printJSON(array(
+					'ack' => 0,
+					'ack_msg' => 'channel_partner_id is required. Use value from Login API #2 result.channel_partner_id',
+				));
+			} else {
+				$detail = array(
+					'channel_partner_id' => $channel_partner_id,
+					'order_id' => isset($_REQUEST['order_id']) ? (int) $_REQUEST['order_id'] : 0,
+					'paid_amount' => isset($_REQUEST['paid_amount']) ? $_REQUEST['paid_amount'] : 0,
+					'payment_type' => isset($_REQUEST['payment_type']) ? (int) $_REQUEST['payment_type'] : 0,
+					'remark' => isset($_REQUEST['remark']) ? $_REQUEST['remark'] : '',
+				);
+				$db->printJSON($objCPPay->SaveReceivePayment($detail));
+			}
+		} else if ($service == 'get_cp_party_ledger' || $service == 262) {
+			if ($channel_partner_id <= 0) {
+				$db->printJSON(array(
+					'ack' => 0,
+					'ack_msg' => 'channel_partner_id is required. Use value from Login API #2 result.channel_partner_id',
+				));
+			} else {
+				$detail = array(
+					'channel_partner_id' => $channel_partner_id,
+					'party_id' => isset($_REQUEST['party_id']) ? (int) $_REQUEST['party_id'] : 0,
+				);
+				$db->printJSON($objCPLedger->GetPartyLedger($detail));
+			}
 		} else {
 			$db->printJSON(array(
 				'ack' => 0,
-				'ack_msg' => 'Invalid Channel Partner service. Use s=241 to 256.',
+				'ack_msg' => 'Invalid Channel Partner service. Use s=241 to 262.',
 				'developer_msg' => 'Unknown service: ' . $service,
 			));
 		}
 	} else {
-		$db->printJSON(array('ack' => 0, 'ack_msg' => 'Invalid Service.', 'developer_msg' => 'Register APIs 241-256 via db_sync'));
+		$db->printJSON(array('ack' => 0, 'ack_msg' => 'Invalid Service.', 'developer_msg' => 'Register APIs 241-262 via db_sync'));
 	}
 } else {
 	$db->printJSON(array('ack' => 0, 'ack_msg' => 'Invalid API key.', 'developer_msg' => 'Use key=1226'));

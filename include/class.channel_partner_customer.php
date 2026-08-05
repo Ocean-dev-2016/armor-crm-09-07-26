@@ -580,10 +580,10 @@ class ChannelPartnerCustomer extends Functions
 				'payment_followup' => $payment_followup,
 				'menus' => array(
 					array('key' => 'my_customers', 'label' => 'My Customers', 'api' => 241),
-					array('key' => 'customer_order', 'label' => 'Customer Order', 'api' => 0),
-					array('key' => 'my_stock', 'label' => 'My Stock', 'api' => 0),
-					array('key' => 'receive_payment', 'label' => 'Receive Payment', 'api' => 0),
-					array('key' => 'party_ledger', 'label' => 'Party Ledger', 'api' => 0),
+					array('key' => 'customer_order', 'label' => 'Customer Order', 'api' => 255),
+					array('key' => 'my_stock', 'label' => 'My Stock', 'api' => 257),
+					array('key' => 'receive_payment', 'label' => 'Receive Payment', 'api' => 259),
+					array('key' => 'party_ledger', 'label' => 'Party Ledger', 'api' => 262),
 					array('key' => 'so_pi_format', 'label' => 'SO / PI Format', 'api' => 0),
 				),
 				'actions' => array(

@@ -1286,7 +1286,13 @@ db_sync_register_api_if_missing($conn, 253, 'clear_cp_customer_order_cart', 'CP 
 db_sync_register_api_if_missing($conn, 254, 'place_cp_customer_order', 'CP Place Customer Order', $cpAppApiBase . '&s=254&channel_partner_id=&channel_partner_customer_id=&gst_apply_flag=1&address=');
 db_sync_register_api_if_missing($conn, 255, 'get_cp_customer_orders', 'CP Customer Orders List', $cpAppApiBase . '&s=255&channel_partner_id=&search_name=&ul=0&ll=50');
 db_sync_register_api_if_missing($conn, 256, 'get_cp_customer_order_detail', 'CP Customer Order Detail', $cpAppApiBase . '&s=256&channel_partner_id=&order_id=');
-foreach (array(241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 256) as $cpAppApiId) {
+db_sync_register_api_if_missing($conn, 257, 'get_cp_my_stock', 'CP My Stock Main (Product & Code)', $cpAppApiBase . '&s=257&channel_partner_id=&search_name=');
+db_sync_register_api_if_missing($conn, 258, 'get_cp_my_stock_movements', 'CP My Stock Inward/Outward', $cpAppApiBase . '&s=258&channel_partner_id=&search_name=');
+db_sync_register_api_if_missing($conn, 259, 'get_cp_payment_parties', 'CP Receive Payment Parties', $cpAppApiBase . '&s=259&channel_partner_id=&search_name=');
+db_sync_register_api_if_missing($conn, 260, 'get_cp_payment_orders', 'CP Receive Payment Orders', $cpAppApiBase . '&s=260&channel_partner_id=&party_id=');
+db_sync_register_api_if_missing($conn, 261, 'save_cp_receive_payment', 'CP Save Receive Payment', $cpAppApiBase . '&s=261&channel_partner_id=&order_id=&paid_amount=&payment_type=&remark=');
+db_sync_register_api_if_missing($conn, 262, 'get_cp_party_ledger', 'CP Party Ledger / Customer Ledger', $cpAppApiBase . '&s=262&channel_partner_id=&party_id=0');
+foreach (array(241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 256, 257, 258, 259, 260, 261, 262) as $cpAppApiId) {
 	$slugMap = array(
 		241 => 'get_cp_my_customers',
 		242 => 'add_cp_my_customer',
@@ -1304,6 +1310,12 @@ foreach (array(241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 
 		254 => 'place_cp_customer_order',
 		255 => 'get_cp_customer_orders',
 		256 => 'get_cp_customer_order_detail',
+		257 => 'get_cp_my_stock',
+		258 => 'get_cp_my_stock_movements',
+		259 => 'get_cp_payment_parties',
+		260 => 'get_cp_payment_orders',
+		261 => 'save_cp_receive_payment',
+		262 => 'get_cp_party_ledger',
 	);
 	$urlMap = array(
 		241 => $cpAppApiBase . '&s=241&channel_partner_id=&search_name=&ul=0&ll=50',
@@ -1322,6 +1334,12 @@ foreach (array(241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 
 		254 => $cpAppApiBase . '&s=254&channel_partner_id=&channel_partner_customer_id=&gst_apply_flag=1&address=',
 		255 => $cpAppApiBase . '&s=255&channel_partner_id=&search_name=&ul=0&ll=50',
 		256 => $cpAppApiBase . '&s=256&channel_partner_id=&order_id=',
+		257 => $cpAppApiBase . '&s=257&channel_partner_id=&search_name=',
+		258 => $cpAppApiBase . '&s=258&channel_partner_id=&search_name=',
+		259 => $cpAppApiBase . '&s=259&channel_partner_id=&search_name=',
+		260 => $cpAppApiBase . '&s=260&channel_partner_id=&party_id=',
+		261 => $cpAppApiBase . '&s=261&channel_partner_id=&order_id=&paid_amount=&payment_type=&remark=',
+		262 => $cpAppApiBase . '&s=262&channel_partner_id=&party_id=0',
 	);
 	$escSlug = mysqli_real_escape_string($conn, $slugMap[$cpAppApiId]);
 	$escUrl = mysqli_real_escape_string($conn, $urlMap[$cpAppApiId]);

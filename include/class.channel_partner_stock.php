@@ -488,4 +488,141 @@ class ChannelPartnerStock
 			'errors' => $msgs,
 		);
 	}
+
+	/**
+	 * App API — My Stock tab 1: Main Stock (Product & Code) — same as web.
+	 */
+	public function GetMyStockMain($cpId, $searchName = '')
+	{
+		$cpId = (int) $cpId;
+		if ($cpId <= 0) {
+			return array('ack' => 0, 'ack_msg' => 'channel_partner_id is required.');
+		}
+		$whereCp = "id='" . $cpId . "' AND channel_partner_flag=1 AND customer_flag=0 AND isDelete=0";
+		if ((int) $this->db->rp_getTotalRecord('executive', $whereCp, 0) <= 0) {
+			return array('ack' => 0, 'ack_msg' => 'Invalid Channel Partner.');
+		}
+
+		$this->backfillMissingOutward($cpId);
+
+		$company = $this->db->rp_getValue('executive', 'company_name', "id='" . $cpId . "'", 0);
+		$rows = $this->getMainStockByProductCode($cpId);
+		$search = trim($searchName);
+		$result = array();
+		$sr = 0;
+		foreach ($rows as $r) {
+			$code = (isset($r['catno']) && $r['catno'] !== '' && $r['catno'] !== '-') ? $r['catno'] : '';
+			$name = isset($r['pro_name']) ? $r['pro_name'] : '';
+			$qty = isset($r['total_qty']) ? (float) $r['total_qty'] : 0;
+			$label = $code !== '' ? ($code . ' - ' . $name) : $name;
+			if ($search !== '') {
+				$hay = strtolower($label . ' ' . $code . ' ' . $name);
+				if (strpos($hay, strtolower($search)) === false) {
+					continue;
+				}
+			}
+			$sr++;
+			$result[] = array(
+				'sr' => $sr,
+				'pro_id' => (int) $r['pro_id'],
+				'product_code' => $code,
+				'product_name' => $name,
+				'product_label' => $label,
+				'available_qty' => round($qty, 2),
+			);
+		}
+
+		return array(
+			'ack' => 1,
+			'ack_msg' => 'My Stock (Main) ready',
+			'channel_partner_id' => $cpId,
+			'company_name' => $company ? $company : '',
+			'view' => 'main',
+			'title' => 'Main Stock (Product & Code)',
+			'total' => count($result),
+			'result' => $result,
+		);
+	}
+
+	/**
+	 * App API — My Stock tab 2: Inward / Outward ledger — same as web.
+	 */
+	public function GetMyStockMovements($cpId, $searchName = '')
+	{
+		$cpId = (int) $cpId;
+		if ($cpId <= 0) {
+			return array('ack' => 0, 'ack_msg' => 'channel_partner_id is required.');
+		}
+		$whereCp = "id='" . $cpId . "' AND channel_partner_flag=1 AND customer_flag=0 AND isDelete=0";
+		if ((int) $this->db->rp_getTotalRecord('executive', $whereCp, 0) <= 0) {
+			return array('ack' => 0, 'ack_msg' => 'Invalid Channel Partner.');
+		}
+
+		$this->backfillMissingOutward($cpId);
+
+		$company = $this->db->rp_getValue('executive', 'company_name', "id='" . $cpId . "'", 0);
+		$moves = $this->getStockMovements($cpId);
+		$search = trim($searchName);
+		$all = array();
+		$sr = 0;
+		$running = 0;
+		foreach ($moves as $m) {
+			$code = (isset($m['catno']) && $m['catno'] !== '' && $m['catno'] !== '-') ? $m['catno'] : '';
+			$name = isset($m['pro_name']) ? $m['pro_name'] : '';
+			$label = $code !== '' ? ($code . ' - ' . $name) : $name;
+			$running += (float) $m['qty'];
+			$isIn = ($m['txn_type'] === 'in' || (float) $m['qty_in'] > 0);
+			$dateShow = '';
+			if (!empty($m['date']) && $m['date'] != '0000-00-00') {
+				$dateShow = date('d-m-Y', strtotime($m['date']));
+			}
+			$sr++;
+			$all[] = array(
+				'sr' => $sr,
+				'id' => (int) $m['id'],
+				'date' => isset($m['date']) ? $m['date'] : '',
+				'date_display' => $dateShow,
+				'bill_no' => $m['bill_no'] !== '' ? $m['bill_no'] : '-',
+				'bill_date' => isset($m['bill_date']) ? $m['bill_date'] : '',
+				'ref_order_id' => (int) $m['ref_order_id'],
+				'txn_type' => $isIn ? 'in' : 'out',
+				'txn_label' => $isIn ? 'INWARD' : 'OUTWARD',
+				'pro_id' => (int) $m['pro_id'],
+				'product_code' => $code,
+				'product_name' => $name,
+				'product_label' => $label,
+				'qty_in' => round((float) $m['qty_in'], 2),
+				'qty_out' => round((float) $m['qty_out'], 2),
+				'balance' => round($running, 2),
+				'remark' => isset($m['remark']) ? $m['remark'] : '',
+			);
+		}
+
+		$result = array();
+		if ($search === '') {
+			$result = $all;
+		} else {
+			$sr2 = 0;
+			foreach ($all as $row) {
+				$hay = strtolower($row['product_label'] . ' ' . $row['bill_no'] . ' ' . $row['product_name'] . ' ' . $row['product_code']);
+				if (strpos($hay, strtolower($search)) === false) {
+					continue;
+				}
+				$sr2++;
+				$row['sr'] = $sr2;
+				$result[] = $row;
+			}
+		}
+
+		return array(
+			'ack' => 1,
+			'ack_msg' => 'My Stock (Inward/Outward) ready',
+			'channel_partner_id' => $cpId,
+			'company_name' => $company ? $company : '',
+			'view' => 'inout',
+			'title' => 'Inward / Outward (Bill No & Date)',
+			'total' => count($result),
+			'result' => $result,
+		);
+	}
 }

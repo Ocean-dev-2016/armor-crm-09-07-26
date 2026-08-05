@@ -1,7 +1,7 @@
 {
     "info": {
         "name": "Armor Fire CRM - Full API Collection (Backend Verified)",
-        "description": "Complete API collection generated from live PHP service source code.\n\nGenerated: 2026-07-10 13:59:58\nUpdated: 2026-08-04 \u2014 CP Login Dashboard #247 + My Customers #241-#246 + Customer Order Cart #248-#256 (service_channel_partner.php)\nAll requests: POST multipart/form-data\nAuth: `key` (API key) + `s` (service id or slug)\n\nEnvironments:\n- Live: https://armor-crm.oceanhub.co.in\n- Local: http://localhost:8080/armor_crm_08_07/202526\n\nSet collection variable `base_url` before testing.\nAPI key: 1226\n\n**Common Login (#2):** `service_sales_executive.php` \u2014 result.user_type = sales_executive | channel_partner\n**CP Dashboard (#247):** Login #2 \u2192 result.cp_apis.dashboard = 247\nEmployee Chat folder: service_employee_chat.php (#236-#240)\nService #39 (sync_offline_customers) includes all CRM columns + channel_partner_flag.",
+        "description": "Complete API collection generated from live PHP service source code.\n\nGenerated: 2026-07-10 13:59:58\nUpdated: 2026-08-04 \u2014 CP Login Dashboard #247 + My Customers #241-#246 + Customer Order Cart #248-#256 (service_channel_partner.php)\nAll requests: POST multipart/form-data\nAuth: `key` (API key) + `s` (service id or slug)\n\nEnvironments:\n- Live: https://armor-crm.oceanhub.co.in\n- Local: http://localhost:8080/armor_crm_08_07/202526\n\nSet collection variable `base_url` before testing.\nAPI key: 1226\n\n**Common Login (#2):** `service_sales_executive.php` \u2014 result.user_type = sales_executive | channel_partner\n**CP Dashboard (#247):** Login #2 \u2192 result.cp_apis.dashboard = 247\nEmployee Chat folder: service_employee_chat.php (#236-#240)\nService #39 (sync_offline_customers) includes all CRM columns + channel_partner_flag.\n**CP My Stock:** #257-#258 in service_channel_partner.php\n**CP Receive Payment:** #259-#261 in service_channel_partner.php\n**CP Party Ledger:** #262 in service_channel_partner.php",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "item": [
@@ -899,6 +899,362 @@
                             ]
                         },
                         "description": "Order header + items[] + print_url"
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Channel Partner App \u2014 My Stock (#257-#258)",
+            "description": "Same as web My Stock (channel_partner_stock_manage.php).\n\n**#257 Main Stock** \u2014 Product Code + Name + Available Qty\n**#258 Inward/Outward** \u2014 Bill No, Date, In/Out, Balance\n\nEndpoint: service/service_channel_partner.php\nkey=1226",
+            "item": [
+                {
+                    "name": "CP My Stock Main (#257)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "257",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "channel_partner_id",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "From Login #2"
+                                },
+                                {
+                                    "key": "search_name",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Optional product / code search"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_channel_partner.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_channel_partner.php"
+                            ]
+                        },
+                        "description": "Web tab: 1. Main Stock (Product & Code)\n\nReturns: product_code, product_name, product_label (code - name), available_qty\nSame data as Aarav Safety Solutions \u2014 Main Stock table."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "CP My Stock Movements (#258)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "258",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "channel_partner_id",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "From Login #2"
+                                },
+                                {
+                                    "key": "search_name",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Optional product / bill search"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_channel_partner.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_channel_partner.php"
+                            ]
+                        },
+                        "description": "Web tab: 2. Inward / Outward (Bill No & Date)\n\nReturns: date, bill_no, txn_label (INWARD/OUTWARD), product_label, qty_in, qty_out, balance"
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Channel Partner App \u2014 Receive Payment (#259-#261)",
+            "description": "Same as web Receive Payment (channel_partner_payment.php).\n\n**App flow:**\n1) #259 Parties dropdown + payment_types\n2) Select party \u2192 #260 Orders (Pending / Received)\n3) #261 Save payment (order_id, paid_amount, payment_type, remark)\n\nPayment types: 1=Cash, 2=Cheque, 3=Online/NEFT/UPI, 4=Other\n\nEndpoint: service/service_channel_partner.php\nkey=1226",
+            "item": [
+                {
+                    "name": "CP Payment Parties (#259)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "259",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "channel_partner_id",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "From Login #2"
+                                },
+                                {
+                                    "key": "search_name",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Optional party search"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_channel_partner.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_channel_partner.php"
+                            ]
+                        },
+                        "description": "Select Party / Customer list.\nReturns: party_id, display_name, payment_types[]"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "CP Payment Orders (#260)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "260",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "channel_partner_id",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "party_id",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "From #259 party_id (channel_partner_customer.id)"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_channel_partner.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_channel_partner.php"
+                            ]
+                        },
+                        "description": "Orders for selected party.\nReturns: order_id, order_no, order_amount, payment_status_label, can_receive (1=show Receive button), suggested_amount"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "CP Save Receive Payment (#261)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "261",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "channel_partner_id",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "order_id",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "From #260"
+                                },
+                                {
+                                    "key": "paid_amount",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Required > 0"
+                                },
+                                {
+                                    "key": "payment_type",
+                                    "value": "1",
+                                    "type": "text",
+                                    "description": "1=Cash 2=Cheque 3=Online 4=Other"
+                                },
+                                {
+                                    "key": "remark",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Optional"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_channel_partner.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_channel_partner.php"
+                            ]
+                        },
+                        "description": "Save Payment Received against order (same as web Save Payment)."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Channel Partner App \u2014 Party Ledger (#262)",
+            "description": "Same as web CP Customer Ledger (channel_partner_ledger.php) \u2014 Tally style.\n\n**App flow:**\n1) Call #262 with channel_partner_id + party_id=0 (All Parties)\n2) Use response.parties[] for Party dropdown\n3) On party change, call #262 again with selected party_id\n4) Show result[]: date_display, particulars, voucher, debit_display, credit_display, balance_display\n5) Footer: closing_balance_display\n6) Receive Payment button \u2192 API #259\n\nEndpoint: service/service_channel_partner.php\nkey=1226",
+            "item": [
+                {
+                    "name": "CP Party Ledger \u2014 All Parties (#262)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "262",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "channel_partner_id",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "From Login #2"
+                                },
+                                {
+                                    "key": "party_id",
+                                    "value": "0",
+                                    "type": "text",
+                                    "description": "0 = All Parties (default)"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_channel_partner.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_channel_partner.php"
+                            ]
+                        },
+                        "description": "Full ledger rows + parties dropdown + closing balance.\nReturns: parties[], result[] (date, particulars, voucher, debit, credit, balance_display), closing_balance_display"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "CP Party Ledger \u2014 One Party (#262)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "262",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "channel_partner_id",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "From Login #2"
+                                },
+                                {
+                                    "key": "party_id",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "channel_partner_customer.id from parties[]"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_channel_partner.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_channel_partner.php"
+                            ]
+                        },
+                        "description": "Filtered ledger for one party."
                     },
                     "response": []
                 }
@@ -4582,7 +4938,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 38\n\n**Slug:** get_city\n\n**Service (s):** 38\n\nReturns cities for selected state (table `city` where state_id = class.id).\n\n**Required:** state_id (from #28 result.id) OR state name\n\n**Example:** Gujarat → state_id=12 → Ahmedabad, Rajkot, Surat...\n\n**Bug fixed:** Earlier this API used `area` + city_id. Passing Gujarat id=12 returned only Jhansi (city.id=12 in UP)."
+                        "description": "**API Code:** 38\n\n**Slug:** get_city\n\n**Service (s):** 38\n\nReturns cities for selected state (table `city` where state_id = class.id).\n\n**Required:** state_id (from #28 result.id) OR state name\n\n**Example:** Gujarat \u2192 state_id=12 \u2192 Ahmedabad, Rajkot, Surat...\n\n**Bug fixed:** Earlier this API used `area` + city_id. Passing Gujarat id=12 returned only Jhansi (city.id=12 in UP)."
                     },
                     "response": []
                 },
