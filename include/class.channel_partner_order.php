@@ -86,6 +86,31 @@ class ChannelPartnerOrder
 		return ($id !== '' && $id !== null && $id !== false) ? (int) $id : 0;
 	}
 
+	/**
+	 * Auto Order No — same as web AddToCart for CP (OUTLETS_ORDER_NO = PI/{id}).
+	 * Draft cart was created without order_no; assign before/after place.
+	 */
+	private function ensureOrderNo($orderId)
+	{
+		$orderId = (int) $orderId;
+		if ($orderId <= 0) {
+			return '';
+		}
+		$existing = $this->db->rp_getValue('orders', 'order_no', "id='" . $orderId . "' AND isDelete=0", 0);
+		if ($existing !== '' && $existing !== null && $existing !== false && trim((string) $existing) !== '') {
+			return trim((string) $existing);
+		}
+		$prefix = defined('OUTLETS_ORDER_NO') ? OUTLETS_ORDER_NO : 'PI/';
+		$orderNo = $prefix . str_pad((string) $orderId, 2, '0', STR_PAD_LEFT);
+		$this->db->rp_update(
+			'orders',
+			array('order_no' => $orderNo, 'modified_date' => date('Y-m-d H:i:s')),
+			"id='" . $orderId . "' AND isDelete=0",
+			0
+		);
+		return $orderNo;
+	}
+
 	private function workflowStatus($status, $paidFlag, $grandTotal, $paidAmount)
 	{
 		$status = (int) $status;
@@ -553,6 +578,7 @@ class ChannelPartnerOrder
 				$upd['gst_apply_flag'] = $gstApplyFlag;
 			}
 			$this->db->rp_update('orders', $upd, "id='" . $cartId . "' AND isDelete=0", 0);
+			$this->ensureOrderNo($cartId);
 			return array('ack' => 1, 'cart_id' => $cartId, 'sales_executive_id' => $sales_executive_id);
 		}
 
@@ -592,6 +618,7 @@ class ChannelPartnerOrder
 		if ($cartId <= 0) {
 			return array('ack' => 0, 'ack_msg' => 'Failed to create cart.');
 		}
+		$this->ensureOrderNo($cartId);
 		return array('ack' => 1, 'cart_id' => $cartId, 'sales_executive_id' => $sales_executive_id);
 	}
 
@@ -914,6 +941,7 @@ class ChannelPartnerOrder
 
 		$cart = $this->formatCartResponse($cpId, $cartId);
 		$cart['ack_msg'] = 'Product added to cart.';
+		$cart['order_no'] = $this->ensureOrderNo($cartId);
 		return $cart;
 	}
 
@@ -1293,13 +1321,21 @@ class ChannelPartnerOrder
 		}
 		$this->db->rp_update('orders', $portalUpd, "id='" . $cartId . "'", 0);
 
+		/* Always assign Order No (PI/{id}) if blank — same as web AddToCart */
+		$orderNo = $this->ensureOrderNo($cartId);
+		$chk = $this->db->rp_getData('orders', 'id,order_no,status,grand_total', "id='" . $cartId . "' AND isDelete=0", '', 0);
+		$chkRow = $chk ? mysqli_fetch_assoc($chk) : $chkRow;
+		if (empty($chkRow['order_no']) && $orderNo != '') {
+			$chkRow['order_no'] = $orderNo;
+		}
+
 		$debitRes = $this->objStock->debitForCustomerOrder($cartId);
 		if (empty($debitRes['ack'])) {
 			return array(
 				'ack' => 1,
 				'ack_msg' => 'Order placed but stock debit failed: ' . (isset($debitRes['ack_msg']) ? $debitRes['ack_msg'] : ''),
 				'order_id' => $cartId,
-				'order_no' => $chkRow['order_no'],
+				'order_no' => isset($chkRow['order_no']) ? $chkRow['order_no'] : $orderNo,
 				'stock_debited' => 0,
 			);
 		}
@@ -1308,7 +1344,7 @@ class ChannelPartnerOrder
 			'ack' => 1,
 			'ack_msg' => 'Order placed successfully. Stock deducted.',
 			'order_id' => $cartId,
-			'order_no' => $chkRow['order_no'],
+			'order_no' => isset($chkRow['order_no']) ? $chkRow['order_no'] : $orderNo,
 			'grand_total' => isset($chkRow['grand_total']) ? round((float) $chkRow['grand_total'], 2) : 0,
 			'channel_partner_customer_id' => $custId,
 			'stock_debited' => 1,
@@ -1357,6 +1393,10 @@ class ChannelPartnerOrder
 		$result = array();
 		if ($res) {
 			while ($row = mysqli_fetch_assoc($res)) {
+				$oid = (int) $row['id'];
+				if ($oid > 0 && (trim((string) $row['order_no']) === '')) {
+					$row['order_no'] = $this->ensureOrderNo($oid);
+				}
 				$qty = $this->db->rp_getValue('order_product_item', 'SUM(pro_qty)', "order_id='" . (int) $row['id'] . "' AND isDelete=0", 0);
 				$wf = $this->workflowStatus($row['status'], $row['payment_received_flag'], $row['grand_total'], $row['payment_received_amount']);
 				$party = trim($row['party_name']);

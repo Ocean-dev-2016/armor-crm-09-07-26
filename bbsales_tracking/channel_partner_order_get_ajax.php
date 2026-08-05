@@ -100,6 +100,18 @@ function cp_customer_order_workflow($status, $paidFlag, $grandTotal, $paidAmount
 	if ($res && mysqli_num_rows($res) > 0) {
 		$sr = $page_position + 1;
 		while ($row = mysqli_fetch_assoc($res)) {
+			/* Heal blank Order No for API-placed orders (same as web PI/{id}) */
+			if ((int) $row['id'] > 0 && trim((string) $row['order_no']) === '') {
+				$prefix = defined('OUTLETS_ORDER_NO') ? OUTLETS_ORDER_NO : 'PI/';
+				$genNo = $prefix . str_pad((string) (int) $row['id'], 2, '0', STR_PAD_LEFT);
+				$db->rp_update(
+					'orders',
+					array('order_no' => $genNo, 'modified_date' => date('Y-m-d H:i:s')),
+					"id='" . (int) $row['id'] . "' AND isDelete=0",
+					0
+				);
+				$row['order_no'] = $genNo;
+			}
 			$party = trim($row['party_name']);
 			if ($party == '') {
 				$party = trim($row['person_name']);
