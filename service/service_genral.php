@@ -61,8 +61,21 @@ if ($is_valid_api_key) {
 			// print_r($ack1);exit;
 			$db->printJSON($ack1);
 		} else if ($service == 'get_city' || $service == 38) {
-			$detail = array();
-			$ack = $system->getAllRoutDetail(array("id", "name", "class_id")); //id
+			/* State-wise cities from `city` table (same as web ajax_get_main_city.php).
+			 * Pass state_id = class.id from get_state (#28), OR state name.
+			 * Backward compat: if only city_id is sent (no state_id), return areas for that city
+			 * (old wrong wiring). Prefer state_id for city list. */
+			$hasState = (isset($_REQUEST['state_id']) && trim($_REQUEST['state_id']) !== '')
+				|| (isset($_REQUEST['state']) && trim($_REQUEST['state']) !== '')
+				|| (isset($_REQUEST['state_name']) && trim($_REQUEST['state_name']) !== '')
+				|| (isset($_REQUEST['class_id']) && trim($_REQUEST['class_id']) !== '')
+				|| (isset($_REQUEST['sid']) && trim($_REQUEST['sid']) !== '');
+			$hasCityOnly = !$hasState && isset($_REQUEST['city_id']) && trim($_REQUEST['city_id']) !== '';
+			if ($hasCityOnly) {
+				$ack = $system->getAllRoutDetail(array("id", "name", "class_id", "city_id"));
+			} else {
+				$ack = $system->getAllCityDetail(array("id", "name", "state_id"));
+			}
 			$db->printJSON($ack);
 		} else if ($service == 'get_class' || $service == 35) {
 			$type	= isset($_REQUEST['type']) ? $db->clean($_REQUEST['type']) : "";

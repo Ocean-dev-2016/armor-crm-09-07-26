@@ -246,21 +246,61 @@ class System extends Functions
      function getAllCityDetail($required_columns=array())
     {
     	$required_columns=$this->getRequiredColumns($required_columns);
-    	if($_REQUEST['state_id']!="")
+
+		/* Resolve state filter: state_id (class.id) OR state / state_name / class_id / sid */
+		$state_id = "";
+		if (isset($_REQUEST['state_id']) && trim($_REQUEST['state_id']) !== '') {
+			$state_id = trim($_REQUEST['state_id']);
+		} else if (isset($_REQUEST['class_id']) && trim($_REQUEST['class_id']) !== '') {
+			$state_id = trim($_REQUEST['class_id']);
+		} else if (isset($_REQUEST['sid']) && trim($_REQUEST['sid']) !== '') {
+			$state_id = trim($_REQUEST['sid']);
+		} else if (isset($_REQUEST['state']) && trim($_REQUEST['state']) !== '') {
+			$state_id = trim($_REQUEST['state']);
+		} else if (isset($_REQUEST['state_name']) && trim($_REQUEST['state_name']) !== '') {
+			$state_id = trim($_REQUEST['state_name']);
+		}
+
+		/* If name passed (e.g. Gujarat), map to class.id — same as web CRM */
+		if ($state_id !== '' && !ctype_digit((string) $state_id)) {
+			$resolved = $this->db->rp_getValue(
+				"class",
+				"id",
+				"name='" . $this->db->clean($state_id) . "' AND isDelete=0",
+				0
+			);
+			if ($resolved === '' || $resolved === null || $resolved === false) {
+				$resolved = $this->db->rp_getValue(
+					"class",
+					"id",
+					"LOWER(name)='" . strtolower($this->db->clean($state_id)) . "' AND isDelete=0",
+					0
+				);
+			}
+			$state_id = ($resolved !== '' && $resolved !== null && $resolved !== false) ? $resolved : '';
+		}
+
+    	if ($state_id !== '')
     	{
-    		$result=$this->db->rp_getData("city",$required_columns,"state_id='".$_REQUEST['state_id']."' AND isDelete=0","name ASC",0);
+    		$result=$this->db->rp_getData("city",$required_columns,"state_id='".$this->db->clean($state_id)."' AND isDelete=0","name ASC",0);
     	}
     	else
     	{
     		$result=$this->db->rp_getData("city",$required_columns,"isDelete=0","name ASC",0);
     	}
-    	while($detail=mysqli_fetch_assoc($result))
-    	{
-    		$p[]=$detail;
-    	}
-    	$reply=array("ack"=>1,"developer_msg"=>"City detail found","ack_msg"=>"City detail found.","result"=>$p);
+		$p = array();
+		if ($result) {
+			while($detail=mysqli_fetch_assoc($result))
+			{
+				$p[]=$detail;
+			}
+		}
+		if (!empty($p)) {
+			$reply=array("ack"=>1,"developer_msg"=>"City detail found","ack_msg"=>"City detail found.","total"=>count($p),"result"=>$p);
+		} else {
+			$reply=array("ack"=>0,"developer_msg"=>"City detail not found","ack_msg"=>"No city found for selected state.","total"=>0,"result"=>array());
+		}
     	return $reply;
-    	//print_r(result);
     }
 	function getAllClassDetailCustomer($required_columns=array())
 	{

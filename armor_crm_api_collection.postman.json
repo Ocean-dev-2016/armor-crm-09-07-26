@@ -4557,6 +4557,18 @@
                                     "key": "s",
                                     "value": "38",
                                     "type": "text"
+                                },
+                                {
+                                    "key": "state_id",
+                                    "value": "12",
+                                    "type": "text",
+                                    "description": "REQUIRED. class.id from get_state (#28). Gujarat=12. Do NOT pass Gujarat id as city_id."
+                                },
+                                {
+                                    "key": "state",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Optional alternate: state name e.g. Gujarat"
                                 }
                             ]
                         },
@@ -4570,7 +4582,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 38\n\n**Slug:** get_city\n\n**Service (s):** 38"
+                        "description": "**API Code:** 38\n\n**Slug:** get_city\n\n**Service (s):** 38\n\nReturns cities for selected state (table `city` where state_id = class.id).\n\n**Required:** state_id (from #28 result.id) OR state name\n\n**Example:** Gujarat → state_id=12 → Ahmedabad, Rajkot, Surat...\n\n**Bug fixed:** Earlier this API used `area` + city_id. Passing Gujarat id=12 returned only Jhansi (city.id=12 in UP)."
                     },
                     "response": []
                 },
