@@ -1191,8 +1191,18 @@ class ChannelPartnerOrder
 			'type_of_company' => isset($cp_exec['type_of_company']) ? $cp_exec['type_of_company'] : '',
 			'terms_comdition' => !empty($cp_exec['cp_print_header']) ? $cp_exec['cp_print_header'] : '',
 			'faithfully' => !empty($cp_exec['cp_print_footer']) ? $cp_exec['cp_print_footer'] : '',
-			'remarks' => isset($detail['remark']) ? $detail['remark'] : '',
+			'remarks' => isset($detail['remark']) ? $detail['remark'] : (isset($detail['remarks']) ? $detail['remarks'] : ''),
 			'round_off' => '',
+			/* PlaceOrderPanel requires these keys as strings (null → broken SQL) — same as web channel_partner_order_simple.php */
+			'chalan_no' => '',
+			'po_no' => '',
+			'po_date' => date('Y-m-d'),
+			'transport_name' => '',
+			'transport_through' => '',
+			'vendor_code' => '',
+			'tendor_code' => '',
+			'terms_condition_id' => '',
+			'max_dispatch_date' => date('Y-m-d'),
 			'channel_partner_customer_id' => $custId,
 			'channel_partner_order_flag' => 1,
 			'cp_portal_order_flag' => 1,
@@ -1205,11 +1215,64 @@ class ChannelPartnerOrder
 		$chk = $this->db->rp_getData('orders', 'id,order_no,status,grand_total', "id='" . $cartId . "' AND isDelete=0", '', 0);
 		$chkRow = $chk ? mysqli_fetch_assoc($chk) : array();
 		if (empty($chkRow) || (int) $chkRow['status'] === -1) {
-			return array(
-				'ack' => 0,
-				'ack_msg' => 'Failed to place order.',
-				'developer_msg' => is_array($placed) && isset($placed['ack_msg']) ? $placed['ack_msg'] : 'PlaceOrderPanel did not finalize order',
+			/* Fallback finalize (App): PlaceOrderPanel fails when null fields break SQL.
+			 * Same end state as web success — status 0 + totals from cart lines. */
+			$sub = 0;
+			$qtyTot = 0;
+			$gstTot = 0;
+			$ir2 = $this->db->rp_getData('order_product_item', '*', "order_id='" . $cartId . "' AND isDelete=0", '', 0);
+			if ($ir2) {
+				while ($it2 = mysqli_fetch_assoc($ir2)) {
+					$line = isset($it2['totalprice']) ? (float) $it2['totalprice'] : ((float) $it2['pro_qty'] * (float) $it2['unitprice']);
+					$sub += $line;
+					$qtyTot += (float) $it2['pro_qty'];
+					$pct = (float) $this->db->rp_getValue('product', 'igst', "id='" . (int) $it2['pro_id'] . "' AND isDelete=0", 0);
+					if ($gstFlag) {
+						$gstTot += ($line * $pct) / 100;
+					}
+				}
+			}
+			$grand = $sub + $gstTot;
+			$fallbackUpd = array(
+				'total_qty' => $qtyTot,
+				'subtotal' => $this->db->rp_num($sub),
+				'grand_total' => $this->db->rp_num($grand),
+				'remaining_amount' => round($grand),
+				'igst_amount' => $this->db->rp_num($gstTot),
+				'status' => 0,
+				'order_date' => date('Y-m-d'),
+				'remarks' => $placeDetail['remarks'],
+				'billing_address' => $billing_address,
+				'shipping_address' => $shipping_address,
+				'booking_place' => $booking_place,
+				'booking_pincode' => $booking_pincode,
+				'sales_id' => $sales_executive_id,
+				'channel_partner_order_flag' => 1,
+				'cp_portal_order_flag' => 1,
+				'cp_order_mode' => 'customer',
+				'channel_partner_customer_id' => $custId,
+				'modified_date' => date('Y-m-d H:i:s'),
 			);
+			$colGst = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `orders` LIKE 'gst_apply_flag'");
+			if ($colGst && mysqli_num_rows($colGst) > 0) {
+				$fallbackUpd['gst_apply_flag'] = $gstFlag;
+			}
+			$okFallback = $this->db->rp_update('orders', $fallbackUpd, "id='" . $cartId . "' AND status=-1 AND isDelete=0", 0);
+			$chk = $this->db->rp_getData('orders', 'id,order_no,status,grand_total', "id='" . $cartId . "' AND isDelete=0", '', 0);
+			$chkRow = $chk ? mysqli_fetch_assoc($chk) : array();
+			if (!$okFallback || empty($chkRow) || (int) $chkRow['status'] === -1) {
+				$dev = 'PlaceOrderPanel did not finalize order';
+				if (is_array($placed) && isset($placed['ack_msg'])) {
+					$dev = $placed['ack_msg'];
+				}
+				return array(
+					'ack' => 0,
+					'ack_msg' => 'Failed to place order.',
+					'developer_msg' => $dev,
+					'cart_id' => $cartId,
+					'hint' => 'Cart OK (#249). Deploy latest class.channel_partner_order.php PlaceOrder fix.',
+				);
+			}
 		}
 
 		$portalUpd = array(
