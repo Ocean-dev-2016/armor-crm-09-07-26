@@ -1,310 +1,10 @@
 {
     "info": {
         "name": "Armor Fire CRM - Full API Collection (Backend Verified)",
-        "description": "Complete API collection generated from live PHP service source code.\n\nGenerated: 2026-07-10 13:59:58\nUpdated: 2026-08-04 \u2014 CP Login Dashboard #247 + My Customers #241-#246 + Customer Order Cart #248-#256 (service_channel_partner.php)\nAll requests: POST multipart/form-data\nAuth: `key` (API key) + `s` (service id or slug)\n\nEnvironments:\n- Live: https://armor-crm.oceanhub.co.in\n- Local: http://localhost:8080/armor_crm_08_07/202526\n\nSet collection variable `base_url` before testing.\nAPI key: 1226\n\n**Common Login (#2):** `service_sales_executive.php` \u2014 result.user_type = sales_executive | channel_partner\n**CP Dashboard (#247):** Login #2 \u2192 result.cp_apis.dashboard = 247\nEmployee Chat folder: service_employee_chat.php (#236-#240)\nService #39 (sync_offline_customers) includes all CRM columns + channel_partner_flag.\n**CP My Stock:** #257-#258 in service_channel_partner.php\n**CP Receive Payment:** #259-#261 in service_channel_partner.php\n**CP Party Ledger:** #262 in service_channel_partner.php\n**CP READY demo:** Aarav CP12229 \u2014 folder 'CP READY \u2014 Aarav CP12229 Cart Demo (verified)' with live stock pwp_id 2095.",
+        "description": "Complete API collection generated from live PHP service source code.\n\nGenerated: 2026-07-10 13:59:58\nUpdated: 2026-08-04 \u2014 CP Login Dashboard #247 + My Customers #241-#246 + Customer Order Cart #248-#256 (service_channel_partner.php)\nAll requests: POST multipart/form-data\nAuth: `key` (API key) + `s` (service id or slug)\n\nEnvironments:\n- Live: https://armor-crm.oceanhub.co.in\n- Local: http://localhost:8080/armor_crm_08_07/202526\n\nSet collection variable `base_url` before testing.\nAPI key: 1226\n\n**Common Login (#2):** `service_sales_executive.php` \u2014 result.user_type = sales_executive | channel_partner\n**CP Dashboard (#247):** Login #2 \u2192 result.cp_apis.dashboard = 247\nEmployee Chat folder: service_employee_chat.php (#236-#240)\nService #39 (sync_offline_customers) includes all CRM columns + channel_partner_flag.\n**CP My Stock:** #257-#258 in service_channel_partner.php\n**CP Receive Payment:** #259-#261 in service_channel_partner.php\n**CP Party Ledger:** #262 in service_channel_partner.php\n**CP Cart:** ONE Add Cart API #250 (service_channel_partner.php). Folder: Channel Partner App \u2014 Customer Order + Cart. Demo values: CP 12229 / party 8 / pwp_id 2095.",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "item": [
-        {
-            "name": "CP READY \u2014 Aarav CP12229 Cart Demo (verified)",
-            "description": "LIVE verified (Aarav Safety Solutions / CP 12229):\nStock (#257) \u2192 Order Products (#248) pwp_id map:\n| CatNo | product_id | pwp_id | stock | rate |\n| 2301 | 335 | 2095 | 27 | 9300 |\n| 2893 | 458 | 2119 | 30 | 975 |\n| 2290 | 13 | 2106 | 33 | 5700 |\n| 2293 | 307 | 2096 | 22 | 12009 |\nParty (#241): id=8 Orbit Electricals (also 6 Metro Mall, 7 Shiv Buildtech)\nNOTE: Add Cart (#250) \u2014 do NOT send `products`. Only pwp_id+qty.\n\nRun in order: 1 Clear \u2192 2 Products \u2192 3 Add \u2192 4 Get Cart",
-            "item": [
-                {
-                    "name": "1) My Stock (#257)",
-                    "request": {
-                        "method": "POST",
-                        "header": [],
-                        "body": {
-                            "mode": "formdata",
-                            "formdata": [
-                                {
-                                    "key": "key",
-                                    "value": "1226",
-                                    "type": "text"
-                                },
-                                {
-                                    "key": "s",
-                                    "value": "257",
-                                    "type": "text"
-                                },
-                                {
-                                    "key": "channel_partner_id",
-                                    "value": "12229",
-                                    "type": "text"
-                                }
-                            ]
-                        },
-                        "url": {
-                            "raw": "{{base_url}}/service/service_channel_partner.php",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "service",
-                                "service_channel_partner.php"
-                            ]
-                        },
-                        "description": "See available_qty for CatNo 2301/2893/2290/2293"
-                    },
-                    "response": []
-                },
-                {
-                    "name": "2) My Customers (#241)",
-                    "request": {
-                        "method": "POST",
-                        "header": [],
-                        "body": {
-                            "mode": "formdata",
-                            "formdata": [
-                                {
-                                    "key": "key",
-                                    "value": "1226",
-                                    "type": "text"
-                                },
-                                {
-                                    "key": "s",
-                                    "value": "241",
-                                    "type": "text"
-                                },
-                                {
-                                    "key": "channel_partner_id",
-                                    "value": "12229",
-                                    "type": "text"
-                                },
-                                {
-                                    "key": "ll",
-                                    "value": "20",
-                                    "type": "text"
-                                }
-                            ]
-                        },
-                        "url": {
-                            "raw": "{{base_url}}/service/service_channel_partner.php",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "service",
-                                "service_channel_partner.php"
-                            ]
-                        },
-                        "description": "Use party id=8 Orbit Electricals"
-                    },
-                    "response": []
-                },
-                {
-                    "name": "3) Products search TWIST (#248)",
-                    "request": {
-                        "method": "POST",
-                        "header": [],
-                        "body": {
-                            "mode": "formdata",
-                            "formdata": [
-                                {
-                                    "key": "key",
-                                    "value": "1226",
-                                    "type": "text"
-                                },
-                                {
-                                    "key": "s",
-                                    "value": "248",
-                                    "type": "text"
-                                },
-                                {
-                                    "key": "channel_partner_id",
-                                    "value": "12229",
-                                    "type": "text"
-                                },
-                                {
-                                    "key": "search_name",
-                                    "value": "TWIST",
-                                    "type": "text",
-                                    "description": "Returns pwp_id 2095 catno 2301 stock 27"
-                                },
-                                {
-                                    "key": "only_in_stock",
-                                    "value": "1",
-                                    "type": "text"
-                                }
-                            ]
-                        },
-                        "url": {
-                            "raw": "{{base_url}}/service/service_channel_partner.php",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "service",
-                                "service_channel_partner.php"
-                            ]
-                        },
-                        "description": "Copy result[].pwp_id"
-                    },
-                    "response": []
-                },
-                {
-                    "name": "4) Clear Cart (#253)",
-                    "request": {
-                        "method": "POST",
-                        "header": [],
-                        "body": {
-                            "mode": "formdata",
-                            "formdata": [
-                                {
-                                    "key": "key",
-                                    "value": "1226",
-                                    "type": "text"
-                                },
-                                {
-                                    "key": "s",
-                                    "value": "253",
-                                    "type": "text"
-                                },
-                                {
-                                    "key": "channel_partner_id",
-                                    "value": "12229",
-                                    "type": "text"
-                                }
-                            ]
-                        },
-                        "url": {
-                            "raw": "{{base_url}}/service/service_channel_partner.php",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "service",
-                                "service_channel_partner.php"
-                            ]
-                        },
-                        "description": "Reset draft cart"
-                    },
-                    "response": []
-                },
-                {
-                    "name": "5) Add Cart (#250) \u2014 CORRECT",
-                    "request": {
-                        "method": "POST",
-                        "header": [],
-                        "body": {
-                            "mode": "formdata",
-                            "formdata": [
-                                {
-                                    "key": "key",
-                                    "value": "1226",
-                                    "type": "text"
-                                },
-                                {
-                                    "key": "s",
-                                    "value": "250",
-                                    "type": "text"
-                                },
-                                {
-                                    "key": "channel_partner_id",
-                                    "value": "12229",
-                                    "type": "text"
-                                },
-                                {
-                                    "key": "channel_partner_customer_id",
-                                    "value": "8",
-                                    "type": "text",
-                                    "description": "Orbit Electricals"
-                                },
-                                {
-                                    "key": "gst_apply_flag",
-                                    "value": "1",
-                                    "type": "text"
-                                },
-                                {
-                                    "key": "pwp_id",
-                                    "value": "2095",
-                                    "type": "text",
-                                    "description": "CatNo 2301 from #248"
-                                },
-                                {
-                                    "key": "qty",
-                                    "value": "1",
-                                    "type": "text"
-                                },
-                                {
-                                    "key": "rate",
-                                    "value": "9300",
-                                    "type": "text"
-                                },
-                                {
-                                    "key": "discount",
-                                    "value": "0",
-                                    "type": "text"
-                                },
-                                {
-                                    "key": "products",
-                                    "value": "",
-                                    "type": "text",
-                                    "description": "EMPTY",
-                                    "disabled": true
-                                }
-                            ]
-                        },
-                        "url": {
-                            "raw": "{{base_url}}/service/service_channel_partner.php",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "service",
-                                "service_channel_partner.php"
-                            ]
-                        },
-                        "description": "VERIFIED LIVE success.\nack=1, cart with Orbit Electricals + product #2301"
-                    },
-                    "response": []
-                },
-                {
-                    "name": "6) Get Cart (#249)",
-                    "request": {
-                        "method": "POST",
-                        "header": [],
-                        "body": {
-                            "mode": "formdata",
-                            "formdata": [
-                                {
-                                    "key": "key",
-                                    "value": "1226",
-                                    "type": "text"
-                                },
-                                {
-                                    "key": "s",
-                                    "value": "249",
-                                    "type": "text"
-                                },
-                                {
-                                    "key": "channel_partner_id",
-                                    "value": "12229",
-                                    "type": "text"
-                                },
-                                {
-                                    "key": "channel_partner_customer_id",
-                                    "value": "8",
-                                    "type": "text"
-                                }
-                            ]
-                        },
-                        "url": {
-                            "raw": "{{base_url}}/service/service_channel_partner.php",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "service",
-                                "service_channel_partner.php"
-                            ]
-                        },
-                        "description": "Returns channel_partner_customer_id, items[], grand_total"
-                    },
-                    "response": []
-                }
-            ]
-        },
         {
             "name": "Channel Partner App \u2014 Dashboard + My Customers (#241-#247)",
             "description": "CP Login Dashboard (#247) + My Customers (#241-#246).\n1) Login API #2 \u2192 result.channel_partner_id + result.cp_apis.dashboard\n2) Dashboard #247 (Web + Mobile same JSON)\n3) List #241 / Add #242\nEndpoint: service/service_channel_partner.php\nkey=1226",
@@ -732,7 +432,7 @@
         },
         {
             "name": "Channel Partner App \u2014 Customer Order + Cart (#248-#256)",
-            "description": "LIVE verified (Aarav Safety Solutions / CP 12229):\nStock (#257) \u2192 Order Products (#248) pwp_id map:\n| CatNo | product_id | pwp_id | stock | rate |\n| 2301 | 335 | 2095 | 27 | 9300 |\n| 2893 | 458 | 2119 | 30 | 975 |\n| 2290 | 13 | 2106 | 33 | 5700 |\n| 2293 | 307 | 2096 | 22 | 12009 |\nParty (#241): id=8 Orbit Electricals (also 6 Metro Mall, 7 Shiv Buildtech)\nNOTE: Add Cart (#250) \u2014 do NOT send `products`. Only pwp_id+qty.\n\n**Add Cart (#250) \u2014 ONLY these fields:**\nkey=1226, s=250, channel_partner_id={{channel_partner_id}}, channel_partner_customer_id={{channel_partner_customer_id}}, pwp_id={{pwp_id}}, qty={{qty}}\nOptional: rate, discount, gst_apply_flag. Leave products EMPTY.\n\nFlow: #257 stock \u2192 #248 products (pwp_id) \u2192 #250 add \u2192 #249 get cart \u2192 #254 place",
+            "description": "Channel Partner App \u2014 Customer Order + Cart (#248-#256)\nSAME as web CP login (Aarav / channel_partner_id) \u2014 App draft cart.\nWeb form has no cart; App uses #249-#253 draft order (status=-1).\n\n**Who:** Only Channel Partner login. Always send channel_partner_id from Login #2.\n**Stock products only for that CP** (My Stock #257).\n\nLIVE verified Aarav Safety Solutions (CP 12229):\nParty: channel_partner_customer_id=8 Orbit Electricals\npwp_id map (from #248):\n  CatNo 2301 \u2192 pwp_id 2095 (stock 27, rate 9300)\n  CatNo 2893 \u2192 pwp_id 2119 (stock 30, rate 975)\n  CatNo 2290 \u2192 pwp_id 2106 (stock 33, rate 5700)\n  CatNo 2293 \u2192 pwp_id 2096 (stock 22, rate 12009)\n\n**Add Cart #250 (ONLY ONE API):** key, s=250, channel_partner_id, channel_partner_customer_id, pwp_id, qty\nDo NOT send products field.\nFlow: #257 \u2192 #241 \u2192 #248 \u2192 #250 \u2192 #249 \u2192 #254",
             "item": [
                 {
                     "name": "CP Order Products (#248)",
@@ -754,15 +454,15 @@
                                 },
                                 {
                                     "key": "channel_partner_id",
-                                    "value": "{{channel_partner_id}}",
+                                    "value": "12229",
                                     "type": "text",
-                                    "description": "LIVE: 12229 Aarav Safety Solutions"
+                                    "description": "From Login #2 \u2014 Aarav Safety Solutions (demo CP)"
                                 },
                                 {
                                     "key": "search_name",
                                     "value": "TWIST",
                                     "type": "text",
-                                    "description": "Try: TWIST / 2301 name / COUPLING. LIVE stock catno 2301 \u2192 pwp_id 2095"
+                                    "description": "Returns pwp_id 2095 (CatNo 2301) for this CP stock"
                                 },
                                 {
                                     "key": "only_in_stock",
@@ -806,15 +506,15 @@
                                 },
                                 {
                                     "key": "channel_partner_id",
-                                    "value": "{{channel_partner_id}}",
+                                    "value": "12229",
                                     "type": "text",
-                                    "description": "LIVE: 12229 Aarav Safety Solutions"
+                                    "description": "From Login #2 \u2014 Aarav Safety Solutions (demo CP)"
                                 },
                                 {
                                     "key": "channel_partner_customer_id",
-                                    "value": "{{channel_partner_customer_id}}",
+                                    "value": "8",
                                     "type": "text",
-                                    "description": "LIVE party id=8 Orbit Electricals"
+                                    "description": "Orbit Electricals \u2014 binds party on cart"
                                 },
                                 {
                                     "key": "party_id",
@@ -859,15 +559,15 @@
                                 },
                                 {
                                     "key": "channel_partner_id",
-                                    "value": "{{channel_partner_id}}",
+                                    "value": "12229",
                                     "type": "text",
-                                    "description": "LIVE: 12229 Aarav Safety Solutions"
+                                    "description": "From Login #2 \u2014 Aarav Safety Solutions (demo CP)"
                                 },
                                 {
                                     "key": "channel_partner_customer_id",
-                                    "value": "{{channel_partner_customer_id}}",
+                                    "value": "8",
                                     "type": "text",
-                                    "description": "LIVE: 8 Orbit Electricals (from #241)"
+                                    "description": "From #241 \u2014 Orbit Electricals"
                                 },
                                 {
                                     "key": "gst_apply_flag",
@@ -877,20 +577,20 @@
                                 },
                                 {
                                     "key": "pwp_id",
-                                    "value": "{{pwp_id}}",
+                                    "value": "2095",
                                     "type": "text",
-                                    "description": "LIVE stock: 2095 = CatNo 2301 (from #248)"
+                                    "description": "From #248 \u2014 CatNo 2301 (CP stock product)"
                                 },
                                 {
                                     "key": "qty",
-                                    "value": "{{qty}}",
+                                    "value": "1",
                                     "type": "text"
                                 },
                                 {
                                     "key": "rate",
-                                    "value": "{{rate}}",
+                                    "value": "9300",
                                     "type": "text",
-                                    "description": "Optional. LIVE default 9300 for pwp 2095"
+                                    "description": "Optional"
                                 },
                                 {
                                     "key": "discount",
@@ -902,7 +602,7 @@
                                     "key": "products",
                                     "value": "",
                                     "type": "text",
-                                    "description": "LEAVE EMPTY / disabled. Do NOT put catno here",
+                                    "description": "LEAVE EMPTY \u2014 do not send",
                                     "disabled": true
                                 },
                                 {
@@ -945,7 +645,7 @@
                                 "service_channel_partner.php"
                             ]
                         },
-                        "description": "VERIFIED LIVE: CP 12229 + party 8 + pwp_id 2095 + qty 1 \u2192 ack=1 cart.\nRequired: channel_partner_id, channel_partner_customer_id, pwp_id, qty\nDo NOT send products field."
+                        "description": "ONE Add-Cart API for Channel Partner App.\nVerified live: CP 12229 + party 8 + pwp_id 2095 + qty 1 \u2192 ack=1.\nRequired: channel_partner_id, channel_partner_customer_id, pwp_id, qty\nLeave products EMPTY."
                     },
                     "response": []
                 },
@@ -969,9 +669,9 @@
                                 },
                                 {
                                     "key": "channel_partner_id",
-                                    "value": "{{channel_partner_id}}",
+                                    "value": "12229",
                                     "type": "text",
-                                    "description": "LIVE: 12229 Aarav Safety Solutions"
+                                    "description": "From Login #2 \u2014 Aarav Safety Solutions (demo CP)"
                                 },
                                 {
                                     "key": "cart_item_id",
@@ -1030,9 +730,9 @@
                                 },
                                 {
                                     "key": "channel_partner_id",
-                                    "value": "{{channel_partner_id}}",
+                                    "value": "12229",
                                     "type": "text",
-                                    "description": "LIVE: 12229 Aarav Safety Solutions"
+                                    "description": "From Login #2 \u2014 Aarav Safety Solutions (demo CP)"
                                 },
                                 {
                                     "key": "cart_item_id",
@@ -1075,9 +775,9 @@
                                 },
                                 {
                                     "key": "channel_partner_id",
-                                    "value": "{{channel_partner_id}}",
+                                    "value": "12229",
                                     "type": "text",
-                                    "description": "LIVE: 12229 Aarav Safety Solutions"
+                                    "description": "From Login #2 \u2014 Aarav Safety Solutions (demo CP)"
                                 }
                             ]
                         },
@@ -1115,13 +815,13 @@
                                 },
                                 {
                                     "key": "channel_partner_id",
-                                    "value": "{{channel_partner_id}}",
+                                    "value": "12229",
                                     "type": "text",
-                                    "description": "LIVE: 12229 Aarav Safety Solutions"
+                                    "description": "From Login #2 \u2014 Aarav Safety Solutions (demo CP)"
                                 },
                                 {
                                     "key": "channel_partner_customer_id",
-                                    "value": "{{channel_partner_customer_id}}",
+                                    "value": "8",
                                     "type": "text",
                                     "description": "Required if not already on cart"
                                 },
@@ -1183,9 +883,9 @@
                                 },
                                 {
                                     "key": "channel_partner_id",
-                                    "value": "{{channel_partner_id}}",
+                                    "value": "12229",
                                     "type": "text",
-                                    "description": "LIVE: 12229 Aarav Safety Solutions"
+                                    "description": "From Login #2 \u2014 Aarav Safety Solutions (demo CP)"
                                 },
                                 {
                                     "key": "search_name",
@@ -1239,9 +939,9 @@
                                 },
                                 {
                                     "key": "channel_partner_id",
-                                    "value": "{{channel_partner_id}}",
+                                    "value": "12229",
                                     "type": "text",
-                                    "description": "LIVE: 12229 Aarav Safety Solutions"
+                                    "description": "From Login #2 \u2014 Aarav Safety Solutions (demo CP)"
                                 },
                                 {
                                     "key": "order_id",
