@@ -689,7 +689,18 @@ $orders_status = array(/*"-1"=>"Add to Cart",*/"-2" => "Disapproved", "" => "Wai
 												</li>
 											<?php
 											}
-											if ($ctable_d['status'] == 1) {
+											$cpModeForApprove = isset($ctable_d['cp_order_mode']) ? $ctable_d['cp_order_mode'] : '';
+											$cpEndForApprove = isset($ctable_d['channel_partner_customer_id']) ? (int) $ctable_d['channel_partner_customer_id'] : 0;
+											$isCpSupplyForApprove = (
+												!empty($ctable_d['channel_partner_order_flag'])
+												&& (int) $ctable_d['channel_partner_order_flag'] === 1
+												&& $cpModeForApprove !== 'customer'
+												&& $cpEndForApprove <= 0
+											);
+											/* CP supply: Account Approve from Waiting (0) or Waiting Account Approval (1) */
+											$showAccountApprove = ($ctable_d['status'] == 1)
+												|| ($isCpSupplyForApprove && (int) $ctable_d['status'] === 0);
+											if ($showAccountApprove) {
 											?>
 												<li><a href="javascript:;" onClick="OrderStatus('<?php echo $ctable_d['id']; ?>','4');"><span><i class="fa fa-circle"></i>Account Approve</span></a></li>
 											<?php
@@ -698,7 +709,16 @@ $orders_status = array(/*"-1"=>"Add to Cart",*/"-2" => "Disapproved", "" => "Wai
 
 											<?php
 											if ($ctable_d['status'] == 4) {
-												if ($_SESSION[SITE_SESS . '_ADMIN_TYPE'] != 0) {
+												if ($isCpSupplyForApprove && ($rights['update_flag'] == 1 || $_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0)) {
+													/* CP supply: Dispatch from same Action gear (credits stock) */
+													?>
+													<li>
+														<a href="javascript:;" onClick="CreditCpStock('<?php echo (int) $ctable_d['id']; ?>');">
+															<span class="text-info"><i class="fa fa-truck"></i> Dispatch</span>
+														</a>
+													</li>
+													<?php
+												} else if ($_SESSION[SITE_SESS . '_ADMIN_TYPE'] != 0) {
 													$get_dispatch_right = $db->rp_getValue("page_admin_right", "view_flag", "isDelete=0 AND page_id='569' AND admin_id='" . $_SESSION[SITE_SESS . '_ADMIN_TYPE'] . "'", 0);
 													if ($get_dispatch_right == 1) {
 											?>
@@ -760,6 +780,7 @@ $orders_status = array(/*"-1"=>"Add to Cart",*/"-2" => "Disapproved", "" => "Wai
 												&& !$isCpCustomerOrder
 												&& ($rights['update_flag'] == 1 || $_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0)
 											) {
+												/* status 4 Dispatch already shown above; status > 4 show credited / re-credit if needed */
 												if ($cpCredited === 1) {
 													?>
 													<li>
@@ -768,19 +789,11 @@ $orders_status = array(/*"-1"=>"Add to Cart",*/"-2" => "Disapproved", "" => "Wai
 														</a>
 													</li>
 													<?php
-												} else if ((int) $ctable_d['status'] >= 4) {
+												} else if ((int) $ctable_d['status'] > 4) {
 													?>
 													<li>
 														<a href="javascript:;" onClick="CreditCpStock('<?php echo (int) $ctable_d['id']; ?>');">
-															<span class="text-info"><i class="fa fa-truck"></i> Dispatch &amp; Credit Stock to CP</span>
-														</a>
-													</li>
-													<?php
-												} else {
-													?>
-													<li>
-														<a href="javascript:;" style="cursor:default;opacity:0.75;" title="Account Approval required first">
-															<span class="text-warning"><i class="fa fa-lock"></i> Approve Account first for Dispatch</span>
+															<span class="text-info"><i class="fa fa-truck"></i> Credit Stock to CP</span>
 														</a>
 													</li>
 													<?php
@@ -1132,7 +1145,7 @@ $orders_status = array(/*"-1"=>"Add to Cart",*/"-2" => "Disapproved", "" => "Wai
 		} else if (status == 3) {
 			var txt = "Cancel";
 		} else if (status == 4) {
-			var txt = "Account's Approve";
+			var txt = "Account Approve";
 		}
 		var r = confirm("Are You Sure you want to " + txt + " this Order??");
 		if (r) {
@@ -1150,9 +1163,12 @@ $orders_status = array(/*"-1"=>"Add to Cart",*/"-2" => "Disapproved", "" => "Wai
 						setTimeout(function() {
 							$(".transCover").fadeOut(100);
 							toastr.success(result.ack_msg);
-
+							if (typeof displayRecords === "function") {
+								displayRecords(typeof numRecords !== "undefined" ? numRecords : 100, 1);
+							}
 						}, 1500);
 					} else {
+						$(".transCover").fadeOut(100);
 						toastr.error(result.ack_msg);
 					}
 

@@ -1053,7 +1053,7 @@ function ConvertCpPortalOrder(oid) {
 }
 
 function CreditCpStock(oid) {
-	if (!confirm("Account Approved order — Dispatch and credit quantity to Channel Partner stock?")) {
+	if (!confirm("Dispatch this order and credit quantity to Channel Partner stock?")) {
 		return;
 	}
 	$.ajax({

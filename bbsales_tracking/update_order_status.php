@@ -67,7 +67,7 @@ if ($status == 1) {
 	$db->insertLog($ctable, $last_id, "status_change", "", $insert, 0, $log_description, $flag, $module_name, $user_id, $customer_id);
 	$update = $db->rp_update("orders", array("status" => $status), "id='" . $order_id . "'", 0);
 } else if ($status == 4) {
-	// Gear menu / Order Viewer → Account Approve
+	// Gear menu / Order Viewer → Account Approve (CP supply stays at 4; Dispatch is a separate Action step)
 	$txt = "Account Approved";
 	$ctable = "orders";
 	$last_id = $order_id;

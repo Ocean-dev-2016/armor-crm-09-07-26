@@ -16,9 +16,10 @@ $flag_d = mysqli_fetch_array($flag_r);
 
 $bid 	= $_REQUEST['order_id'];
 $order_status=$db->rp_getValue("orders","status","id='".$_REQUEST['order_id']."' AND isDelete=0");
-
-
-
+$cp_order_flag_v = (int) $db->rp_getValue("orders", "channel_partner_order_flag", "id='" . (int) $bid . "' AND isDelete=0", 0);
+$cp_order_mode_v = $db->rp_getValue("orders", "cp_order_mode", "id='" . (int) $bid . "' AND isDelete=0", 0);
+$cp_end_cust_v = (int) $db->rp_getValue("orders", "channel_partner_customer_id", "id='" . (int) $bid . "' AND isDelete=0", 0);
+$is_cp_supply_order_v = ($cp_order_flag_v === 1 && $cp_order_mode_v !== 'customer' && $cp_end_cust_v <= 0);
 
 ?>
 <!DOCTYPE html>
@@ -166,14 +167,14 @@ $order_status=$db->rp_getValue("orders","status","id='".$_REQUEST['order_id']."'
 							<?php
 							}
 					}
-							if($order_status==1){
-								if($_REQUEST['type']==7)
+							if($order_status==1 || ($is_cp_supply_order_v && (int)$order_status===0)){
+								if(isset($_REQUEST['type']) && $_REQUEST['type']==7)
 								{
 									$_REQUEST['type']="";
 								}
 							?>
 								<div class="btn-group btn-theme-panel hide-app-dis">
-									<a class="btn btn-warning" href="javascript:;" onClick="OrderStatus('<?php echo $bid; ?>','4');" title="Print">Account Approve</a>
+									<a class="btn btn-warning" href="javascript:;" onClick="OrderStatus('<?php echo $bid; ?>','4');" title="Account Approve">Account Approve</a>
 								</div>
 
 							
