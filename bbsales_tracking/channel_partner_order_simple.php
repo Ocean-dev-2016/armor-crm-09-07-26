@@ -75,17 +75,34 @@ if ($edit_order_id > 0 && $cp_mode == 'customer') {
 	$eir = $db->rp_getData("order_product_item", "*", "order_id='" . $edit_order_id . "' AND isDelete=0", "id ASC", 0);
 	if ($eir) {
 		while ($eit = mysqli_fetch_assoc($eir)) {
+			$pid = (int) $eit['pro_id'];
+			$weightId = isset($eit['weight_id']) ? $eit['weight_id'] : '';
 			$pwp = (int) $db->rp_getValue(
 				"product_weight_price",
 				"id",
-				"product_id='" . (int) $eit['pro_id'] . "' AND weight_id='" . $db->clean($eit['weight_id']) . "' AND isDelete=0",
+				"product_id='" . $pid . "' AND weight_id='" . $db->clean($weightId) . "' AND isDelete=0",
 				0
 			);
+			/* App-saved rows sometimes have weight_id -1 / blank — fallback by product_id */
+			if ($pwp <= 0 && $pid > 0) {
+				$pwp = (int) $db->rp_getValue(
+					"product_weight_price",
+					"id",
+					"product_id='" . $pid . "' AND isDelete=0",
+					0
+				);
+			}
+			$lineBase = isset($eit['totalprice']) ? (float) $eit['totalprice'] : ((float) $eit['pro_qty'] * (float) $eit['unitprice']);
+			$lineGst = isset($eit['igst_amount']) ? (float) $eit['igst_amount'] : 0;
+			$gstPct = (float) $db->rp_getValue("product", "igst", "id='" . $pid . "' AND isDelete=0", 0);
 			$edit_lines_js[] = array(
 				'pwp_id' => $pwp,
 				'qty' => (float) $eit['pro_qty'],
 				'rate' => (float) $eit['unitprice'],
 				'discount' => isset($eit['discount']) ? (float) $eit['discount'] : 0,
+				'amount' => round($lineBase, 2),
+				'gst_amount' => round($lineGst, 2),
+				'gst_percent' => $gstPct,
 			);
 		}
 	}
@@ -835,6 +852,7 @@ var cpCustomerId = "<?php echo (int) $cp_login_id; ?>";
 var productOptionsHtml = '<option value="">Select Product</option>';
 var cpProductsReady = false;
 var cpEditLines = <?php echo json_encode($edit_lines_js); ?>;
+var cpSkipProductFill = false;
 
 function isNumberKey(evt) {
 	var charCode = (evt.which) ? evt.which : evt.keyCode;
@@ -916,11 +934,42 @@ function applyCpEditLines() {
 	cpEditLines = [];
 	var $first = $("#cpProductBody .cp-product-row").first();
 	function fillRow($row, line) {
-		$row.find(".cp-product-select").val(String(line.pwp_id)).trigger("change");
-		$row.find(".cp-qty").val(line.qty);
-		$row.find(".cp-rate").val(line.rate);
-		$row.find(".cp-disc").val(line.discount || 0);
-		$row.find(".cp-qty, .cp-rate, .cp-disc").trigger("input");
+		var $sel = $row.find(".cp-product-select");
+		var pwpId = line.pwp_id ? String(line.pwp_id) : "";
+		/* Skip catalog overwrite so saved App/Web rate+discount stay intact */
+		cpSkipProductFill = true;
+		if (pwpId !== "" && pwpId !== "0") {
+			$sel.val(pwpId).trigger("change");
+		}
+		cpSkipProductFill = false;
+
+		var $opt = $sel.find("option:selected");
+		var gst = parseFloat($opt.attr("data-gst"));
+		if (isNaN(gst) || gst <= 0) {
+			gst = parseFloat(line.gst_percent) || 0;
+		}
+		$row.find(".cp-gst-val").val(gst);
+		$row.find(".cp-gst-pct").text(gst > 0 ? gst + "%" : "—");
+
+		$row.find(".cp-qty").val(line.qty > 0 ? line.qty : "");
+		$row.find(".cp-rate").val(line.rate > 0 ? fmtAmt(line.rate) : "");
+		$row.find(".cp-disc").val((line.discount !== undefined && line.discount !== null) ? line.discount : 0);
+
+		recalcRow($row);
+
+		/* Fallback: if calc still 0 but DB has amount (App-saved line) */
+		var baseNow = parseFloat($row.data("base")) || 0;
+		if (baseNow <= 0 && line.amount && parseFloat(line.amount) > 0) {
+			var withGst = parseInt($("#gst_apply_flag").val(), 10) === 1;
+			var savedBase = parseFloat(line.amount) || 0;
+			var savedGst = withGst ? (parseFloat(line.gst_amount) || 0) : 0;
+			$row.find(".cp-line-amt").text(fmtAmt(savedBase + savedGst));
+			$row.data("gross", savedBase);
+			$row.data("discamt", 0);
+			$row.data("base", savedBase);
+			$row.data("gstamt", savedGst);
+			recalcTotals();
+		}
 	}
 	fillRow($first, lines[0]);
 	for (var i = 1; i < lines.length; i++) {
@@ -1087,6 +1136,9 @@ $(document).ready(function () {
 	});
 
 	$(document).on("change", ".cp-product-select", function () {
+		if (cpSkipProductFill) {
+			return;
+		}
 		fillRowFromProduct($(this).closest("tr"));
 	});
 
