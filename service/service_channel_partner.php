@@ -295,7 +295,6 @@ if ($is_valid_api_key) {
 					'channel_partner_customer_id' => isset($_REQUEST['channel_partner_customer_id'])
 						? (int) $_REQUEST['channel_partner_customer_id']
 						: (isset($_REQUEST['party_id']) ? (int) $_REQUEST['party_id'] : 0),
-					'gst_apply_flag' => isset($_REQUEST['gst_apply_flag']) ? (int) $_REQUEST['gst_apply_flag'] : 1,
 					'address' => isset($_REQUEST['address']) ? $_REQUEST['address'] : '',
 					'shipping_address' => isset($_REQUEST['shipping_address']) ? $_REQUEST['shipping_address'] : '',
 					'billing_address' => isset($_REQUEST['billing_address']) ? $_REQUEST['billing_address'] : '',
@@ -308,7 +307,13 @@ if ($is_valid_api_key) {
 					'catno' => isset($_REQUEST['catno']) ? $db->clean($_REQUEST['catno']) : '',
 					'product_id' => isset($_REQUEST['product_id']) ? (int) $_REQUEST['product_id'] : 0,
 					'weight_id' => isset($_REQUEST['weight_id']) ? $_REQUEST['weight_id'] : '',
+					'sub_total' => isset($_REQUEST['sub_total']) ? $_REQUEST['sub_total'] : (isset($_REQUEST['subtotal']) ? $_REQUEST['subtotal'] : null),
+					'gst_amount' => isset($_REQUEST['gst_amount']) ? $_REQUEST['gst_amount'] : null,
+					'grand_total' => isset($_REQUEST['grand_total']) ? $_REQUEST['grand_total'] : null,
 				);
+				if (isset($_REQUEST['gst_apply_flag']) && $_REQUEST['gst_apply_flag'] !== '') {
+					$detail['gst_apply_flag'] = (int) $_REQUEST['gst_apply_flag'];
+				}
 				$db->printJSON($objCPOrder->UpdateCustomerOrder($detail));
 			}
 		} else if ($service == 'add_cp_customer_order_item' || $service == 266) {
@@ -325,11 +330,19 @@ if ($is_valid_api_key) {
 					'qty' => isset($_REQUEST['qty']) ? $_REQUEST['qty'] : 0,
 					'rate' => isset($_REQUEST['rate']) ? $_REQUEST['rate'] : null,
 					'discount' => isset($_REQUEST['discount']) ? $_REQUEST['discount'] : null,
-					'gst_apply_flag' => isset($_REQUEST['gst_apply_flag']) ? (int) $_REQUEST['gst_apply_flag'] : 1,
 					'catno' => isset($_REQUEST['catno']) ? $db->clean($_REQUEST['catno']) : '',
 					'product_id' => isset($_REQUEST['product_id']) ? (int) $_REQUEST['product_id'] : 0,
 					'weight_id' => isset($_REQUEST['weight_id']) ? $_REQUEST['weight_id'] : '',
+					'amount' => isset($_REQUEST['amount']) ? $_REQUEST['amount'] : (isset($_REQUEST['line_base']) ? $_REQUEST['line_base'] : null),
+					'line_base' => isset($_REQUEST['line_base']) ? $_REQUEST['line_base'] : null,
+					'item_gst_amount' => isset($_REQUEST['item_gst_amount']) ? $_REQUEST['item_gst_amount'] : (isset($_REQUEST['line_gst_amount']) ? $_REQUEST['line_gst_amount'] : null),
+					'sub_total' => isset($_REQUEST['sub_total']) ? $_REQUEST['sub_total'] : (isset($_REQUEST['subtotal']) ? $_REQUEST['subtotal'] : null),
+					'gst_amount' => isset($_REQUEST['gst_amount']) ? $_REQUEST['gst_amount'] : null,
+					'grand_total' => isset($_REQUEST['grand_total']) ? $_REQUEST['grand_total'] : null,
 				);
+				if (isset($_REQUEST['gst_apply_flag']) && $_REQUEST['gst_apply_flag'] !== '') {
+					$detail['gst_apply_flag'] = (int) $_REQUEST['gst_apply_flag'];
+				}
 				$db->printJSON($objCPOrder->AddCustomerOrderItem($detail));
 			}
 		} else if ($service == 'get_cp_my_stock' || $service == 257) {

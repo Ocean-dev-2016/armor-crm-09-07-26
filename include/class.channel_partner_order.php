@@ -1473,6 +1473,108 @@ class ChannelPartnerOrder
 	}
 
 	/**
+	 * Same formula as web channel_partner_order_simple.js:
+	 * gross = qty * rate
+	 * base  = gross - (gross * discount% / 100)
+	 * gst   = gst_apply ? base * product.igst% / 100 : 0
+	 * grand = base + gst
+	 */
+	private function resolveGstApplyFlag($detail, $order = null)
+	{
+		if (is_array($detail) && array_key_exists('gst_apply_flag', $detail) && $detail['gst_apply_flag'] !== '' && $detail['gst_apply_flag'] !== null) {
+			return ((int) $detail['gst_apply_flag'] === 0) ? 0 : 1;
+		}
+		if (is_array($order) && isset($order['gst_apply_flag'])) {
+			return ((int) $order['gst_apply_flag'] === 0) ? 0 : 1;
+		}
+		return 1;
+	}
+
+	private function sumOrderItemTotals($orderId, $gstFlag)
+	{
+		$sub = 0;
+		$gstTot = 0;
+		$qtyTot = 0;
+		$gstFlag = ((int) $gstFlag === 0) ? 0 : 1;
+		$ir = $this->db->rp_getData('order_product_item', '*', "order_id='" . (int) $orderId . "' AND isDelete=0", 'id ASC', 0);
+		if ($ir) {
+			while ($row = mysqli_fetch_assoc($ir)) {
+				$qty = (float) $row['pro_qty'];
+				$line = isset($row['totalprice']) ? (float) $row['totalprice'] : ($qty * (float) $row['unitprice']);
+				$sub += $line;
+				$qtyTot += $qty;
+				if ($gstFlag) {
+					if (isset($row['igst_amount']) && $row['igst_amount'] !== '' && $row['igst_amount'] !== null) {
+						$gstTot += (float) $row['igst_amount'];
+					} else {
+						$pct = (float) $this->db->rp_getValue('product', 'igst', "id='" . (int) $row['pro_id'] . "' AND isDelete=0", 0);
+						$gstTot += ($line * $pct) / 100;
+					}
+				}
+			}
+		}
+		return array(
+			'sub_total' => round($sub, 2),
+			'gst_amount' => round($gstTot, 2),
+			'grand_total' => round($sub + $gstTot, 2),
+			'total_qty' => round($qtyTot, 2),
+		);
+	}
+
+	private function applyOrderTotals($orderId, $gstFlag, $detail = null)
+	{
+		$calc = $this->sumOrderItemTotals($orderId, $gstFlag);
+		$sub = $calc['sub_total'];
+		$gst = $calc['gst_amount'];
+		$grand = $calc['grand_total'];
+
+		/* Optional app-sent totals (trust when provided) */
+		if (is_array($detail)) {
+			if (isset($detail['sub_total']) && $detail['sub_total'] !== '' && is_numeric($detail['sub_total'])) {
+				$sub = round((float) $detail['sub_total'], 2);
+			} else if (isset($detail['subtotal']) && $detail['subtotal'] !== '' && is_numeric($detail['subtotal'])) {
+				$sub = round((float) $detail['subtotal'], 2);
+			}
+			if (isset($detail['gst_amount']) && $detail['gst_amount'] !== '' && is_numeric($detail['gst_amount'])) {
+				$gst = round((float) $detail['gst_amount'], 2);
+			} else if (isset($detail['igst_amount']) && $detail['igst_amount'] !== '' && is_numeric($detail['igst_amount'])) {
+				$gst = round((float) $detail['igst_amount'], 2);
+			}
+			if (isset($detail['grand_total']) && $detail['grand_total'] !== '' && is_numeric($detail['grand_total'])) {
+				$grand = round((float) $detail['grand_total'], 2);
+			}
+			if (!$gstFlag) {
+				$gst = 0;
+				if (!isset($detail['grand_total']) || $detail['grand_total'] === '' || !is_numeric($detail['grand_total'])) {
+					$grand = $sub;
+				}
+			}
+		}
+
+		$upd = array(
+			'total_qty' => $calc['total_qty'],
+			'subtotal' => $this->db->rp_num($sub),
+			'igst_amount' => $this->db->rp_num($gst),
+			'grand_total' => $this->db->rp_num($grand),
+			'remaining_amount' => round($grand),
+			'modified_date' => date('Y-m-d H:i:s'),
+		);
+		$colGst = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `orders` LIKE 'gst_apply_flag'");
+		if ($colGst && mysqli_num_rows($colGst) > 0) {
+			$upd['gst_apply_flag'] = ((int) $gstFlag === 0) ? 0 : 1;
+		}
+		$this->db->rp_update('orders', $upd, "id='" . (int) $orderId . "'", 0);
+
+		return array(
+			'sub_total' => round($sub, 2),
+			'gst_amount' => round($gst, 2),
+			'grand_total' => round($grand, 2),
+			'total_qty' => $calc['total_qty'],
+			'gst_apply_flag' => ((int) $gstFlag === 0) ? 0 : 1,
+		);
+	}
+
+	/**
 	 * Soft-delete CP customer order (Pending only) + credit stock back.
 	 */
 	public function DeleteCustomerOrder($detail)
@@ -1592,10 +1694,7 @@ class ChannelPartnerOrder
 			);
 		}
 
-		$gstFlag = isset($detail['gst_apply_flag']) ? (int) $detail['gst_apply_flag'] : (isset($order['gst_apply_flag']) ? (int) $order['gst_apply_flag'] : 1);
-		if ($gstFlag !== 0) {
-			$gstFlag = 1;
-		}
+		$gstFlag = $this->resolveGstApplyFlag($detail, $order);
 
 		$newQty = $existQty + $qty;
 		$lineBase = $newQty * (float) $it['price'];
@@ -1604,12 +1703,34 @@ class ChannelPartnerOrder
 		$itemId = 0;
 		$merged = 0;
 
+		/* Optional app-sent line amount / gst for NEW qty only (when not merge) */
+		$appLineAmount = null;
+		$appLineGst = null;
+		if (isset($detail['amount']) && $detail['amount'] !== '' && is_numeric($detail['amount'])) {
+			$appLineAmount = (float) $detail['amount'];
+		} else if (isset($detail['total']) && $detail['total'] !== '' && is_numeric($detail['total'])) {
+			$appLineAmount = (float) $detail['total'];
+		} else if (isset($detail['line_base']) && $detail['line_base'] !== '' && is_numeric($detail['line_base'])) {
+			$appLineAmount = (float) $detail['line_base'];
+		}
+		if (isset($detail['item_gst_amount']) && $detail['item_gst_amount'] !== '' && is_numeric($detail['item_gst_amount'])) {
+			$appLineGst = (float) $detail['item_gst_amount'];
+		} else if (isset($detail['gst_amount']) && $detail['gst_amount'] !== '' && is_numeric($detail['gst_amount']) && !isset($detail['sub_total']) && !isset($detail['grand_total'])) {
+			/* per-line gst only when order totals not also sent under same key ambiguity — skip if order-level keys present */
+			$appLineGst = (float) $detail['gst_amount'];
+		}
+
 		if ($existRow) {
+			$saveLineBase = $lineBase;
+			$saveGstAmt = $gstAmt;
+			if ($appLineAmount !== null && !$merged) {
+				/* merge: keep server lineBase for combined qty */
+			}
 			$updItem = array(
 				'pro_qty' => $newQty,
 				'remaining_qty' => $newQty,
 				'unitprice' => $it['price'],
-				'totalprice' => $this->db->rp_num($lineBase),
+				'totalprice' => $this->db->rp_num($saveLineBase),
 				'discount' => $it['discount'],
 				'discount_amount' => $it['discount_amount'],
 				'box_qty' => $it['box_qty'],
@@ -1618,12 +1739,14 @@ class ChannelPartnerOrder
 			);
 			$colIg = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `order_product_item` LIKE 'igst_amount'");
 			if ($colIg && mysqli_num_rows($colIg) > 0) {
-				$updItem['igst_amount'] = $this->db->rp_num($gstAmt);
+				$updItem['igst_amount'] = $this->db->rp_num($saveGstAmt);
 			}
 			$this->db->rp_update('order_product_item', $updItem, "id='" . (int) $existRow['id'] . "'", 0);
 			$itemId = (int) $existRow['id'];
 			$merged = 1;
 		} else {
+			$saveLineBase = ($appLineAmount !== null) ? $appLineAmount : ($qty * (float) $it['price']);
+			$saveGstAmt = $gstFlag ? (($appLineGst !== null) ? $appLineGst : (($saveLineBase * $gstPct) / 100)) : 0;
 			$rows = array(
 				'order_id', 'pro_id', 'weight_id', 'pro_name', 'pro_qty', 'remaining_qty',
 				'unitprice', 'totalprice', 'discount', 'discount_amount', 'box_qty', 'cartoon_qty',
@@ -1637,7 +1760,7 @@ class ChannelPartnerOrder
 				$qty,
 				$qty,
 				$it['price'],
-				$this->db->rp_num($qty * (float) $it['price']),
+				$this->db->rp_num($saveLineBase),
 				$it['discount'],
 				$it['discount_amount'],
 				$it['box_qty'],
@@ -1650,46 +1773,14 @@ class ChannelPartnerOrder
 			$colIg = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `order_product_item` LIKE 'igst_amount'");
 			if ($colIg && mysqli_num_rows($colIg) > 0) {
 				$rows[] = 'igst_amount';
-				$values[] = $this->db->rp_num($gstFlag ? (($qty * (float) $it['price'] * $gstPct) / 100) : 0);
+				$values[] = $this->db->rp_num($saveGstAmt);
 			}
 			$this->db->rp_insert('order_product_item', $values, $rows, 0);
 			$itemId = (int) $this->db->rp_getValue('order_product_item', 'MAX(id)', "order_id='" . $orderId . "'", 0);
 			$merged = 0;
 		}
 
-		$sub = 0;
-		$qtyTot = 0;
-		$gstTot = 0;
-		$ir = $this->db->rp_getData('order_product_item', '*', "order_id='" . $orderId . "' AND isDelete=0", 'id ASC', 0);
-		if ($ir) {
-			while ($row = mysqli_fetch_assoc($ir)) {
-				$line = (float) $row['totalprice'];
-				$sub += $line;
-				$qtyTot += (float) $row['pro_qty'];
-				if (isset($row['igst_amount'])) {
-					$gstTot += (float) $row['igst_amount'];
-				} else {
-					$pct = (float) $this->db->rp_getValue('product', 'igst', "id='" . (int) $row['pro_id'] . "' AND isDelete=0", 0);
-					if ($gstFlag) {
-						$gstTot += ($line * $pct) / 100;
-					}
-				}
-			}
-		}
-		$grand = $sub + $gstTot;
-		$upd = array(
-			'total_qty' => $qtyTot,
-			'subtotal' => $this->db->rp_num($sub),
-			'grand_total' => $this->db->rp_num($grand),
-			'remaining_amount' => round($grand),
-			'igst_amount' => $this->db->rp_num($gstTot),
-			'modified_date' => date('Y-m-d H:i:s'),
-		);
-		$colGst = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `orders` LIKE 'gst_apply_flag'");
-		if ($colGst && mysqli_num_rows($colGst) > 0) {
-			$upd['gst_apply_flag'] = $gstFlag;
-		}
-		$this->db->rp_update('orders', $upd, "id='" . $orderId . "'", 0);
+		$this->applyOrderTotals($orderId, $gstFlag, $detail);
 		$this->ensureOrderNo($orderId);
 
 		$stockMsg = '';
@@ -1721,6 +1812,9 @@ class ChannelPartnerOrder
 			'item_id' => $itemId,
 			'merged' => $merged,
 			'added_qty' => round($qty, 2),
+			'sub_total' => isset($detailOut['result']['sub_total']) ? $detailOut['result']['sub_total'] : 0,
+			'gst_amount' => isset($detailOut['result']['gst_amount']) ? $detailOut['result']['gst_amount'] : 0,
+			'grand_total' => isset($detailOut['result']['grand_total']) ? $detailOut['result']['grand_total'] : 0,
 			'result' => isset($detailOut['result']) ? $detailOut['result'] : array(),
 		);
 	}
@@ -1758,10 +1852,7 @@ class ChannelPartnerOrder
 			return $custCheck;
 		}
 
-		$gstFlag = isset($detail['gst_apply_flag']) ? (int) $detail['gst_apply_flag'] : (isset($order['gst_apply_flag']) ? (int) $order['gst_apply_flag'] : 1);
-		if ($gstFlag !== 0) {
-			$gstFlag = 1;
-		}
+		$gstFlag = $this->resolveGstApplyFlag($detail, $order);
 
 		$replaceItems = false;
 		$itemsIn = array();
@@ -1780,6 +1871,17 @@ class ChannelPartnerOrder
 					$built = $this->buildItemFromPwp($cpId, (int) $resolved['pwp_id'], $qty, $rate, $disc);
 					if ($built['ack'] != 1) {
 						return $built;
+					}
+					/* Optional app line totals */
+					if (isset($p['line_base']) && $p['line_base'] !== '' && is_numeric($p['line_base'])) {
+						$built['item']['app_line_base'] = (float) $p['line_base'];
+					} else if (isset($p['amount']) && $p['amount'] !== '' && is_numeric($p['amount'])) {
+						$built['item']['app_line_base'] = (float) $p['amount'];
+					}
+					if (isset($p['item_gst_amount']) && $p['item_gst_amount'] !== '' && is_numeric($p['item_gst_amount'])) {
+						$built['item']['app_line_gst'] = (float) $p['item_gst_amount'];
+					} else if (isset($p['gst_amount']) && $p['gst_amount'] !== '' && is_numeric($p['gst_amount'])) {
+						$built['item']['app_line_gst'] = (float) $p['gst_amount'];
 					}
 					$itemsIn[] = $built['item'];
 				}
@@ -1831,13 +1933,14 @@ class ChannelPartnerOrder
 				0
 			);
 
-			$sub = 0;
-			$qtyTot = 0;
-			$gstTot = 0;
 			foreach ($itemsIn as $it) {
-				$lineBase = (float) $it['qty'] * (float) $it['price'];
+				$lineBase = isset($it['app_line_base']) ? (float) $it['app_line_base'] : ((float) $it['qty'] * (float) $it['price']);
 				$gstPct = isset($it['gst_percent']) ? (float) $it['gst_percent'] : 0;
-				$gstAmt = $gstFlag ? (($lineBase * $gstPct) / 100) : 0;
+				if (isset($it['app_line_gst'])) {
+					$gstAmt = $gstFlag ? (float) $it['app_line_gst'] : 0;
+				} else {
+					$gstAmt = $gstFlag ? (($lineBase * $gstPct) / 100) : 0;
+				}
 				$rows = array(
 					'order_id', 'pro_id', 'weight_id', 'pro_name', 'pro_qty', 'remaining_qty',
 					'unitprice', 'totalprice', 'discount', 'discount_amount', 'box_qty', 'cartoon_qty',
@@ -1867,32 +1970,26 @@ class ChannelPartnerOrder
 					$values[] = $this->db->rp_num($gstAmt);
 				}
 				$this->db->rp_insert('order_product_item', $values, $rows, 0);
-				$sub += $lineBase;
-				$qtyTot += (float) $it['qty'];
-				$gstTot += $gstAmt;
 			}
-			$grand = $sub + $gstTot;
+
+			$totals = $this->applyOrderTotals($orderId, $gstFlag, $detail);
 			$upd = array(
-				'total_qty' => $qtyTot,
-				'subtotal' => $this->db->rp_num($sub),
-				'grand_total' => $this->db->rp_num($grand),
-				'remaining_amount' => round($grand),
-				'igst_amount' => $this->db->rp_num($gstTot),
 				'channel_partner_customer_id' => $custId,
 				'modified_date' => date('Y-m-d H:i:s'),
 			);
-			$colGst = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `orders` LIKE 'gst_apply_flag'");
-			if ($colGst && mysqli_num_rows($colGst) > 0) {
-				$upd['gst_apply_flag'] = $gstFlag;
-			}
 		} else {
 			$upd = array(
 				'channel_partner_customer_id' => $custId,
 				'modified_date' => date('Y-m-d H:i:s'),
 			);
-			$colGst = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `orders` LIKE 'gst_apply_flag'");
-			if ($colGst && mysqli_num_rows($colGst) > 0 && isset($detail['gst_apply_flag'])) {
-				$upd['gst_apply_flag'] = $gstFlag;
+			/* Header-only update can still save app totals / gst flag */
+			if (isset($detail['sub_total']) || isset($detail['subtotal']) || isset($detail['gst_amount']) || isset($detail['grand_total']) || array_key_exists('gst_apply_flag', $detail)) {
+				$this->applyOrderTotals($orderId, $gstFlag, $detail);
+			} else {
+				$colGst = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `orders` LIKE 'gst_apply_flag'");
+				if ($colGst && mysqli_num_rows($colGst) > 0 && array_key_exists('gst_apply_flag', $detail)) {
+					$upd['gst_apply_flag'] = $gstFlag;
+				}
 			}
 		}
 
@@ -1931,6 +2028,10 @@ class ChannelPartnerOrder
 			'ack_msg' => 'Order updated successfully.',
 			'order_id' => $orderId,
 			'order_no' => isset($order['order_no']) ? $order['order_no'] : $this->ensureOrderNo($orderId),
+			'sub_total' => isset($detailOut['result']['sub_total']) ? $detailOut['result']['sub_total'] : 0,
+			'gst_amount' => isset($detailOut['result']['gst_amount']) ? $detailOut['result']['gst_amount'] : 0,
+			'grand_total' => isset($detailOut['result']['grand_total']) ? $detailOut['result']['grand_total'] : 0,
+			'gst_apply_flag' => isset($detailOut['result']['gst_apply_flag']) ? $detailOut['result']['gst_apply_flag'] : 1,
 			'result' => isset($detailOut['result']) ? $detailOut['result'] : array(),
 		);
 	}
@@ -1958,21 +2059,55 @@ class ChannelPartnerOrder
 		$wf = $this->workflowStatus($row['status'], $row['payment_received_flag'], $row['grand_total'], $row['payment_received_amount']);
 
 		$items = array();
+		$gstFlag = $this->resolveGstApplyFlag(array(), $row);
 		$ir = $this->db->rp_getData('order_product_item', '*', "order_id='" . $orderId . "' AND isDelete=0", 'id ASC', 0);
 		if ($ir) {
 			while ($it = mysqli_fetch_assoc($ir)) {
+				$lineBase = isset($it['totalprice']) ? (float) $it['totalprice'] : ((float) $it['pro_qty'] * (float) $it['unitprice']);
+				$gstPct = (float) $this->db->rp_getValue('product', 'igst', "id='" . (int) $it['pro_id'] . "' AND isDelete=0", 0);
+				$lineGst = 0;
+				if ($gstFlag) {
+					$lineGst = isset($it['igst_amount']) ? (float) $it['igst_amount'] : (($lineBase * $gstPct) / 100);
+				}
+				$pwpId = (int) $this->db->rp_getValue(
+					'product_weight_price',
+					'id',
+					"product_id='" . (int) $it['pro_id'] . "' AND weight_id='" . $this->db->clean($it['weight_id']) . "' AND isDelete=0",
+					0
+				);
 				$items[] = array(
 					'item_id' => (int) $it['id'],
+					'pwp_id' => $pwpId,
 					'pid' => (int) $it['pro_id'],
 					'weight_id' => $it['weight_id'],
 					'product_name' => $it['pro_name'],
 					'qty' => round((float) $it['pro_qty'], 2),
 					'rate' => round((float) $it['unitprice'], 2),
 					'discount' => isset($it['discount']) ? round((float) $it['discount'], 2) : 0,
-					'amount' => round((float) $it['totalprice'], 2),
-					'gst_amount' => isset($it['igst_amount']) ? round((float) $it['igst_amount'], 2) : 0,
+					'gst_percent' => round($gstPct, 2),
+					'line_base' => round($lineBase, 2),
+					'amount' => round($lineBase, 2),
+					'gst_amount' => round($lineGst, 2),
+					'line_total' => round($lineBase + $lineGst, 2),
 				);
 			}
+		}
+
+		/* Prefer live item sum (correct columns: orders.subtotal / orders.igst_amount) */
+		$calc = $this->sumOrderItemTotals($orderId, $gstFlag);
+		$subTotal = $calc['sub_total'];
+		$gstAmount = $calc['gst_amount'];
+		$grandTotal = $calc['grand_total'];
+		if (isset($row['subtotal']) && (float) $row['subtotal'] > 0) {
+			$subTotal = round((float) $row['subtotal'], 2);
+		}
+		if (isset($row['igst_amount'])) {
+			$gstAmount = $gstFlag ? round((float) $row['igst_amount'], 2) : 0;
+		}
+		if (isset($row['grand_total']) && (float) $row['grand_total'] > 0) {
+			$grandTotal = round((float) $row['grand_total'], 2);
+		} else {
+			$grandTotal = round($subTotal + $gstAmount, 2);
 		}
 
 		return array(
@@ -1991,10 +2126,10 @@ class ChannelPartnerOrder
 				'address' => !empty($row['shipping_address']) ? $row['shipping_address'] : (!empty($cust['address']) ? $cust['address'] : ''),
 				'shipping_address' => isset($row['shipping_address']) ? $row['shipping_address'] : '',
 				'billing_address' => isset($row['billing_address']) ? $row['billing_address'] : '',
-				'gst_apply_flag' => isset($row['gst_apply_flag']) ? (int) $row['gst_apply_flag'] : 1,
-				'sub_total' => isset($row['sub_total']) ? round((float) $row['sub_total'], 2) : 0,
-				'gst_amount' => isset($row['gst_amount']) ? round((float) $row['gst_amount'], 2) : 0,
-				'grand_total' => round((float) $row['grand_total'], 2),
+				'gst_apply_flag' => $gstFlag,
+				'sub_total' => $subTotal,
+				'gst_amount' => $gstAmount,
+				'grand_total' => $grandTotal,
 				'payment_received_flag' => (int) $row['payment_received_flag'],
 				'payment_received_amount' => round((float) $row['payment_received_amount'], 2),
 				'status' => $wf['status'],

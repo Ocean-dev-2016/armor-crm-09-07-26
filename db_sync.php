@@ -756,6 +756,13 @@ db_sync_add_column_if_missing(
 	"varchar(20) NOT NULL DEFAULT '' COMMENT 'own|customer — CP portal order mode'",
 	array('cp_portal_order_flag', 'channel_partner_customer_id')
 );
+db_sync_add_column_if_missing(
+	$conn,
+	'orders',
+	'gst_apply_flag',
+	"tinyint(1) NOT NULL DEFAULT 1 COMMENT '1=Apply GST on CP customer order, 0=Without GST'",
+	array('cp_order_mode', 'cp_portal_order_flag')
+);
 
 /* ------------------------------------------------------------------
  * STEP 5g — Payment Received flag on orders (Pending Payment 45 days)
