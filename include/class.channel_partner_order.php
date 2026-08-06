@@ -1523,6 +1523,209 @@ class ChannelPartnerOrder
 	}
 
 	/**
+	 * Append one product line to Pending CP customer order (Edit Order → + Add Item).
+	 * Same product+weight merges qty on existing line.
+	 */
+	public function AddCustomerOrderItem($detail)
+	{
+		$cpId = isset($detail['channel_partner_id']) ? (int) $detail['channel_partner_id'] : 0;
+		$orderId = isset($detail['order_id']) ? (int) $detail['order_id'] : (isset($detail['id']) ? (int) $detail['id'] : 0);
+		$cpCheck = $this->validateCp($cpId);
+		if ($cpCheck['ack'] != 1) {
+			return $cpCheck;
+		}
+		if ($orderId <= 0) {
+			return array('ack' => 0, 'ack_msg' => 'order_id is required.');
+		}
+		$order = $this->loadCpCustomerOrder($cpId, $orderId);
+		if (!$order) {
+			return array('ack' => 0, 'ack_msg' => 'Order not found.');
+		}
+		$mod = $this->assertOrderModifiable($order);
+		if ($mod['ack'] != 1) {
+			return $mod;
+		}
+
+		$resolved = $this->resolvePwpId($detail);
+		if ($resolved['ack'] != 1) {
+			return $resolved;
+		}
+		$qty = isset($detail['qty']) ? (float) $detail['qty'] : 0;
+		if ($qty <= 0) {
+			return array('ack' => 0, 'ack_msg' => 'qty is required and must be > 0.');
+		}
+		$rate = isset($detail['rate']) ? $detail['rate'] : (isset($detail['price']) ? $detail['price'] : null);
+		$disc = isset($detail['discount']) ? $detail['discount'] : null;
+		$built = $this->buildItemFromPwp($cpId, (int) $resolved['pwp_id'], $qty, $rate, $disc);
+		if ($built['ack'] != 1) {
+			return $built;
+		}
+		$it = $built['item'];
+
+		$existRow = null;
+		$existR = $this->db->rp_getData(
+			'order_product_item',
+			'*',
+			"order_id='" . $orderId . "' AND pro_id='" . (int) $it['pid'] . "' AND weight_id='" . $this->db->clean($it['weight_id']) . "' AND isDelete=0",
+			'id ASC',
+			0
+		);
+		if ($existR && mysqli_num_rows($existR) > 0) {
+			$existRow = mysqli_fetch_assoc($existR);
+		}
+
+		$existQty = $existRow ? (float) $existRow['pro_qty'] : 0;
+		$stockDebited = !empty($order['cp_stock_debited']) && (int) $order['cp_stock_debited'] === 1;
+		$needForCheck = $stockDebited ? $qty : ($existQty + $qty);
+		$stockCheck = $this->objStock->validateItemsStock($cpId, array(
+			array(
+				'pid' => $it['pid'],
+				'weight_id' => $it['weight_id'],
+				'qty' => $needForCheck,
+				'pro_name' => $it['pro_name'],
+			),
+		));
+		if (empty($stockCheck['ack'])) {
+			return array(
+				'ack' => 0,
+				'ack_msg' => isset($stockCheck['ack_msg']) ? $stockCheck['ack_msg'] : 'Insufficient stock.',
+			);
+		}
+
+		$gstFlag = isset($detail['gst_apply_flag']) ? (int) $detail['gst_apply_flag'] : (isset($order['gst_apply_flag']) ? (int) $order['gst_apply_flag'] : 1);
+		if ($gstFlag !== 0) {
+			$gstFlag = 1;
+		}
+
+		$newQty = $existQty + $qty;
+		$lineBase = $newQty * (float) $it['price'];
+		$gstPct = isset($it['gst_percent']) ? (float) $it['gst_percent'] : 0;
+		$gstAmt = $gstFlag ? (($lineBase * $gstPct) / 100) : 0;
+		$itemId = 0;
+		$merged = 0;
+
+		if ($existRow) {
+			$updItem = array(
+				'pro_qty' => $newQty,
+				'remaining_qty' => $newQty,
+				'unitprice' => $it['price'],
+				'totalprice' => $this->db->rp_num($lineBase),
+				'discount' => $it['discount'],
+				'discount_amount' => $it['discount_amount'],
+				'box_qty' => $it['box_qty'],
+				'cartoon_qty' => $it['cartoon_qty'],
+				'modified_date' => date('Y-m-d H:i:s'),
+			);
+			$colIg = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `order_product_item` LIKE 'igst_amount'");
+			if ($colIg && mysqli_num_rows($colIg) > 0) {
+				$updItem['igst_amount'] = $this->db->rp_num($gstAmt);
+			}
+			$this->db->rp_update('order_product_item', $updItem, "id='" . (int) $existRow['id'] . "'", 0);
+			$itemId = (int) $existRow['id'];
+			$merged = 1;
+		} else {
+			$rows = array(
+				'order_id', 'pro_id', 'weight_id', 'pro_name', 'pro_qty', 'remaining_qty',
+				'unitprice', 'totalprice', 'discount', 'discount_amount', 'box_qty', 'cartoon_qty',
+				'brand_id', 'isDelete', 'isActive', 'created_date',
+			);
+			$values = array(
+				$orderId,
+				$it['pid'],
+				$it['weight_id'],
+				$it['pro_name'],
+				$qty,
+				$qty,
+				$it['price'],
+				$this->db->rp_num($qty * (float) $it['price']),
+				$it['discount'],
+				$it['discount_amount'],
+				$it['box_qty'],
+				$it['cartoon_qty'],
+				$it['brand_id'],
+				0,
+				1,
+				date('Y-m-d H:i:s'),
+			);
+			$colIg = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `order_product_item` LIKE 'igst_amount'");
+			if ($colIg && mysqli_num_rows($colIg) > 0) {
+				$rows[] = 'igst_amount';
+				$values[] = $this->db->rp_num($gstFlag ? (($qty * (float) $it['price'] * $gstPct) / 100) : 0);
+			}
+			$this->db->rp_insert('order_product_item', $values, $rows, 0);
+			$itemId = (int) $this->db->rp_getValue('order_product_item', 'MAX(id)', "order_id='" . $orderId . "'", 0);
+			$merged = 0;
+		}
+
+		$sub = 0;
+		$qtyTot = 0;
+		$gstTot = 0;
+		$ir = $this->db->rp_getData('order_product_item', '*', "order_id='" . $orderId . "' AND isDelete=0", 'id ASC', 0);
+		if ($ir) {
+			while ($row = mysqli_fetch_assoc($ir)) {
+				$line = (float) $row['totalprice'];
+				$sub += $line;
+				$qtyTot += (float) $row['pro_qty'];
+				if (isset($row['igst_amount'])) {
+					$gstTot += (float) $row['igst_amount'];
+				} else {
+					$pct = (float) $this->db->rp_getValue('product', 'igst', "id='" . (int) $row['pro_id'] . "' AND isDelete=0", 0);
+					if ($gstFlag) {
+						$gstTot += ($line * $pct) / 100;
+					}
+				}
+			}
+		}
+		$grand = $sub + $gstTot;
+		$upd = array(
+			'total_qty' => $qtyTot,
+			'subtotal' => $this->db->rp_num($sub),
+			'grand_total' => $this->db->rp_num($grand),
+			'remaining_amount' => round($grand),
+			'igst_amount' => $this->db->rp_num($gstTot),
+			'modified_date' => date('Y-m-d H:i:s'),
+		);
+		$colGst = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `orders` LIKE 'gst_apply_flag'");
+		if ($colGst && mysqli_num_rows($colGst) > 0) {
+			$upd['gst_apply_flag'] = $gstFlag;
+		}
+		$this->db->rp_update('orders', $upd, "id='" . $orderId . "'", 0);
+		$this->ensureOrderNo($orderId);
+
+		$stockMsg = '';
+		if ($stockDebited) {
+			$salesId = isset($order['sales_id']) ? (int) $order['sales_id'] : 0;
+			$orderNo = isset($order['order_no']) ? $order['order_no'] : $this->ensureOrderNo($orderId);
+			$debitRes = $this->objStock->addMovement(
+				$cpId,
+				(int) $it['pid'],
+				$it['weight_id'],
+				$it['pro_name'],
+				-1 * $qty,
+				'OUT add item Customer Order ' . $orderNo,
+				$orderId,
+				$salesId,
+				'out'
+			);
+			if (empty($debitRes['ack'])) {
+				$stockMsg = ' (Stock: ' . (isset($debitRes['ack_msg']) ? $debitRes['ack_msg'] : 'debit failed') . ')';
+			}
+		}
+
+		$detailOut = $this->GetOrderDetail(array('channel_partner_id' => $cpId, 'order_id' => $orderId));
+		return array(
+			'ack' => 1,
+			'ack_msg' => ($merged ? 'Item quantity updated on order.' : 'Item added to order.') . $stockMsg,
+			'order_id' => $orderId,
+			'order_no' => isset($order['order_no']) ? $order['order_no'] : $this->ensureOrderNo($orderId),
+			'item_id' => $itemId,
+			'merged' => $merged,
+			'added_qty' => round($qty, 2),
+			'result' => isset($detailOut['result']) ? $detailOut['result'] : array(),
+		);
+	}
+
+	/**
 	 * Update Pending CP customer order — party / address / remark / products.
 	 * products: JSON [{pwp_id, qty, rate, discount}] replaces all lines when sent.
 	 */

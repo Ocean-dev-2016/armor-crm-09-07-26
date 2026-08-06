@@ -32,6 +32,7 @@
  * #263 delete_cp_customer_order            — Delete Pending customer order (+ stock credit)
  * #264 update_cp_customer_order            — Edit Pending customer order
  * #265 get_cp_payment_pdf                  — Receive Payment Print PDF (party statement)
+ * #266 add_cp_customer_order_item          — Edit Order: add item (+ Add Item)
  *
  * Also available (older): service_genral.php #224/#225 same customer table.
  */
@@ -310,6 +311,27 @@ if ($is_valid_api_key) {
 				);
 				$db->printJSON($objCPOrder->UpdateCustomerOrder($detail));
 			}
+		} else if ($service == 'add_cp_customer_order_item' || $service == 266) {
+			if ($channel_partner_id <= 0) {
+				$db->printJSON(array(
+					'ack' => 0,
+					'ack_msg' => 'channel_partner_id is required. Use value from Login API #2 result.channel_partner_id',
+				));
+			} else {
+				$detail = array(
+					'channel_partner_id' => $channel_partner_id,
+					'order_id' => isset($_REQUEST['order_id']) ? (int) $_REQUEST['order_id'] : (isset($_REQUEST['id']) ? (int) $_REQUEST['id'] : 0),
+					'pwp_id' => isset($_REQUEST['pwp_id']) ? (int) $_REQUEST['pwp_id'] : 0,
+					'qty' => isset($_REQUEST['qty']) ? $_REQUEST['qty'] : 0,
+					'rate' => isset($_REQUEST['rate']) ? $_REQUEST['rate'] : null,
+					'discount' => isset($_REQUEST['discount']) ? $_REQUEST['discount'] : null,
+					'gst_apply_flag' => isset($_REQUEST['gst_apply_flag']) ? (int) $_REQUEST['gst_apply_flag'] : 1,
+					'catno' => isset($_REQUEST['catno']) ? $db->clean($_REQUEST['catno']) : '',
+					'product_id' => isset($_REQUEST['product_id']) ? (int) $_REQUEST['product_id'] : 0,
+					'weight_id' => isset($_REQUEST['weight_id']) ? $_REQUEST['weight_id'] : '',
+				);
+				$db->printJSON($objCPOrder->AddCustomerOrderItem($detail));
+			}
 		} else if ($service == 'get_cp_my_stock' || $service == 257) {
 			if ($channel_partner_id <= 0) {
 				$db->printJSON(array(
@@ -401,12 +423,12 @@ if ($is_valid_api_key) {
 		} else {
 			$db->printJSON(array(
 				'ack' => 0,
-				'ack_msg' => 'Invalid Channel Partner service. Use s=241 to 265.',
+				'ack_msg' => 'Invalid Channel Partner service. Use s=241 to 266.',
 				'developer_msg' => 'Unknown service: ' . $service,
 			));
 		}
 	} else {
-		$db->printJSON(array('ack' => 0, 'ack_msg' => 'Invalid Service.', 'developer_msg' => 'Register APIs 241-265 via db_sync'));
+		$db->printJSON(array('ack' => 0, 'ack_msg' => 'Invalid Service.', 'developer_msg' => 'Register APIs 241-266 via db_sync'));
 	}
 } else {
 	$db->printJSON(array('ack' => 0, 'ack_msg' => 'Invalid API key.', 'developer_msg' => 'Use key=1226'));

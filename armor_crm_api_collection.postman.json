@@ -1033,7 +1033,77 @@
                                 "service_channel_partner.php"
                             ]
                         },
-                        "description": "Edit Pending CP customer order.\nIf products sent \u2192 replace lines + stock adjust.\nOnly status=Pending (not dispatched / not paid)."
+                        "description": "Edit Pending CP customer order.\nIf products sent → replace lines + stock adjust.\nOnly status=Pending (not dispatched / not paid)."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "CP Add Order Item (#266) — Edit Order + Add Item",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "266",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "channel_partner_id",
+                                    "value": "{{channel_partner_id}}",
+                                    "type": "text",
+                                    "description": "From Login #2"
+                                },
+                                {
+                                    "key": "order_id",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "From #256 — Pending only (can_edit=1)"
+                                },
+                                {
+                                    "key": "pwp_id",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "From #248 products list"
+                                },
+                                {
+                                    "key": "qty",
+                                    "value": "1",
+                                    "type": "text",
+                                    "description": "Required > 0"
+                                },
+                                {
+                                    "key": "rate",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Optional override rate"
+                                },
+                                {
+                                    "key": "discount",
+                                    "value": "0",
+                                    "type": "text",
+                                    "description": "Optional discount %"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_channel_partner.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_channel_partner.php"
+                            ]
+                        },
+                        "description": "Edit Order screen → + Add Item.\nAppends one product line to pending order.\nSame product+weight merges qty on existing line.\nReturns updated order detail in result.\n\nFlow: #256 detail → product picker #248 → #266 add item → refresh items/totals.\nSave header/qty changes still use #264."
                     },
                     "response": []
                 },
