@@ -26,11 +26,12 @@
  * #257 get_cp_my_stock                     — My Stock Main (Product & Code)
  * #258 get_cp_my_stock_movements           — My Stock Inward / Outward ledger
  * #259 get_cp_payment_parties              — Receive Payment: party list + payment types
- * #260 get_cp_payment_orders               — Receive Payment: orders for party
- * #261 save_cp_receive_payment             — Save payment received against order
+ * #260 get_cp_payment_orders               — Receive Payment: orders for party (popup fields)
+ * #261 save_cp_receive_payment             — Save payment (popup Save Payment button)
  * #262 get_cp_party_ledger                 — Party Ledger / CP Customer Ledger (Tally style)
  * #263 delete_cp_customer_order            — Delete Pending customer order (+ stock credit)
  * #264 update_cp_customer_order            — Edit Pending customer order
+ * #265 get_cp_payment_pdf                  — Receive Payment Print PDF (party statement)
  *
  * Also available (older): service_genral.php #224/#225 same customer table.
  */
@@ -384,15 +385,28 @@ if ($is_valid_api_key) {
 				);
 				$db->printJSON($objCPLedger->GetPartyLedger($detail));
 			}
+		} else if ($service == 'get_cp_payment_pdf' || $service == 265) {
+			if ($channel_partner_id <= 0) {
+				$db->printJSON(array(
+					'ack' => 0,
+					'ack_msg' => 'channel_partner_id is required. Use value from Login API #2 result.channel_partner_id',
+				));
+			} else {
+				$detail = array(
+					'channel_partner_id' => $channel_partner_id,
+					'party_id' => isset($_REQUEST['party_id']) ? (int) $_REQUEST['party_id'] : (isset($_REQUEST['channel_partner_customer_id']) ? (int) $_REQUEST['channel_partner_customer_id'] : 0),
+				);
+				$db->printJSON($objCPPay->GetPaymentPdf($detail));
+			}
 		} else {
 			$db->printJSON(array(
 				'ack' => 0,
-				'ack_msg' => 'Invalid Channel Partner service. Use s=241 to 264.',
+				'ack_msg' => 'Invalid Channel Partner service. Use s=241 to 265.',
 				'developer_msg' => 'Unknown service: ' . $service,
 			));
 		}
 	} else {
-		$db->printJSON(array('ack' => 0, 'ack_msg' => 'Invalid Service.', 'developer_msg' => 'Register APIs 241-264 via db_sync'));
+		$db->printJSON(array('ack' => 0, 'ack_msg' => 'Invalid Service.', 'developer_msg' => 'Register APIs 241-265 via db_sync'));
 	}
 } else {
 	$db->printJSON(array('ack' => 0, 'ack_msg' => 'Invalid API key.', 'developer_msg' => 'Use key=1226'));

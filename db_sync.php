@@ -1294,7 +1294,8 @@ db_sync_register_api_if_missing($conn, 261, 'save_cp_receive_payment', 'CP Save 
 db_sync_register_api_if_missing($conn, 262, 'get_cp_party_ledger', 'CP Party Ledger / Customer Ledger', $cpAppApiBase . '&s=262&channel_partner_id=&party_id=0');
 db_sync_register_api_if_missing($conn, 263, 'delete_cp_customer_order', 'CP Delete Customer Order', $cpAppApiBase . '&s=263&channel_partner_id=&order_id=');
 db_sync_register_api_if_missing($conn, 264, 'update_cp_customer_order', 'CP Update Customer Order', $cpAppApiBase . '&s=264&channel_partner_id=&order_id=&channel_partner_customer_id=&gst_apply_flag=1&address=&remark=&products=');
-foreach (array(241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 256, 257, 258, 259, 260, 261, 262, 263, 264) as $cpAppApiId) {
+db_sync_register_api_if_missing($conn, 265, 'get_cp_payment_pdf', 'CP Receive Payment Print PDF', $cpAppApiBase . '&s=265&channel_partner_id=&party_id=');
+foreach (array(241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 256, 257, 258, 259, 260, 261, 262, 263, 264, 265) as $cpAppApiId) {
 	$slugMap = array(
 		241 => 'get_cp_my_customers',
 		242 => 'add_cp_my_customer',
@@ -1320,6 +1321,7 @@ foreach (array(241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 
 		262 => 'get_cp_party_ledger',
 		263 => 'delete_cp_customer_order',
 		264 => 'update_cp_customer_order',
+		265 => 'get_cp_payment_pdf',
 	);
 	$urlMap = array(
 		241 => $cpAppApiBase . '&s=241&channel_partner_id=&search_name=&ul=0&ll=50',
@@ -1346,6 +1348,7 @@ foreach (array(241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 
 		262 => $cpAppApiBase . '&s=262&channel_partner_id=&party_id=0',
 		263 => $cpAppApiBase . '&s=263&channel_partner_id=&order_id=',
 		264 => $cpAppApiBase . '&s=264&channel_partner_id=&order_id=&channel_partner_customer_id=&gst_apply_flag=1&address=&remark=&products=',
+		265 => $cpAppApiBase . '&s=265&channel_partner_id=&party_id=',
 	);
 	$escSlug = mysqli_real_escape_string($conn, $slugMap[$cpAppApiId]);
 	$escUrl = mysqli_real_escape_string($conn, $urlMap[$cpAppApiId]);

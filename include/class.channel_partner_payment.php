@@ -364,4 +364,194 @@ class ChannelPartnerPayment
 			'payment_saved' => $payInsertOk ? 1 : 0,
 		);
 	}
+
+	/**
+	 * Generate Payment Receive Statement PDF for selected party (same as web Print / Share PDF).
+	 * Returns file_url for app download / open.
+	 */
+	public function GetPaymentPdf($detail)
+	{
+		$cpId = isset($detail['channel_partner_id']) ? (int) $detail['channel_partner_id'] : 0;
+		$partyId = isset($detail['party_id']) ? (int) $detail['party_id'] : (isset($detail['channel_partner_customer_id']) ? (int) $detail['channel_partner_customer_id'] : 0);
+
+		$cpCheck = $this->validateCp($cpId);
+		if ($cpCheck['ack'] != 1) {
+			return $cpCheck;
+		}
+		$partyCheck = $this->assertParty($cpId, $partyId);
+		if ($partyCheck['ack'] != 1) {
+			return $partyCheck;
+		}
+
+		$cp_r = $this->db->rp_getData(
+			'executive',
+			'company_name,cp_print_company_name,cp_print_gst,gst',
+			"id='" . $cpId . "' AND isDelete=0",
+			'',
+			0
+		);
+		$cp = $cp_r ? mysqli_fetch_assoc($cp_r) : array();
+		$cp_name = isset($cp['company_name']) ? $cp['company_name'] : '';
+		$pi_company = !empty($cp['cp_print_company_name']) ? $cp['cp_print_company_name'] : $cp_name;
+		$pi_gst = !empty($cp['cp_print_gst']) ? $cp['cp_print_gst'] : (isset($cp['gst']) ? $cp['gst'] : '');
+
+		$pr = $this->db->rp_getData(
+			'channel_partner_customer',
+			'id,company_name,person_name,mobile_no,address,city,state,pincode,gst',
+			"id='" . $partyId . "' AND channel_partner_id='" . $cpId . "' AND isDelete=0",
+			'',
+			0
+		);
+		$partyRow = $pr ? mysqli_fetch_assoc($pr) : null;
+		if (!$partyRow) {
+			return array('ack' => 0, 'ack_msg' => 'Invalid Party.');
+		}
+		$partyLabel = $partyRow['company_name'];
+
+		$orders = array();
+		$or = $this->db->rp_getData(
+			'orders',
+			'id,order_no,order_date,grand_total,payment_received_flag,payment_received_amount,status',
+			"customer_id='" . $cpId . "' AND channel_partner_order_flag=1 AND channel_partner_customer_id='" . $partyId . "' AND isDelete=0 AND status NOT IN (-2,3)",
+			'order_date ASC, id ASC',
+			0
+		);
+		if ($or) {
+			while ($o = mysqli_fetch_assoc($or)) {
+				$orders[] = $o;
+			}
+		}
+
+		$totalOrder = 0;
+		$totalPaid = 0;
+		$totalPending = 0;
+		$rowsHtml = '';
+		$sr = 0;
+		foreach ($orders as $o) {
+			$sr++;
+			$paidFlag = isset($o['payment_received_flag']) ? (int) $o['payment_received_flag'] : 0;
+			$orderAmt = (float) $o['grand_total'];
+			$paidAmt = ($paidFlag === 1) ? (float) $o['payment_received_amount'] : 0;
+			$totalOrder += $orderAmt;
+			$totalPaid += $paidAmt;
+			$totalPending += ($paidFlag === 1) ? 0 : $orderAmt;
+			$statusTxt = ($paidFlag === 1) ? 'RECEIVED' : 'PENDING';
+			$statusCls = ($paidFlag === 1) ? 'ok' : 'pend';
+			$rowsHtml .= '<tr><td class="tc">' . $sr . '</td><td><b>' . htmlspecialchars($o['order_no']) . '</b></td>'
+				. '<td class="tc">' . date('d-m-Y', strtotime($o['order_date'])) . '</td>'
+				. '<td class="tr">' . number_format($orderAmt, 2) . '</td>'
+				. '<td class="tc ' . $statusCls . '">' . $statusTxt . '</td>'
+				. '<td class="tr">' . number_format($paidAmt, 2) . '</td></tr>';
+		}
+		if ($rowsHtml == '') {
+			$rowsHtml = '<tr><td colspan="6" class="tc">No orders found.</td></tr>';
+		}
+
+		$parts = array();
+		if (!empty($partyRow['address'])) {
+			$parts[] = $partyRow['address'];
+		}
+		if (!empty($partyRow['city'])) {
+			$parts[] = $partyRow['city'];
+		}
+		if (!empty($partyRow['state'])) {
+			$parts[] = $partyRow['state'];
+		}
+		if (!empty($partyRow['pincode'])) {
+			$parts[] = $partyRow['pincode'];
+		}
+		$partyAddr = implode(', ', $parts);
+		$partyMobile = isset($partyRow['mobile_no']) ? $partyRow['mobile_no'] : '';
+		$partyGst = isset($partyRow['gst']) ? $partyRow['gst'] : '';
+
+		$css = 'table{width:100%;border-collapse:collapse;font-size:11px;font-family:dejavusans,Arial,sans-serif;}'
+			. 'td,th{border:1px solid #595959;padding:5px 6px;vertical-align:top;}'
+			. '.th{background:#1a6b8a;color:#fff;text-align:center;}'
+			. '.title{background:#A9A9A9;text-align:center;font-weight:bold;font-size:14px;}'
+			. '.tr{text-align:right;}.tc{text-align:center;}'
+			. '.ok{color:#1e7e34;font-weight:bold;}.pend{color:#c0392b;font-weight:bold;}'
+			. '.gray{background:#f0f0f0;}';
+
+		$html = '<html><head><style>' . $css . '</style></head><body>';
+		$html .= '<table><tr><td colspan="6" class="title">PAYMENT RECEIVE STATEMENT</td></tr><tr>'
+			. '<td colspan="3"><b>Party / Buyer</b><br><b>' . htmlspecialchars($partyLabel) . '</b><br>'
+			. htmlspecialchars($partyAddr)
+			. ($partyMobile != '' ? '<br>Mobile: ' . htmlspecialchars($partyMobile) : '')
+			. ($partyGst != '' ? '<br>GSTIN: ' . htmlspecialchars($partyGst) : '') . '</td>'
+			. '<td colspan="3"><b>From:</b> ' . htmlspecialchars($pi_company) . '<br>'
+			. ($pi_gst != '' ? '<b>GSTIN:</b> ' . htmlspecialchars($pi_gst) . '<br>' : '')
+			. '<b>Print Date:</b> ' . date('d-M-Y') . '</td></tr></table>';
+		$html .= '<table><tr class="th"><th>Sr</th><th>Order No</th><th>Date</th><th>Order Amount</th><th>Status</th><th>Received</th></tr>'
+			. $rowsHtml
+			. '<tr class="gray"><td colspan="3" class="tr"><b>Total Order</b></td><td class="tr"><b>' . number_format($totalOrder, 2) . '</b></td>'
+			. '<td class="tr"><b>Total Received</b></td><td class="tr"><b>' . number_format($totalPaid, 2) . '</b></td></tr>'
+			. '<tr class="gray"><td colspan="5" class="tr"><b>Pending</b></td><td class="tr pend"><b>' . number_format($totalPending, 2) . '</b></td></tr></table>';
+		$html .= '</body></html>';
+
+		$bbsDir = dirname(__FILE__) . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'bbsales_tracking' . DIRECTORY_SEPARATOR;
+		$saveDir = $bbsDir . 'inquiry_documents' . DIRECTORY_SEPARATOR;
+		if (!is_dir($saveDir)) {
+			@mkdir($saveDir, 0777, true);
+		}
+		if (!is_dir($saveDir) || !is_writable($saveDir)) {
+			return array('ack' => 0, 'ack_msg' => 'inquiry_documents folder missing or not writable.');
+		}
+
+		$now = time();
+		$oldFiles = @glob($saveDir . 'CP_Payment_*.pdf');
+		if ($oldFiles) {
+			foreach ($oldFiles as $old) {
+				if (is_file($old) && ($now - @filemtime($old)) > 86400) {
+					@unlink($old);
+				}
+			}
+		}
+
+		$fileBase = 'CP_Payment_' . preg_replace('/[^A-Za-z0-9_\-]/', '_', $partyLabel) . '_' . date('Ymd_His');
+		$fileName = $fileBase . '_' . substr(md5(uniqid((string) mt_rand(), true)), 0, 8) . '.pdf';
+		$savePath = $saveDir . $fileName;
+
+		$mpdfFile = $bbsDir . 'mpdf60' . DIRECTORY_SEPARATOR . 'mpdf.php';
+		if (!file_exists($mpdfFile)) {
+			return array('ack' => 0, 'ack_msg' => 'mPDF library missing (mpdf60).');
+		}
+
+		$polyfill = $bbsDir . 'include' . DIRECTORY_SEPARATOR . 'mbstring_polyfill.php';
+		if (file_exists($polyfill)) {
+			include_once $polyfill;
+		}
+
+		require_once $mpdfFile;
+		$mpdf = new mPDF('', 'A4', 10, 'sans-serif', 8, 8, 8, 8, 0, 0, 'P');
+		$mpdf->WriteHTML($html);
+		$mpdf->Output($savePath, 'F');
+
+		if (!file_exists($savePath) || @filesize($savePath) < 50) {
+			return array('ack' => 0, 'ack_msg' => 'PDF file was not created. Check folder permissions.');
+		}
+
+		$fileUrl = '';
+		if (defined('INQUIRY_REPORT_FILES1')) {
+			$fileUrl = rtrim(INQUIRY_REPORT_FILES1, '/') . '/' . $fileName;
+		} else if (defined('ADMINSITEURL')) {
+			$fileUrl = rtrim(ADMINSITEURL, '/') . '/inquiry_documents/' . $fileName;
+		} else {
+			$fileUrl = '../bbsales_tracking/inquiry_documents/' . $fileName;
+		}
+
+		return array(
+			'ack' => 1,
+			'ack_msg' => 'PDF ready',
+			'party_id' => $partyId,
+			'party_name' => $partyLabel,
+			'file_url' => $fileUrl,
+			'file_name' => $fileName,
+			'title' => 'Payment Receive Statement - ' . $partyLabel,
+			'total_order' => round($totalOrder, 2),
+			'total_received' => round($totalPaid, 2),
+			'total_pending' => round($totalPending, 2),
+			'order_count' => count($orders),
+			'pdf_ok' => 1,
+		);
+	}
 }
