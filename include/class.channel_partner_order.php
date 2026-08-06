@@ -1088,7 +1088,7 @@ class ChannelPartnerOrder
 	{
 		$cpId = isset($detail['channel_partner_id']) ? (int) $detail['channel_partner_id'] : 0;
 		$custId = isset($detail['channel_partner_customer_id']) ? (int) $detail['channel_partner_customer_id'] : 0;
-		$gstFlag = isset($detail['gst_apply_flag']) ? (int) $detail['gst_apply_flag'] : 1;
+		$gstFlag = $this->resolveGstApplyFlag($detail);
 		if ($gstFlag !== 0) {
 			$gstFlag = 1;
 		}
@@ -1321,9 +1321,12 @@ class ChannelPartnerOrder
 		}
 		$this->db->rp_update('orders', $portalUpd, "id='" . $cartId . "'", 0);
 
+		/* Force GST mode + totals (PlaceOrderPanel may ignore Without GST) */
+		$this->syncGstModeOnOrder($cartId, $gstFlag);
+
 		/* Always assign Order No (PI/{id}) if blank — same as web AddToCart */
 		$orderNo = $this->ensureOrderNo($cartId);
-		$chk = $this->db->rp_getData('orders', 'id,order_no,status,grand_total', "id='" . $cartId . "' AND isDelete=0", '', 0);
+		$chk = $this->db->rp_getData('orders', 'id,order_no,status,grand_total,gst_apply_flag,igst_amount,subtotal', "id='" . $cartId . "' AND isDelete=0", '', 0);
 		$chkRow = $chk ? mysqli_fetch_assoc($chk) : $chkRow;
 		if (empty($chkRow['order_no']) && $orderNo != '') {
 			$chkRow['order_no'] = $orderNo;
@@ -1336,6 +1339,7 @@ class ChannelPartnerOrder
 				'ack_msg' => 'Order placed but stock debit failed: ' . (isset($debitRes['ack_msg']) ? $debitRes['ack_msg'] : ''),
 				'order_id' => $cartId,
 				'order_no' => isset($chkRow['order_no']) ? $chkRow['order_no'] : $orderNo,
+				'gst_apply_flag' => $gstFlag,
 				'stock_debited' => 0,
 			);
 		}
@@ -1346,6 +1350,9 @@ class ChannelPartnerOrder
 			'order_id' => $cartId,
 			'order_no' => isset($chkRow['order_no']) ? $chkRow['order_no'] : $orderNo,
 			'grand_total' => isset($chkRow['grand_total']) ? round((float) $chkRow['grand_total'], 2) : 0,
+			'sub_total' => isset($chkRow['subtotal']) ? round((float) $chkRow['subtotal'], 2) : 0,
+			'gst_amount' => isset($chkRow['igst_amount']) ? round((float) $chkRow['igst_amount'], 2) : 0,
+			'gst_apply_flag' => $gstFlag,
 			'channel_partner_customer_id' => $custId,
 			'stock_debited' => 1,
 			'print_url' => 'bbsales_tracking/channel_partner_order_print.php?order_id=' . $cartId,
@@ -1481,13 +1488,52 @@ class ChannelPartnerOrder
 	 */
 	private function resolveGstApplyFlag($detail, $order = null)
 	{
-		if (is_array($detail) && array_key_exists('gst_apply_flag', $detail) && $detail['gst_apply_flag'] !== '' && $detail['gst_apply_flag'] !== null) {
-			return ((int) $detail['gst_apply_flag'] === 0) ? 0 : 1;
+		if (is_array($detail)) {
+			if (array_key_exists('gst_apply_flag', $detail) && $detail['gst_apply_flag'] !== '' && $detail['gst_apply_flag'] !== null) {
+				return ((int) $detail['gst_apply_flag'] === 0) ? 0 : 1;
+			}
+			/* App aliases */
+			if (isset($detail['without_gst']) && (string) $detail['without_gst'] !== '' && (int) $detail['without_gst'] === 1) {
+				return 0;
+			}
+			if (isset($detail['with_gst']) && (string) $detail['with_gst'] !== '') {
+				return ((int) $detail['with_gst'] === 0) ? 0 : 1;
+			}
 		}
-		if (is_array($order) && isset($order['gst_apply_flag'])) {
+		if (is_array($order) && array_key_exists('gst_apply_flag', $order) && $order['gst_apply_flag'] !== '' && $order['gst_apply_flag'] !== null) {
 			return ((int) $order['gst_apply_flag'] === 0) ? 0 : 1;
 		}
 		return 1;
+	}
+
+	/**
+	 * Persist GST mode + recalculate line GST and order totals (After Place / Update).
+	 */
+	private function syncGstModeOnOrder($orderId, $gstFlag)
+	{
+		$orderId = (int) $orderId;
+		$gstFlag = ((int) $gstFlag === 0) ? 0 : 1;
+		if ($orderId <= 0) {
+			return;
+		}
+		$ir = $this->db->rp_getData('order_product_item', '*', "order_id='" . $orderId . "' AND isDelete=0", 'id ASC', 0);
+		if ($ir) {
+			while ($row = mysqli_fetch_assoc($ir)) {
+				$line = isset($row['totalprice']) ? (float) $row['totalprice'] : ((float) $row['pro_qty'] * (float) $row['unitprice']);
+				$pct = (float) $this->db->rp_getValue('product', 'igst', "id='" . (int) $row['pro_id'] . "' AND isDelete=0", 0);
+				$gstAmt = $gstFlag ? (($line * $pct) / 100) : 0;
+				$colIg = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `order_product_item` LIKE 'igst_amount'");
+				if ($colIg && mysqli_num_rows($colIg) > 0) {
+					$this->db->rp_update(
+						'order_product_item',
+						array('igst_amount' => $this->db->rp_num($gstAmt)),
+						"id='" . (int) $row['id'] . "'",
+						0
+					);
+				}
+			}
+		}
+		$this->applyOrderTotals($orderId, $gstFlag);
 	}
 
 	private function sumOrderItemTotals($orderId, $gstFlag)
@@ -1973,6 +2019,11 @@ class ChannelPartnerOrder
 			}
 
 			$totals = $this->applyOrderTotals($orderId, $gstFlag, $detail);
+			/* Ensure line GST matches mode (esp. Without GST → 0) */
+			$this->syncGstModeOnOrder($orderId, $gstFlag);
+			if (is_array($detail) && (isset($detail['sub_total']) || isset($detail['grand_total']) || isset($detail['gst_amount']))) {
+				$this->applyOrderTotals($orderId, $gstFlag, $detail);
+			}
 			$upd = array(
 				'channel_partner_customer_id' => $custId,
 				'modified_date' => date('Y-m-d H:i:s'),
@@ -1983,8 +2034,8 @@ class ChannelPartnerOrder
 				'modified_date' => date('Y-m-d H:i:s'),
 			);
 			/* Header-only update can still save app totals / gst flag */
-			if (isset($detail['sub_total']) || isset($detail['subtotal']) || isset($detail['gst_amount']) || isset($detail['grand_total']) || array_key_exists('gst_apply_flag', $detail)) {
-				$this->applyOrderTotals($orderId, $gstFlag, $detail);
+			if (isset($detail['sub_total']) || isset($detail['subtotal']) || isset($detail['gst_amount']) || isset($detail['grand_total']) || array_key_exists('gst_apply_flag', $detail) || isset($detail['without_gst']) || isset($detail['with_gst'])) {
+				$this->syncGstModeOnOrder($orderId, $gstFlag);
 			} else {
 				$colGst = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `orders` LIKE 'gst_apply_flag'");
 				if ($colGst && mysqli_num_rows($colGst) > 0 && array_key_exists('gst_apply_flag', $detail)) {

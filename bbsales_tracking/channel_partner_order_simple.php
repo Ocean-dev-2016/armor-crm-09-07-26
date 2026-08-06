@@ -68,9 +68,10 @@ if ($edit_order_id > 0 && $cp_mode == 'customer') {
 	}
 	$selected_cp_customer_id = (int) $edit_ord['channel_partner_customer_id'];
 	$edit_order_no = isset($edit_ord['order_no']) ? $edit_ord['order_no'] : '';
-	$edit_gst_flag = isset($edit_ord['gst_apply_flag']) ? (int) $edit_ord['gst_apply_flag'] : 1;
-	if ($edit_gst_flag !== 0) {
-		$edit_gst_flag = 1;
+	/* Exact 0 = Without GST; missing column / null → default With GST */
+	$edit_gst_flag = 1;
+	if (array_key_exists('gst_apply_flag', $edit_ord) && $edit_ord['gst_apply_flag'] !== null && $edit_ord['gst_apply_flag'] !== '') {
+		$edit_gst_flag = ((int) $edit_ord['gst_apply_flag'] === 0) ? 0 : 1;
 	}
 	$eir = $db->rp_getData("order_product_item", "*", "order_id='" . $edit_order_id . "' AND isDelete=0", "id ASC", 0);
 	if ($eir) {

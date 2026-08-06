@@ -201,8 +201,10 @@ if ($is_valid_api_key) {
 				'channel_partner_customer_id' => isset($_REQUEST['channel_partner_customer_id'])
 					? (int) $_REQUEST['channel_partner_customer_id']
 					: (isset($_REQUEST['party_id']) ? (int) $_REQUEST['party_id'] : 0),
-				'gst_apply_flag' => isset($_REQUEST['gst_apply_flag']) ? (int) $_REQUEST['gst_apply_flag'] : 1,
 			);
+			if (isset($_REQUEST['gst_apply_flag']) && $_REQUEST['gst_apply_flag'] !== '') {
+				$detail['gst_apply_flag'] = (int) $_REQUEST['gst_apply_flag'];
+			}
 			$db->printJSON($objCPOrder->GetCart($detail));
 		} else if ($service == 'add_cp_customer_order_cart' || $service == 250) {
 			$detail = array(
@@ -210,7 +212,6 @@ if ($is_valid_api_key) {
 				'channel_partner_customer_id' => isset($_REQUEST['channel_partner_customer_id'])
 					? (int) $_REQUEST['channel_partner_customer_id']
 					: (isset($_REQUEST['party_id']) ? (int) $_REQUEST['party_id'] : 0),
-				'gst_apply_flag' => isset($_REQUEST['gst_apply_flag']) ? (int) $_REQUEST['gst_apply_flag'] : 1,
 				'pwp_id' => isset($_REQUEST['pwp_id']) ? (int) $_REQUEST['pwp_id'] : (isset($_REQUEST['line_product']) ? (int) $_REQUEST['line_product'] : 0),
 				'catno' => isset($_REQUEST['catno']) ? $db->clean($_REQUEST['catno']) : (isset($_REQUEST['cat_no']) ? $db->clean($_REQUEST['cat_no']) : ''),
 				'product_id' => isset($_REQUEST['product_id']) ? (int) $_REQUEST['product_id'] : (isset($_REQUEST['pid']) ? (int) $_REQUEST['pid'] : (isset($_REQUEST['pro_id']) ? (int) $_REQUEST['pro_id'] : 0)),
@@ -221,6 +222,13 @@ if ($is_valid_api_key) {
 				'discount' => isset($_REQUEST['discount']) ? $_REQUEST['discount'] : null,
 				'products' => isset($_REQUEST['products']) ? $_REQUEST['products'] : '',
 			);
+			if (isset($_REQUEST['gst_apply_flag']) && $_REQUEST['gst_apply_flag'] !== '') {
+				$detail['gst_apply_flag'] = (int) $_REQUEST['gst_apply_flag'];
+			} else if (isset($_REQUEST['without_gst']) && (int) $_REQUEST['without_gst'] === 1) {
+				$detail['gst_apply_flag'] = 0;
+			} else {
+				$detail['gst_apply_flag'] = 1;
+			}
 			$db->printJSON($objCPOrder->AddToCart($detail));
 		} else if ($service == 'update_cp_customer_order_cart_item' || $service == 251) {
 			$detail = array(
@@ -243,7 +251,6 @@ if ($is_valid_api_key) {
 			$detail = array(
 				'channel_partner_id' => $channel_partner_id,
 				'channel_partner_customer_id' => isset($_REQUEST['channel_partner_customer_id']) ? (int) $_REQUEST['channel_partner_customer_id'] : 0,
-				'gst_apply_flag' => isset($_REQUEST['gst_apply_flag']) ? (int) $_REQUEST['gst_apply_flag'] : 1,
 				'address' => isset($_REQUEST['address']) ? $_REQUEST['address'] : '',
 				'shipping_address' => isset($_REQUEST['shipping_address']) ? $_REQUEST['shipping_address'] : '',
 				'billing_address' => isset($_REQUEST['billing_address']) ? $_REQUEST['billing_address'] : '',
@@ -254,6 +261,15 @@ if ($is_valid_api_key) {
 				'rate' => isset($_REQUEST['rate']) ? $_REQUEST['rate'] : null,
 				'discount' => isset($_REQUEST['discount']) ? $_REQUEST['discount'] : null,
 			);
+			if (isset($_REQUEST['gst_apply_flag']) && $_REQUEST['gst_apply_flag'] !== '') {
+				$detail['gst_apply_flag'] = (int) $_REQUEST['gst_apply_flag'];
+			} else if (isset($_REQUEST['without_gst']) && (int) $_REQUEST['without_gst'] === 1) {
+				$detail['gst_apply_flag'] = 0;
+			} else if (isset($_REQUEST['with_gst']) && $_REQUEST['with_gst'] !== '') {
+				$detail['gst_apply_flag'] = ((int) $_REQUEST['with_gst'] === 0) ? 0 : 1;
+			} else {
+				$detail['gst_apply_flag'] = 1;
+			}
 			$db->printJSON($objCPOrder->PlaceOrder($detail));
 		} else if ($service == 'get_cp_customer_orders' || $service == 255) {
 			$detail = array(
@@ -313,6 +329,10 @@ if ($is_valid_api_key) {
 				);
 				if (isset($_REQUEST['gst_apply_flag']) && $_REQUEST['gst_apply_flag'] !== '') {
 					$detail['gst_apply_flag'] = (int) $_REQUEST['gst_apply_flag'];
+				} else if (isset($_REQUEST['without_gst']) && (int) $_REQUEST['without_gst'] === 1) {
+					$detail['gst_apply_flag'] = 0;
+				} else if (isset($_REQUEST['with_gst']) && $_REQUEST['with_gst'] !== '') {
+					$detail['gst_apply_flag'] = ((int) $_REQUEST['with_gst'] === 0) ? 0 : 1;
 				}
 				$db->printJSON($objCPOrder->UpdateCustomerOrder($detail));
 			}
