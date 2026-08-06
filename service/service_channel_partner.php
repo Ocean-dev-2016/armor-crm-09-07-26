@@ -29,6 +29,8 @@
  * #260 get_cp_payment_orders               — Receive Payment: orders for party
  * #261 save_cp_receive_payment             — Save payment received against order
  * #262 get_cp_party_ledger                 — Party Ledger / CP Customer Ledger (Tally style)
+ * #263 delete_cp_customer_order            — Delete Pending customer order (+ stock credit)
+ * #264 update_cp_customer_order            — Edit Pending customer order
  *
  * Also available (older): service_genral.php #224/#225 same customer table.
  */
@@ -265,6 +267,48 @@ if ($is_valid_api_key) {
 				'order_id' => isset($_REQUEST['order_id']) ? (int) $_REQUEST['order_id'] : (isset($_REQUEST['id']) ? (int) $_REQUEST['id'] : 0),
 			);
 			$db->printJSON($objCPOrder->GetOrderDetail($detail));
+		} else if ($service == 'delete_cp_customer_order' || $service == 263) {
+			if ($channel_partner_id <= 0) {
+				$db->printJSON(array(
+					'ack' => 0,
+					'ack_msg' => 'channel_partner_id is required. Use value from Login API #2 result.channel_partner_id',
+				));
+			} else {
+				$detail = array(
+					'channel_partner_id' => $channel_partner_id,
+					'order_id' => isset($_REQUEST['order_id']) ? (int) $_REQUEST['order_id'] : (isset($_REQUEST['id']) ? (int) $_REQUEST['id'] : 0),
+				);
+				$db->printJSON($objCPOrder->DeleteCustomerOrder($detail));
+			}
+		} else if ($service == 'update_cp_customer_order' || $service == 264) {
+			if ($channel_partner_id <= 0) {
+				$db->printJSON(array(
+					'ack' => 0,
+					'ack_msg' => 'channel_partner_id is required. Use value from Login API #2 result.channel_partner_id',
+				));
+			} else {
+				$detail = array(
+					'channel_partner_id' => $channel_partner_id,
+					'order_id' => isset($_REQUEST['order_id']) ? (int) $_REQUEST['order_id'] : (isset($_REQUEST['id']) ? (int) $_REQUEST['id'] : 0),
+					'channel_partner_customer_id' => isset($_REQUEST['channel_partner_customer_id'])
+						? (int) $_REQUEST['channel_partner_customer_id']
+						: (isset($_REQUEST['party_id']) ? (int) $_REQUEST['party_id'] : 0),
+					'gst_apply_flag' => isset($_REQUEST['gst_apply_flag']) ? (int) $_REQUEST['gst_apply_flag'] : 1,
+					'address' => isset($_REQUEST['address']) ? $_REQUEST['address'] : '',
+					'shipping_address' => isset($_REQUEST['shipping_address']) ? $_REQUEST['shipping_address'] : '',
+					'billing_address' => isset($_REQUEST['billing_address']) ? $_REQUEST['billing_address'] : '',
+					'remark' => isset($_REQUEST['remark']) ? $_REQUEST['remark'] : (isset($_REQUEST['remarks']) ? $_REQUEST['remarks'] : ''),
+					'products' => isset($_REQUEST['products']) ? $_REQUEST['products'] : '',
+					'pwp_id' => isset($_REQUEST['pwp_id']) ? (int) $_REQUEST['pwp_id'] : 0,
+					'qty' => isset($_REQUEST['qty']) ? $_REQUEST['qty'] : '',
+					'rate' => isset($_REQUEST['rate']) ? $_REQUEST['rate'] : null,
+					'discount' => isset($_REQUEST['discount']) ? $_REQUEST['discount'] : null,
+					'catno' => isset($_REQUEST['catno']) ? $db->clean($_REQUEST['catno']) : '',
+					'product_id' => isset($_REQUEST['product_id']) ? (int) $_REQUEST['product_id'] : 0,
+					'weight_id' => isset($_REQUEST['weight_id']) ? $_REQUEST['weight_id'] : '',
+				);
+				$db->printJSON($objCPOrder->UpdateCustomerOrder($detail));
+			}
 		} else if ($service == 'get_cp_my_stock' || $service == 257) {
 			if ($channel_partner_id <= 0) {
 				$db->printJSON(array(
@@ -343,12 +387,12 @@ if ($is_valid_api_key) {
 		} else {
 			$db->printJSON(array(
 				'ack' => 0,
-				'ack_msg' => 'Invalid Channel Partner service. Use s=241 to 262.',
+				'ack_msg' => 'Invalid Channel Partner service. Use s=241 to 264.',
 				'developer_msg' => 'Unknown service: ' . $service,
 			));
 		}
 	} else {
-		$db->printJSON(array('ack' => 0, 'ack_msg' => 'Invalid Service.', 'developer_msg' => 'Register APIs 241-262 via db_sync'));
+		$db->printJSON(array('ack' => 0, 'ack_msg' => 'Invalid Service.', 'developer_msg' => 'Register APIs 241-264 via db_sync'));
 	}
 } else {
 	$db->printJSON(array('ack' => 0, 'ack_msg' => 'Invalid API key.', 'developer_msg' => 'Use key=1226'));

@@ -92,7 +92,7 @@ function cp_customer_order_workflow($status, $paidFlag, $grandTotal, $paidAmount
 			<th style="width:11%;">Amount</th>
 			<th style="width:12%;">Payment</th>
 			<th style="width:18%;">Status</th>
-			<th style="width:10%;">Action</th>
+			<th style="width:14%;">Action</th>
 		</tr>
 	</thead>
 	<tbody>
@@ -130,6 +130,7 @@ function cp_customer_order_workflow($status, $paidFlag, $grandTotal, $paidAmount
 				: 'Pending';
 			$wf = cp_customer_order_workflow($row['status'], $paidFlag, $row['grand_total'], $paidAmt);
 			$partyId = (int) $row['channel_partner_customer_id'];
+			$canEdit = !empty($wf['can_dispatch']); /* Pending only */
 			?>
 			<tr>
 				<td><?php echo $sr++; ?></td>
@@ -168,7 +169,20 @@ function cp_customer_order_workflow($status, $paidFlag, $grandTotal, $paidAmount
 						<span class="label label-success">Completed</span>
 					<?php } ?>
 				</td>
-				<td>
+				<td style="white-space:nowrap;">
+					<?php if ($canEdit) { ?>
+						<a class="btn btn-xs yellow-crusta" style="color:#fff;"
+							href="channel_partner_order_simple.php?cp_mode=customer&edit_order_id=<?php echo (int) $row['id']; ?>"
+							title="Edit order">
+							<i class="fa fa-pencil"></i> Edit
+						</a>
+						<button type="button" class="btn btn-xs red cp-order-delete"
+							data-order-id="<?php echo (int) $row['id']; ?>"
+							data-order-no="<?php echo htmlspecialchars($row['order_no']); ?>"
+							title="Delete order">
+							<i class="fa fa-trash"></i> Delete
+						</button>
+					<?php } ?>
 					<a class="btn btn-xs blue" target="_blank" href="channel_partner_order_print.php?order_id=<?php echo (int) $row['id']; ?>">
 						<i class="fa fa-print"></i> Print
 					</a>

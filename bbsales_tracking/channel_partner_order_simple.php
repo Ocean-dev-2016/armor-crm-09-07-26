@@ -43,6 +43,54 @@ if (isset($_REQUEST['cp_customer_id']) && (int) $_REQUEST['cp_customer_id'] > 0)
 	$selected_cp_customer_id = (int) $_REQUEST['channel_partner_customer_id'];
 }
 
+$edit_order_id = isset($_REQUEST['edit_order_id']) ? (int) $_REQUEST['edit_order_id'] : 0;
+$edit_order_no = '';
+$edit_gst_flag = 1;
+$edit_lines_js = array();
+if ($edit_order_id > 0 && $cp_mode == 'customer') {
+	$eo = $db->rp_getData(
+		"orders",
+		"*",
+		"id='" . $edit_order_id . "' AND customer_id='" . $cp_login_id . "' AND channel_partner_order_flag=1 AND cp_order_mode='customer' AND isDelete=0 AND status!=-1",
+		"",
+		0
+	);
+	if (!$eo || !($edit_ord = mysqli_fetch_assoc($eo))) {
+		$db->addErrorMessage("Order not found for edit.");
+		$db->rp_location("channel_partner_order_manage.php");
+	}
+	$st = (int) $edit_ord['status'];
+	$pf = (int) $edit_ord['payment_received_flag'];
+	$pa = (float) $edit_ord['payment_received_amount'];
+	if (($pf === 1 && $pa > 0) || ($st >= 5 && $st != 3 && $st != -2)) {
+		$db->addErrorMessage("Only Pending orders can be edited.");
+		$db->rp_location("channel_partner_order_manage.php");
+	}
+	$selected_cp_customer_id = (int) $edit_ord['channel_partner_customer_id'];
+	$edit_order_no = isset($edit_ord['order_no']) ? $edit_ord['order_no'] : '';
+	$edit_gst_flag = isset($edit_ord['gst_apply_flag']) ? (int) $edit_ord['gst_apply_flag'] : 1;
+	if ($edit_gst_flag !== 0) {
+		$edit_gst_flag = 1;
+	}
+	$eir = $db->rp_getData("order_product_item", "*", "order_id='" . $edit_order_id . "' AND isDelete=0", "id ASC", 0);
+	if ($eir) {
+		while ($eit = mysqli_fetch_assoc($eir)) {
+			$pwp = (int) $db->rp_getValue(
+				"product_weight_price",
+				"id",
+				"product_id='" . (int) $eit['pro_id'] . "' AND weight_id='" . $db->clean($eit['weight_id']) . "' AND isDelete=0",
+				0
+			);
+			$edit_lines_js[] = array(
+				'pwp_id' => $pwp,
+				'qty' => (float) $eit['pro_qty'],
+				'rate' => (float) $eit['unitprice'],
+				'discount' => isset($eit['discount']) ? (float) $eit['discount'] : 0,
+			);
+		}
+	}
+}
+
 $cp_customers = array();
 $cp_customers_r = $db->rp_getData(
 	"channel_partner_customer",
@@ -61,16 +109,23 @@ $next_id = (int) $db->getLastInsertId("orders");
 $order_no_display = "ORD-" . $next_id;
 $order_date = date("d-m-Y");
 
-$page_title = ($cp_mode == 'own') ? "Add My Order (to Armor)" : "Customer Order (CP Format & Pricing)";
+$page_title = ($edit_order_id > 0)
+	? ("Edit Customer Order" . ($edit_order_no != '' ? ' — ' . $edit_order_no : ''))
+	: (($cp_mode == 'own') ? "Add My Order (to Armor)" : "Customer Order (CP Format & Pricing)");
 $page_hierarchy = array(
 	array("link" => "", "title" => "Sales & Marketing"),
 	array("link" => "channel_partner_customer_manage.php", "title" => "Channel Partner"),
-	array("link" => "channel_partner_order_simple.php?cp_mode=" . $cp_mode, "title" => $page_title)
+	array("link" => "channel_partner_order_manage.php", "title" => "Manage Customer Order"),
+	array("link" => "channel_partner_order_simple.php?cp_mode=" . $cp_mode . ($edit_order_id > 0 ? '&edit_order_id=' . $edit_order_id : ''), "title" => $page_title)
 );
 
 /* ---------- SUBMIT ---------- */
 if (isset($_REQUEST['btn_save']) || isset($_REQUEST['submit'])) {
-	if (!isset($rights['insert_flag']) || (int) $rights['insert_flag'] != 1) {
+	$post_edit_check = isset($_REQUEST['edit_order_id']) ? (int) $_REQUEST['edit_order_id'] : 0;
+	$canSave = ($post_edit_check > 0)
+		? (isset($rights['update_flag']) && (int) $rights['update_flag'] == 1) || (isset($rights['insert_flag']) && (int) $rights['insert_flag'] == 1)
+		: (isset($rights['insert_flag']) && (int) $rights['insert_flag'] == 1);
+	if (!$canSave) {
 		$db->rp_location('access_denied.php?msg=delete_access_denied');
 	}
 	$cp_mode = (isset($_REQUEST['cp_mode']) && $_REQUEST['cp_mode'] == 'own') ? 'own' : 'customer';
@@ -288,6 +343,47 @@ if (isset($_REQUEST['btn_save']) || isset($_REQUEST['submit'])) {
 				: $booking_place;
 			$booking_pincode = !empty($pre_cp_cust['pincode']) ? $pre_cp_cust['pincode'] : $booking_pincode;
 		}
+	}
+
+	/* ---------- EDIT existing Pending order ---------- */
+	$post_edit_id = isset($_REQUEST['edit_order_id']) ? (int) $_REQUEST['edit_order_id'] : 0;
+	if ($post_edit_id > 0 && $cp_mode == 'customer') {
+		if (empty($item)) {
+			$db->addErrorMessage("Please add at least one product.");
+			$db->rp_location("channel_partner_order_simple.php?cp_mode=customer&edit_order_id=" . $post_edit_id);
+		}
+		$productsPayload = array();
+		for ($i = 0; $i < count($line_products); $i++) {
+			$pwp_id = (int) $line_products[$i];
+			$qty = isset($line_qtys[$i]) ? (float) $line_qtys[$i] : 0;
+			if ($pwp_id <= 0 || $qty <= 0) {
+				continue;
+			}
+			$productsPayload[] = array(
+				'pwp_id' => $pwp_id,
+				'qty' => $qty,
+				'rate' => isset($line_prices[$i]) ? $line_prices[$i] : null,
+				'discount' => isset($line_discounts[$i]) ? $line_discounts[$i] : 0,
+			);
+		}
+		require_once dirname(__FILE__) . '/../include/class.channel_partner_order.php';
+		$objCpOrd = new ChannelPartnerOrder();
+		$updRes = $objCpOrd->UpdateCustomerOrder(array(
+			'channel_partner_id' => $cp_login_id,
+			'order_id' => $post_edit_id,
+			'channel_partner_customer_id' => $cp_end_id,
+			'gst_apply_flag' => $gst_apply_flag,
+			'address' => $shipping_address,
+			'shipping_address' => $shipping_address,
+			'billing_address' => $billing_address,
+			'products' => $productsPayload,
+		));
+		if (!empty($updRes['ack'])) {
+			$db->addSuccessMessage(isset($updRes['ack_msg']) ? $updRes['ack_msg'] : "Order updated.");
+			$db->rp_location("channel_partner_order_manage.php");
+		}
+		$db->addErrorMessage(isset($updRes['ack_msg']) ? $updRes['ack_msg'] : "Order update failed.");
+		$db->rp_location("channel_partner_order_simple.php?cp_mode=customer&edit_order_id=" . $post_edit_id);
 	}
 
 	$sales_executive_id = !empty($cp_exec_d['seid']) ? $cp_exec_d['seid'] : 0;
@@ -569,7 +665,10 @@ if (isset($_REQUEST['btn_save']) || isset($_REQUEST['submit'])) {
 								<input type="hidden" name="channel_partner_order_flag" value="1">
 								<input type="hidden" name="cp_portal_order_flag" value="1">
 								<input type="hidden" name="customer_id" id="customer_id" value="<?php echo (int) $cp_login_id; ?>">
-								<input type="hidden" name="gst_apply_flag" id="gst_apply_flag" value="1">
+								<?php if ($edit_order_id > 0) { ?>
+								<input type="hidden" name="edit_order_id" value="<?php echo (int) $edit_order_id; ?>">
+								<?php } ?>
+								<input type="hidden" name="gst_apply_flag" id="gst_apply_flag" value="<?php echo (int) $edit_gst_flag; ?>">
 
 								<div class="cp-order-section">
 									<div class="cp-order-section-title">Order Details</div>
@@ -577,7 +676,7 @@ if (isset($_REQUEST['btn_save']) || isset($_REQUEST['submit'])) {
 										<div class="col-md-3 col-sm-6">
 											<div class="form-group">
 												<label>Order No</label>
-												<input type="text" class="form-control" value="<?php echo htmlspecialchars($order_no_display); ?>" readonly>
+												<input type="text" class="form-control" value="<?php echo htmlspecialchars($edit_order_id > 0 && $edit_order_no != '' ? $edit_order_no : $order_no_display); ?>" readonly>
 											</div>
 										</div>
 										<div class="col-md-3 col-sm-6">
@@ -591,10 +690,10 @@ if (isset($_REQUEST['btn_save']) || isset($_REQUEST['submit'])) {
 												<label>Pricing Type <code>*</code></label>
 												<div class="cp-gst-box">
 													<label>
-														<input type="radio" name="gst_apply_ui" value="1" checked class="cp-gst-radio"> With GST
+														<input type="radio" name="gst_apply_ui" value="1" <?php echo ((int) $edit_gst_flag === 1) ? 'checked' : ''; ?> class="cp-gst-radio"> With GST
 													</label>
 													<label>
-														<input type="radio" name="gst_apply_ui" value="0" class="cp-gst-radio"> Without GST
+														<input type="radio" name="gst_apply_ui" value="0" <?php echo ((int) $edit_gst_flag === 0) ? 'checked' : ''; ?> class="cp-gst-radio"> Without GST
 													</label>
 												</div>
 											</div>
@@ -716,8 +815,8 @@ if (isset($_REQUEST['btn_save']) || isset($_REQUEST['submit'])) {
 								<div id="cpHiddenItems"></div>
 
 								<div class="cp-actions">
-									<button type="submit" name="btn_save" value="1" class="btn btn-success" id="btnSubmitOrder" disabled>Submit Order</button>
-									<a href="channel_partner_customer_manage.php" class="btn btn-default">Cancel</a>
+									<button type="submit" name="btn_save" value="1" class="btn btn-success" id="btnSubmitOrder" disabled><?php echo ($edit_order_id > 0) ? 'Update Order' : 'Submit Order'; ?></button>
+									<a href="channel_partner_order_manage.php" class="btn btn-default">Cancel</a>
 									<a href="channel_partner_print_settings.php" class="btn btn-info">SO/PI Format Settings</a>
 								</div>
 							</form>
@@ -735,6 +834,7 @@ if (isset($_REQUEST['btn_save']) || isset($_REQUEST['submit'])) {
 var cpCustomerId = "<?php echo (int) $cp_login_id; ?>";
 var productOptionsHtml = '<option value="">Select Product</option>';
 var cpProductsReady = false;
+var cpEditLines = <?php echo json_encode($edit_lines_js); ?>;
 
 function isNumberKey(evt) {
 	var charCode = (evt.which) ? evt.which : evt.keyCode;
@@ -799,12 +899,37 @@ function loadCpProducts() {
 				initCpProductSelect($sel);
 			});
 			showProductLoader(false);
+			applyCpEditLines();
 		},
 		error: function () {
 			showProductLoader(false);
 			toastr.error("Product list load failed. Please refresh.");
 		}
 	});
+}
+
+function applyCpEditLines() {
+	if (!cpEditLines || !cpEditLines.length || !cpProductsReady) {
+		return;
+	}
+	var lines = cpEditLines.slice();
+	cpEditLines = [];
+	var $first = $("#cpProductBody .cp-product-row").first();
+	function fillRow($row, line) {
+		$row.find(".cp-product-select").val(String(line.pwp_id)).trigger("change");
+		$row.find(".cp-qty").val(line.qty);
+		$row.find(".cp-rate").val(line.rate);
+		$row.find(".cp-disc").val(line.discount || 0);
+		$row.find(".cp-qty, .cp-rate, .cp-disc").trigger("input");
+	}
+	fillRow($first, lines[0]);
+	for (var i = 1; i < lines.length; i++) {
+		$first.find(".cp-add-row").trigger("click");
+		var $row = $("#cpProductBody .cp-product-row").last();
+		fillRow($row, lines[i]);
+	}
+	refreshRowActions();
+	recalcTotals();
 }
 
 function refreshRowActions() {

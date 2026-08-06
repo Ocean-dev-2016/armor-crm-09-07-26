@@ -1424,6 +1424,8 @@ class ChannelPartnerOrder
 					'status_label' => $wf['status_label'],
 					'baki_amount' => $wf['baki_amount'],
 					'order_status_code' => (int) $row['status'],
+					'can_edit' => ($wf['status'] === 'pending') ? 1 : 0,
+					'can_delete' => ($wf['status'] === 'pending') ? 1 : 0,
 				);
 			}
 		}
@@ -1433,6 +1435,300 @@ class ChannelPartnerOrder
 			'ack_msg' => 'Customer orders fetched.',
 			'total' => $total,
 			'result' => $result,
+		);
+	}
+
+	/**
+	 * Pending only — not dispatched / not paid.
+	 */
+	private function assertOrderModifiable($order)
+	{
+		if (!$order) {
+			return array('ack' => 0, 'ack_msg' => 'Order not found.');
+		}
+		$status = isset($order['status']) ? (int) $order['status'] : 0;
+		$paidFlag = isset($order['payment_received_flag']) ? (int) $order['payment_received_flag'] : 0;
+		$paidAmt = isset($order['payment_received_amount']) ? (float) $order['payment_received_amount'] : 0;
+		if ($paidFlag === 1 && $paidAmt > 0) {
+			return array('ack' => 0, 'ack_msg' => 'Paid / Completed order cannot be edited or deleted.');
+		}
+		if ($status >= 5 && $status != 3 && $status != -2) {
+			return array('ack' => 0, 'ack_msg' => 'Dispatched order cannot be edited or deleted.');
+		}
+		if ($status == 3 || $status == -2) {
+			return array('ack' => 0, 'ack_msg' => 'Cancelled order cannot be modified.');
+		}
+		return array('ack' => 1);
+	}
+
+	private function loadCpCustomerOrder($cpId, $orderId)
+	{
+		$where = "id='" . (int) $orderId . "' AND customer_id='" . (int) $cpId . "' AND channel_partner_order_flag=1"
+			. " AND cp_order_mode='customer' AND isDelete=0 AND status!=-1";
+		$or = $this->db->rp_getData('orders', '*', $where, '', 0);
+		if (!$or || mysqli_num_rows($or) == 0) {
+			return null;
+		}
+		return mysqli_fetch_assoc($or);
+	}
+
+	/**
+	 * Soft-delete CP customer order (Pending only) + credit stock back.
+	 */
+	public function DeleteCustomerOrder($detail)
+	{
+		$cpId = isset($detail['channel_partner_id']) ? (int) $detail['channel_partner_id'] : 0;
+		$orderId = isset($detail['order_id']) ? (int) $detail['order_id'] : (isset($detail['id']) ? (int) $detail['id'] : 0);
+		$cpCheck = $this->validateCp($cpId);
+		if ($cpCheck['ack'] != 1) {
+			return $cpCheck;
+		}
+		if ($orderId <= 0) {
+			return array('ack' => 0, 'ack_msg' => 'order_id is required.');
+		}
+		$order = $this->loadCpCustomerOrder($cpId, $orderId);
+		if (!$order) {
+			return array('ack' => 0, 'ack_msg' => 'Order not found.');
+		}
+		$mod = $this->assertOrderModifiable($order);
+		if ($mod['ack'] != 1) {
+			return $mod;
+		}
+
+		$credit = $this->objStock->creditBackForCustomerOrder($orderId);
+		$this->db->rp_update(
+			'order_product_item',
+			array('isDelete' => 1, 'modified_date' => date('Y-m-d H:i:s')),
+			"order_id='" . $orderId . "' AND isDelete=0",
+			0
+		);
+		$this->db->rp_update(
+			'orders',
+			array(
+				'isDelete' => 1,
+				'status' => 3,
+				'modified_date' => date('Y-m-d H:i:s'),
+			),
+			"id='" . $orderId . "'",
+			0
+		);
+
+		return array(
+			'ack' => 1,
+			'ack_msg' => 'Order deleted successfully.' . (empty($credit['ack']) ? '' : (' ' . $credit['ack_msg'])),
+			'order_id' => $orderId,
+			'order_no' => isset($order['order_no']) ? $order['order_no'] : '',
+			'stock_credited' => (!empty($credit['ack']) && empty($credit['already'])) ? 1 : 0,
+		);
+	}
+
+	/**
+	 * Update Pending CP customer order — party / address / remark / products.
+	 * products: JSON [{pwp_id, qty, rate, discount}] replaces all lines when sent.
+	 */
+	public function UpdateCustomerOrder($detail)
+	{
+		$cpId = isset($detail['channel_partner_id']) ? (int) $detail['channel_partner_id'] : 0;
+		$orderId = isset($detail['order_id']) ? (int) $detail['order_id'] : (isset($detail['id']) ? (int) $detail['id'] : 0);
+		$cpCheck = $this->validateCp($cpId);
+		if ($cpCheck['ack'] != 1) {
+			return $cpCheck;
+		}
+		if ($orderId <= 0) {
+			return array('ack' => 0, 'ack_msg' => 'order_id is required.');
+		}
+		$order = $this->loadCpCustomerOrder($cpId, $orderId);
+		if (!$order) {
+			return array('ack' => 0, 'ack_msg' => 'Order not found.');
+		}
+		$mod = $this->assertOrderModifiable($order);
+		if ($mod['ack'] != 1) {
+			return $mod;
+		}
+
+		$custId = isset($detail['channel_partner_customer_id']) ? (int) $detail['channel_partner_customer_id'] : 0;
+		if ($custId <= 0) {
+			$custId = isset($order['channel_partner_customer_id']) ? (int) $order['channel_partner_customer_id'] : 0;
+		}
+		$custCheck = $this->assertCustomer($cpId, $custId);
+		if ($custCheck['ack'] != 1) {
+			return $custCheck;
+		}
+
+		$gstFlag = isset($detail['gst_apply_flag']) ? (int) $detail['gst_apply_flag'] : (isset($order['gst_apply_flag']) ? (int) $order['gst_apply_flag'] : 1);
+		if ($gstFlag !== 0) {
+			$gstFlag = 1;
+		}
+
+		$replaceItems = false;
+		$itemsIn = array();
+		if (!empty($detail['products'])) {
+			$products = is_array($detail['products']) ? $detail['products'] : json_decode($detail['products'], true);
+			if (is_array($products) && !empty($products)) {
+				$replaceItems = true;
+				foreach ($products as $p) {
+					$resolved = $this->resolvePwpId($p);
+					if ($resolved['ack'] != 1) {
+						return $resolved;
+					}
+					$qty = isset($p['qty']) ? (float) $p['qty'] : 0;
+					$rate = isset($p['rate']) ? $p['rate'] : (isset($p['price']) ? $p['price'] : null);
+					$disc = isset($p['discount']) ? $p['discount'] : null;
+					$built = $this->buildItemFromPwp($cpId, (int) $resolved['pwp_id'], $qty, $rate, $disc);
+					if ($built['ack'] != 1) {
+						return $built;
+					}
+					$itemsIn[] = $built['item'];
+				}
+			}
+		} else if (isset($detail['pwp_id']) && (int) $detail['pwp_id'] > 0) {
+			$replaceItems = true;
+			$resolved = $this->resolvePwpId($detail);
+			if ($resolved['ack'] != 1) {
+				return $resolved;
+			}
+			$qty = isset($detail['qty']) ? (float) $detail['qty'] : 0;
+			$built = $this->buildItemFromPwp($cpId, (int) $resolved['pwp_id'], $qty, isset($detail['rate']) ? $detail['rate'] : null, isset($detail['discount']) ? $detail['discount'] : null);
+			if ($built['ack'] != 1) {
+				return $built;
+			}
+			$itemsIn[] = $built['item'];
+		}
+
+		if ($replaceItems) {
+			if (empty($itemsIn)) {
+				return array('ack' => 0, 'ack_msg' => 'Please keep at least one product.');
+			}
+			$stockCheckItems = array();
+			foreach ($itemsIn as $it) {
+				$stockCheckItems[] = array(
+					'pid' => $it['pid'],
+					'weight_id' => $it['weight_id'],
+					'qty' => $it['qty'],
+					'pro_name' => $it['pro_name'],
+				);
+			}
+			/* After credit-back, full qty must be available again */
+			$this->objStock->creditBackForCustomerOrder($orderId);
+
+			$stockCheck = $this->objStock->validateItemsStock($cpId, $stockCheckItems);
+			if (empty($stockCheck['ack'])) {
+				/* re-debit old stock so order stays consistent if validation fails */
+				$this->objStock->debitForCustomerOrder($orderId, true);
+				return array(
+					'ack' => 0,
+					'ack_msg' => isset($stockCheck['ack_msg']) ? $stockCheck['ack_msg'] : 'Insufficient stock.',
+				);
+			}
+
+			$this->db->rp_update(
+				'order_product_item',
+				array('isDelete' => 1, 'modified_date' => date('Y-m-d H:i:s')),
+				"order_id='" . $orderId . "' AND isDelete=0",
+				0
+			);
+
+			$sub = 0;
+			$qtyTot = 0;
+			$gstTot = 0;
+			foreach ($itemsIn as $it) {
+				$lineBase = (float) $it['qty'] * (float) $it['price'];
+				$gstPct = isset($it['gst_percent']) ? (float) $it['gst_percent'] : 0;
+				$gstAmt = $gstFlag ? (($lineBase * $gstPct) / 100) : 0;
+				$rows = array(
+					'order_id', 'pro_id', 'weight_id', 'pro_name', 'pro_qty', 'remaining_qty',
+					'unitprice', 'totalprice', 'discount', 'discount_amount', 'box_qty', 'cartoon_qty',
+					'brand_id', 'isDelete', 'isActive', 'created_date',
+				);
+				$values = array(
+					$orderId,
+					$it['pid'],
+					$it['weight_id'],
+					$it['pro_name'],
+					$it['qty'],
+					$it['qty'],
+					$it['price'],
+					$this->db->rp_num($lineBase),
+					$it['discount'],
+					$it['discount_amount'],
+					$it['box_qty'],
+					$it['cartoon_qty'],
+					$it['brand_id'],
+					0,
+					1,
+					date('Y-m-d H:i:s'),
+				);
+				$colIg = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `order_product_item` LIKE 'igst_amount'");
+				if ($colIg && mysqli_num_rows($colIg) > 0) {
+					$rows[] = 'igst_amount';
+					$values[] = $this->db->rp_num($gstAmt);
+				}
+				$this->db->rp_insert('order_product_item', $values, $rows, 0);
+				$sub += $lineBase;
+				$qtyTot += (float) $it['qty'];
+				$gstTot += $gstAmt;
+			}
+			$grand = $sub + $gstTot;
+			$upd = array(
+				'total_qty' => $qtyTot,
+				'subtotal' => $this->db->rp_num($sub),
+				'grand_total' => $this->db->rp_num($grand),
+				'remaining_amount' => round($grand),
+				'igst_amount' => $this->db->rp_num($gstTot),
+				'channel_partner_customer_id' => $custId,
+				'modified_date' => date('Y-m-d H:i:s'),
+			);
+			$colGst = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `orders` LIKE 'gst_apply_flag'");
+			if ($colGst && mysqli_num_rows($colGst) > 0) {
+				$upd['gst_apply_flag'] = $gstFlag;
+			}
+		} else {
+			$upd = array(
+				'channel_partner_customer_id' => $custId,
+				'modified_date' => date('Y-m-d H:i:s'),
+			);
+			$colGst = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `orders` LIKE 'gst_apply_flag'");
+			if ($colGst && mysqli_num_rows($colGst) > 0 && isset($detail['gst_apply_flag'])) {
+				$upd['gst_apply_flag'] = $gstFlag;
+			}
+		}
+
+		if (isset($detail['remark']) || isset($detail['remarks'])) {
+			$upd['remarks'] = isset($detail['remark']) ? $detail['remark'] : $detail['remarks'];
+		}
+		if (isset($detail['address']) && trim($detail['address']) !== '') {
+			$upd['shipping_address'] = trim($detail['address']);
+			$upd['billing_address'] = trim($detail['address']);
+		}
+		if (isset($detail['shipping_address']) && trim($detail['shipping_address']) !== '') {
+			$upd['shipping_address'] = trim($detail['shipping_address']);
+		}
+		if (isset($detail['billing_address']) && trim($detail['billing_address']) !== '') {
+			$upd['billing_address'] = trim($detail['billing_address']);
+		}
+
+		$this->db->rp_update('orders', $upd, "id='" . $orderId . "'", 0);
+		$this->ensureOrderNo($orderId);
+
+		if ($replaceItems) {
+			$debit = $this->objStock->debitForCustomerOrder($orderId, true);
+			if (empty($debit['ack'])) {
+				return array(
+					'ack' => 1,
+					'ack_msg' => 'Order updated but stock debit failed: ' . (isset($debit['ack_msg']) ? $debit['ack_msg'] : ''),
+					'order_id' => $orderId,
+					'stock_debited' => 0,
+				);
+			}
+		}
+
+		$detailOut = $this->GetOrderDetail(array('channel_partner_id' => $cpId, 'order_id' => $orderId));
+		return array(
+			'ack' => 1,
+			'ack_msg' => 'Order updated successfully.',
+			'order_id' => $orderId,
+			'order_no' => isset($order['order_no']) ? $order['order_no'] : $this->ensureOrderNo($orderId),
+			'result' => isset($detailOut['result']) ? $detailOut['result'] : array(),
 		);
 	}
 
@@ -1502,6 +1798,8 @@ class ChannelPartnerOrder
 				'status_label' => $wf['status_label'],
 				'baki_amount' => $wf['baki_amount'],
 				'order_status_code' => (int) $row['status'],
+				'can_edit' => ($wf['status'] === 'pending') ? 1 : 0,
+				'can_delete' => ($wf['status'] === 'pending') ? 1 : 0,
 				'items' => $items,
 				'print_url' => 'bbsales_tracking/channel_partner_order_print.php?order_id=' . (int) $row['id'],
 			),

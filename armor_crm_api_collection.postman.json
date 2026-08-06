@@ -1,7 +1,7 @@
 {
     "info": {
         "name": "Armor Fire CRM - Full API Collection (Backend Verified)",
-        "description": "Complete API collection generated from live PHP service source code.\n\nGenerated: 2026-07-10 13:59:58\nUpdated: 2026-08-04 \u2014 CP Login Dashboard #247 + My Customers #241-#246 + Customer Order Cart #248-#256 (service_channel_partner.php)\nAll requests: POST multipart/form-data\nAuth: `key` (API key) + `s` (service id or slug)\n\nEnvironments:\n- Live: https://armor-crm.oceanhub.co.in\n- Local: http://localhost:8080/armor_crm_08_07/202526\n\nSet collection variable `base_url` before testing.\nAPI key: 1226\n\n**Common Login (#2):** `service_sales_executive.php` \u2014 result.user_type = sales_executive | channel_partner\n**CP Dashboard (#247):** Login #2 \u2192 result.cp_apis.dashboard = 247\nEmployee Chat folder: service_employee_chat.php (#236-#240)\nService #39 (sync_offline_customers) includes all CRM columns + channel_partner_flag.\n**CP My Stock:** #257-#258 in service_channel_partner.php\n**CP Receive Payment:** #259-#261 in service_channel_partner.php\n**CP Party Ledger:** #262 in service_channel_partner.php\n**CP Cart:** ONE Add Cart API #250 (service_channel_partner.php). Folder: Channel Partner App \u2014 Customer Order + Cart. Demo values: CP 12229 / party 8 / pwp_id 2095.",
+        "description": "Complete API collection generated from live PHP service source code.\n\nGenerated: 2026-07-10 13:59:58\nUpdated: 2026-08-04 \u2014 CP Login Dashboard #247 + My Customers #241-#246 + Customer Order Cart #248-#256 (service_channel_partner.php)\nAll requests: POST multipart/form-data\nAuth: `key` (API key) + `s` (service id or slug)\n\nEnvironments:\n- Live: https://armor-crm.oceanhub.co.in\n- Local: http://localhost:8080/armor_crm_08_07/202526\n\nSet collection variable `base_url` before testing.\nAPI key: 1226\n\n**Common Login (#2):** `service_sales_executive.php` \u2014 result.user_type = sales_executive | channel_partner\n**CP Dashboard (#247):** Login #2 \u2192 result.cp_apis.dashboard = 247\nEmployee Chat folder: service_employee_chat.php (#236-#240)\nService #39 (sync_offline_customers) includes all CRM columns + channel_partner_flag.\n**CP My Stock:** #257-#258 in service_channel_partner.php\n**CP Receive Payment:** #259-#261 in service_channel_partner.php\n**CP Party Ledger:** #262 in service_channel_partner.php\n**CP Cart:** ONE Add Cart API #250 (service_channel_partner.php). Folder: Channel Partner App \u2014 Customer Order + Cart. Demo values: CP 12229 / party 8 / pwp_id 2095.\n**CP Order Edit/Delete:** #263 delete, #264 update (Pending only) in service_channel_partner.php",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "item": [
@@ -432,7 +432,7 @@
         },
         {
             "name": "Channel Partner App \u2014 Customer Order + Cart (#248-#256)",
-            "description": "Channel Partner App \u2014 Customer Order + Cart (#248-#256)\nSAME as web CP login (Aarav / channel_partner_id) \u2014 App draft cart.\nWeb form has no cart; App uses #249-#253 draft order (status=-1).\n\n**Who:** Only Channel Partner login. Always send channel_partner_id from Login #2.\n**Stock products only for that CP** (My Stock #257).\n\nLIVE verified Aarav Safety Solutions (CP 12229):\nParty: channel_partner_customer_id=8 Orbit Electricals\npwp_id map (from #248):\n  CatNo 2301 \u2192 pwp_id 2095 (stock 27, rate 9300)\n  CatNo 2893 \u2192 pwp_id 2119 (stock 30, rate 975)\n  CatNo 2290 \u2192 pwp_id 2106 (stock 33, rate 5700)\n  CatNo 2293 \u2192 pwp_id 2096 (stock 22, rate 12009)\n\n**Add Cart #250 (ONLY ONE API):** key, s=250, channel_partner_id, channel_partner_customer_id, pwp_id, qty\nDo NOT send products field.\nFlow: #257 \u2192 #241 \u2192 #248 \u2192 #250 \u2192 #249 \u2192 #254",
+            "description": "Channel Partner App \u2014 Customer Order + Cart (#248-#256)\nSAME as web CP login (Aarav / channel_partner_id) \u2014 App draft cart.\nWeb form has no cart; App uses #249-#253 draft order (status=-1).\n\n**Who:** Only Channel Partner login. Always send channel_partner_id from Login #2.\n**Stock products only for that CP** (My Stock #257).\n\nLIVE verified Aarav Safety Solutions (CP 12229):\nParty: channel_partner_customer_id=8 Orbit Electricals\npwp_id map (from #248):\n  CatNo 2301 \u2192 pwp_id 2095 (stock 27, rate 9300)\n  CatNo 2893 \u2192 pwp_id 2119 (stock 30, rate 975)\n  CatNo 2290 \u2192 pwp_id 2106 (stock 33, rate 5700)\n  CatNo 2293 \u2192 pwp_id 2096 (stock 22, rate 12009)\n\n**Add Cart #250 (ONLY ONE API):** key, s=250, channel_partner_id, channel_partner_customer_id, pwp_id, qty\nDo NOT send products field.\nFlow: #257 \u2192 #241 \u2192 #248 \u2192 #250 \u2192 #249 \u2192 #254\n\n**Edit/Delete (Pending only):**\n#256 detail \u2192 can_edit / can_delete\n#264 update_cp_customer_order (party / products JSON / remark)\n#263 delete_cp_customer_order (soft delete + stock credit back)",
             "item": [
                 {
                     "name": "CP Order Products (#248)",
@@ -961,6 +961,124 @@
                             ]
                         },
                         "description": "Order header + items[] + print_url"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "CP Update Customer Order (#264)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "264",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "channel_partner_id",
+                                    "value": "12229",
+                                    "type": "text",
+                                    "description": "From Login #2"
+                                },
+                                {
+                                    "key": "order_id",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "From #255 \u2014 Pending only"
+                                },
+                                {
+                                    "key": "channel_partner_customer_id",
+                                    "value": "8",
+                                    "type": "text",
+                                    "description": "Party (optional keep existing)"
+                                },
+                                {
+                                    "key": "gst_apply_flag",
+                                    "value": "1",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "remark",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "address",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "products",
+                                    "value": "[{\"pwp_id\":2095,\"qty\":1,\"rate\":9300,\"discount\":0}]",
+                                    "type": "text",
+                                    "description": "JSON array replaces all lines. Omit to update header only."
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_channel_partner.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_channel_partner.php"
+                            ]
+                        },
+                        "description": "Edit Pending CP customer order.\nIf products sent \u2192 replace lines + stock adjust.\nOnly status=Pending (not dispatched / not paid)."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "CP Delete Customer Order (#263)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "263",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "channel_partner_id",
+                                    "value": "12229",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "order_id",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "From #255 \u2014 Pending only (can_delete=1)"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_channel_partner.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_channel_partner.php"
+                            ]
+                        },
+                        "description": "Soft-delete Pending order + credit stock back.\nDispatched / Paid orders cannot be deleted."
                     },
                     "response": []
                 }

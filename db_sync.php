@@ -1292,7 +1292,9 @@ db_sync_register_api_if_missing($conn, 259, 'get_cp_payment_parties', 'CP Receiv
 db_sync_register_api_if_missing($conn, 260, 'get_cp_payment_orders', 'CP Receive Payment Orders', $cpAppApiBase . '&s=260&channel_partner_id=&party_id=');
 db_sync_register_api_if_missing($conn, 261, 'save_cp_receive_payment', 'CP Save Receive Payment', $cpAppApiBase . '&s=261&channel_partner_id=&order_id=&paid_amount=&payment_type=&remark=');
 db_sync_register_api_if_missing($conn, 262, 'get_cp_party_ledger', 'CP Party Ledger / Customer Ledger', $cpAppApiBase . '&s=262&channel_partner_id=&party_id=0');
-foreach (array(241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 256, 257, 258, 259, 260, 261, 262) as $cpAppApiId) {
+db_sync_register_api_if_missing($conn, 263, 'delete_cp_customer_order', 'CP Delete Customer Order', $cpAppApiBase . '&s=263&channel_partner_id=&order_id=');
+db_sync_register_api_if_missing($conn, 264, 'update_cp_customer_order', 'CP Update Customer Order', $cpAppApiBase . '&s=264&channel_partner_id=&order_id=&channel_partner_customer_id=&gst_apply_flag=1&address=&remark=&products=');
+foreach (array(241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 256, 257, 258, 259, 260, 261, 262, 263, 264) as $cpAppApiId) {
 	$slugMap = array(
 		241 => 'get_cp_my_customers',
 		242 => 'add_cp_my_customer',
@@ -1316,6 +1318,8 @@ foreach (array(241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 
 		260 => 'get_cp_payment_orders',
 		261 => 'save_cp_receive_payment',
 		262 => 'get_cp_party_ledger',
+		263 => 'delete_cp_customer_order',
+		264 => 'update_cp_customer_order',
 	);
 	$urlMap = array(
 		241 => $cpAppApiBase . '&s=241&channel_partner_id=&search_name=&ul=0&ll=50',
@@ -1340,6 +1344,8 @@ foreach (array(241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 
 		260 => $cpAppApiBase . '&s=260&channel_partner_id=&party_id=',
 		261 => $cpAppApiBase . '&s=261&channel_partner_id=&order_id=&paid_amount=&payment_type=&remark=',
 		262 => $cpAppApiBase . '&s=262&channel_partner_id=&party_id=0',
+		263 => $cpAppApiBase . '&s=263&channel_partner_id=&order_id=',
+		264 => $cpAppApiBase . '&s=264&channel_partner_id=&order_id=&channel_partner_customer_id=&gst_apply_flag=1&address=&remark=&products=',
 	);
 	$escSlug = mysqli_real_escape_string($conn, $slugMap[$cpAppApiId]);
 	$escUrl = mysqli_real_escape_string($conn, $urlMap[$cpAppApiId]);

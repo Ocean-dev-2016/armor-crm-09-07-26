@@ -186,6 +186,39 @@ $("#results").off("change", ".cp-status-update").on("change", ".cp-status-update
 		}
 	});
 });
+/* Delete Pending order */
+$("#results").off("click", ".cp-order-delete").on("click", ".cp-order-delete", function () {
+	var $btn = $(this);
+	var orderId = $btn.data("order-id");
+	var orderNo = $btn.data("order-no") || "";
+	if (!confirm("Delete order " + orderNo + "?\nStock will be credited back. This cannot be undone.")) {
+		return;
+	}
+	$btn.prop("disabled", true);
+	$.ajax({
+		url: "ajax_cp_delete_order.php",
+		type: "POST",
+		dataType: "json",
+		data: { order_id: orderId },
+		success: function (res) {
+			if (res && parseInt(res.ack, 10) === 1) {
+				if (typeof toastr !== "undefined") {
+					toastr.success(res.ack_msg || "Deleted");
+				} else {
+					alert(res.ack_msg || "Deleted");
+				}
+				displayRecords(100, 1);
+			} else {
+				$btn.prop("disabled", false);
+				alert((res && res.ack_msg) ? res.ack_msg : "Delete failed");
+			}
+		},
+		error: function () {
+			$btn.prop("disabled", false);
+			alert("Delete request failed");
+		}
+	});
+});
 $(document).ready(function() {
 	displayRecords(100, 1);
 });

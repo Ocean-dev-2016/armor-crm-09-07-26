@@ -380,6 +380,56 @@ class ChannelPartnerStock
 	}
 
 	/**
+	 * Credit stock back when CP customer order is deleted/edited (reverse of debit).
+	 */
+	public function creditBackForCustomerOrder($orderId)
+	{
+		$orderId = (int) $orderId;
+		$order = $this->getOrder($orderId);
+		if (!$order) {
+			return array("ack" => 0, "ack_msg" => "Order not found.");
+		}
+		if ((int) $order['channel_partner_order_flag'] !== 1) {
+			return array("ack" => 0, "ack_msg" => "Not a Channel Partner order.");
+		}
+		if (!$this->hasFlag($order, 'cp_stock_debited')) {
+			return array("ack" => 1, "ack_msg" => "No stock debit to reverse.", "already" => 1);
+		}
+
+		$cpId = (int) $order['customer_id'];
+		$salesId = isset($order['sales_id']) ? (int) $order['sales_id'] : 0;
+		$orderNo = isset($order['order_no']) ? $order['order_no'] : ('#' . $orderId);
+		$items = $this->getOrderItems($orderId);
+		$ok = 0;
+		foreach ($items as $it) {
+			$qty = (float) $it['pro_qty'];
+			if ($qty <= 0) {
+				continue;
+			}
+			$res = $this->addMovement(
+				$cpId,
+				(int) $it['pro_id'],
+				$it['weight_id'],
+				$it['pro_name'],
+				$qty,
+				"IN reverse Customer Order " . $orderNo . " (edit/delete)",
+				$orderId,
+				$salesId,
+				'in'
+			);
+			if (!empty($res['ack'])) {
+				$ok++;
+			}
+		}
+		$this->setOrderFlag($orderId, 'cp_stock_debited', 0);
+		return array(
+			"ack" => 1,
+			"ack_msg" => "Credited back " . $ok . " product line(s) to CP stock.",
+			"lines" => $ok,
+		);
+	}
+
+	/**
 	 * Pre-check stock for items array before placing order.
 	 * $items: array of array(pid, weight_id, qty, pro_name)
 	 */
