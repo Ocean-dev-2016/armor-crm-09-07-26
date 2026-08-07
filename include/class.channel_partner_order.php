@@ -1433,6 +1433,13 @@ class ChannelPartnerOrder
 					'order_status_code' => (int) $row['status'],
 					'can_edit' => ($wf['status'] === 'pending') ? 1 : 0,
 					'can_delete' => ($wf['status'] === 'pending') ? 1 : 0,
+					'can_dispatch' => ($wf['status'] === 'pending') ? 1 : 0,
+					'status_options' => ($wf['status'] === 'pending')
+						? array(
+							array('value' => 'pending', 'label' => 'Pending'),
+							array('value' => 'dispatch', 'label' => 'Dispatched'),
+						)
+						: array(),
 				);
 			}
 		}
@@ -2189,9 +2196,140 @@ class ChannelPartnerOrder
 				'order_status_code' => (int) $row['status'],
 				'can_edit' => ($wf['status'] === 'pending') ? 1 : 0,
 				'can_delete' => ($wf['status'] === 'pending') ? 1 : 0,
+				'can_dispatch' => ($wf['status'] === 'pending') ? 1 : 0,
+				'status_options' => ($wf['status'] === 'pending')
+					? array(
+						array('value' => 'pending', 'label' => 'Pending'),
+						array('value' => 'dispatch', 'label' => 'Dispatched'),
+					)
+					: array(),
 				'items' => $items,
 				'print_url' => 'bbsales_tracking/channel_partner_order_print.php?order_id=' . (int) $row['id'],
 			),
+		);
+	}
+
+	/**
+	 * Same as web Manage Customer Order status dropdown:
+	 * Pending → Dispatched (then list shows Pending Payment / Baki).
+	 * Mirrors bbsales_tracking/ajax_cp_dispatch_order.php
+	 */
+	public function UpdateCustomerOrderStatus($detail)
+	{
+		$cpId = isset($detail['channel_partner_id']) ? (int) $detail['channel_partner_id'] : 0;
+		$orderId = isset($detail['order_id']) ? (int) $detail['order_id'] : (isset($detail['id']) ? (int) $detail['id'] : 0);
+		$statusRaw = '';
+		if (isset($detail['status']) && $detail['status'] !== '') {
+			$statusRaw = strtolower(trim((string) $detail['status']));
+		} else if (isset($detail['dispatch_status']) && $detail['dispatch_status'] !== '') {
+			$statusRaw = strtolower(trim((string) $detail['dispatch_status']));
+		} else if (isset($detail['action']) && $detail['action'] !== '') {
+			$statusRaw = strtolower(trim((string) $detail['action']));
+		}
+
+		$cpCheck = $this->validateCp($cpId);
+		if ($cpCheck['ack'] != 1) {
+			return $cpCheck;
+		}
+		if ($orderId <= 0) {
+			return array('ack' => 0, 'ack_msg' => 'order_id is required.');
+		}
+		if ($statusRaw === '') {
+			return array(
+				'ack' => 0,
+				'ack_msg' => 'status is required. Use status=dispatch (Pending → Dispatched).',
+				'allowed_status' => array('dispatch', 'dispatched'),
+			);
+		}
+
+		$isDispatch = in_array($statusRaw, array('dispatch', 'dispatched', '5', '1'), true);
+		if (!$isDispatch) {
+			if (in_array($statusRaw, array('pending', '0'), true)) {
+				return array(
+					'ack' => 0,
+					'ack_msg' => 'Order is already Pending. Only Pending → Dispatched is allowed from App (same as web).',
+				);
+			}
+			return array(
+				'ack' => 0,
+				'ack_msg' => 'Invalid status. Use status=dispatch to mark Dispatched.',
+				'allowed_status' => array('dispatch', 'dispatched'),
+			);
+		}
+
+		$order = $this->loadCpCustomerOrder($cpId, $orderId);
+		if (!$order) {
+			return array('ack' => 0, 'ack_msg' => 'Order not found.');
+		}
+		$mod = $this->assertOrderModifiable($order);
+		if ($mod['ack'] != 1) {
+			return $mod;
+		}
+
+		$dispatchStatus = 0;
+		if (isset($detail['dispatch_status_id']) && (int) $detail['dispatch_status_id'] > 0) {
+			$dispatchStatus = (int) $detail['dispatch_status_id'];
+		}
+		if ($dispatchStatus <= 0) {
+			$dispatchStatus = (int) $this->db->rp_getValue('dispatch_order_status', 'id', 'isDelete=0', 0);
+			if ($dispatchStatus <= 0) {
+				mysqli_query($this->db->myconn, "INSERT INTO dispatch_order_status (name, isDelete, isActive) VALUES ('Dispatched', 0, 1)");
+				$dispatchStatus = (int) mysqli_insert_id($this->db->myconn);
+			}
+			if ($dispatchStatus <= 0) {
+				$dispatchStatus = 1;
+			}
+		}
+
+		$upd = array(
+			'dispatch_status' => $dispatchStatus,
+			'modified_date' => date('Y-m-d H:i:s'),
+		);
+		if ((int) $order['status'] < 5) {
+			$upd['status'] = 5;
+		}
+
+		$ok = $this->db->rp_update(
+			'orders',
+			$upd,
+			"id='" . $orderId . "' AND customer_id='" . $cpId . "' AND isDelete=0",
+			0
+		);
+		if (!$ok) {
+			return array('ack' => 0, 'ack_msg' => 'Status update failed.');
+		}
+
+		/* Idempotent stock outward (same as web ajax_cp_dispatch_order.php) */
+		$debitRes = $this->objStock->debitForCustomerOrder($orderId);
+		$debitMsg = '';
+		if (!empty($debitRes['ack'])) {
+			$debitMsg = !empty($debitRes['already']) ? ' Stock already deducted.' : ' Stock outward posted.';
+		} else {
+			$debitMsg = ' Stock outward failed: ' . (isset($debitRes['ack_msg']) ? $debitRes['ack_msg'] : '');
+		}
+
+		$fresh = $this->loadCpCustomerOrder($cpId, $orderId);
+		$wf = $this->workflowStatus(
+			isset($fresh['status']) ? $fresh['status'] : 5,
+			isset($fresh['payment_received_flag']) ? $fresh['payment_received_flag'] : 0,
+			isset($fresh['grand_total']) ? $fresh['grand_total'] : 0,
+			isset($fresh['payment_received_amount']) ? $fresh['payment_received_amount'] : 0
+		);
+
+		return array(
+			'ack' => 1,
+			'ack_msg' => 'Dispatch status updated for ' . (isset($order['order_no']) ? $order['order_no'] : ('#' . $orderId)) . $debitMsg,
+			'order_id' => $orderId,
+			'order_no' => isset($order['order_no']) ? $order['order_no'] : '',
+			'dispatch_status' => $dispatchStatus,
+			'status' => $wf['status'],
+			'status_label' => $wf['status_label'],
+			'baki_amount' => $wf['baki_amount'],
+			'order_status_code' => isset($fresh['status']) ? (int) $fresh['status'] : 5,
+			'can_edit' => 0,
+			'can_delete' => 0,
+			'can_dispatch' => 0,
+			'stock' => $debitRes,
 		);
 	}
 }

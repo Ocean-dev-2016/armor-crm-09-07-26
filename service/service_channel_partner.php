@@ -33,6 +33,7 @@
  * #264 update_cp_customer_order            — Edit Pending customer order
  * #265 get_cp_payment_pdf                  — Receive Payment Print PDF (party statement)
  * #266 add_cp_customer_order_item          — Edit Order: add item (+ Add Item)
+ * #267 update_cp_customer_order_status     — Status: Pending → Dispatched (same as web dropdown)
  *
  * Also available (older): service_genral.php #224/#225 same customer table.
  */
@@ -175,6 +176,8 @@ if ($is_valid_api_key) {
 					'add_cart' => array('s' => 250, 'slug' => 'add_cp_customer_order_cart'),
 					'place_order' => array('s' => 254, 'slug' => 'place_cp_customer_order'),
 					'orders' => array('s' => 255, 'slug' => 'get_cp_customer_orders'),
+					'order_detail' => array('s' => 256, 'slug' => 'get_cp_customer_order_detail'),
+					'update_status' => array('s' => 267, 'slug' => 'update_cp_customer_order_status'),
 				),
 			));
 		} else if ($service == 'get_cp_dashboard' || $service == 247) {
@@ -365,6 +368,23 @@ if ($is_valid_api_key) {
 				}
 				$db->printJSON($objCPOrder->AddCustomerOrderItem($detail));
 			}
+		} else if ($service == 'update_cp_customer_order_status' || $service == 'dispatch_cp_customer_order' || $service == 267) {
+			if ($channel_partner_id <= 0) {
+				$db->printJSON(array(
+					'ack' => 0,
+					'ack_msg' => 'channel_partner_id is required. Use value from Login API #2 result.channel_partner_id',
+				));
+			} else {
+				$detail = array(
+					'channel_partner_id' => $channel_partner_id,
+					'order_id' => isset($_REQUEST['order_id']) ? (int) $_REQUEST['order_id'] : (isset($_REQUEST['id']) ? (int) $_REQUEST['id'] : 0),
+					'status' => isset($_REQUEST['status']) ? $db->clean($_REQUEST['status']) : '',
+					'action' => isset($_REQUEST['action']) ? $db->clean($_REQUEST['action']) : '',
+					'dispatch_status' => isset($_REQUEST['dispatch_status']) ? $db->clean($_REQUEST['dispatch_status']) : '',
+					'dispatch_status_id' => isset($_REQUEST['dispatch_status_id']) ? (int) $_REQUEST['dispatch_status_id'] : 0,
+				);
+				$db->printJSON($objCPOrder->UpdateCustomerOrderStatus($detail));
+			}
 		} else if ($service == 'get_cp_my_stock' || $service == 257) {
 			if ($channel_partner_id <= 0) {
 				$db->printJSON(array(
@@ -456,12 +476,12 @@ if ($is_valid_api_key) {
 		} else {
 			$db->printJSON(array(
 				'ack' => 0,
-				'ack_msg' => 'Invalid Channel Partner service. Use s=241 to 266.',
+				'ack_msg' => 'Invalid Channel Partner service. Use s=241 to 267.',
 				'developer_msg' => 'Unknown service: ' . $service,
 			));
 		}
 	} else {
-		$db->printJSON(array('ack' => 0, 'ack_msg' => 'Invalid Service.', 'developer_msg' => 'Register APIs 241-266 via db_sync'));
+		$db->printJSON(array('ack' => 0, 'ack_msg' => 'Invalid Service.', 'developer_msg' => 'Register APIs 241-267 via db_sync'));
 	}
 } else {
 	$db->printJSON(array('ack' => 0, 'ack_msg' => 'Invalid API key.', 'developer_msg' => 'Use key=1226'));

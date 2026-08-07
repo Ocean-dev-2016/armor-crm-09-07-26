@@ -303,6 +303,9 @@ if ($is_valid_api_key) {
 								'my_customers_detail' => 244,
 								'my_customers_delete' => 245,
 								'my_customers_form_masters' => 246,
+								'customer_orders_list' => 255,
+								'customer_order_detail' => 256,
+								'update_customer_order_status' => 267,
 								'party_ledger' => 262,
 							),
 						);
