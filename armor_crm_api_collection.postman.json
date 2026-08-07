@@ -1511,7 +1511,7 @@
         },
         {
             "name": "Channel Partner App — Party Ledger (#262)",
-            "description": "Same as web CP Customer Ledger (channel_partner_ledger.php) — Tally style.\n\n**App flow:**\n1) Call #262 with channel_partner_id + party_id=0 (All Parties)\n2) Use response.parties[] for Party dropdown\n3) On party change, call #262 again with selected party_id\n4) Show result[]: date_display, particulars, voucher, debit_display, credit_display, balance_display\n5) Footer: closing_balance_display\n6) Receive Payment button → API #259\n\nEndpoint: service/service_channel_partner.php\nkey=1226",
+            "description": "Same as web CP Customer Ledger (channel_partner_ledger.php) — Tally style.\n\n**App flow:**\n1) Call #262 with channel_partner_id + party_id=0 (All Parties)\n2) Use response.parties[] for Party dropdown\n3) On party change, call #262 again with selected party_id\n4) Show result[]: date_display, particulars, voucher, debit_display, credit_display, balance_display\n5) Footer: closing_balance_display\n6) Receive Payment button → API #259\n7) PDF: response.file_url = full absolute PDF URL (same style as #265). Also print_url points to same PDF when pdf_ok=1.\n\nEndpoint: service/service_channel_partner.php\nkey=1226",
             "item": [
                 {
                     "name": "CP Party Ledger — All Parties (#262)",
