@@ -1874,6 +1874,126 @@ class ChannelPartnerOrder
 	}
 
 	/**
+	 * Soft-delete one line from Pending CP customer order (Edit Order → Delete Item).
+	 * Credits stock back for that qty when order already stock-debited.
+	 * At least one item must remain — use #263 to delete whole order.
+	 */
+	public function DeleteCustomerOrderItem($detail)
+	{
+		$cpId = isset($detail['channel_partner_id']) ? (int) $detail['channel_partner_id'] : 0;
+		$orderId = isset($detail['order_id']) ? (int) $detail['order_id'] : (isset($detail['id']) ? (int) $detail['id'] : 0);
+		$itemId = 0;
+		if (isset($detail['item_id']) && (int) $detail['item_id'] > 0) {
+			$itemId = (int) $detail['item_id'];
+		} else if (isset($detail['order_item_id']) && (int) $detail['order_item_id'] > 0) {
+			$itemId = (int) $detail['order_item_id'];
+		} else if (isset($detail['cart_item_id']) && (int) $detail['cart_item_id'] > 0) {
+			$itemId = (int) $detail['cart_item_id'];
+		}
+
+		$cpCheck = $this->validateCp($cpId);
+		if ($cpCheck['ack'] != 1) {
+			return $cpCheck;
+		}
+		if ($orderId <= 0) {
+			return array('ack' => 0, 'ack_msg' => 'order_id is required.');
+		}
+		if ($itemId <= 0) {
+			return array('ack' => 0, 'ack_msg' => 'item_id is required (from #256 items[].item_id).');
+		}
+
+		$order = $this->loadCpCustomerOrder($cpId, $orderId);
+		if (!$order) {
+			return array('ack' => 0, 'ack_msg' => 'Order not found.');
+		}
+		$mod = $this->assertOrderModifiable($order);
+		if ($mod['ack'] != 1) {
+			return $mod;
+		}
+
+		$ir = $this->db->rp_getData(
+			'order_product_item',
+			'*',
+			"id='" . $itemId . "' AND order_id='" . $orderId . "' AND isDelete=0",
+			'',
+			0
+		);
+		if (!$ir || mysqli_num_rows($ir) == 0) {
+			return array('ack' => 0, 'ack_msg' => 'Order item not found.');
+		}
+		$item = mysqli_fetch_assoc($ir);
+
+		$remainCount = (int) $this->db->rp_getTotalRecord(
+			'order_product_item',
+			"order_id='" . $orderId . "' AND isDelete=0",
+			0
+		);
+		if ($remainCount <= 1) {
+			return array(
+				'ack' => 0,
+				'ack_msg' => 'Cannot delete the last item. Delete the whole order with API #263, or add another item first (#266).',
+				'order_id' => $orderId,
+				'item_id' => $itemId,
+				'hint' => 'delete_cp_customer_order s=263',
+			);
+		}
+
+		$this->db->rp_update(
+			'order_product_item',
+			array(
+				'isDelete' => 1,
+				'modified_date' => date('Y-m-d H:i:s'),
+			),
+			"id='" . $itemId . "' AND order_id='" . $orderId . "'",
+			0
+		);
+
+		$gstFlag = $this->resolveGstApplyFlag($detail, $order);
+		$this->applyOrderTotals($orderId, $gstFlag, $detail);
+
+		$stockMsg = '';
+		$stockCredited = 0;
+		$stockDebited = !empty($order['cp_stock_debited']) && (int) $order['cp_stock_debited'] === 1;
+		$qty = isset($item['pro_qty']) ? (float) $item['pro_qty'] : 0;
+		if ($stockDebited && $qty > 0) {
+			$salesId = isset($order['sales_id']) ? (int) $order['sales_id'] : 0;
+			$orderNo = isset($order['order_no']) ? $order['order_no'] : $this->ensureOrderNo($orderId);
+			$creditRes = $this->objStock->addMovement(
+				$cpId,
+				(int) $item['pro_id'],
+				$item['weight_id'],
+				isset($item['pro_name']) ? $item['pro_name'] : '',
+				$qty,
+				'IN delete item Customer Order ' . $orderNo,
+				$orderId,
+				$salesId,
+				'in'
+			);
+			if (!empty($creditRes['ack'])) {
+				$stockCredited = 1;
+				$stockMsg = ' Stock credited back.';
+			} else {
+				$stockMsg = ' Stock credit failed: ' . (isset($creditRes['ack_msg']) ? $creditRes['ack_msg'] : '');
+			}
+		}
+
+		$detailOut = $this->GetOrderDetail(array('channel_partner_id' => $cpId, 'order_id' => $orderId));
+		return array(
+			'ack' => 1,
+			'ack_msg' => 'Item deleted from order.' . $stockMsg,
+			'order_id' => $orderId,
+			'order_no' => isset($order['order_no']) ? $order['order_no'] : '',
+			'item_id' => $itemId,
+			'deleted_qty' => round($qty, 2),
+			'stock_credited' => $stockCredited,
+			'sub_total' => isset($detailOut['result']['sub_total']) ? $detailOut['result']['sub_total'] : 0,
+			'gst_amount' => isset($detailOut['result']['gst_amount']) ? $detailOut['result']['gst_amount'] : 0,
+			'grand_total' => isset($detailOut['result']['grand_total']) ? $detailOut['result']['grand_total'] : 0,
+			'result' => isset($detailOut['result']) ? $detailOut['result'] : array(),
+		);
+	}
+
+	/**
 	 * Update Pending CP customer order — party / address / remark / products.
 	 * products: JSON [{pwp_id, qty, rate, discount}] replaces all lines when sent.
 	 */

@@ -34,6 +34,7 @@
  * #265 get_cp_payment_pdf                  — Receive Payment Print PDF (party statement)
  * #266 add_cp_customer_order_item          — Edit Order: add item (+ Add Item)
  * #267 update_cp_customer_order_status     — Status: Pending → Dispatched (same as web dropdown)
+ * #268 delete_cp_customer_order_item       — Edit Order: delete one item
  *
  * Also available (older): service_genral.php #224/#225 same customer table.
  */
@@ -368,6 +369,25 @@ if ($is_valid_api_key) {
 				}
 				$db->printJSON($objCPOrder->AddCustomerOrderItem($detail));
 			}
+		} else if ($service == 'delete_cp_customer_order_item' || $service == 'remove_cp_customer_order_item' || $service == 268) {
+			if ($channel_partner_id <= 0) {
+				$db->printJSON(array(
+					'ack' => 0,
+					'ack_msg' => 'channel_partner_id is required. Use value from Login API #2 result.channel_partner_id',
+				));
+			} else {
+				$detail = array(
+					'channel_partner_id' => $channel_partner_id,
+					'order_id' => isset($_REQUEST['order_id']) ? (int) $_REQUEST['order_id'] : (isset($_REQUEST['id']) ? (int) $_REQUEST['id'] : 0),
+					'item_id' => isset($_REQUEST['item_id']) ? (int) $_REQUEST['item_id'] : 0,
+					'order_item_id' => isset($_REQUEST['order_item_id']) ? (int) $_REQUEST['order_item_id'] : 0,
+					'cart_item_id' => isset($_REQUEST['cart_item_id']) ? (int) $_REQUEST['cart_item_id'] : 0,
+				);
+				if (isset($_REQUEST['gst_apply_flag']) && $_REQUEST['gst_apply_flag'] !== '') {
+					$detail['gst_apply_flag'] = (int) $_REQUEST['gst_apply_flag'];
+				}
+				$db->printJSON($objCPOrder->DeleteCustomerOrderItem($detail));
+			}
 		} else if ($service == 'update_cp_customer_order_status' || $service == 'dispatch_cp_customer_order' || $service == 267) {
 			if ($channel_partner_id <= 0) {
 				$db->printJSON(array(
@@ -476,12 +496,12 @@ if ($is_valid_api_key) {
 		} else {
 			$db->printJSON(array(
 				'ack' => 0,
-				'ack_msg' => 'Invalid Channel Partner service. Use s=241 to 267.',
+				'ack_msg' => 'Invalid Channel Partner service. Use s=241 to 268.',
 				'developer_msg' => 'Unknown service: ' . $service,
 			));
 		}
 	} else {
-		$db->printJSON(array('ack' => 0, 'ack_msg' => 'Invalid Service.', 'developer_msg' => 'Register APIs 241-267 via db_sync'));
+		$db->printJSON(array('ack' => 0, 'ack_msg' => 'Invalid Service.', 'developer_msg' => 'Register APIs 241-268 via db_sync'));
 	}
 } else {
 	$db->printJSON(array('ack' => 0, 'ack_msg' => 'Invalid API key.', 'developer_msg' => 'Use key=1226'));
