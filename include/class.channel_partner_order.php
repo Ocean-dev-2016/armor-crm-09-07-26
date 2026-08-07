@@ -1434,6 +1434,7 @@ class ChannelPartnerOrder
 					'can_edit' => ($wf['status'] === 'pending') ? 1 : 0,
 					'can_delete' => ($wf['status'] === 'pending') ? 1 : 0,
 					'can_dispatch' => ($wf['status'] === 'pending') ? 1 : 0,
+					'can_dispatched' => ($wf['status'] === 'pending') ? 1 : 0,
 					'status_options' => ($wf['status'] === 'pending')
 						? array(
 							array('value' => 'pending', 'label' => 'Pending'),
@@ -2197,6 +2198,7 @@ class ChannelPartnerOrder
 				'can_edit' => ($wf['status'] === 'pending') ? 1 : 0,
 				'can_delete' => ($wf['status'] === 'pending') ? 1 : 0,
 				'can_dispatch' => ($wf['status'] === 'pending') ? 1 : 0,
+				'can_dispatched' => ($wf['status'] === 'pending') ? 1 : 0,
 				'status_options' => ($wf['status'] === 'pending')
 					? array(
 						array('value' => 'pending', 'label' => 'Pending'),
@@ -2213,6 +2215,8 @@ class ChannelPartnerOrder
 	 * Same as web Manage Customer Order status dropdown:
 	 * Pending → Dispatched (then list shows Pending Payment / Baki).
 	 * Mirrors bbsales_tracking/ajax_cp_dispatch_order.php
+	 *
+	 * Always returns can_dispatch / can_dispatched (1|0) for App UI.
 	 */
 	public function UpdateCustomerOrderStatus($detail)
 	{
@@ -2232,38 +2236,87 @@ class ChannelPartnerOrder
 			return $cpCheck;
 		}
 		if ($orderId <= 0) {
-			return array('ack' => 0, 'ack_msg' => 'order_id is required.');
-		}
-		if ($statusRaw === '') {
 			return array(
 				'ack' => 0,
-				'ack_msg' => 'status is required. Use status=dispatch (Pending → Dispatched).',
-				'allowed_status' => array('dispatch', 'dispatched'),
-			);
-		}
-
-		$isDispatch = in_array($statusRaw, array('dispatch', 'dispatched', '5', '1'), true);
-		if (!$isDispatch) {
-			if (in_array($statusRaw, array('pending', '0'), true)) {
-				return array(
-					'ack' => 0,
-					'ack_msg' => 'Order is already Pending. Only Pending → Dispatched is allowed from App (same as web).',
-				);
-			}
-			return array(
-				'ack' => 0,
-				'ack_msg' => 'Invalid status. Use status=dispatch to mark Dispatched.',
-				'allowed_status' => array('dispatch', 'dispatched'),
+				'ack_msg' => 'order_id is required. Use Pending order from #255 where can_dispatch=1.',
+				'can_dispatch' => 0,
+				'can_dispatched' => 0,
 			);
 		}
 
 		$order = $this->loadCpCustomerOrder($cpId, $orderId);
 		if (!$order) {
-			return array('ack' => 0, 'ack_msg' => 'Order not found.');
+			return array(
+				'ack' => 0,
+				'ack_msg' => 'Order not found.',
+				'order_id' => $orderId,
+				'can_dispatch' => 0,
+				'can_dispatched' => 0,
+			);
 		}
-		$mod = $this->assertOrderModifiable($order);
-		if ($mod['ack'] != 1) {
-			return $mod;
+
+		$wf = $this->workflowStatus(
+			$order['status'],
+			$order['payment_received_flag'],
+			$order['grand_total'],
+			$order['payment_received_amount']
+		);
+		$canDispatch = ($wf['status'] === 'pending') ? 1 : 0;
+		$baseFlags = array(
+			'order_id' => $orderId,
+			'order_no' => isset($order['order_no']) ? $order['order_no'] : '',
+			'status' => $wf['status'],
+			'status_label' => $wf['status_label'],
+			'baki_amount' => $wf['baki_amount'],
+			'order_status_code' => (int) $order['status'],
+			'can_edit' => $canDispatch,
+			'can_delete' => $canDispatch,
+			'can_dispatch' => $canDispatch,
+			'can_dispatched' => $canDispatch,
+			'status_options' => $canDispatch
+				? array(
+					array('value' => 'pending', 'label' => 'Pending'),
+					array('value' => 'dispatch', 'label' => 'Dispatched'),
+				)
+				: array(),
+		);
+
+		/* status empty → only return can_dispatch flags (App can check before change) */
+		if ($statusRaw === '' || $statusRaw === 'check' || $statusRaw === 'get') {
+			return array_merge(array(
+				'ack' => 1,
+				'ack_msg' => $canDispatch
+					? 'Order is Pending. You can mark Dispatched (status=dispatch).'
+					: ('Order status is ' . $wf['status_label'] . '. Dispatched change not allowed.'),
+			), $baseFlags);
+		}
+
+		$isDispatch = in_array($statusRaw, array('dispatch', 'dispatched', '5'), true);
+		if (!$isDispatch) {
+			if (in_array($statusRaw, array('pending', '0'), true)) {
+				return array_merge(array(
+					'ack' => 0,
+					'ack_msg' => 'Order is already Pending. Send status=dispatch to mark Dispatched.',
+				), $baseFlags);
+			}
+			return array_merge(array(
+				'ack' => 0,
+				'ack_msg' => 'Invalid status. Use status=dispatch (or omit status to only check can_dispatch).',
+				'allowed_status' => array('dispatch', 'dispatched'),
+			), $baseFlags);
+		}
+
+		if ($canDispatch !== 1) {
+			$msg = 'Cannot mark Dispatched.';
+			if ($wf['status'] === 'pending_payment') {
+				$msg = 'Order already Dispatched (Pending Payment). can_dispatch=0.';
+			} else if ($wf['status'] === 'completed') {
+				$msg = 'Order already Completed. can_dispatch=0.';
+			}
+			return array_merge(array(
+				'ack' => 0,
+				'ack_msg' => $msg,
+			), $baseFlags);
 		}
 
 		$dispatchStatus = 0;
@@ -2296,7 +2349,10 @@ class ChannelPartnerOrder
 			0
 		);
 		if (!$ok) {
-			return array('ack' => 0, 'ack_msg' => 'Status update failed.');
+			return array_merge(array(
+				'ack' => 0,
+				'ack_msg' => 'Status update failed.',
+			), $baseFlags);
 		}
 
 		/* Idempotent stock outward (same as web ajax_cp_dispatch_order.php) */
@@ -2309,7 +2365,7 @@ class ChannelPartnerOrder
 		}
 
 		$fresh = $this->loadCpCustomerOrder($cpId, $orderId);
-		$wf = $this->workflowStatus(
+		$wf2 = $this->workflowStatus(
 			isset($fresh['status']) ? $fresh['status'] : 5,
 			isset($fresh['payment_received_flag']) ? $fresh['payment_received_flag'] : 0,
 			isset($fresh['grand_total']) ? $fresh['grand_total'] : 0,
@@ -2322,13 +2378,15 @@ class ChannelPartnerOrder
 			'order_id' => $orderId,
 			'order_no' => isset($order['order_no']) ? $order['order_no'] : '',
 			'dispatch_status' => $dispatchStatus,
-			'status' => $wf['status'],
-			'status_label' => $wf['status_label'],
-			'baki_amount' => $wf['baki_amount'],
+			'status' => $wf2['status'],
+			'status_label' => $wf2['status_label'],
+			'baki_amount' => $wf2['baki_amount'],
 			'order_status_code' => isset($fresh['status']) ? (int) $fresh['status'] : 5,
 			'can_edit' => 0,
 			'can_delete' => 0,
 			'can_dispatch' => 0,
+			'can_dispatched' => 0,
+			'status_options' => array(),
 			'stock' => $debitRes,
 		);
 	}

@@ -1012,7 +1012,7 @@
                                 "service_channel_partner.php"
                             ]
                         },
-                        "description": "Same as web Manage Customer Order Status dropdown.\nPending → Dispatched. After success, status becomes pending_payment (Baki) until payment received.\nOnly when #255/#256 return can_dispatch=1.\nParams: channel_partner_id, order_id, status=dispatch\nAlias slug: dispatch_cp_customer_order"
+                        "description": "Same as web Manage Customer Order Status dropdown.\nPending → Dispatched. After success, status becomes pending_payment (Baki).\n\n**App:** Use only when #255/#256 return can_dispatch=1 (or can_dispatched=1).\nResponse always includes can_dispatch + can_dispatched (1|0).\nOmit status (or status=check) to only read can_dispatch without updating.\n\nParams: channel_partner_id, order_id, status=dispatch\nkey must be 1226 (not 1228).\norder_id must be a real Pending order id from #255 — do not leave {{order_id}} empty/old."
                     },
                     "response": []
                 },
