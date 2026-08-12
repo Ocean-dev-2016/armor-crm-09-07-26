@@ -335,23 +335,24 @@ $weight_total = 0;
 
 		<table style="width:250mm!important;">
 			<tbody>
-				<tr class="text-center" style="background-color: <?= VIEW_COLOR ?>;">
-					<th colspan="1" class="text-center" width="5%">SR No.</th>
+				<tr class="text-center" style="background-color: <?= VIEW_COLOR ?>; color: #000;">
+					<th colspan="1" class="text-center" width="5%" style="color: #000;">SR No.</th>
 					<!-- <th colspan="1" class="image-width text-center">Image</th>  -->
-					<th colspan="5" class="text-center">Product Name</th>
-					<th colspan="1" class="text-center">Brand <br> Name</th>
-					<th colspan="2" class="text-center">HSN Code</th>
-					<th colspan="3" class="text-center">Qty</th>
-					<th colspan="2" class="text-center">Weight (in kg)</th>
-					<!-- <th colspan="3" class="text-center">Price</th> -->
-					<!-- <th colspan="3" class="text-center">Discount</th> -->
-					<!-- <th colspan="3" class="text-center">Alt. Qty</th> -->
-					<th colspan="3" class="text-center">Rate</th>
-					<th colspan="3" class="text-center">GST /<br>IGST %</th>
-					<th colspan="3" class="text-center">Total Amount</th>
+					<th colspan="5" class="text-center" style="color: #000;">Product Name</th>
+					<th colspan="1" class="text-center" style="color: #000;">Brand <br> Name</th>
+					<th colspan="2" class="text-center" style="color: #000;">HSN Code</th>
+					<th colspan="2" class="text-center" style="color: #000;">Qty</th>
+					<th colspan="2" class="text-center" style="color: #000;">Weight (in kg)</th>
+					<th colspan="2" class="text-center" style="color: #000;">Rate</th>
+					<th colspan="2" class="text-center" style="color: #000;">Discount %</th>
+					<th colspan="2" class="text-center" style="color: #000;">Discounted Value</th>
+					<th colspan="2" class="text-center" style="color: #000;">GST /<br>IGST %</th>
+					<th colspan="3" class="text-center" style="color: #000;">Total Amount</th>
 				</tr>
 				<?php
 				$ITEMS = array();
+				$total_item_discount = 0;
+				$total_mrp_amount = 0;
 				$items1 = $db->rp_getData("order_product_item", "*", "order_id='" . $order_id . "'");
 				while ($item1 = mysqli_fetch_assoc($items1)) {
 					$item1['display_order'] = $db->rp_getValue("product", "display_order", "id='" . $item1['pro_id'] . "' AND isDelete=0");
@@ -392,6 +393,25 @@ $weight_total = 0;
 
 						$inner_unit = $db->rp_getValue("product_weight_price", "inner_unit", "product_id='" . $item['pro_id'] . "' AND weight_id='" . $item['weight_id'] . "'");
 						$outer_unit = $db->rp_getValue("product_weight_price", "outer_unit", "product_id='" . $item['pro_id'] . "' AND weight_id='" . $item['weight_id'] . "'");
+
+						$item_original_price = floatval($item['original_price']);
+						$item_discount_per = floatval($item['discount']);
+						$item_discount_val = floatval($item['discount_amount']);
+						if ($item_discount_val <= 0 && $item_discount_per > 0 && $item_original_price > 0) {
+							$item_discount_val = ($item_original_price * $item_discount_per) / 100;
+						}
+						if ($item_discount_per <= 0 && $item_discount_val > 0 && $item_original_price > 0) {
+							$item_discount_per = ($item_discount_val / $item_original_price) * 100;
+						}
+						if ($item_discount_val <= 0 && $item_original_price > 0 && floatval($item['unitprice']) > 0) {
+							$item_discount_val = $item_original_price - floatval($item['unitprice']);
+							if ($item_discount_per <= 0 && $item_discount_val > 0) {
+								$item_discount_per = ($item_discount_val / $item_original_price) * 100;
+							}
+						}
+						$item_discount_total = $item_discount_val * floatval($item['pro_qty']);
+						$total_item_discount += $item_discount_total;
+						$total_mrp_amount += ($item_original_price > 0 ? $item_original_price : floatval($item['unitprice'])) * floatval($item['pro_qty']);
 				?>
 						<tr>
 							<td colspan="1" class="text-center srno"><strong><?php echo $count; ?></strong></td>
@@ -418,7 +438,7 @@ $weight_total = 0;
 							</td>
 							<td colspan="1" class="text-center"><?php echo $db->rp_getValue("order_item_brand_master", "name", "isDelete=0 AND isActive=1 AND id='" . $item['order_item_brand_id'] . "'") ?></td>
 							<td colspan="2" class="text-center"> <?= $hsncode ?></td>
-							<td colspan="3" class="text-center"><?= $qty_product;
+							<td colspan="2" class="text-center"><?= $qty_product;
 																$totalqty += $qty_product;
 																?></td>
 							<td colspan="2" class="text-center">
@@ -429,20 +449,19 @@ $weight_total = 0;
 								$weight_total += $kg;
 								?>
 							</td>
-							<!-- <td colspan="3" class="text-center"><?= $qty_outer ?>
-							<?= $order_unit_arr[$outer_unit] ?></td> -->
-							<!-- <td colspan="3" class="text-center"><?= $item['original_price'] ?></td> -->
-							<!-- <td colspan="3" class="text-center"><?= $item['discount_amount'] ?></td> -->
-							<td colspan="3" class="text-center">
+							<td colspan="2" class="text-center">
 								<?php
+								$display_rate = $item_original_price > 0 ? $item_original_price : floatval($item['unitprice']);
 								if ($cart_detail_d['customer_type'] == 1 || $cart_detail_d['customer_type'] == 2) {
-									echo $item['unitprice'] * $item['inner_size'];
+									echo round($display_rate * $item['inner_size'], 2);
 								} else {
-									echo $item['unitprice'];
+									echo round($display_rate, 2);
 								}
 								?>
 							</td>
-							<td colspan="3" class="text-center"><?= $pro_gst = $db->rp_getValue("product", "igst", "id='" . $item['pro_id'] . "' AND isDelete=0", 0); ?></td>
+							<td colspan="2" class="text-center"><?php echo round($item_discount_per, 2); ?></td>
+							<td colspan="2" class="text-center"><?php echo $currency . ' ' . round($item_discount_total, 2); ?></td>
+							<td colspan="2" class="text-center"><?= $pro_gst = $db->rp_getValue("product", "igst", "id='" . $item['pro_id'] . "' AND isDelete=0", 0); ?></td>
 							<td colspan="3" class="text-center"><?php echo $currency . ' ' . round($item['totalprice'], 2); ?></td>
 						</tr>
 						<?php
@@ -457,10 +476,12 @@ $weight_total = 0;
 								<td colspan="5"></td>
 								<td colspan="1"></td>
 								<td colspan="2"></td>
-								<td colspan="3"></td>
 								<td colspan="2"></td>
-								<td colspan="3"></td>
-								<td colspan="3"></td>
+								<td colspan="2"></td>
+								<td colspan="2"></td>
+								<td colspan="2"></td>
+								<td colspan="2"></td>
+								<td colspan="2"></td>
 								<td colspan="3"></td>
 							</tr>
 				<?php
@@ -474,10 +495,12 @@ $weight_total = 0;
 					<td colspan="5"></td>
 					<td colspan="1"></td>
 					<td colspan="2"></td>
-					<td colspan="3"></td>
 					<td colspan="2"></td>
-					<td colspan="3"></td>
-					<td colspan="3"></td>
+					<td colspan="2"></td>
+					<td colspan="2"></td>
+					<td colspan="2"></td>
+					<td colspan="2"></td>
+					<td colspan="2"></td>
 					<td colspan="3"></td>
 				</tr>
 				<tr>
@@ -486,10 +509,12 @@ $weight_total = 0;
 					<td colspan="5"></td>
 					<td colspan="1"></td>
 					<td colspan="2"><strong>Total</strong></td>
-					<td colspan="3" style="text-align: center"><?php echo $totalqty; ?></td>
+					<td colspan="2" style="text-align: center"><?php echo $totalqty; ?></td>
 					<td colspan="2" style="text-align: center"><?php echo $weight_total; ?></td>
-					<td colspan="3"></td>
-					<td colspan="3"></td>
+					<td colspan="2"></td>
+					<td colspan="2"></td>
+					<td colspan="2"></td>
+					<td colspan="2"></td>
 					<td colspan="3"></td>
 				</tr>
 			</tbody>
@@ -500,8 +525,17 @@ $weight_total = 0;
 					<td colspan="13" class="" rowspan="1" style="vertical-align: top;background-color: lightgray;">
 						<strong>GSTIN NO. : <?= $company_detail_d['gst'] ?></strong>
 					</td>
-					<td colspan="4" class="text-left font-13" style="background-color: lightgray;"><strong>Sub Total</strong></td>
-					<td colspan="4" class="text-right font-13" style="background-color: lightgray;"><strong><?php echo $currency . ' ' . $db->rp_number_format($totalprice1, 2); ?></strong></td>
+					<td colspan="2" class="text-left font-13" style="background-color: lightgray;"><strong>Discount</strong></td>
+					<td colspan="2" class="text-center font-13" style="background-color: lightgray;"><strong><?php
+						$overall_discount_per = ($total_mrp_amount > 0) ? round(($total_item_discount / $total_mrp_amount) * 100, 2) : 0;
+						echo rtrim(rtrim(number_format($overall_discount_per, 2, '.', ''), '0'), '.') . '%';
+					?></strong></td>
+					<td colspan="4" class="text-right font-13" style="background-color: lightgray;"><strong><?php echo $currency . ' ' . $db->rp_number_format($total_item_discount, 2); ?></strong></td>
+				</tr>
+				<tr>
+					<td colspan="13" class="" rowspan="1" style="vertical-align: top;"></td>
+					<td colspan="4" class="text-left font-13"><strong>Sub Total</strong></td>
+					<td colspan="4" class="text-right font-13"><strong><?php echo $currency . ' ' . $db->rp_number_format($totalprice1, 2); ?></strong></td>
 				</tr>
 				<?php if ($cart_detail_d['cash_discount_amount'] != "" && $cart_detail_d['cash_discount_amount'] != "0") { ?>
 					<tr>
