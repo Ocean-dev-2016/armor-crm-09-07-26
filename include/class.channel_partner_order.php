@@ -2421,6 +2421,12 @@ class ChannelPartnerOrder
 		if (empty($html) || stripos($html, 'Order not found') !== false || stripos($html, 'Invalid order') !== false) {
 			return array('ack' => 0, 'ack_msg' => 'Unable to load order print HTML for PDF.');
 		}
+		if (stripos($html, 'Login to your account') !== false || stripos($html, 'login.php') !== false || stripos($html, 'Forget Password') !== false) {
+			return array('ack' => 0, 'ack_msg' => 'Order print returned login page instead of order. Deploy channel_partner_order_print.php api_download fix.');
+		}
+		if (stripos($html, 'PRO FORMA INVOICE') === false && stripos($html, 'class="sheet"') === false) {
+			return array('ack' => 0, 'ack_msg' => 'Order print HTML invalid (order layout missing).');
+		}
 		$html = html_entity_decode($html);
 
 		$bbsDir = dirname(__FILE__) . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'bbsales_tracking' . DIRECTORY_SEPARATOR;
@@ -2479,6 +2485,35 @@ class ChannelPartnerOrder
 		);
 	}
 
+	private function isValidPdfFile($path)
+	{
+		if (!is_file($path) || @filesize($path) < 50) {
+			return false;
+		}
+		$fh = @fopen($path, 'rb');
+		if (!$fh) {
+			return false;
+		}
+		$head = fread($fh, 5);
+		fclose($fh);
+		return ($head === '%PDF-');
+	}
+
+	/** Reject PDFs generated from CRM login HTML (older bug before connect_in fix). */
+	private function pdfLooksLikeLoginPage($path)
+	{
+		if (!is_file($path)) {
+			return true;
+		}
+		$chunk = @file_get_contents($path, false, null, 0, 80000);
+		if ($chunk === false || $chunk === '') {
+			return true;
+		}
+		return (stripos($chunk, 'Login to your account') !== false
+			|| stripos($chunk, 'Forget Password') !== false
+			|| stripos($chunk, 'login-form') !== false);
+	}
+
 	/**
 	 * Stream PDF to browser/App (GET service/download_cp_order_pdf.php).
 	 */
@@ -2502,7 +2537,7 @@ class ChannelPartnerOrder
 			$candidate = $bbsDir . 'pdf' . DIRECTORY_SEPARATOR . 'orders' . DIRECTORY_SEPARATOR . $fileHint;
 			$real = @realpath($candidate);
 			$realDir = @realpath($bbsDir . 'pdf' . DIRECTORY_SEPARATOR . 'orders');
-			if ($real && $realDir && strpos($real, $realDir) === 0 && is_file($real)) {
+			if ($real && $realDir && strpos($real, $realDir) === 0 && $this->isValidPdfFile($real) && !$this->pdfLooksLikeLoginPage($real)) {
 				$own = (int) $this->db->rp_getTotalRecord(
 					'orders',
 					"id='" . $orderId . "' AND customer_id='" . $cpId . "' AND channel_partner_order_flag=1"

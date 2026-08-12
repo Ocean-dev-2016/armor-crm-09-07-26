@@ -5,10 +5,15 @@
  */
 $page_id = 565;
 $page_slug = 'page_order';
-include("connect.php");
+$api_download = (isset($_REQUEST['api_download']) && (string) $_REQUEST['api_download'] === '1');
+/* App PDF #269 — same as order_view_download_1.php: no web session / security redirect */
+if ($api_download) {
+	include('connect_in.php');
+} else {
+	include('connect.php');
+}
 
 $order_id = isset($_REQUEST['order_id']) ? (int) $_REQUEST['order_id'] : 0;
-$api_download = (isset($_REQUEST['api_download']) && (string) $_REQUEST['api_download'] === '1');
 if ($order_id <= 0) {
 	if ($api_download) {
 		header('Content-Type: text/html; charset=utf-8');
