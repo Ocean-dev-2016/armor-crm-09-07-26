@@ -2358,25 +2358,53 @@ class ChannelPartnerOrder
 	}
 
 	/**
-	 * Public GET URL for App — opens PDF without CRM web login (uses API key).
+	 * Render order print HTML locally (no HTTP — avoids login redirect on live).
 	 */
-	private function buildCpOrderPdfDownloadUrl($cpId, $orderId, $fileName)
+	private function renderOrderPrintHtml($orderId)
 	{
-		$cpId = (int) $cpId;
 		$orderId = (int) $orderId;
-		$fileName = basename((string) $fileName);
-		$base = defined('SITEURL') ? rtrim(SITEURL, '/') : '';
-		if ($base === '') {
+		if ($orderId <= 0) {
 			return '';
 		}
-		return $base . '/service/download_cp_order_pdf.php?key=1226'
-			. '&channel_partner_id=' . $cpId
-			. '&order_id=' . $orderId
-			. '&file=' . rawurlencode($fileName);
+		$bbsDir = dirname(__FILE__) . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'bbsales_tracking' . DIRECTORY_SEPARATOR;
+		$printFile = $bbsDir . 'channel_partner_order_print.php';
+		if (!file_exists($printFile)) {
+			return '';
+		}
+		$cwd = getcwd();
+		@chdir($bbsDir);
+		$savedGet = $_GET;
+		$savedRequest = $_REQUEST;
+		$_GET['order_id'] = $orderId;
+		$_GET['api_download'] = '1';
+		$_REQUEST['order_id'] = $orderId;
+		$_REQUEST['api_download'] = '1';
+		ob_start();
+		include $printFile;
+		$html = ob_get_clean();
+		$_GET = $savedGet;
+		$_REQUEST = $savedRequest;
+		if ($cwd) {
+			@chdir($cwd);
+		}
+		return $html;
+	}
+
+	/** Same file_url style as #265 GetPaymentPdf / #262 Ledger PDF */
+	private function buildInquiryDocumentFileUrl($fileName)
+	{
+		$fileName = basename((string) $fileName);
+		if (defined('INQUIRY_REPORT_FILES1')) {
+			return rtrim(INQUIRY_REPORT_FILES1, '/') . '/' . $fileName;
+		}
+		if (defined('ADMINSITEURL')) {
+			return rtrim(ADMINSITEURL, '/') . '/inquiry_documents/' . $fileName;
+		}
+		return '../bbsales_tracking/inquiry_documents/' . $fileName;
 	}
 
 	/**
-	 * Generate CP order PDF file on disk (pdf/orders — same folder as App order PDF #98).
+	 * Generate CP order PDF — same pattern as #265 / #262 (inquiry_documents + file_url).
 	 */
 	private function buildCustomerOrderPdfFile($cpId, $orderId)
 	{
@@ -2398,31 +2426,12 @@ class ChannelPartnerOrder
 		}
 		$row = mysqli_fetch_assoc($or);
 
-		$bodyUrl = '';
-		if (defined('ADMINSITEURL')) {
-			$bodyUrl = rtrim(ADMINSITEURL, '/') . '/channel_partner_order_print.php?order_id=' . $orderId . '&api_download=1';
-		}
-		if ($bodyUrl == '') {
-			return array('ack' => 0, 'ack_msg' => 'ADMINSITEURL not configured.');
-		}
-
-		$html = @file_get_contents($bodyUrl);
-		if (empty($html)) {
-			$ch = curl_init();
-			curl_setopt($ch, CURLOPT_URL, $bodyUrl);
-			curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-			curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-			curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
-			curl_setopt($ch, CURLOPT_TIMEOUT, 60);
-			$html = curl_exec($ch);
-			curl_close($ch);
-		}
-		if (empty($html) || stripos($html, 'Order not found') !== false || stripos($html, 'Invalid order') !== false) {
+		$html = $this->renderOrderPrintHtml($orderId);
+		if ($html === '' || stripos($html, 'Order not found') !== false || stripos($html, 'Invalid order') !== false) {
 			return array('ack' => 0, 'ack_msg' => 'Unable to load order print HTML for PDF.');
 		}
-		if (stripos($html, 'Login to your account') !== false || stripos($html, 'login.php') !== false || stripos($html, 'Forget Password') !== false) {
-			return array('ack' => 0, 'ack_msg' => 'Order print returned login page instead of order. Deploy channel_partner_order_print.php api_download fix.');
+		if (stripos($html, 'Login to your account') !== false || stripos($html, 'Forget Password') !== false) {
+			return array('ack' => 0, 'ack_msg' => 'Order print returned login page instead of order.');
 		}
 		if (stripos($html, 'PRO FORMA INVOICE') === false && stripos($html, 'class="sheet"') === false) {
 			return array('ack' => 0, 'ack_msg' => 'Order print HTML invalid (order layout missing).');
@@ -2430,12 +2439,12 @@ class ChannelPartnerOrder
 		$html = html_entity_decode($html);
 
 		$bbsDir = dirname(__FILE__) . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'bbsales_tracking' . DIRECTORY_SEPARATOR;
-		$saveDir = $bbsDir . 'pdf' . DIRECTORY_SEPARATOR . 'orders' . DIRECTORY_SEPARATOR;
+		$saveDir = $bbsDir . 'inquiry_documents' . DIRECTORY_SEPARATOR;
 		if (!is_dir($saveDir)) {
 			@mkdir($saveDir, 0777, true);
 		}
 		if (!is_dir($saveDir) || !is_writable($saveDir)) {
-			return array('ack' => 0, 'ack_msg' => 'pdf/orders folder missing or not writable.');
+			return array('ack' => 0, 'ack_msg' => 'inquiry_documents folder missing or not writable.');
 		}
 
 		$now = time();
@@ -2477,7 +2486,7 @@ class ChannelPartnerOrder
 			'order_id' => $orderId,
 			'order_no' => isset($row['order_no']) ? $row['order_no'] : '',
 			'file_name' => $fileName,
-			'save_path' => $savePath,
+			'file_url' => $this->buildInquiryDocumentFileUrl($fileName),
 			'status' => $row['status'],
 			'payment_received_flag' => $row['payment_received_flag'],
 			'grand_total' => $row['grand_total'],
@@ -2485,96 +2494,9 @@ class ChannelPartnerOrder
 		);
 	}
 
-	private function isValidPdfFile($path)
-	{
-		if (!is_file($path) || @filesize($path) < 50) {
-			return false;
-		}
-		$fh = @fopen($path, 'rb');
-		if (!$fh) {
-			return false;
-		}
-		$head = fread($fh, 5);
-		fclose($fh);
-		return ($head === '%PDF-');
-	}
-
-	/** Reject PDFs generated from CRM login HTML (older bug before connect_in fix). */
-	private function pdfLooksLikeLoginPage($path)
-	{
-		if (!is_file($path)) {
-			return true;
-		}
-		$chunk = @file_get_contents($path, false, null, 0, 80000);
-		if ($chunk === false || $chunk === '') {
-			return true;
-		}
-		return (stripos($chunk, 'Login to your account') !== false
-			|| stripos($chunk, 'Forget Password') !== false
-			|| stripos($chunk, 'login-form') !== false);
-	}
-
 	/**
-	 * Stream PDF to browser/App (GET service/download_cp_order_pdf.php).
-	 */
-	public function StreamCustomerOrderPdf($detail)
-	{
-		$cpId = isset($detail['channel_partner_id']) ? (int) $detail['channel_partner_id'] : 0;
-		$orderId = isset($detail['order_id']) ? (int) $detail['order_id'] : (isset($detail['id']) ? (int) $detail['id'] : 0);
-		$fileHint = isset($detail['file']) ? basename((string) $detail['file']) : '';
-
-		if ($cpId <= 0 || $orderId <= 0) {
-			header('HTTP/1.1 400 Bad Request');
-			header('Content-Type: text/plain; charset=utf-8');
-			echo 'channel_partner_id and order_id are required.';
-			exit;
-		}
-
-		$savePath = '';
-		$fileName = '';
-		if ($fileHint !== '' && preg_match('/^CP_Order_[A-Za-z0-9_\-\.]+\.pdf$/', $fileHint)) {
-			$bbsDir = dirname(__FILE__) . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'bbsales_tracking' . DIRECTORY_SEPARATOR;
-			$candidate = $bbsDir . 'pdf' . DIRECTORY_SEPARATOR . 'orders' . DIRECTORY_SEPARATOR . $fileHint;
-			$real = @realpath($candidate);
-			$realDir = @realpath($bbsDir . 'pdf' . DIRECTORY_SEPARATOR . 'orders');
-			if ($real && $realDir && strpos($real, $realDir) === 0 && $this->isValidPdfFile($real) && !$this->pdfLooksLikeLoginPage($real)) {
-				$own = (int) $this->db->rp_getTotalRecord(
-					'orders',
-					"id='" . $orderId . "' AND customer_id='" . $cpId . "' AND channel_partner_order_flag=1"
-					. " AND cp_order_mode='customer' AND isDelete=0 AND status!=-1",
-					0
-				);
-				if ($own > 0) {
-					$savePath = $real;
-					$fileName = $fileHint;
-				}
-			}
-		}
-
-		if ($savePath === '') {
-			$built = $this->buildCustomerOrderPdfFile($cpId, $orderId);
-			if (empty($built['ack'])) {
-				header('HTTP/1.1 404 Not Found');
-				header('Content-Type: text/plain; charset=utf-8');
-				echo isset($built['ack_msg']) ? $built['ack_msg'] : 'PDF not available.';
-				exit;
-			}
-			$savePath = $built['save_path'];
-			$fileName = $built['file_name'];
-		}
-
-		header('Content-Type: application/pdf');
-		header('Content-Disposition: inline; filename="' . str_replace('"', '', $fileName) . '"');
-		header('Content-Length: ' . (string) filesize($savePath));
-		header('Cache-Control: private, max-age=3600');
-		readfile($savePath);
-		exit;
-	}
-
-	/**
-	 * App: generate CP Customer Order PDF (same layout as web print).
+	 * App: CP Customer Order PDF — same response style as #265 GetPaymentPdf.
 	 * Params: channel_partner_id, order_id
-	 * Returns file_url via service download (no CRM login required).
 	 */
 	public function DownloadCustomerOrderPdf($detail)
 	{
@@ -2585,8 +2507,6 @@ class ChannelPartnerOrder
 			return $built;
 		}
 
-		$fileName = $built['file_name'];
-		$fileUrl = $this->buildCpOrderPdfDownloadUrl($cpId, $orderId, $fileName);
 		$wf = $this->workflowStatus(
 			$built['status'],
 			$built['payment_received_flag'],
@@ -2598,13 +2518,13 @@ class ChannelPartnerOrder
 		return array_merge(array(
 			'ack' => 1,
 			'ack_msg' => 'PDF ready',
-			'order_id' => $orderId,
+			'order_id' => (int) $built['order_id'],
 			'order_no' => $built['order_no'],
 			'status' => $wf['status'],
 			'status_label' => $wf['status_label'],
-			'file_url' => $fileUrl,
-			'file_name' => $fileName,
-			'title' => 'Customer Order - ' . ($built['order_no'] != '' ? $built['order_no'] : $orderId),
+			'file_url' => $built['file_url'],
+			'file_name' => $built['file_name'],
+			'title' => 'Customer Order - ' . ($built['order_no'] != '' ? $built['order_no'] : $built['order_id']),
 			'pdf_ok' => 1,
 		), $printMeta);
 	}
