@@ -23,6 +23,12 @@ if($id!="" && $mode=="edit")
 	{
 		$result1=$reply1['result'];		
 		extract($result1);
+		if (!isset($weight_ids) || !is_array($weight_ids)) {
+			$weight_ids = array();
+		}
+		if (!isset($min_selling_price) || !is_array($min_selling_price)) {
+			$min_selling_price = array();
+		}
 
 		// print_r($result1);exit();
 		// echo $stock;exit;	
@@ -213,7 +219,7 @@ if($type==1)
 
 									$inner_unit=$weight_inner_unit[$key];		
 									$outer_unit=$weight_outer_unit[$key];
-									$minimum_selling_price=$min_selling_price[$key];	
+									$minimum_selling_price = isset($min_selling_price[$key]) ? $min_selling_price[$key] : 0;	
 								}
 						
 								else
@@ -453,7 +459,7 @@ else if($type==2)
 						$is_including=$weight_is_including[$key];	
 						$inner_unit=$weight_inner_unit[$key];		
 						$outer_unit=$weight_outer_unit[$key];
-						$minimum_selling_price=$min_selling_price[$key];			
+						$minimum_selling_price = isset($min_selling_price[$key]) ? $min_selling_price[$key] : 0;			
 					}
 			
 					else

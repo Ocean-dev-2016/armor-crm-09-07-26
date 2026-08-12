@@ -2462,10 +2462,11 @@ class Functions extends Database
 	/*for Get Available Stock */
 	public function compressImage($source, $destination, $quality = 40)
 	{
-		//echo "string";
 		// Get image info 
 		$imgInfo = getimagesize($source);
-		//echo $imgInfo['mime'];exit;
+		if ($imgInfo === false || !isset($imgInfo['mime'])) {
+			return false;
+		}
 		$mime = $imgInfo['mime'];
 
 		// Create a new image from file 

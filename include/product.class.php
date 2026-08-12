@@ -102,11 +102,11 @@ class Product extends Functions
 
 			/*genrate a compress image*/
 			if (isset($image_path) && !empty($image_path)) {
-				$source = SITEURL . PRODUCT . $image_path;
-				$compressedImage = PRODUCT_THUMB_A . $image_path;
-				// echo $source."<br>";
-				// echo $compressedImage."<br>";
-				$this->db->compressImage($source, $compressedImage);
+				$localSource = PRODUCT_A . $image_path;
+				if (file_exists($localSource)) {
+					$compressedImage = PRODUCT_THUMB_A . $image_path;
+					$this->db->compressImage($localSource, $compressedImage);
+				}
 			}
 			/*genrate a compress image*/
 
@@ -241,11 +241,16 @@ class Product extends Functions
 		}
 		/*genrate a compress image*/
 		if (isset($image_path) && !empty($image_path)) {
-			$source = SITEURL . PRODUCT . $image_path;
-			$compressedImage = PRODUCT_THUMB_A . $image_path;
-			$this->db->compressImage($source, $compressedImage);
+			$localSource = PRODUCT_A . $image_path;
+			if (file_exists($localSource)) {
+				$compressedImage = PRODUCT_THUMB_A . $image_path;
+				$this->db->compressImage($localSource, $compressedImage);
+			}
 		}
 		/*genrate a compress image*/
+		if (!isset($weights) || !is_array($weights)) {
+			$weights = array();
+		}
 		$rows 	= array(
 			"product_type" => $product_type,
 			"tcid"         => $tcid,
@@ -292,41 +297,46 @@ class Product extends Functions
 		/*log entry*/
 		$uid = $this->db->rp_update($this->ctable, $rows, $where, 0, $log_description, $flag, $module_name, "", "");
 
-		$this->db->rp_delete("product_weight_price", "product_id = '" . $id . "'");
-
 		$product_id = $id;
+		$validWeights = array();
 		foreach ($weights as $w) {
+			if (isset($w['id']) && $w['id'] !== "") {
+				$validWeights[] = $w;
+			}
+		}
+
+		if (count($validWeights) > 0) {
+			$this->db->rp_delete("product_weight_price", "product_id = '" . $id . "'");
+		}
+
+		foreach ($validWeights as $w) {
 			//print_r($w);exit;
 			if ($w['id'] != "") {
 				$weight_id = $w['id'];
-				$price = $w['price'];
-				$opening_stock = $w['stock'];
-				$current_stock = $w['current_stock'];
+				$price = isset($w['price']) ? $w['price'] : 0;
+				$opening_stock = isset($w['stock']) ? $w['stock'] : 0;
+				$current_stock = isset($w['current_stock']) ? $w['current_stock'] : 0;
 				$min = 0;
 				//$inner=0;			
-				$inner = $w['inner'];
-				$outer = $w['outer'];
-				$inner_unit = ($w['inner_unit']) ? $w['inner_unit'] : "";
-				$outer_unit = ($w['outer_unit']) ? $w['outer_unit'] : "";
-				$catno = $w['catno'];
+				$inner = isset($w['inner']) ? $w['inner'] : 0;
+				$outer = isset($w['outer']) ? $w['outer'] : 0;
+				$inner_unit = (isset($w['inner_unit']) && $w['inner_unit']) ? $w['inner_unit'] : "";
+				$outer_unit = (isset($w['outer_unit']) && $w['outer_unit']) ? $w['outer_unit'] : "";
+				$catno = isset($w['catno']) ? $w['catno'] : "";
 				$weight_in_kg = 0;
 				$w['pro_active'] = 0;
 				$pro_active = $w['pro_active'];
-				$pro_weight = $w['pro_weight'];
-				$size_inner = $w['inner_size'];
-				$inner_cft = $w['inner_cft'];
-				$inner_cbm = $w['inner_cbm'];
-				$min_stock_qty = $w['min_stock_qty'];
-				$max_stock_qty = $w['max_stock_qty'];
+				$pro_weight = isset($w['pro_weight']) ? $w['pro_weight'] : 0;
+				$size_inner = isset($w['inner_size']) ? $w['inner_size'] : "";
+				$inner_cft = isset($w['inner_cft']) ? $w['inner_cft'] : "";
+				$inner_cbm = isset($w['inner_cbm']) ? $w['inner_cbm'] : "";
+				$min_stock_qty = isset($w['min_stock_qty']) ? $w['min_stock_qty'] : 0;
+				$max_stock_qty = isset($w['max_stock_qty']) ? $w['max_stock_qty'] : 0;
 				$minimum_selling_price = isset($w['minimum_selling_price']) ? $w['minimum_selling_price'] : 0;
-				$size_outer = $w['outer_size'];
-				$outer_cft = $w['outer_cft'];
-				$outer_cbm = $w['outer_cbm'];
-				if ($w['is_including']) {
-					$is_including = 1;
-				} else {
-					$is_including = 0;
-				}
+				$size_outer = isset($w['outer_size']) ? $w['outer_size'] : "";
+				$outer_cft = isset($w['outer_cft']) ? $w['outer_cft'] : "";
+				$outer_cbm = isset($w['outer_cbm']) ? $w['outer_cbm'] : "";
+				$is_including = (isset($w['is_including']) && $w['is_including']) ? 1 : 0;
 
 				$rows1 = array("weight_id", "product_id", "price", "stock_qty", "opening_stock_qty", "min_qty", "inner_size", "outer_size", "catno", "pro_weight", "size_inner", "inner_cft", "size_outer", "outer_cft", "inner_cbm", "outer_cbm", "min_stock_qty", "max_stock_qty", "is_including", "inner_unit", "outer_unit", "minimum_selling_price");
 
@@ -352,12 +362,13 @@ class Product extends Functions
 								);
 								$update_price_list = $this->db->rp_update("product_price_list", $update_array, "id='" . $price_list_d['id'] . "'", 0);
 								// check in order if item in added to cart
-								$user_r = $this->db->rp_getData("customer", "id", "price_list_id='" . $price_list_d['id'] . "' AND isDelete=0");
+								$user_r = $this->db->rp_getData("customer", "id", "price_list_id='" . $price_list_d['price_list_id'] . "' AND isDelete=0");
 								if ($user_r) {
 									$USERIDS = array();
 									while ($user_d = mysqli_fetch_assoc($user_r)) {
 										$USERIDS[] = $user_d['id'];
 									}
+									if (count($USERIDS) > 0) {
 									$USERIDS = implode(",", $USERIDS);
 
 									// check order 
@@ -367,6 +378,7 @@ class Product extends Functions
 										while ($order_d = mysqli_fetch_assoc($order_r)) {
 											$ORDERIDS[] = $order_d['id'];
 										}
+										if (count($ORDERIDS) > 0) {
 										$ORDERIDS = implode(",", $ORDERIDS);
 
 										$order_item_r = $this->db->rp_getData("order_product_item", "*", "pro_id='" . $product_id . "' AND weight_id='" . $weight_id . "' AND order_id IN (" . $ORDERIDS . ") AND isDelete=0");
@@ -394,8 +406,10 @@ class Product extends Functions
 												$updated_id = $this->db->rp_update("order_product_item", $row_value, "id='" . $order_item_d['id'] . "'", 0);
 											}
 										}
+										}
 									}
 									// check order 
+									}
 								}
 								// check in order if item in added to cart
 							}
@@ -421,8 +435,14 @@ class Product extends Functions
 	{
 		//get product for update
 		$where = " id='" . $detail['id'] . "' AND isDelete=0";
-		$ctable_r = $this->db->rp_getData($this->ctable, "*", $where, 0);
+		$ctable_r = $this->db->rp_getData($this->ctable, "*", $where);
+		if (!$ctable_r) {
+			return array("ack" => 0, "developer_msg" => "Product not found.", "ack_msg" => "Failed! Product not found.");
+		}
 		$ctable_d = mysqli_fetch_array($ctable_r);
+		if (!$ctable_d) {
+			return array("ack" => 0, "developer_msg" => "Product not found.", "ack_msg" => "Failed! Product not found.");
+		}
 		$result = array();
 
 		$result['name']		= htmlentities($ctable_d['name']);
@@ -466,14 +486,35 @@ class Product extends Functions
 		$weight_prices = array();
 		$weight_stock = array();
 		$weight_min = array();
+		$weight_catnos = array();
+		$weight_current_stock = array();
+		$weight_inner = array();
+		$weight_outer = array();
+		$weight_inkg = array();
+		$weight_pro_weight = array();
+		$weight_inner_size = array();
+		$weight_inner_cft = array();
+		$weight_inner_cbm = array();
+		$weight_outer_size = array();
+		$weight_outer_cft = array();
+		$weight_outer_cbm = array();
+		$weight_min_stock_qty = array();
+		$weight_max_stock_qty = array();
+		$weight_is_including = array();
+		$weight_inner_unit = array();
+		$weight_outer_unit = array();
+		$minimum_selling_price = array();
 		$weight_id_d = $this->db->rp_getData("product_weight_price", "weight_id", "product_id='" . $detail['id'] . "' AND isDelete=0", "", 0);
-		while ($w = mysqli_fetch_array($weight_id_d)) {
-			$weight_ids[] = $w['weight_id'];
+		if ($weight_id_d) {
+			while ($w = mysqli_fetch_array($weight_id_d)) {
+				$weight_ids[] = $w['weight_id'];
+			}
 		}
 
 		$result['weight_ids'] = $weight_ids;
 		$weight_price_d = $this->db->rp_getData("product_weight_price", "*", "product_id='" . $detail['id'] . "'", "", 0);
-		while ($p = mysqli_fetch_array($weight_price_d)) {
+		if ($weight_price_d) {
+			while ($p = mysqli_fetch_array($weight_price_d)) {
 			$weight_prices[] = $p['price'];
 			$weight_catnos[] = $p['catno'];
 			$weight_stock[] = $p['opening_stock_qty'];
@@ -497,6 +538,7 @@ class Product extends Functions
 			$weight_inner_unit[] = $p['inner_unit'];
 			$weight_outer_unit[] = $p['outer_unit'];
 			$minimum_selling_price[] = 0; // Min sell removed — app uses MRP only
+			}
 		}
 		$result['weight_prices'] = $weight_prices;
 		$result['weight_catnos'] = $weight_catnos;

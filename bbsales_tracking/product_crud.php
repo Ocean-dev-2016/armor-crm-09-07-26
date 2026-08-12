@@ -44,19 +44,22 @@ $brand_id             = "";
 $unit_id             = "";
 		$display_unit		  = "";
 $hsn_code             = "";
+$subpid               = "";
+$is_free              = 0;
 if(isset($_REQUEST['submit'])){
 	// var_dump($_REQUEST);exit;
 	$detail=array();
 					// $detail['image_path']				= "";
 	$detail['image_path']     = $db->clean($_REQUEST['image_path']);
-	$detail['old_image_path'] = $db->clean($_REQUEST['old_image_path']);
+	$detail['old_image_path'] = isset($_REQUEST['old_image_path']) ? $db->clean($_REQUEST['old_image_path']) : '';
 	$detail['product_type']   = $db->clean($_REQUEST['product_type']);
 	$detail['name']           = $db->clean($_REQUEST['name']);
 			// $detail['gujrati_name']		= $db->clean($_REQUEST['gujrati_name']);
 				//$detail['weight']			= $db->clean(trim($_REQUEST['weight']));
-	$weights = $_REQUEST['weights_chk'];
-	$weights = $weights['weights'];
-
+	$weights = array();
+	if (isset($_REQUEST['weights_chk']['weights']) && is_array($_REQUEST['weights_chk']['weights'])) {
+		$weights = $_REQUEST['weights_chk']['weights'];
+	}
 
 	//$detail['opening_stock_qty']=$weights['stock'];
 				//$detail['min_qty']			=$weights['min'];
@@ -67,14 +70,14 @@ if(isset($_REQUEST['submit'])){
 	$detail['unit_id']      = $db->clean($_REQUEST['unit_id']);
 	$detail['customer_unit_id']      = $db->clean($_REQUEST['customer_unit_id']);
 	$detail['display_unit']      = $db->clean($_REQUEST['display_unit']);
-	$detail['is_free']      = $db->clean($_REQUEST['is_free']);
+	$detail['is_free']      = isset($_REQUEST['is_free']) ? $db->clean($_REQUEST['is_free']) : 0;
 	
 	$detail['hsn_code']     = $db->clean($_REQUEST['hsn_code']);
 	$detail['name']         = $db->clean(trim($_REQUEST['name']));
 	$detail['product_code'] = $db->clean(trim($_REQUEST['product_code']));
 	$detail['max_price']    = $db->clean($db->rp_num(trim($_REQUEST['max_price'])));
 	$detail['sell_price']   = $db->clean($db->rp_num(trim($_REQUEST['sell_price'])));
-	$detail['pro_tax']      = round($_REQUEST['pro_tax']);
+	$detail['pro_tax']      = isset($_REQUEST['pro_tax']) ? round($_REQUEST['pro_tax']) : 0;
 			/*$detail['ship_days'] 		= $db->clean(intval(trim($_REQUEST['ship_days'])));
 	$detail['local_ship_charge']= $db->clean($db->rp_num(trim($_REQUEST['local_ship_charge'])));
 	$detail['zonal_ship_charge']= $db->clean($db->rp_num(trim($_REQUEST['zonal_ship_charge'])));
@@ -89,7 +92,7 @@ if(isset($_REQUEST['submit'])){
 		/*$detail['igst'] 	= $db->clean($_REQUEST['igst']);
 		$detail['cgst'] 	= $db->clean($_REQUEST['cgst']);
 		$detail['sgst'] 	= $db->clean($_REQUEST['sgst']);*/
-		$detail['status'] 	= $db->clean($_REQUEST['status']);
+		$detail['status'] 	= isset($_REQUEST['status']) ? $db->clean($_REQUEST['status']) : 1;
 				$detail['isDelete']			= 0;
 	/*	if($qty==0){
 				$detail['status']  		= 1;
@@ -98,11 +101,12 @@ if(isset($_REQUEST['submit'])){
 		// $detail['display_order']	= $db->rp_getDisplayOrder($ctable,"cid='".$cid."'");
 			$detail['descr'] 		= $db->clean(htmlentities($_REQUEST['descr']));
 			$ctable_q = "SELECT MAX(sell_price) as max_price,MIN(sell_price) as min_price FROM ( SELECT sell_price FROM product p WHERE $ctable_where UNION SELECT sell_price FROM sub_product s WHERE $ctable_where ) AS tmp  ";
-		$detail['attr_count'] 	= $_REQUEST['attr_count'];
+		$attr_count = isset($_REQUEST['attr_count']) ? intval($_REQUEST['attr_count']) : 0;
+		$detail['attr_count'] 	= $attr_count;
 	$arrayAttr = array();
 	for($i=1;$i<=$attr_count;$i++){
-		$attrValArr = $_REQUEST['attr_'.$i];
-		if(count($attrValArr)>0){
+		$attrValArr = isset($_REQUEST['attr_'.$i]) ? $_REQUEST['attr_'.$i] : array();
+		if(is_array($attrValArr) && count($attrValArr)>0){
 			//array_push($arrayAttr,array($i=>$attrValArr));
 			$arrayAttr[$i] = $attrValArr;
 		}
@@ -265,7 +269,11 @@ if(isset($_REQUEST['id']) && $_REQUEST['id']>0 && $_REQUEST['mode']=="isActive" 
 								
 								<input type="hidden" name="mode" id="mode" value="<?php echo $_REQUEST['mode']; ?>">
 								<input type="hidden" name="id" id="id" value="<?php echo $_REQUEST['id']; ?>">
-								<input type="hidden" name="subpid" id="subpid" value="<?php echo $subpid; ?>">
+								<input type="hidden" name="subpid" id="subpid" value="<?php echo isset($subpid) ? $subpid : ''; ?>">
+								<input type="hidden" name="status" id="status" value="<?php echo isset($status) && $status !== '' ? $status : 1; ?>">
+								<input type="hidden" name="pro_tax" id="pro_tax" value="<?php echo $pro_tax; ?>">
+								<input type="hidden" name="is_free" id="is_free" value="<?php echo isset($is_free) ? $is_free : 0; ?>">
+								<input type="hidden" name="attr_count" id="attr_count" value="0">
 								
 								<div class="box-body"  >
 									<?php if(isset($_REQUEST['msg']) && $_REQUEST['msg']=="duplicate"){ ?>
@@ -493,6 +501,7 @@ if(isset($_REQUEST['id']) && $_REQUEST['id']>0 && $_REQUEST['mode']=="isActive" 
 															</div>
 															<input type="hidden" id="old_image_path" name="old_image_path" value="<?php echo $image_path; ?>" /> -->
 															<div class="form-group">
+																<input type="hidden" id="old_image_path" name="old_image_path" value="<?php echo isset($image_path) ? $image_path : ''; ?>" />
 																<input data-image="<?php echo ($image_path!="" && file_exists(PRODUCT_A.$image_path))?PRODUCT_A.$image_path:"";?>" type="file" name="image_path" id="image_path" data-old-image-dom="old_image_path" data-old-image-path="<?php echo $image_path ?>" value="" >
 															</div>
 														</div>
