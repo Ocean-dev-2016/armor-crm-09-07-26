@@ -237,7 +237,7 @@ class Product extends Functions
 				$image_path = "";
 			}
 		} else {
-			$image_path = $detail['old_image_path'];
+			$image_path = isset($detail['old_image_path']) ? $detail['old_image_path'] : '';
 			unset($detail['old_image_path']);
 		}
 		/*genrate a compress image*/
@@ -362,57 +362,7 @@ class Product extends Functions
 									"discounted_amount" => $discounted_amount,
 								);
 								$update_price_list = $this->db->rp_update("product_price_list", $update_array, "id='" . $price_list_d['id'] . "'", 0);
-								// check in order if item in added to cart
-								$user_r = $this->db->rp_getData("customer", "id", "price_list_id='" . $price_list_d['price_list_id'] . "' AND isDelete=0");
-								if ($user_r) {
-									$USERIDS = array();
-									while ($user_d = mysqli_fetch_assoc($user_r)) {
-										$USERIDS[] = $user_d['id'];
-									}
-									if (count($USERIDS) > 0) {
-									$USERIDS = implode(",", $USERIDS);
-
-									// check order 
-									$order_r = $this->db->rp_getData("orders", "id", "customer_id IN (" . $USERIDS . ") AND status=-1 AND isDelete=0");
-									if ($order_r) {
-										$ORDERIDS = array();
-										while ($order_d = mysqli_fetch_assoc($order_r)) {
-											$ORDERIDS[] = $order_d['id'];
-										}
-										if (count($ORDERIDS) > 0) {
-										$ORDERIDS = implode(",", $ORDERIDS);
-
-										$order_item_r = $this->db->rp_getData("order_product_item", "*", "pro_id='" . $product_id . "' AND weight_id='" . $weight_id . "' AND order_id IN (" . $ORDERIDS . ") AND isDelete=0");
-										if ($order_item_r) {
-											while ($order_item_d = mysqli_fetch_assoc($order_item_r)) {
-												// print_r($order_item_d);		
-
-												$totalprice = $order_item_d['pro_qty'] * $discounted_price;
-												$totalprice = $this->db->rp_num($totalprice);
-
-												$row_value = array(
-													"original_price" => $price,
-													"unitprice" => $discounted_price,
-													"totalprice" => $totalprice,
-													"discount_amount" => $discounted_amount,
-													"discount" => round($discount, 2),
-													"price_list_id" => $price_list_d['id'],
-													"price_list_price" => $price,
-													"price_list_discounted_price" => $discounted_price,
-													"price_list_discounted_amount" => $discounted_amount,
-													"price_list_discount_type" => "1",
-													"price_list_discount" => round($discount, 2),
-												);
-
-												$updated_id = $this->db->rp_update("order_product_item", $row_value, "id='" . $order_item_d['id'] . "'", 0);
-											}
-										}
-										}
-									}
-									// check order 
-									}
-								}
-								// check in order if item in added to cart
+								// Cart sync disabled — nested customer/order queries caused live timeout (HTTP 500)
 							}
 						}
 					}

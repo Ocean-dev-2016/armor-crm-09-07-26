@@ -23,7 +23,7 @@ echo "PHP: " . PHP_VERSION . "\n\n";
 
 $files = array(
 	'product_crud.php' => 'if($cat_r && mysqli_num_rows($cat_r)',
-	'../include/product.class.php' => 'set_time_limit(180)',
+	'../include/product.class.php' => 'Cart sync disabled',
 	'get_size_from_product_type.php' => 'if($pro_r1 && ($pro_d',
 	'../include/function.class.php' => 'if ($imgInfo === false',
 );
@@ -102,6 +102,7 @@ if ($step === 'all' || $step === 'page') {
 
 if ($step === 'all' || $step === 'update') {
 	echo "\n--- UpdateProduct test ---\n";
+	@flush();
 	if (!empty($reply['ack'])) {
 		$r = $reply['result'];
 		$update = array(
@@ -128,6 +129,7 @@ if ($step === 'all' || $step === 'update') {
 		);
 		$_SESSION[SITE_SESS . 'SESS_NAME'] = 'DiagTest';
 		$upd = $obj->UpdateProduct($update, array());
+		@flush();
 		echo ($upd['ack'] == 1 ? 'OK: ' : 'FAIL: ') . $upd['ack_msg'] . "\n";
 		if ($upd['ack'] != 1) {
 			$allOk = false;
