@@ -981,7 +981,11 @@ class Order extends Functions
 							$update_cartoon_qty = $p['cartoon_qty'] + $pro_d['cartoon_qty'];
 
 							$discount_amount = $p['original_price'] - $p['price'];
-							$discount = ($discount_amount * 100) / $p['original_price'];
+							$discount = ($p['original_price'] > 0) ? (($discount_amount * 100) / $p['original_price']) : 0;
+							$disc_err = $this->validateItemDiscountMax50($discount, $discount_amount, $p['original_price']);
+							if ($disc_err) {
+								return $disc_err;
+							}
 							$user_discount = $this->db->rp_num($discount);
 							$unitprice_amt = $this->db->rp_num($discount_amount);
 
@@ -1038,6 +1042,14 @@ class Order extends Functions
 									$original_price = $p['original_price'];
 
 									$user_discount = $p['discount'];
+									$disc_err = $this->validateItemDiscountMax50(
+										$user_discount,
+										isset($p['discount_amount']) ? $p['discount_amount'] : 0,
+										isset($p['original_price']) ? $p['original_price'] : 0
+									);
+									if ($disc_err) {
+										return $disc_err;
+									}
 									if ($user_discount == 0) {
 										$discount_amount = $p['discount_amount'];
 									} else {
@@ -1432,6 +1444,14 @@ class Order extends Functions
 									$original_price = isset($p['original_price']) && $p['original_price'] !== '' && $p['original_price'] !== null ? $p['original_price'] : $unitprice;
 
 									$user_discount = isset($p['discount']) ? $p['discount'] : 0;
+									$disc_err = $this->validateItemDiscountMax50(
+										$user_discount,
+										isset($p['discount_amount']) ? $p['discount_amount'] : 0,
+										$original_price
+									);
+									if ($disc_err) {
+										return $disc_err;
+									}
 									if ($user_discount == 0 || $user_discount == '' || $user_discount === null) {
 										$user_discount = 0;
 										$discount_amount = $this->db->rp_num(isset($p['discount_amount']) ? $p['discount_amount'] : 0);
@@ -1709,6 +1729,14 @@ class Order extends Functions
 								$original_price = $p['original_price'];
 
 								$user_discount = $p['discount'];
+								$disc_err = $this->validateItemDiscountMax50(
+									$user_discount,
+									isset($p['discount_amount']) ? $p['discount_amount'] : 0,
+									isset($p['original_price']) ? $p['original_price'] : 0
+								);
+								if ($disc_err) {
+									return $disc_err;
+								}
 								if ($user_discount == 0) {
 									$discount_amount = $this->db->rp_num($p['discount_amount']);
 								} else {
@@ -3487,6 +3515,14 @@ class Order extends Functions
 		if ($check_cart_exist != 0) {
 			if (!empty($discount)) {
 				foreach ($discount as $d) {
+					if (isset($d['discount']) && floatval($d['discount']) > 50) {
+						$reply = array(
+							"ack" => 0,
+							"developer_msg" => "You cant add Discount More Than 50%",
+							"ack_msg" => "You cant add Discount More Than 50%",
+						);
+						return $reply;
+					}
 					if ($detail['cart_type'] == "2") {
 						$get_item = $this->db->rp_getData($table_item, "*", "isDelete=0 AND quotation_id='" . $detail['cart_id'] . "'", "", 0);
 					} else {
@@ -3865,5 +3901,31 @@ class Order extends Functions
 				}
 			}
 		}
+	}
+
+	/**
+	 * Item discount max 50% (Dis% or Dis Flat vs MRP/original_price).
+	 * Returns error ack array, or false when valid.
+	 */
+	private function validateItemDiscountMax50($discount, $discount_amount, $original_price)
+	{
+		$discount = floatval($discount);
+		$discount_amount = floatval($discount_amount);
+		$original_price = floatval($original_price);
+		if ($discount > 50) {
+			return array(
+				"ack" => 0,
+				"ack_msg" => "You cant add Discount More Than 50%",
+				"developer_msg" => "You cant add Discount More Than 50%",
+			);
+		}
+		if ($original_price > 0 && $discount_amount > ($original_price * 50 / 100)) {
+			return array(
+				"ack" => 0,
+				"ack_msg" => "You cant add Discount More Than 50%",
+				"developer_msg" => "You cant add Discount More Than 50%",
+			);
+		}
+		return false;
 	}
 }

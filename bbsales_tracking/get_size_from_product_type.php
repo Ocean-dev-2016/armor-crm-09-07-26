@@ -155,7 +155,6 @@ if($type==1)
 		  						<th style="width: 5%;">Variant</th>
 		  						<th style="width: 10%;">Product code</th>
 		  						<th style="width: 5%;">Product Weight</th>
-		  						<th style="width: 5%;">Minimum Selling Price</th>
 		  						<th style="width: 10%;">Price<br><span style="font-size:12px">(INR)</span></th>
 		  						<th style="width: 10%;">Inner Qty<br><span style="font-size:12px">(NOS)</span></th>
 		  						<th style="width: 10%;">Inner Unit</th>
@@ -274,10 +273,6 @@ if($type==1)
 								<input <?php echo $disabled;?> placeholder="Product Weight" id="weightInput<?php echo $pro_d['id']?>" value="<?php echo $pro_weight;?>" type="text" 
 						  		name="weights_chk[weights][<?php echo $pro_d['id']?>][pro_weight]" class="form-control weightInput" aria-label="15g">
 							</td>
-							<td>
-						  		<input <?php echo $disabled;?> placeholder="Min Sell Price" id="minSellPrice<?php echo $pro_d['id']?>" data-pro_idd="<?php echo $pro_d['id']?>" value="<?php echo $minimum_selling_price;?>" type="text" 
-						  		name="weights_chk[weights][<?php echo $pro_d['id']?>][minimum_selling_price]" class="form-control minSellPrice" aria-label="min">
-						  	</td>
 							<td>
 							  <input <?php echo $disabled;?> placeholder="MRP" id="weightPriceInput<?php echo $pro_d['id']?>" data-pro_id="<?php echo $pro_d['id']?>" value="<?php echo $price;?>" type="text" 
 						  		name="weights_chk[weights][<?php echo $pro_d['id']?>][price]" class="form-control weightPriceInput"  aria-label="15g">
@@ -403,7 +398,6 @@ else if($type==2)
 		  						<th style="width: 5%;">Variant</th>
 		  						<th style="width: 10%;">Product code</th>
 		  						<th style="width: 5%;">Product Weight</th>
-		  						<th style="width: 5%;">Minimum Selling Price</th>
 		  						<th style="width: 10%;">Price<br><span style="font-size:12px">(INR)</span></th>
 		  						<th style="width: 10%;">Inner Qty<br><span style="font-size:12px">(NOS)</span></th>
 		  						<th style="width: 10%;">Inner Unit</th>
@@ -520,9 +514,6 @@ else if($type==2)
 								<input <?php echo $disabled;?> placeholder="Product Weight" id="weightInput<?php echo $pro_d['id']?>" value="<?php echo $pro_weight;?>" type="text" 
 						  		name="weights_chk[weights][<?php echo $pro_d['id']?>][pro_weight]" class="form-control weightInput" aria-label="15g">
 							</td>
-							<td>
-						  		<input <?php echo $disabled;?> placeholder="Min Sell Price" id="minSellPrice<?php echo $pro_d['id']?>" data-pro_idd="<?php echo $pro_d['id']?>" value="<?php echo $minimum_selling_price;?>" type="text" name="weights_chk[weights][<?php echo $pro_d['id']?>][minimum_selling_price]" class="form-control minSellPrice" aria-label="min">
-						  	</td>
 							<td>
 							  <input <?php echo $disabled;?> placeholder="MRP" id="weightPriceInput<?php echo $pro_d['id']?>" data-pro_id="<?php echo $pro_d['id']?>"  value="<?php echo $price;?>" type="text" 
 						  		name="weights_chk[weights][<?php echo $pro_d['id']?>][price]" class="form-control weightPriceInput"  aria-label="15g">
@@ -666,7 +657,7 @@ $('input.weights_chk').live('click', function(event){
 
 		$("#weightInnerUnitInput"+id).removeAttr('disabled');
 		$("#weightOuterUnitInput"+id).removeAttr('disabled');
-		$("#minSellPrice"+id).removeAttr('disabled');
+		$("#weightPriceInput"+id).removeAttr('disabled');
 	}
 	else
 	{
@@ -690,31 +681,9 @@ $('input.weights_chk').live('click', function(event){
 		$("#weightInput"+id).attr('disabled','disabled');
 		$("#weightInnerUnitInput"+id).attr('disabled','disabled');
 		$("#weightOuterUnitInput"+id).attr('disabled','disabled');
-		$("#minSellPrice"+id).attr('disabled','disabled');
+		$("#weightPriceInput"+id).attr('disabled','disabled');
 	}
 });
-});
-
-$('input.minSellPrice').live('keyup',function (event) {
-	var idd=$(this).data('pro_idd');
-	var min_sell_price = parseFloat($("#minSellPrice"+idd).val());
-	if (min_sell_price > 0) {
-		$("#weightPriceInput"+idd).removeAttr('disabled');
-		$('input.weightPriceInput').trigger("change");
-	}else {
-		$("#weightPriceInput"+idd).val("");
-		$("#weightPriceInput"+idd).attr('disabled','disabled');
-	}
-});
-
-$('input.weightPriceInput').live('change',function (event) {
-	var id=$(this).data('pro_id');
-	var MRP=$(this).val();
-	var min_sell_price = parseFloat($("#minSellPrice"+id).val());
-	if (min_sell_price > MRP && MRP != "" && MRP != undefined ) {
-		$(this).val("");
-		toastr.error("Add MRP Greater Than Minimum Selling Price");
-	}
 });
 
 $('input.check_all_box').on('change', function() 

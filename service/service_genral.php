@@ -1800,6 +1800,29 @@ if ($is_valid_api_key) {
 				$item_gst = $GST;
 				//$item_gst=$_REQUEST['item_gst'];
 
+				// Max item discount 50% (Dis% / Dis Flat) — same as web Order/Quotation
+				$discount_check = floatval($discount);
+				$discount_amt_check = floatval($discount_amt);
+				$original_price_check = floatval($original_price);
+				if ($discount_check > 50) {
+					$ack = array(
+						"ack" => 0,
+						"ack_msg" => "You cant add Discount More Than 50%",
+						"developer_msg" => "You cant add Discount More Than 50%",
+					);
+					$db->printJSON($ack);
+					exit;
+				}
+				if ($original_price_check > 0 && $discount_amt_check > ($original_price_check * 50 / 100)) {
+					$ack = array(
+						"ack" => 0,
+						"ack_msg" => "You cant add Discount More Than 50%",
+						"developer_msg" => "You cant add Discount More Than 50%",
+					);
+					$db->printJSON($ack);
+					exit;
+				}
+
 				if ($discount != "" && $discount != "0.00" && $discount != "0" && $discount != "0.0") {
 					$discount_amt = ($original_price * $discount) / 100;
 					$after_discount_price = $original_price - $discount_amt;
@@ -2057,7 +2080,8 @@ if ($is_valid_api_key) {
 
 							$order_item_d['stock'] = $db->rp_getValue("product_weight_price", "stock_qty", "weight_id='" . $order_item_d['weight_id'] . "' AND product_id='" . $order_item_d['pro_id'] . "'  AND isDelete=0");
 
-							$order_item_d['minimum_selling_price'] = $db->rp_getValue("product_weight_price", "minimum_selling_price", "weight_id='" . $order_item_d['weight_id'] . "' AND product_id='" . $order_item_d['pro_id'] . "'  AND isDelete=0");
+							// Min sell removed for app — always 0; discount/rate calc uses MRP (original_price/price)
+							$order_item_d['minimum_selling_price'] = 0;
 
 							$order_item_d['order_item_brand_id'] = $order_item_d['order_item_brand_id'];
 							$order_item_d['order_item_brand_name'] = $db->rp_getValue("order_item_brand_master", "name", "isDelete=0 AND isActive=1 AND id='" . $order_item_d['order_item_brand_id'] . "'");

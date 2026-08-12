@@ -658,6 +658,8 @@ class System extends Functions
     				{
     					while($r=mysqli_fetch_assoc($result_r))
     					{
+    						// Min sell removed for app — use MRP (price) only
+    						$r['minimum_selling_price'] = 0;
     						$result[]=$r;
     					}
     				}

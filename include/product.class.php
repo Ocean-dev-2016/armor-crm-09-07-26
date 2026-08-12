@@ -147,7 +147,7 @@ class Product extends Functions
 
 						$min_stock_qty = $w['min_stock_qty'];
 						$max_stock_qty = $w['max_stock_qty'];
-						$minimum_selling_price = $w['minimum_selling_price'];
+						$minimum_selling_price = isset($w['minimum_selling_price']) ? $w['minimum_selling_price'] : 0;
 
 						$size_outer = $w['outer_size'];
 						$outer_cft = $w['outer_cft'];
@@ -318,7 +318,7 @@ class Product extends Functions
 				$inner_cbm = $w['inner_cbm'];
 				$min_stock_qty = $w['min_stock_qty'];
 				$max_stock_qty = $w['max_stock_qty'];
-				$minimum_selling_price = $w['minimum_selling_price'];
+				$minimum_selling_price = isset($w['minimum_selling_price']) ? $w['minimum_selling_price'] : 0;
 				$size_outer = $w['outer_size'];
 				$outer_cft = $w['outer_cft'];
 				$outer_cbm = $w['outer_cbm'];
@@ -496,7 +496,7 @@ class Product extends Functions
 			$weight_is_including[] = $p['is_including'];
 			$weight_inner_unit[] = $p['inner_unit'];
 			$weight_outer_unit[] = $p['outer_unit'];
-			$minimum_selling_price[] = $p['minimum_selling_price'];
+			$minimum_selling_price[] = 0; // Min sell removed — app uses MRP only
 		}
 		$result['weight_prices'] = $weight_prices;
 		$result['weight_catnos'] = $weight_catnos;
@@ -712,6 +712,8 @@ class Product extends Functions
 					$w['discountPer'] = $discountPer;
 					$w['final_qty'] = $this->db->rp_getValue("product_weight_price", "stock_qty", "product_id='" . $product_detail['id'] . "' AND bid='" . $w['bid'] . "' AND weight_id='" . $w['weight_id'] . "'", 0);
 					$w['is_premium'] = ($is_premium) ? $is_premium : 0;
+					// Min sell removed for app — MRP is orignal_price / price
+					$w['minimum_selling_price'] = 0;
 
 					// print_r($w);exit;
 					$proudcts[] = $w;
@@ -1642,7 +1644,7 @@ class Product extends Functions
 					$item_order_unit_qty = 0;
 				}
 
-				$r['minimum_selling_price'] = $this->db->rp_getValue("product_weight_price", "minimum_selling_price", "weight_id='" . $r['weight_id'] . "' AND product_id='" . $r['pro_id'] . "'  AND isDelete=0");
+				$r['minimum_selling_price'] = 0; // Min sell removed — app uses MRP only
 
 				$r['item_order_unit_qty'] = $item_order_unit_qty;
 				$r['unit_name'] =	$order_unit_arr[$r['item_order_unit']];
@@ -1907,12 +1909,13 @@ class Product extends Functions
 						}
 						$user_discount = $this->db->rp_getValue("price_table", "discount", "tcid='" . $pro_d['tcid'] . "' AND uid='" . $uid . "' AND isDelete=0", 0);
 
-						$price_r =	$this->db->rp_getData("product_weight_price", "id,weight_id,price,product_id,inner_size,outer_size,catno,stock_qty,is_including,minimum_selling_price", "isDelete=0 AND product_id=" . $pid, "", 0);
+						$price_r =	$this->db->rp_getData("product_weight_price", "id,weight_id,price,product_id,inner_size,outer_size,catno,stock_qty,is_including", "isDelete=0 AND product_id=" . $pid, "", 0);
 
 						if ($price_r) {
 							$product_weight_price = array();
 							while ($price_d = mysqli_fetch_assoc($price_r)) {
 								$price_d['original_price'] = $this->db->rp_number_format($price_d['price'], 2);
+								$price_d['minimum_selling_price'] = 0; // Min sell removed — MRP only
 
 
 								if ($price_d['is_including'] == 1) {

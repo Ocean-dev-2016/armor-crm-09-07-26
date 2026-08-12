@@ -205,8 +205,8 @@ $order_unit_arr = array("-1" => "Box", "-2" => "Strip", "-3" => "Pallet", "1" =>
 				}
 				?>
 			</td>
-			<tr style="background-color:#A9A9A9">
-				<td colspan="21" align="center"><b>PRO FORMA INVOICE</b></td>
+			<tr style="background-color:#A9A9A9; color: #000;">
+				<td colspan="21" align="center" style="color: #000;"><b>PRO FORMA INVOICE</b></td>
 			</tr>
 			<tr>
 				<td colspan="8" rowspan="4" style="text-align: left;vertical-align: top;">
@@ -296,23 +296,24 @@ $order_unit_arr = array("-1" => "Box", "-2" => "Strip", "-3" => "Pallet", "1" =>
 		<!-- product detail division hear-->
 		<table>
 			<tbody>
-				<tr class="text-center" style="background-color: <?= VIEW_COLOR ?>;">
-					<th colspan="1" class="text-center" width="2%">SR No.</th>
+				<tr class="text-center" style="background-color: <?= VIEW_COLOR ?>; color: #000;">
+					<th colspan="1" class="text-center" style="width:4%; color: #000;">SR No.</th>
 					<!-- <th colspan="1" class="image-width text-center">Image</th>  -->
-					<th colspan="5" class="text-center">Product Name</th>
-					<th colspan="1" class="text-center">Brand <br> Name</th>
-					<th colspan="2" class="text-center">HSN Code</th>
-					<th colspan="3" class="text-center">Qty</th>
-					<th colspan="2" class="text-center">Weight (in kg)</th>
-					<!-- <th colspan="3" class="text-center">Price</th> -->
-					<!-- <th colspan="3" class="text-center">Discount</th> -->
-					<!-- <th colspan="3" class="text-center">Alt. Qty</th> -->
-					<th colspan="3" class="text-center">Rate</th>
-					<th colspan="3" class="text-center">GST /<br>IGST %</th>
-					<th colspan="3" class="text-center">Total Amount</th>
+					<th colspan="3" class="text-center" style="width:22%; color: #000;">Product Name</th>
+					<th colspan="1" class="text-center" style="width:8%; color: #000;">Brand <br> Name</th>
+					<th colspan="1" class="text-center" style="width:8%; color: #000;">HSN Code</th>
+					<th colspan="1" class="text-center" style="width:6%; color: #000;">Qty</th>
+					<th colspan="1" class="text-center" style="width:8%; color: #000;">Weight<br />(in kg)</th>
+					<th colspan="1" class="text-center" style="width:8%; color: #000;">Rate</th>
+					<th colspan="1" class="text-center" style="width:8%; color: #000;">Discount %</th>
+					<th colspan="1" class="text-center" style="width:10%; color: #000;">Discounted Value</th>
+					<th colspan="1" class="text-center" style="width:8%; color: #000;">GST /<br>IGST %</th>
+					<th colspan="1" class="text-center" style="width:10%; color: #000;">Total Amount</th>
 				</tr>
 				<?php
 				$ITEMS = array();
+				$total_item_discount = 0;
+				$total_mrp_amount = 0;
 				$items1 = $db->rp_getData("order_product_item", "*", "order_id='" . $order_id . "'");
 				while ($item1 = mysqli_fetch_assoc($items1)) {
 					$item1['display_order'] = $db->rp_getValue("product", "display_order", "id='" . $item1['pro_id'] . "' AND isDelete=0");
@@ -355,6 +356,25 @@ $order_unit_arr = array("-1" => "Box", "-2" => "Strip", "-3" => "Pallet", "1" =>
 
 						$inner_unit = $db->rp_getValue("product_weight_price", "inner_unit", "product_id='" . $item['pro_id'] . "' AND weight_id='" . $item['weight_id'] . "'");
 						$outer_unit = $db->rp_getValue("product_weight_price", "outer_unit", "product_id='" . $item['pro_id'] . "' AND weight_id='" . $item['weight_id'] . "'");
+
+						$item_original_price = floatval($item['original_price']);
+						$item_discount_per = floatval($item['discount']);
+						$item_discount_val = floatval($item['discount_amount']);
+						if ($item_discount_val <= 0 && $item_discount_per > 0 && $item_original_price > 0) {
+							$item_discount_val = ($item_original_price * $item_discount_per) / 100;
+						}
+						if ($item_discount_per <= 0 && $item_discount_val > 0 && $item_original_price > 0) {
+							$item_discount_per = ($item_discount_val / $item_original_price) * 100;
+						}
+						if ($item_discount_val <= 0 && $item_original_price > 0 && floatval($item['unitprice']) > 0) {
+							$item_discount_val = $item_original_price - floatval($item['unitprice']);
+							if ($item_discount_per <= 0 && $item_discount_val > 0) {
+								$item_discount_per = ($item_discount_val / $item_original_price) * 100;
+							}
+						}
+						$item_discount_total = $item_discount_val * floatval($item['pro_qty']);
+						$total_item_discount += $item_discount_total;
+						$total_mrp_amount += ($item_original_price > 0 ? $item_original_price : floatval($item['unitprice'])) * floatval($item['pro_qty']);
 				?>
 						<tr>
 							<td colspan="1" class="text-center srno"><strong><?php echo $count; ?></strong></td>
@@ -369,7 +389,7 @@ $order_unit_arr = array("-1" => "Box", "-2" => "Strip", "-3" => "Pallet", "1" =>
 									<?php
 									}
 									?>  -->
-							<td colspan="5" class="model" style="position: relative;">
+							<td colspan="3" class="model" style="position: relative;">
 								<?php
 								if ($item['weight_id'] != -1) {
 									echo "<b>#".$product_code."</b>-".$pro_name . " - " . $size;
@@ -380,12 +400,12 @@ $order_unit_arr = array("-1" => "Box", "-2" => "Strip", "-3" => "Pallet", "1" =>
 								<?= (isset($item['pro_description']) && $item['pro_description'] != "") ? "<br/><br/>" . $item['pro_description'] : "" ?>
 							</td>
 							<td colspan="1" class="text-center"><?php echo $db->rp_getValue("order_item_brand_master", "name", "isDelete=0 AND isActive=1 AND id='" . $item['order_item_brand_id'] . "'") ?></td>
-							<td colspan="2" class="text-center"> <?= $hsncode ?></td>
-							<td colspan="3" class="text-center"><?= $qty_product;
+							<td colspan="1" class="text-center"> <?= $hsncode ?></td>
+							<td colspan="1" class="text-center"><?= $qty_product;
 																$totalqty += $qty_product;
 																?></td>
 
-							<td colspan="2" class="text-center">
+							<td colspan="1" class="text-center">
 								<?php
 								$weight = $db->rp_getValue("product_weight_price", "pro_weight", "product_id='" . $item['pro_id'] . "' AND weight_id='" . $item['weight_id'] . "'");
 								echo $kg = $weight / 1000;
@@ -395,21 +415,20 @@ $order_unit_arr = array("-1" => "Box", "-2" => "Strip", "-3" => "Pallet", "1" =>
 								?>
 
 							</td>
-							<!-- <td colspan="3" class="text-center"><?= $qty_outer ?>
-								<?= $order_unit_arr[$outer_unit] ?></td> -->
-							<!-- <td colspan="3" class="text-center"><?= $item['original_price'] ?></td> -->
-							<!-- <td colspan="3" class="text-center"><?= $item['discount_amount'] ?></td> -->
-							<td colspan="3" class="text-center">
+							<td colspan="1" class="text-center">
 								<?php
+								$display_rate = $item_original_price > 0 ? $item_original_price : floatval($item['unitprice']);
 								if ($cart_detail_d['customer_type'] == 1 || $cart_detail_d['customer_type'] == 2) {
-									echo $item['unitprice'] * $item['inner_size'];
+									echo round($display_rate * $item['inner_size'], 2);
 								} else {
-									echo $item['unitprice'];
+									echo round($display_rate, 2);
 								}
 								?>
 							</td>
-							<td colspan="3" class="text-center"><?= $pro_gst = $db->rp_getValue("product", "igst", "id='" . $item['pro_id'] . "' AND isDelete=0", 0); ?></td>
-							<td colspan="3" class="text-center"><?php echo $currency . ' ' . round($item['totalprice'], 2); ?></td>
+							<td colspan="1" class="text-center"><?php echo round($item_discount_per, 2); ?></td>
+							<td colspan="1" class="text-center"><?php echo $currency . ' ' . round($item_discount_total, 2); ?></td>
+							<td colspan="1" class="text-center"><?= $pro_gst = $db->rp_getValue("product", "igst", "id='" . $item['pro_id'] . "' AND isDelete=0", 0); ?></td>
+							<td colspan="1" class="text-center"><?php echo $currency . ' ' . round($item['totalprice'], 2); ?></td>
 						</tr>
 						<?php
 					}
@@ -420,14 +439,16 @@ $order_unit_arr = array("-1" => "Box", "-2" => "Strip", "-3" => "Pallet", "1" =>
 							<tr class="border">
 								<td colspan="1"></td>
 								<!-- <td colspan="1"></td> -->
-								<td colspan="5"></td>
+								<td colspan="3"></td>
 								<td colspan="1"></td>
-								<td colspan="2"></td>
-								<td colspan="3"></td>
-								<td colspan="2"></td>
-								<td colspan="3"></td>
-								<td colspan="3"></td>
-								<td colspan="3"></td>
+								<td colspan="1"></td>
+								<td colspan="1"></td>
+								<td colspan="1"></td>
+								<td colspan="1"></td>
+								<td colspan="1"></td>
+								<td colspan="1"></td>
+								<td colspan="1"></td>
+								<td colspan="1"></td>
 							</tr>
 				<?php
 						}
@@ -437,30 +458,59 @@ $order_unit_arr = array("-1" => "Box", "-2" => "Strip", "-3" => "Pallet", "1" =>
 				<tr>
 					<td colspan="1"></td>
 					<!-- <td colspan="1"></td> -->
-					<td colspan="5"></td>
+					<td colspan="3"></td>
 					<td colspan="1"></td>
-					<td colspan="2"></td>
-					<td colspan="3"></td>
-					<td colspan="2"></td>
-					<td colspan="3"></td>
-					<td colspan="3"></td>
-					<td colspan="3"></td>
+					<td colspan="1"></td>
+					<td colspan="1"></td>
+					<td colspan="1"></td>
+					<td colspan="1"></td>
+					<td colspan="1"></td>
+					<td colspan="1"></td>
+					<td colspan="1"></td>
+					<td colspan="1"></td>
 				</tr>
 				<tr>
 					<td colspan="1"></td>
 					<!-- 	<td colspan="1"></td> -->
-					<td colspan="5"></td>
+					<td colspan="3"></td>
 					<td colspan="1"></td>
-					<td colspan="2"><strong>Total</strong></td>
-					<td colspan="3" style="text-align: center"><?php echo $totalqty; ?></td>
-					<td colspan="2" style="text-align: center"><?php echo $weight_total; ?></td>
-					<td colspan="3"></td>
-					<td colspan="3"></td>
-					<td colspan="3"></td>
+					<td colspan="1"><strong>Total</strong></td>
+					<td colspan="1" style="text-align: center"><?php echo $totalqty; ?></td>
+					<td colspan="1" style="text-align: center"><?php echo $weight_total; ?></td>
+					<td colspan="1"></td>
+					<td colspan="1"></td>
+					<td colspan="1"></td>
+					<td colspan="1"></td>
+					<td colspan="1"></td>
 				</tr>
 			</tbody>
 		</table>
 		<!-- product detail division end-->
+		<?php
+		// Resolve Grand Total for print (fallback when DB grand_total_rounded is 0)
+		if (!isset($totalprice1)) { $totalprice1 = 0; }
+		$total_tax_amt = floatval($totalprice1) - floatval($cart_detail_d['cash_discount_amount']) - floatval($cart_detail_d['additional_discount_amount']) + floatval($cart_detail_d['transport_charge']) + floatval($cart_detail_d['packing_charge']);
+		$calc_before_round = $total_tax_amt + floatval($cart_detail_d['igst_amount']) + floatval($cart_detail_d['tcs_amount']);
+		$display_grand_total = floatval($cart_detail_d['grand_total_rounded']);
+		if ($display_grand_total <= 0) {
+			$display_grand_total = floatval($cart_detail_d['grand_total']);
+		}
+		if ($display_grand_total <= 0) {
+			$display_grand_total = round($calc_before_round);
+		}
+		$display_roundoff = $cart_detail_d['roundoff'];
+		if ((string)$display_roundoff === '' || $display_roundoff === null) {
+			$display_roundoff = round($calc_before_round) - $calc_before_round;
+		}
+		// Dynamic rowspan for bank/terms (ends before Round Off / Bill Amount In Words)
+		$terms_rowspan = 2; // Sub Total, Taxable
+		if ($cart_detail_d['cash_discount_amount'] != "" && $cart_detail_d['cash_discount_amount'] != "0") { $terms_rowspan++; }
+		if ($cart_detail_d['additional_discount_amount'] != "" && $cart_detail_d['additional_discount_amount'] != "0") { $terms_rowspan++; }
+		if ($cart_detail_d['igst_amount'] != "" && $cart_detail_d['igst_amount'] != "0") {
+			$terms_rowspan += (strtolower(CLIENT_STATE) == strtolower($cart_detail_d['state'])) ? 2 : 1;
+		}
+		if ($cart_detail_d['tcs_amount'] != "" && $cart_detail_d['tcs_amount'] != "0") { $terms_rowspan++; }
+		?>
 		<!-- Terms & Condition & Amount detail division hear-->
 		<table>
 			<tbody class="<?= $cl; ?>">
@@ -468,13 +518,16 @@ $order_unit_arr = array("-1" => "Box", "-2" => "Strip", "-3" => "Pallet", "1" =>
 					<td colspan="13" class="" rowspan="1" style="vertical-align: top;background-color: lightgray;">
 						<strong>GSTIN NO. : <?= $company_detail_d['gst'] ?></strong>
 					</td>
-					<td colspan="4" class="text-left font-13" style="background-color: lightgray;"><strong>Sub Total</strong></td>
-					<td colspan="4" class="text-right font-13" style="background-color: lightgray;"><strong><?php echo $currency . ' ' . $db->rp_number_format($totalprice1, 2); ?></strong></td>
+					<td colspan="2" class="text-left font-13" style="background-color: lightgray;"><strong>Discount</strong></td>
+					<td colspan="2" class="text-center font-13" style="background-color: lightgray;"><strong><?php
+						$overall_discount_per = ($total_mrp_amount > 0) ? round(($total_item_discount / $total_mrp_amount) * 100, 2) : 0;
+						echo rtrim(rtrim(number_format($overall_discount_per, 2, '.', ''), '0'), '.') . '%';
+					?></strong></td>
+					<td colspan="4" class="text-right font-13" style="background-color: lightgray;"><strong><?php echo $currency . ' ' . $db->rp_number_format($total_item_discount, 2); ?></strong></td>
 
 				</tr>
-
 				<tr>
-					<td colspan="13" class="" rowspan="6" style="vertical-align: top;">
+					<td colspan="13" class="" rowspan="<?= $terms_rowspan ?>" style="vertical-align: top;">
 						<b>
 							<?php
 							if (isset($company_detail_d['bank_details']) && $company_detail_d['bank_details'] != "") {
@@ -503,18 +556,23 @@ $order_unit_arr = array("-1" => "Box", "-2" => "Strip", "-3" => "Pallet", "1" =>
 						?>
 						<br /><span style="color: red;">Edited By : <?= $modified_by_name ?> &nbsp; </span>
 					</td>
-					<?php if ($cart_detail_d['cash_discount_amount'] != "" && $cart_detail_d['cash_discount_amount'] != "0") { ?>
-						<td colspan="4" class="text-left " style="font-weight: 700;font-size: 14px;">Cash Discount</td>
-						<td colspan="4" class="text-right font-13"><strong><?php echo $currency . ' ' . $db->rp_number_format($cart_detail_d['cash_discount_amount'], 2); ?></strong></td>
-					<?php } ?>
+					<td colspan="4" class="text-left font-13"><strong>Sub Total</strong></td>
+					<td colspan="4" class="text-right font-13"><strong><?php echo $currency . ' ' . $db->rp_number_format($totalprice1, 2); ?></strong></td>
 				</tr>
 
+				<?php if ($cart_detail_d['cash_discount_amount'] != "" && $cart_detail_d['cash_discount_amount'] != "0") { ?>
 				<tr>
-					<?php if ($cart_detail_d['additional_discount_amount'] != "" && $cart_detail_d['additional_discount_amount'] != "0") { ?>
+						<td colspan="4" class="text-left " style="font-weight: 700;font-size: 14px;">Cash Discount</td>
+						<td colspan="4" class="text-right font-13"><strong><?php echo $currency . ' ' . $db->rp_number_format($cart_detail_d['cash_discount_amount'], 2); ?></strong></td>
+				</tr>
+				<?php } ?>
+
+				<?php if ($cart_detail_d['additional_discount_amount'] != "" && $cart_detail_d['additional_discount_amount'] != "0") { ?>
+				<tr>
 						<td colspan="4" class="text-left " style="font-weight: 700;font-size: 14px;"><strong>Additional Discount</strong></td>
 						<td colspan="4" class="text-right font-13"><strong><?php echo $currency . ' ' . $db->rp_number_format($cart_detail_d['additional_discount_amount'], 2); ?></strong></td>
-					<?php } ?>
 				</tr>
+				<?php } ?>
 				<!-- <tr>
 						<td colspan="4" class="text-left font-13"><strong>Transport Charge</strong></td>
 						<td colspan="4" class="text-right font-13"><strong><?php echo $currency . ' ' . $db->rp_number_format($cart_detail_d['transport_charge'], 2); ?></strong></td>
@@ -551,7 +609,7 @@ $order_unit_arr = array("-1" => "Box", "-2" => "Strip", "-3" => "Pallet", "1" =>
 							<br/><span style="color: red;">Edited By : <?= $modified_by_name ?> &nbsp; </span>
 						</td> -->
 					<td colspan="4" class="text-left " style="font-weight: 700;font-size: 14px;"><strong>Total Taxable Amount</strong></td>
-					<?php $total_tax_amt = $totalprice1 - ($cart_detail_d['cash_discount_amount'] + $cart_detail_d['additional_discount_amount']) + ($cart_detail_d['transport_charge'] + $cart_detail_d['packing_charge']); ?>
+					<?php /* $total_tax_amt already calculated above for grand total */ ?>
 					<td colspan="4" class="text-right font-13"><strong><?php echo $currency . ' ' . $db->rp_number_format($total_tax_amt, 2); ?></strong></td>
 				</tr>
 				<?php
@@ -574,10 +632,6 @@ $order_unit_arr = array("-1" => "Box", "-2" => "Strip", "-3" => "Pallet", "1" =>
 								<td colspan="4" class="text-left"><strong>IGST</strong></td>
 								<td colspan="4" class="text-right "><strong><?= ($currency . $db->rp_number_format($cart_detail_d['igst_amount'], 2)) ?></strong></td>
 							</tr>
-							<tr>
-								<td colspan="4" class="text-left"></td>
-								<td colspan="4" class="text-right "></td>
-							</tr>
 						<?php
 						}
 					} else {
@@ -598,41 +652,19 @@ $order_unit_arr = array("-1" => "Box", "-2" => "Strip", "-3" => "Pallet", "1" =>
 								<td colspan="4" class="text-left"><strong>IGST</strong></td>
 								<td colspan="4" class="text-right "><strong><?= ($currency . $db->rp_number_format($cart_detail_d['igst_amount'], 2)) ?></strong></td>
 							</tr>
-							<tr>
-								<td colspan="4" class="text-left"></td>
-								<td colspan="4" class="text-right "></td>
-							</tr>
 					<?php
 						}
 					}
-				} else {
-					?>
-					<tr>
-						<td colspan="4" class="text-left"></td>
-						<td colspan="4" class="text-right "></td>
-					</tr>
-					<tr>
-						<td colspan="4" class="text-left"></td>
-						<td colspan="4" class="text-right "></td>
-					</tr>
-				<?php
 				}
 				?>
 				<?php
-				if ($cart_detail_d['tcs_amount'] != "0") {
+				if ($cart_detail_d['tcs_amount'] != "" && $cart_detail_d['tcs_amount'] != "0") {
 				?>
 					<tr>
 						<td colspan="4">
 							<strong>TCS (<?= TCS_CHARGE_IN_PER ?>%)</strong>
 						</td>
 						<td colspan="4" class="text-right"><strong><?= $currency . number_format($cart_detail_d['tcs_amount'], 2) ?></strong></td>
-					</tr>
-				<?php
-				} else {
-				?>
-					<tr>
-						<td colspan="4"></td>
-						<td colspan="4" class="text-right"><strong></td>
 					</tr>
 				<?php
 				}
@@ -659,7 +691,7 @@ $order_unit_arr = array("-1" => "Box", "-2" => "Strip", "-3" => "Pallet", "1" =>
 							<br> -->
 						<b>Bill Amount In Words</b> :
 						<?php
-						$grand_total_words = $ntw->rp_convertNumToWord($cart_detail_d['grand_total_rounded']);
+						$grand_total_words = $ntw->rp_convertNumToWord($display_grand_total);
 						echo ucwords(strtolower($grand_total_words));
 						?>
 					</td>
@@ -667,7 +699,7 @@ $order_unit_arr = array("-1" => "Box", "-2" => "Strip", "-3" => "Pallet", "1" =>
 						<strong>Round Off</strong>
 					</td>
 					<td colspan="4" class="text-right"><strong>
-							<?php echo $currency . $cart_detail_d['roundoff']; ?>
+							<?php echo $currency . $display_roundoff; ?>
 						</strong></td>
 				</tr>
 				<tr>
@@ -680,7 +712,7 @@ $order_unit_arr = array("-1" => "Box", "-2" => "Strip", "-3" => "Pallet", "1" =>
 					</td>
 					<td colspan="4" class="text-right" style="background-color: <?= GRAND_TOTAL_COLOR ?>;font-size: 16px;"><strong>
 							<?php
-							echo $currency . ' ' . $db->rp_number_format($cart_detail_d['grand_total_rounded'], 2);
+							echo $currency . ' ' . $db->rp_number_format($display_grand_total, 2);
 							?>
 						</strong>
 					</td>

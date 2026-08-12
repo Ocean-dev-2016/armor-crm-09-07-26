@@ -971,8 +971,6 @@ if (isset($_REQUEST['id']) && $_REQUEST['id'] > 0 && $_REQUEST['mode'] == "isAct
 
                                                                         $top_cat_id = $db->rp_getValue("product", "tcid", "id='" . $i['product_id'] . "'");
 
-                                                                        $minimum_selling_price = $db->rp_getValue("product_weight_price", "minimum_selling_price", "product_id='" . $i['product_id'] . "' AND weight_id='" . $i['weight_id'] . "'");
-
                                                                         $unit_id = $db->rp_getValue("product", "unit_id", "id='" . $i['product_id'] . "'");
                                                                         $unit_name = $db->rp_getValue("unit", "name", "id='" . $unit_id . "'");
                                                                         if ($i['is_including'] == 1) {
@@ -1034,7 +1032,6 @@ if (isset($_REQUEST['id']) && $_REQUEST['id'] > 0 && $_REQUEST['mode'] == "isAct
                                                                                  <?= $get_pro_price ?>
                                                                               </span>
                                                                               <input type='hidden' value="<?= ($is_premium) ? $is_premium : 0; ?>" class='is_premium' />
-                                                                              <span><input type='hidden' value="<?= $minimum_selling_price ?>" class='min-sell-price' /><strong>Min Sell Price: </strong> <?= $minimum_selling_price ?> </span>
                                                                            </td>
                                                                            <td style='text-align:right;padding: 1px!important;'>
                                                                               <?php
@@ -1603,7 +1600,6 @@ if (isset($_REQUEST['id']) && $_REQUEST['id'] > 0 && $_REQUEST['mode'] == "isAct
          var bag_box_id = $("#bag_box_id").val();
          var gst_tax = $(row).find("input.gst_tax").val();
          var discount_amount_new = $(row).find("td").find("input.discount_amount").val();
-         var minSellPrice = $(row).find("td").find("input.min-sell-price").val();
          var item_order_unit = $(row).find("td").find("input.item_order_unit").val();
          var order_qty = $(row).find("td").find("input.order_qty").val();
          var changed_before_price = $(row).find("td").find("input.price").val();
@@ -1710,32 +1706,18 @@ if (isset($_REQUEST['id']) && $_REQUEST['id'] > 0 && $_REQUEST['mode'] == "isAct
 
 
          if (parseFloat(price) > parseFloat(original_price)) {
-
-            if ((parseFloat(price) < parseFloat(minSellPrice)) && is_premium == 0) {
-               toastr.error("The Rate Should Not Be Less Than The Min Sell Price");
-               $(row).find("td").find("input.price").val(old_price);
-               price = $(row).find("td").find("input.price").val();
-            } else {
-               // toastr.error("Rate should not be higher than Available Price");
-               $(row).find("td").find("input.price").val(old_price);
-               price = $(row).find("td").find("input.price").val();
-            }
+            $(row).find("td").find("input.price").val(old_price);
+            price = $(row).find("td").find("input.price").val();
          }
 
-         if ((parseFloat(original_price) < parseFloat(minSellPrice)) && is_premium == 0) {
-            toastr.error("Add Price Greater Than Minimum Selling Price");
-            $(row).find("td").find("input.original_price").val(original_price_hidden);
-            original_price = $(row).find("td").find("input.original_price").val();
-         }
-
-         if (parseFloat(discount_amount_new) > parseFloat(original_price)) {
-            toastr.error("You cant add Discount More Than Price");
+         if (parseFloat(discount_amount_new) > (parseFloat(original_price) * 50 / 100)) {
+            toastr.error("You cant add Discount More Than 50%");
             $(row).find("td").find("input.discount_amount").val(0);
             discount_amount_new = 0;
          }
 
-         if (parseFloat(discount) > 100) {
-            toastr.error("You cant add Discount More Than 100");
+         if (parseFloat(discount) > 50) {
+            toastr.error("You cant add Discount More Than 50%");
             $(row).find("td").find("input.discount").val(0);
             discount = 0;
          }
@@ -1755,17 +1737,6 @@ if (isset($_REQUEST['id']) && $_REQUEST['id'] > 0 && $_REQUEST['mode'] == "isAct
             var discount_amount = (original_price * discount) / 100;
             price = (original_price - discount_amount);
             price1 = (original_price - discount_amount);
-         }
-
-         if (parseFloat(price1) < parseFloat(minSellPrice) && is_premium == 0) {
-            toastr.error("The Rate Should Not Be Less Than The Min Sell Price");
-            $(row).find("td").find("input.discount_amount").val(discount_amount_new);
-            $(row).find("td").find("input.discount").val("");
-            $(row).find("td").find("input.price").val(changed_before_price);
-            price = $(row).find("td").find("input.price").val();
-            price1 = $(row).find("td").find("input.price").val();
-            $(row).find("td").find("input.discount_amount").val(0);
-            discount_amount_new = 0;
          }
 
          /*price = (original_price - discount_amount);
@@ -2015,7 +1986,6 @@ if (isset($_REQUEST['id']) && $_REQUEST['id'] > 0 && $_REQUEST['mode'] == "isAct
             var qty = $("#qty").val();
 
             var unitname = $("#bag_box_id").find('option:selected').data('unitname');
-            var min_sell_price = $("#product_id").find('option:selected').data('min_sell_price');
             var item_order_unit = bag_box_id;
             var order_qty = qty;
 
@@ -2169,7 +2139,7 @@ if (isset($_REQUEST['id']) && $_REQUEST['id'] > 0 && $_REQUEST['mode'] == "isAct
 
                   "<td style='padding: 1px!important;'; class='text-center'><input type='text' name='qty[]' class='form-control positive  qty' style='text-align:right;width: 80px;' readonly value='" + qty + "' onChange='recalculateRow(this)'  id='qty'/><input class='new_qty' type='hidden' value='" + qty + "' id='qty'></td>" +
 
-                  "<td style='text-align:right;padding: 1px!important;'><input type='text' name='original_price[]' class='form-control  original_price' style='text-align:right;width: 80px;' value='" + original_price + "' onChange='recalculateRow(this)'  id='original_price'/><input type='hidden' value=" + original_price + " class='original_price_hidden'/><input type='hidden' name=is_including[] id=is_including value=" + is_including + "><span id='pro_master_price'>" + pro_price_main + "</span><span id='pro_master_price'>" + pro_price_main + "</span><span><input type='hidden' value=" + min_sell_price + " class='min-sell-price'/><input type='hidden' value=" + is_premium + " class='is_premium'/><strong>Min Sell Price: </strong>" + min_sell_price + "</span></td>" +
+                  "<td style='text-align:right;padding: 1px!important;'><input type='text' name='original_price[]' class='form-control  original_price' style='text-align:right;width: 80px;' value='" + original_price + "' onChange='recalculateRow(this)'  id='original_price'/><input type='hidden' value=" + original_price + " class='original_price_hidden'/><input type='hidden' name=is_including[] id=is_including value=" + is_including + "><span id='pro_master_price'>" + pro_price_main + "</span><span><input type='hidden' value=" + is_premium + " class='is_premium'/></span></td>" +
 
                   "<td style='text-align:right;padding: 1px!important;'><input type='text' name='discount_amount[]' style='text-align:right;width: 80px;' class='form-control discount_amount' onChange='recalculateRow(this,1)' value=''></td>" +
 
