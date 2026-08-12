@@ -6,8 +6,12 @@
 $page_id = 565;
 $page_slug = 'page_order';
 $api_download = (isset($_REQUEST['api_download']) && (string) $_REQUEST['api_download'] === '1');
-/* App PDF #269 — same as order_view_download_1.php: no web session / security redirect */
-if ($api_download) {
+
+/* Embedded from API #269 — reuse existing $db, do not reload connect (avoids 500 fatal) */
+if (!empty($GLOBALS['cp_order_pdf_embed']) && !empty($GLOBALS['cp_order_pdf_db'])) {
+	$db = $GLOBALS['cp_order_pdf_db'];
+	$api_download = true;
+} else if ($api_download) {
 	include('connect_in.php');
 } else {
 	include('connect.php');

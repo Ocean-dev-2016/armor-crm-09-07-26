@@ -2379,15 +2379,44 @@ class ChannelPartnerOrder
 		$_GET['api_download'] = '1';
 		$_REQUEST['order_id'] = $orderId;
 		$_REQUEST['api_download'] = '1';
+		$GLOBALS['cp_order_pdf_embed'] = true;
+		$GLOBALS['cp_order_pdf_db'] = $this->db;
 		ob_start();
-		include $printFile;
+		@include $printFile;
 		$html = ob_get_clean();
+		unset($GLOBALS['cp_order_pdf_embed'], $GLOBALS['cp_order_pdf_db']);
 		$_GET = $savedGet;
 		$_REQUEST = $savedRequest;
 		if ($cwd) {
 			@chdir($cwd);
 		}
+		if ($html !== '' && stripos($html, 'PRO FORMA INVOICE') === false && stripos($html, 'class="sheet"') === false) {
+			$html = '';
+		}
 		return $html;
+	}
+
+	/** Fallback when embedded include fails (HTTP + connect_in on print page). */
+	private function fetchOrderPrintHtmlHttp($orderId)
+	{
+		$orderId = (int) $orderId;
+		if ($orderId <= 0 || !defined('ADMINSITEURL')) {
+			return '';
+		}
+		$url = rtrim(ADMINSITEURL, '/') . '/channel_partner_order_print.php?order_id=' . $orderId . '&api_download=1';
+		$html = @file_get_contents($url);
+		if (empty($html)) {
+			$ch = curl_init();
+			curl_setopt($ch, CURLOPT_URL, $url);
+			curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+			curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+			curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
+			curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+			$html = curl_exec($ch);
+			curl_close($ch);
+		}
+		return ($html !== false) ? $html : '';
 	}
 
 	/** Same file_url style as #265 GetPaymentPdf / #262 Ledger PDF */
@@ -2427,6 +2456,9 @@ class ChannelPartnerOrder
 		$row = mysqli_fetch_assoc($or);
 
 		$html = $this->renderOrderPrintHtml($orderId);
+		if ($html === '' || stripos($html, 'Login to your account') !== false || stripos($html, 'Forget Password') !== false) {
+			$html = $this->fetchOrderPrintHtmlHttp($orderId);
+		}
 		if ($html === '' || stripos($html, 'Order not found') !== false || stripos($html, 'Invalid order') !== false) {
 			return array('ack' => 0, 'ack_msg' => 'Unable to load order print HTML for PDF.');
 		}
@@ -2472,8 +2504,6 @@ class ChannelPartnerOrder
 
 		require_once $mpdfFile;
 		$mpdf = new mPDF('', 'A4', 10, 'sans-serif', 8, 8, 8, 8, 0, 0, 'P');
-		$mpdf->autoScriptToLang = true;
-		$mpdf->autoLangToFont = true;
 		$mpdf->WriteHTML($html);
 		$mpdf->Output($savePath, 'F');
 
