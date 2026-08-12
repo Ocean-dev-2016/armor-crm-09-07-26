@@ -1006,7 +1006,7 @@
                                 "service_channel_partner.php"
                             ]
                         },
-                        "description": "Generate Customer Order PDF (same as web channel_partner_order_print.php).\n\n**App flow:**\n1) #255/#256 → if can_download_pdf=1 (Pending, not dispatched)\n2) Call #269 with channel_partner_id + order_id\n3) Download/open response.file_url (absolute PDF URL, same style as #265)\n\nParams: key=1226, s=269, channel_partner_id, order_id\nResponse: ack, file_url, file_name, order_no, pdf_ok=1"
+                        "description": "Generate Customer Order PDF (same as web channel_partner_order_print.php).\n\n**App flow:**\n1) #255/#256 → if can_download_pdf=1 (Pending, not dispatched)\n2) Call #269 with channel_partner_id + order_id\n3) Open/download response.file_url — public GET (no CRM login):\n   service/download_cp_order_pdf.php?key=1226&channel_partner_id=&order_id=&file=\n\nParams: key=1226, s=269, channel_partner_id, order_id\nResponse: ack, file_url, file_name, order_no, pdf_ok=1"
                     },
                     "response": []
                 },
