@@ -1305,7 +1305,8 @@ db_sync_register_api_if_missing($conn, 265, 'get_cp_payment_pdf', 'CP Receive Pa
 db_sync_register_api_if_missing($conn, 266, 'add_cp_customer_order_item', 'CP Edit Order Add Item', $cpAppApiBase . '&s=266&channel_partner_id=&order_id=&pwp_id=&qty=&rate=&discount=');
 db_sync_register_api_if_missing($conn, 267, 'update_cp_customer_order_status', 'CP Update Customer Order Status (Pending→Dispatched)', $cpAppApiBase . '&s=267&channel_partner_id=&order_id=&status=dispatch');
 db_sync_register_api_if_missing($conn, 268, 'delete_cp_customer_order_item', 'CP Edit Order Delete Item', $cpAppApiBase . '&s=268&channel_partner_id=&order_id=&item_id=');
-foreach (array(241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 256, 257, 258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268) as $cpAppApiId) {
+db_sync_register_api_if_missing($conn, 269, 'download_cp_customer_order_pdf', 'CP Customer Order PDF Download', $cpAppApiBase . '&s=269&channel_partner_id=&order_id=');
+foreach (array(241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 256, 257, 258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269) as $cpAppApiId) {
 	$slugMap = array(
 		241 => 'get_cp_my_customers',
 		242 => 'add_cp_my_customer',
@@ -1335,6 +1336,7 @@ foreach (array(241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 
 		266 => 'add_cp_customer_order_item',
 		267 => 'update_cp_customer_order_status',
 		268 => 'delete_cp_customer_order_item',
+		269 => 'download_cp_customer_order_pdf',
 	);
 	$urlMap = array(
 		241 => $cpAppApiBase . '&s=241&channel_partner_id=&search_name=&ul=0&ll=50',
@@ -1365,6 +1367,7 @@ foreach (array(241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 
 		266 => $cpAppApiBase . '&s=266&channel_partner_id=&order_id=&pwp_id=&qty=&rate=&discount=',
 		267 => $cpAppApiBase . '&s=267&channel_partner_id=&order_id=&status=dispatch',
 		268 => $cpAppApiBase . '&s=268&channel_partner_id=&order_id=&item_id=',
+		269 => $cpAppApiBase . '&s=269&channel_partner_id=&order_id=',
 	);
 	$escSlug = mysqli_real_escape_string($conn, $slugMap[$cpAppApiId]);
 	$escUrl = mysqli_real_escape_string($conn, $urlMap[$cpAppApiId]);

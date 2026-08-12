@@ -39,6 +39,29 @@ class ChannelPartnerOrder
 		return array('ack' => 1);
 	}
 
+	/**
+	 * Absolute print / PDF download fields for CP App (#255/#256/#254).
+	 * can_download_pdf=1 while order is still Pending (not dispatched).
+	 */
+	private function orderPrintMeta($orderId, $wfStatus)
+	{
+		$orderId = (int) $orderId;
+		$printRel = 'bbsales_tracking/channel_partner_order_print.php?order_id=' . $orderId;
+		$printAbs = $printRel;
+		if (defined('ADMINSITEURL')) {
+			$printAbs = rtrim(ADMINSITEURL, '/') . '/channel_partner_order_print.php?order_id=' . $orderId;
+		}
+		$canPdf = ($wfStatus === 'pending') ? 1 : 0;
+		return array(
+			'print_url' => $printAbs,
+			'print_path' => $printRel,
+			'can_download_pdf' => $canPdf,
+			'can_print' => $canPdf,
+			'download_pdf_api' => 269,
+			'download_pdf_slug' => 'download_cp_customer_order_pdf',
+		);
+	}
+
 	private function getCpExec($cpId)
 	{
 		$r = $this->db->rp_getData('executive', '*', "id='" . (int) $cpId . "' AND isDelete=0", '', 0);
@@ -1334,29 +1357,31 @@ class ChannelPartnerOrder
 
 		$debitRes = $this->objStock->debitForCustomerOrder($cartId);
 		if (empty($debitRes['ack'])) {
-			return array(
+			$printMetaFail = $this->orderPrintMeta($cartId, 'pending');
+			return array_merge(array(
 				'ack' => 1,
 				'ack_msg' => 'Order placed but stock debit failed: ' . (isset($debitRes['ack_msg']) ? $debitRes['ack_msg'] : ''),
 				'order_id' => $cartId,
 				'order_no' => isset($chkRow['order_no']) ? $chkRow['order_no'] : $orderNo,
 				'gst_apply_flag' => $gstFlag,
 				'stock_debited' => 0,
-			);
+			), $printMetaFail);
 		}
 
-		return array(
+		$orderNoOut = isset($chkRow['order_no']) ? $chkRow['order_no'] : $orderNo;
+		$printMeta = $this->orderPrintMeta($cartId, 'pending');
+		return array_merge(array(
 			'ack' => 1,
 			'ack_msg' => 'Order placed successfully. Stock deducted.',
 			'order_id' => $cartId,
-			'order_no' => isset($chkRow['order_no']) ? $chkRow['order_no'] : $orderNo,
+			'order_no' => $orderNoOut,
 			'grand_total' => isset($chkRow['grand_total']) ? round((float) $chkRow['grand_total'], 2) : 0,
 			'sub_total' => isset($chkRow['subtotal']) ? round((float) $chkRow['subtotal'], 2) : 0,
 			'gst_amount' => isset($chkRow['igst_amount']) ? round((float) $chkRow['igst_amount'], 2) : 0,
 			'gst_apply_flag' => $gstFlag,
 			'channel_partner_customer_id' => $custId,
 			'stock_debited' => 1,
-			'print_url' => 'bbsales_tracking/channel_partner_order_print.php?order_id=' . $cartId,
-		);
+		), $printMeta);
 	}
 
 	public function GetOrderList($detail)
@@ -1412,7 +1437,8 @@ class ChannelPartnerOrder
 				}
 				$paidFlag = (int) $row['payment_received_flag'];
 				$paidAmt = (float) $row['payment_received_amount'];
-				$result[] = array(
+				$printMeta = $this->orderPrintMeta((int) $row['id'], $wf['status']);
+				$result[] = array_merge(array(
 					'order_id' => (int) $row['id'],
 					'order_no' => $row['order_no'],
 					'order_date' => $row['order_date'],
@@ -1441,7 +1467,7 @@ class ChannelPartnerOrder
 							array('value' => 'dispatch', 'label' => 'Dispatched'),
 						)
 						: array(),
-				);
+				), $printMeta);
 			}
 		}
 
@@ -2289,10 +2315,11 @@ class ChannelPartnerOrder
 			$grandTotal = round($subTotal + $gstAmount, 2);
 		}
 
+		$printMeta = $this->orderPrintMeta((int) $row['id'], $wf['status']);
 		return array(
 			'ack' => 1,
 			'ack_msg' => 'Order detail ready',
-			'result' => array(
+			'result' => array_merge(array(
 				'order_id' => (int) $row['id'],
 				'order_no' => $row['order_no'],
 				'order_date' => $row['order_date'],
@@ -2326,9 +2353,126 @@ class ChannelPartnerOrder
 					)
 					: array(),
 				'items' => $items,
-				'print_url' => 'bbsales_tracking/channel_partner_order_print.php?order_id=' . (int) $row['id'],
-			),
+			), $printMeta),
 		);
+	}
+
+	/**
+	 * App: generate CP Customer Order PDF (same layout as web print).
+	 * Params: channel_partner_id, order_id
+	 * Returns absolute file_url for download (same style as #265).
+	 */
+	public function DownloadCustomerOrderPdf($detail)
+	{
+		$cpId = isset($detail['channel_partner_id']) ? (int) $detail['channel_partner_id'] : 0;
+		$orderId = isset($detail['order_id']) ? (int) $detail['order_id'] : (isset($detail['id']) ? (int) $detail['id'] : 0);
+		$cpCheck = $this->validateCp($cpId);
+		if ($cpCheck['ack'] != 1) {
+			return $cpCheck;
+		}
+		if ($orderId <= 0) {
+			return array('ack' => 0, 'ack_msg' => 'order_id is required.');
+		}
+
+		$where = "id='" . $orderId . "' AND customer_id='" . $cpId . "' AND channel_partner_order_flag=1"
+			. " AND cp_order_mode='customer' AND isDelete=0 AND status!=-1";
+		$or = $this->db->rp_getData('orders', 'id,order_no,status,payment_received_flag,grand_total,payment_received_amount,company_name', $where, '', 0);
+		if (!$or || mysqli_num_rows($or) == 0) {
+			return array('ack' => 0, 'ack_msg' => 'Order not found.');
+		}
+		$row = mysqli_fetch_assoc($or);
+		$wf = $this->workflowStatus($row['status'], $row['payment_received_flag'], $row['grand_total'], $row['payment_received_amount']);
+
+		$bodyUrl = '';
+		if (defined('ADMINSITEURL')) {
+			$bodyUrl = rtrim(ADMINSITEURL, '/') . '/channel_partner_order_print.php?order_id=' . $orderId . '&api_download=1';
+		}
+		if ($bodyUrl == '') {
+			return array('ack' => 0, 'ack_msg' => 'ADMINSITEURL not configured.');
+		}
+
+		$html = @file_get_contents($bodyUrl);
+		if (empty($html)) {
+			$ch = curl_init();
+			curl_setopt($ch, CURLOPT_URL, $bodyUrl);
+			curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+			curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+			curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
+			curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+			$html = curl_exec($ch);
+			curl_close($ch);
+		}
+		if (empty($html) || stripos($html, 'Order not found') !== false || stripos($html, 'Invalid order') !== false) {
+			return array('ack' => 0, 'ack_msg' => 'Unable to load order print HTML for PDF.');
+		}
+		$html = html_entity_decode($html);
+
+		$bbsDir = dirname(__FILE__) . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'bbsales_tracking' . DIRECTORY_SEPARATOR;
+		$saveDir = $bbsDir . 'inquiry_documents' . DIRECTORY_SEPARATOR;
+		if (!is_dir($saveDir)) {
+			@mkdir($saveDir, 0777, true);
+		}
+		if (!is_dir($saveDir) || !is_writable($saveDir)) {
+			return array('ack' => 0, 'ack_msg' => 'inquiry_documents folder missing or not writable.');
+		}
+
+		$now = time();
+		$oldFiles = @glob($saveDir . 'CP_Order_*.pdf');
+		if ($oldFiles) {
+			foreach ($oldFiles as $old) {
+				if (is_file($old) && ($now - @filemtime($old)) > 86400) {
+					@unlink($old);
+				}
+			}
+		}
+
+		$orderNoSafe = preg_replace('/[^A-Za-z0-9_\-]/', '_', isset($row['order_no']) ? $row['order_no'] : ('OID' . $orderId));
+		$fileName = 'CP_Order_' . $orderNoSafe . '_' . date('Ymd_His') . '_' . substr(md5(uniqid((string) mt_rand(), true)), 0, 8) . '.pdf';
+		$savePath = $saveDir . $fileName;
+
+		$mpdfFile = $bbsDir . 'mpdf60' . DIRECTORY_SEPARATOR . 'mpdf.php';
+		if (!file_exists($mpdfFile)) {
+			return array('ack' => 0, 'ack_msg' => 'mPDF library missing (mpdf60).');
+		}
+		$polyfill = $bbsDir . 'include' . DIRECTORY_SEPARATOR . 'mbstring_polyfill.php';
+		if (file_exists($polyfill)) {
+			include_once $polyfill;
+		}
+
+		require_once $mpdfFile;
+		$mpdf = new mPDF('', 'A4', 10, 'sans-serif', 8, 8, 8, 8, 0, 0, 'P');
+		$mpdf->autoScriptToLang = true;
+		$mpdf->autoLangToFont = true;
+		$mpdf->WriteHTML($html);
+		$mpdf->Output($savePath, 'F');
+
+		if (!file_exists($savePath) || @filesize($savePath) < 50) {
+			return array('ack' => 0, 'ack_msg' => 'PDF file was not created. Check folder permissions.');
+		}
+
+		$fileUrl = '';
+		if (defined('INQUIRY_REPORT_FILES1')) {
+			$fileUrl = rtrim(INQUIRY_REPORT_FILES1, '/') . '/' . $fileName;
+		} else if (defined('ADMINSITEURL')) {
+			$fileUrl = rtrim(ADMINSITEURL, '/') . '/inquiry_documents/' . $fileName;
+		} else {
+			$fileUrl = '../bbsales_tracking/inquiry_documents/' . $fileName;
+		}
+
+		$printMeta = $this->orderPrintMeta($orderId, $wf['status']);
+		return array_merge(array(
+			'ack' => 1,
+			'ack_msg' => 'PDF ready',
+			'order_id' => $orderId,
+			'order_no' => isset($row['order_no']) ? $row['order_no'] : '',
+			'status' => $wf['status'],
+			'status_label' => $wf['status_label'],
+			'file_url' => $fileUrl,
+			'file_name' => $fileName,
+			'title' => 'Customer Order - ' . (isset($row['order_no']) ? $row['order_no'] : $orderId),
+			'pdf_ok' => 1,
+		), $printMeta);
 	}
 
 	/**

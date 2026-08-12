@@ -8,7 +8,13 @@ $page_slug = 'page_order';
 include("connect.php");
 
 $order_id = isset($_REQUEST['order_id']) ? (int) $_REQUEST['order_id'] : 0;
+$api_download = (isset($_REQUEST['api_download']) && (string) $_REQUEST['api_download'] === '1');
 if ($order_id <= 0) {
+	if ($api_download) {
+		header('Content-Type: text/html; charset=utf-8');
+		echo '<html><body>Invalid order.</body></html>';
+		exit;
+	}
 	$db->addErrorMessage("Invalid order.");
 	$db->rp_location("channel_partner_customer_manage.php");
 }
@@ -20,19 +26,27 @@ $is_admin = (isset($_SESSION[SITE_SESS . '_ADMIN_TYPE']) && (int) $_SESSION[SITE
 $ord_r = $db->rp_getData("orders", "*", "id='" . $order_id . "' AND isDelete=0", "", 0);
 $ord = $ord_r ? mysqli_fetch_assoc($ord_r) : null;
 if (empty($ord)) {
+	if ($api_download) {
+		header('Content-Type: text/html; charset=utf-8');
+		echo '<html><body>Order not found.</body></html>';
+		exit;
+	}
 	$db->addErrorMessage("Order not found.");
 	$db->rp_location("channel_partner_customer_manage.php");
 }
 
 $is_cp_portal = !empty($ord['channel_partner_order_flag']);
-if ($is_cp) {
-	if ((int) $ord['customer_id'] !== $cp_login_id) {
-		$db->addErrorMessage("Access denied for this order.");
-		$db->rp_location("channel_partner_customer_manage.php");
+/* api_download=1 is server-side only (App PDF #269) — ownership checked in API before fetch */
+if (!$api_download) {
+	if ($is_cp) {
+		if ((int) $ord['customer_id'] !== $cp_login_id) {
+			$db->addErrorMessage("Access denied for this order.");
+			$db->rp_location("channel_partner_customer_manage.php");
+		}
+	} else if (!$is_admin && !$is_cp_portal) {
+		$db->addErrorMessage("Access denied.");
+		$db->rp_location("dashboard.php");
 	}
-} else if (!$is_admin && !$is_cp_portal) {
-	$db->addErrorMessage("Access denied.");
-	$db->rp_location("dashboard.php");
 }
 
 $cp_id = (int) $ord['customer_id'];
@@ -55,6 +69,21 @@ if ($headerImgFile != '' && defined('HEADER_A') && file_exists(HEADER_A . $heade
 }
 if ($footerImgFile != '' && defined('HEADER_A') && file_exists(HEADER_A . $footerImgFile)) {
 	$footerImgSrc = HEADER_A . $footerImgFile;
+}
+/* App PDF (#269): mPDF needs absolute image paths when HTML is fetched via HTTP */
+if ($api_download) {
+	if ($headerImgSrc != '') {
+		$rp = @realpath(dirname(__FILE__) . DIRECTORY_SEPARATOR . $headerImgSrc);
+		if ($rp) {
+			$headerImgSrc = str_replace('\\', '/', $rp);
+		}
+	}
+	if ($footerImgSrc != '') {
+		$rp = @realpath(dirname(__FILE__) . DIRECTORY_SEPARATOR . $footerImgSrc);
+		if ($rp) {
+			$footerImgSrc = str_replace('\\', '/', $rp);
+		}
+	}
 }
 
 $buyer_name = isset($ord['company_name']) ? $ord['company_name'] : '';
@@ -162,6 +191,7 @@ $auto_print = isset($_REQUEST['p']) && $_REQUEST['p'] == '1';
 </style>
 </head>
 <body>
+<?php if (!$api_download) { ?>
 <div class="toolbar no-print">
 	<button type="button" onclick="window.print();">Print</button>
 	<a href="channel_partner_order_simple.php?cp_mode=customer">New Order</a>
@@ -170,6 +200,7 @@ $auto_print = isset($_REQUEST['p']) && $_REQUEST['p'] == '1';
 </div>
 <?php if ($saved_msg) { ?>
 <div class="ok-banner no-print">Order saved successfully. You can print this Sales Order / PI now.</div>
+<?php } ?>
 <?php } ?>
 
 <div class="sheet">
