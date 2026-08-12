@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 define('DB_SYNC_KEY', 'armor_cp_sync_2026');
-define('DB_SYNC_VERSION', '2026.08.07.2');
+define('DB_SYNC_VERSION', '2026.08.12.1');
 
 if (!isset($_GET['key']) || $_GET['key'] !== DB_SYNC_KEY) {
 	header('HTTP/1.1 403 Forbidden');
@@ -937,6 +937,17 @@ db_sync_append_page_urls($conn, 650, array(
 	'channel_partner_stock_get_ajax.php',
 	'channel_partner_print_settings.php',
 ));
+
+/* ------------------------------------------------------------------
+ * STEP 5i — Product edit: minimum_selling_price on product_weight_price
+ * ------------------------------------------------------------------ */
+db_sync_add_column_if_missing(
+	$conn,
+	'product_weight_price',
+	'minimum_selling_price',
+	"DOUBLE NOT NULL DEFAULT 0 COMMENT 'Min sell (legacy; app uses MRP)'",
+	array('outer_unit', 'inner_unit', 'max_stock_qty')
+);
 
 /* ------------------------------------------------------------------
  * STEP 6 — Final verification (every run)

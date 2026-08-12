@@ -181,7 +181,7 @@ if($type==1)
 		  				</thead>
 						<?php					
 						$pro_r = $db->rp_getData("weight","*","isDelete=0 AND id!=-1","display_order ASC");
-						if(mysqli_num_rows($pro_r)>0)
+						if($pro_r && mysqli_num_rows($pro_r)>0)
 						{
 							$count_row=0;
 						 	while($pro_d = mysqli_fetch_array($pro_r))
@@ -431,7 +431,7 @@ else if($type==2)
 		  		<!-- </div>								 -->
 				<?php					
 				$pro_r1 = $db->rp_getData("weight","*","isDelete=0 AND id=-1","",0);
-				if($pro_d = mysqli_fetch_assoc($pro_r1))
+				if($pro_r1 && ($pro_d = mysqli_fetch_assoc($pro_r1)))
 				{
 					if(in_array($pro_d['id'],$weight_ids))
 					{

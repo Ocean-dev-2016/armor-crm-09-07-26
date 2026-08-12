@@ -306,7 +306,7 @@ if(isset($_REQUEST['id']) && $_REQUEST['id']>0 && $_REQUEST['mode']=="isActive" 
 																<option value="">Select Category</option>
 																<?php
 																	$cat_r = $db->rp_getData("top_category_master","*","isDelete=0");
-																	if(mysqli_num_rows($cat_r)>0){
+																	if($cat_r && mysqli_num_rows($cat_r)>0){
 																		while($cat_d = mysqli_fetch_array($cat_r)){
 																?>
 																<option data-sales_order_unit="<?= $cat_d['unit_id'] ?>" data-customer_order_unit="<?= $cat_d['customer_unit_id'] ?>" value="<?php echo $cat_d['id']; ?>" <?php if($cat_d['id']==$tcid){?> selected <?php } ?>><?php echo $cat_d['name']; ?></option>
@@ -323,7 +323,7 @@ if(isset($_REQUEST['id']) && $_REQUEST['id']>0 && $_REQUEST['mode']=="isActive" 
 																<?php
 																if($tcid!="" && $tcid>0){
 																	$scat_r = $db->rp_getData("category_master","*","isDelete=0 AND tcid='".$tcid."'","","0");
-																	if(mysqli_num_rows($scat_r)>0){
+																	if($scat_r && mysqli_num_rows($scat_r)>0){
 																		while($scat_d = mysqli_fetch_array($scat_r)){
 																?>
 																<option value="<?php echo $scat_d['id']; ?>" <?php if($scat_d['id']==$cid){?> selected <?php } ?>><?php echo $scat_d['name']; ?></option>

@@ -185,6 +185,7 @@ class Product extends Functions
 
 	public function UpdateProduct($detail, $file)
 	{
+		@set_time_limit(180);
 		extract($detail);
 		//print_r($detail);exit;
 		$dup_where = "name = '" . $name . "' AND isDelete=0";

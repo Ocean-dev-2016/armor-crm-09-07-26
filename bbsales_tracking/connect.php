@@ -2,10 +2,10 @@
 error_reporting(0);
 session_start();
 date_default_timezone_set('Asia/Kolkata');
-include("../include/define.php");
+require_once("../include/define.php");
 require_once("../include/function.class.php");
-include("../include/class.system.php");
-include("../include/channel_partner_helper.php");
+require_once("../include/class.system.php");
+require_once("../include/channel_partner_helper.php");
 $db = new Admin();
 $conn = $db->connect();
 
