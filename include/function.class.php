@@ -663,6 +663,9 @@ class Functions extends Database
 	function fetch_all($resource, $type = 'ASSOC')
 	{
 		$Result = array();
+		if (!$resource) {
+			return $Result;
+		}
 		if ($type == 'ASSOC') {
 			while ($Data = mysqli_fetch_assoc($resource)) {
 				$Result[] = $Data;

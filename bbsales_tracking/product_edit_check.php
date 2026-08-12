@@ -23,7 +23,7 @@ echo "PHP: " . PHP_VERSION . "\n\n";
 
 $files = array(
 	'product_crud.php' => 'if($cat_r && mysqli_num_rows($cat_r)',
-	'../include/product.class.php' => 'Cart sync disabled',
+	'../include/product.class.php' => 'existingWeightId',
 	'get_size_from_product_type.php' => 'if($pro_r1 && ($pro_d',
 	'../include/function.class.php' => 'if ($imgInfo === false',
 );
