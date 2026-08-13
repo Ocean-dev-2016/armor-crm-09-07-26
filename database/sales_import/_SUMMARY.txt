@@ -1,0 +1,26 @@
+Sales data sync summary
+Cut-off: 2026-08-13
+Source: kxznassm_armorfire_crm_src (from kxznassm_armorfire_crm.sql)
+Target: kxznassm_armorfire_crm (local XAMPP - schema preserved)
+
+sales_executive => ok rows=85 | local-only-fields=device_id
+visit => ok rows=19485 | local-only-fields=note,followup_date,remark_code,reason_code,approval_type,visit_followup_id,consultant_form_id,high_rate_form_id
+attendance => ok rows=16097
+quotation_detail => ok rows=2468
+orders => ok rows=2005 | local-only-fields=channel_partner_order_flag,channel_partner_customer_id,payment_received_flag,payment_received_date,payment_received_by,payment_received_amount,payment_received_type,cp_portal_order_flag,cp_order_mode,cp_stock_credited,cp_stock_debited,gst_apply_flag
+expense => ok rows=8392 | local-only-fields=expense_claim_type,advance_expense_type
+proforma_invoice_info => ok rows=0
+meeting => ok rows=0
+quotation_product_item => ok rows=13309
+order_product_item => ok rows=8516
+order_scheme_items => ok rows=0
+proforma_invoice_item => ok rows=0
+meeting_member => ok rows=0
+visit_consultant_form => skip_missing_src rows=0
+visit_high_rate_form => skip_missing_src rows=0
+visit_high_rate_form_item => skip_missing_src rows=0
+
+For LIVE:
+1) Do NOT import dump CREATE TABLE / ALTER statements.
+2) Run each *.sql in sales_import/ on live DB (keeps existing live fields).
+3) Prefer off-peak; backup live first.

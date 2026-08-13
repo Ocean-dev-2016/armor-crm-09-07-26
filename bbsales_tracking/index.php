@@ -80,19 +80,11 @@ if ($scheck_res && mysqli_num_rows($scheck_res) > 0) {
 <!-- END LOGO -->
 <!-- BEGIN LOGIN -->
 <div class="content" style="background-color: #ffffff!important;">
-	<div class="logo" style="display: flex;justify-content: center;"><a href="<?php echo SITEURL."bbsales_tracking/index.php"; ?>"> 
-		<?php 
-		// $logo_r=$db->rp_getValue("dealer_distributor_network","logo_detail","isDelete=0 AND admin_type=0");
-		// if($logo_r!="")
-		// {
-		// 	$logo_d=$logo_r;
-		// }
-		// else
-		// {
-		// 	$logo_d="";
-		// }
-		?>	
-		<img src="../images/armore_logo.jpg" style="height:200px;" alt=""/> </a></div>
+	<div class="logo" style="display:flex;justify-content:center;align-items:center;padding:10px 0 5px;">
+		<a href="<?php echo SITEURL."bbsales_tracking/index.php"; ?>">
+			<img src="<?php echo CRM_LOGIN_LOGO_URL; ?>?v=<?php echo @filemtime(CRM_LOGIN_LOGO_PATH); ?>" alt="<?php echo SITETITLE; ?>" style="max-height:160px;max-width:100%;height:auto;display:block;" />
+		</a>
+	</div>
 	<form class="login-form" action="password_admin.php" method="post" onSubmit="return check_form();">
 		<h3 class="form-title">Login to your account</h3>
 		<?php

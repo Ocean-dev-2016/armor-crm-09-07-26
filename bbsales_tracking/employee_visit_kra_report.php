@@ -12,6 +12,7 @@ $kraReport = new EmployeeVisitKraReport($db);
 $employees = $kraReport->getAccessibleEmployees(array(), $rights);
 $defaultFrom = date("Y-m-01");
 $defaultTo = date("Y-m-t");
+$employeeCount = count($employees);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -25,6 +26,23 @@ $defaultTo = date("Y-m-t");
 		.kra-filter-field { min-width:180px; }
 		.kra-filter-employee { min-width:320px; }
 		#kra-results { min-height:120px; }
+		.kra-overview-note {
+			background:#eef6fb; border:1px solid #c5d9e8; color:#31708f;
+			padding:10px 14px; margin-bottom:16px; font-size:13px;
+		}
+		.kra-emp-card {
+			border:1px solid #d9e2ea; margin-bottom:12px; background:#fff;
+		}
+		.kra-emp-card-title {
+			background:#2f6f44; color:#fff; padding:10px 14px; font-size:16px; font-weight:700;
+		}
+		.kra-emp-card-sub {
+			font-size:12px; font-weight:400; margin-top:3px; opacity:0.95;
+		}
+		.kra-emp-card-body {
+			padding:10px 14px; background:#f5f7f9; font-size:13px; color:#555;
+		}
+		.kra-emp-card-body .label-muted { color:#888; margin-right:4px; }
 	</style>
 </head>
 <body class="page-md">
@@ -70,7 +88,6 @@ $defaultTo = date("Y-m-t");
 							<?php } ?>
 						</div>
 					</div>
-					<p class="help-block" style="margin-top:10px;">Maximum 62 days are shown at a time. Salary remains N/A until an employee-to-sales-person mapping is configured.</p>
 				</div>
 			</div>
 			<div class="portlet light">
@@ -78,7 +95,48 @@ $defaultTo = date("Y-m-t");
 					<div class="loading-div" style="display:none;text-align:center;padding:30px;">
 						<img src="assets/admin/layout/img/ajax-loader.gif" alt="Loading">
 					</div>
-					<div id="kra-results"></div>
+					<div id="kra-results">
+						<div id="kra-employee-overview">
+							<div class="kra-overview-note">
+								<i class="fa fa-users"></i>
+								<strong>Employee List (<?php echo (int) $employeeCount; ?>)</strong>
+								— Select employee above and click <b>Show Report</b> for assigned customers + visit details.
+							</div>
+							<?php if (empty($employees)) { ?>
+								<div class="alert alert-warning">No accessible sales employees found.</div>
+							<?php } else {
+								foreach ($employees as $employee) {
+									$typeLabel = isset($employee['type']) ? str_replace('_', ' ', $employee['type']) : '';
+									$meta = array();
+									if (!empty($employee['phone'])) {
+										$meta[] = htmlspecialchars($employee['phone']);
+									}
+									if ($typeLabel != '') {
+										$meta[] = htmlspecialchars(ucwords($typeLabel));
+									}
+									if (!empty($employee['state'])) {
+										$meta[] = htmlspecialchars($employee['state']);
+									}
+									if (!empty($employee['city'])) {
+										$meta[] = htmlspecialchars($employee['city']);
+									}
+							?>
+								<div class="kra-emp-card">
+									<div class="kra-emp-card-title">
+										KEY RESULT AREA - <?php echo htmlspecialchars(strtoupper($employee['name'])); ?>
+										<div class="kra-emp-card-sub">
+											<?php echo !empty($meta) ? implode(' | ', $meta) : 'Select this employee from filter to load report'; ?>
+										</div>
+									</div>
+									<div class="kra-emp-card-body">
+										<span class="label-muted">Status:</span> Select employee + Show Report to load assigned customers and visits.
+									</div>
+								</div>
+							<?php
+								}
+							} ?>
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -89,7 +147,9 @@ $defaultTo = date("Y-m-t");
 <script type="text/javascript" src="js/fSelect.js"></script>
 <script type="text/javascript">
 	(function () {
-		$("#kra_employee_ids").fSelect({placeholder: "All accessible employees", numDisplayed: 2});
+		$("#kra_employee_ids").fSelect({placeholder: "Select Sales Employee", numDisplayed: 2});
+
+		var overviewHtml = $("#kra-employee-overview").prop("outerHTML");
 
 		function queryString() {
 			var selected = $("#kra_employee_ids").val() || [];
@@ -100,7 +160,17 @@ $defaultTo = date("Y-m-t");
 			});
 		}
 
+		function showEmployeeOverview() {
+			$("#kra-results").html(overviewHtml);
+		}
+
 		function loadReport() {
+			var selected = $("#kra_employee_ids").val() || [];
+			if (!selected.length) {
+				toastr.error("Please select at least one Sales Employee.");
+				showEmployeeOverview();
+				return;
+			}
 			$(".loading-div").show();
 			$("#kra-results").html("");
 			$("#kra-results").load("employee_visit_kra_report_get_ajax.php?" + queryString(), function () {
@@ -111,9 +181,10 @@ $defaultTo = date("Y-m-t");
 		$("#kra_filter_btn").on("click", loadReport);
 		$("#kra_excel_btn").on("click", function () {
 			var empCount = ($("#kra_employee_ids").val() || []).length;
-			var waitMsg = empCount === 0
-				? "Exporting ALL employees Excel… please wait (1–3 min on Live)."
-				: "Exporting Excel… please wait.";
+			if (empCount === 0) {
+				toastr.error("Please select at least one Sales Employee for Excel export.");
+				return;
+			}
 			$.ajax({
 				method: "POST",
 				url: "employee_visit_kra_report_excel.php",
@@ -129,7 +200,7 @@ $defaultTo = date("Y-m-t");
 					if (!$("#kra_export_status").length) {
 						$(".loading-div").append('<div id="kra_export_status" style="margin-top:10px;font-weight:600;"></div>');
 					}
-					$("#kra_export_status").text(waitMsg);
+					$("#kra_export_status").text("Exporting Excel… please wait.");
 				},
 				success: function (raw) {
 					$(".loading-div").hide();
@@ -151,7 +222,7 @@ $defaultTo = date("Y-m-t");
 					$("#kra_export_status").text("");
 					var msg = "Excel download failed";
 					if (status === "timeout") {
-						msg = "Excel export timed out on server. Please try again, or export in 2–3 employee batches if Live is slow.";
+						msg = "Excel export timed out. Please try again with fewer employees.";
 					} else if (xhr && xhr.responseText) {
 						try {
 							var parsed = $.parseJSON(xhr.responseText);
@@ -165,7 +236,6 @@ $defaultTo = date("Y-m-t");
 				}
 			});
 		});
-		$(document).ready(loadReport);
 	})();
 </script>
 </body>

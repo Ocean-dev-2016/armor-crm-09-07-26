@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 define('DB_SYNC_KEY', 'armor_cp_sync_2026');
-define('DB_SYNC_VERSION', '2026.08.12.1');
+define('DB_SYNC_VERSION', '2026.08.12.2');
 
 if (!isset($_GET['key']) || $_GET['key'] !== DB_SYNC_KEY) {
 	header('HTTP/1.1 403 Forbidden');
@@ -1268,6 +1268,41 @@ if ($adminTypesResRar) {
 			$now = date('Y-m-d H:i:s');
 			db_sync_run_query($conn, "INSERT INTO page_admin_right (page_id, admin_id, view_flag, insert_flag, update_flag, delete_flag, all_data_flag, personal_flag, chain_vise_flag, isDelete, created_by, created_by_type, created_date)
 				VALUES (671, {$aid}, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, '{$now}')", "Remark Report rights insert admin_type {$aid}");
+		}
+	}
+}
+
+// page_table id=672 — Assign KRA
+$assignKraPageCheck = mysqli_query($conn, "SELECT id FROM page_table WHERE id=672 LIMIT 1");
+if ($assignKraPageCheck && mysqli_num_rows($assignKraPageCheck) > 0) {
+	db_sync_append_page_urls($conn, 672, array(
+		'assign_kra_manage.php',
+		'assign_kra_ajax.php',
+		'assign_kra_get_ajax.php',
+	));
+	db_sync_run_query($conn, "UPDATE page_table SET page_title='Assign KRA', page_slug='assign_kra', isDelete=0, isActive=1 WHERE id=672", 'Update page_table id=672 Assign KRA');
+} else {
+	$now = date('Y-m-d H:i:s');
+	$urls = 'assign_kra_manage.php,assign_kra_ajax.php,assign_kra_get_ajax.php';
+	db_sync_run_query($conn, "INSERT INTO page_table (id, page_title, page_slug, page_count, page_urls, isActive, isDelete, adate, created_date)
+		VALUES (672, 'Assign KRA', 'assign_kra', 0, '{$urls}', 1, 0, '{$now}', '{$now}')", 'Insert page_table id=672 Assign KRA');
+}
+
+$adminTypesResAssignKra = mysqli_query($conn, "SELECT id FROM admin_type WHERE isDelete=0");
+if ($adminTypesResAssignKra) {
+	while ($at = mysqli_fetch_assoc($adminTypesResAssignKra)) {
+		$aid = (int) $at['id'];
+		if ($aid === 0) {
+			continue;
+		}
+		$chk = mysqli_query($conn, "SELECT id FROM page_admin_right WHERE admin_id='{$aid}' AND page_id=672 AND isDelete=0 LIMIT 1");
+		if ($chk && mysqli_num_rows($chk) > 0) {
+			$rid = (int) mysqli_fetch_assoc($chk)['id'];
+			db_sync_run_query($conn, "UPDATE page_admin_right SET view_flag=1, insert_flag=1, update_flag=1, delete_flag=0, all_data_flag=1 WHERE id='{$rid}'", "Assign KRA rights update admin_type {$aid}");
+		} else {
+			$now = date('Y-m-d H:i:s');
+			db_sync_run_query($conn, "INSERT INTO page_admin_right (page_id, admin_id, view_flag, insert_flag, update_flag, delete_flag, all_data_flag, personal_flag, chain_vise_flag, isDelete, created_by, created_by_type, created_date)
+				VALUES (672, {$aid}, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, '{$now}')", "Assign KRA rights insert admin_type {$aid}");
 		}
 	}
 }

@@ -8,18 +8,8 @@ $ctableAPK        = "application_info";
 	<div class="container">
 		<div class="page-logo" style="width:auto;">
 			<a href="dashboard.php">
-				<?php
-				// $logo_r=$db->rp_getValue("dealer_distributor_network","logo_detail","isDelete=0 AND admin_type=0");
-				// if($logo_r!="")
-				// {
-				// 	$logo_d=$logo_r;
-				// }
-				// else
-				// {
-				// 	$logo_d="";
-				// }
-				?>
-				<img src="../images/armore_logo.jpg" alt="logo" height="40" style="margin:-6px 50px 0 0;" class="logo-default"></a>
+				<img src="<?php echo CRM_LOGO_URL; ?>?v=<?php echo @filemtime(CRM_LOGO_PATH); ?>" alt="<?php echo SITETITLE; ?>" height="40" style="margin:-6px 50px 0 0;max-width:180px;object-fit:contain;" class="logo-default">
+			</a>
 		</div>
 
 		<!-- DOC: Apply "hor-menu-light" class after the "hor-menu" class below to have a horizontal menu with white background -->
@@ -827,7 +817,7 @@ $ctableAPK        = "application_info";
 						<?php
 						} ?>
 						<li>
-							<a href="logout.php">
+							<a href="<?php echo ADMINSITEURL; ?>logout.php">
 								<i class="icon-logout"></i> Sign out </a>
 						</li>
 					</ul>

@@ -167,13 +167,20 @@ class EmployeeVisitKraReport
 	public function build($fromDate, $toDate, $requestedIds, $rights)
 	{
 		$range = $this->normalizeDateRange($fromDate, $toDate);
-		$employees = $this->getAccessibleEmployees($requestedIds, $rights);
+		$requestedIds = $this->normalizeIds($requestedIds);
 		$data = array(
 			"range" => $range,
 			"remark_labels" => $this->remarkLabels,
 			"reason_labels" => $this->reasonLabels,
 			"employees" => array(),
+			"require_employee" => empty($requestedIds),
 		);
+		// Do not load all employees/customers when none selected (heavy page load).
+		if (empty($requestedIds)) {
+			return $data;
+		}
+
+		$employees = $this->getAccessibleEmployees($requestedIds, $rights);
 		if (empty($employees)) {
 			return $data;
 		}
@@ -193,15 +200,25 @@ class EmployeeVisitKraReport
 				"total_visits" => 0,
 				"completed_visits" => 0,
 				"open_visits" => 0,
+				"kra_assigned" => 0,
 				"total_quotations" => 0,
+				"total_quotations_count" => 0,
 				"approved_pi" => 0,
+				"approved_pi_count" => 0,
 				"total_duration_minutes" => 0,
 			);
 			$data['employees'][$id] = $employee;
 		}
 
 		$employeeIds = array_keys($employees);
+		$this->loadAssignedCustomers($data, $employeeIds);
+		foreach ($data['employees'] as $employeeId => $employee) {
+			$data['employees'][$employeeId]['kpi']['kra_assigned'] = count($employee['accounts']);
+		}
 		$this->loadVisits($data, $employeeIds);
+		foreach ($data['employees'] as $employeeId => $employee) {
+			uasort($data['employees'][$employeeId]['accounts'], array($this, "sortAccounts"));
+		}
 		$this->loadKpis($data, $employeeIds);
 		return $data;
 	}
@@ -322,9 +339,89 @@ class EmployeeVisitKraReport
 				$data['employees'][$employeeId]['daily'][$visitDate]['codes'][$codes['remark_code']]++;
 			}
 		}
+	}
 
-		foreach ($data['employees'] as $employeeId => $employee) {
-			uasort($data['employees'][$employeeId]['accounts'], array($this, "sortAccounts"));
+	/**
+	 * Pre-load ALL customer types assigned to selected sales employee(s) via executive.seid
+	 * (Dealer / Distributor / Outlet / Project / etc.) even when no visit exists yet.
+	 */
+	private function loadAssignedCustomers(&$data, $employeeIds)
+	{
+		if (empty($employeeIds)) {
+			return;
+		}
+		$executiveColumns = $this->db->rp_getTableColumnNames("executive");
+		$pincodeColumn = in_array("pincode", $executiveColumns) ? "pincode" : (in_array("zip", $executiveColumns) ? "zip" : "");
+		$pincodeSelect = ($pincodeColumn != "") ? "e." . $pincodeColumn . " AS account_pincode" : "'' AS account_pincode";
+		$hasCustomerType = in_array("type_of_executive", $executiveColumns);
+
+		$typeSelect = $hasCustomerType
+			? ", e.type_of_executive, ct.name AS customer_type_name"
+			: ", '' AS type_of_executive, '' AS customer_type_name";
+		$typeJoin = $hasCustomerType
+			? " LEFT JOIN customer_type ct ON ct.id=e.type_of_executive AND ct.isDelete=0 "
+			: "";
+
+		$sql = "SELECT
+				e.id,
+				e.seid,
+				e.client_code,
+				e.company_name,
+				e.cname,
+				e.turnover,
+				e.gst,
+				e.address,
+				e.main_city,
+				" . $pincodeSelect . "
+				" . $typeSelect . "
+			FROM executive e
+			" . $typeJoin . "
+			WHERE e.isDelete=0
+				AND e.seid IN (" . implode(",", $employeeIds) . ")
+				AND e.seid!=0
+				AND e.seid IS NOT NULL
+				AND e.seid!=''
+				AND (
+					(e.company_name IS NOT NULL AND e.company_name!='')
+					OR (e.cname IS NOT NULL AND e.cname!='')
+				)
+			ORDER BY e.company_name ASC, e.cname ASC";
+
+		$result = $this->safeQuery($sql);
+		if (!$result) {
+			return;
+		}
+
+		while ($row = mysqli_fetch_assoc($result)) {
+			$employeeId = (int) $row['seid'];
+			if (!isset($data['employees'][$employeeId])) {
+				continue;
+			}
+			$key = "C" . (int) $row['id'];
+			if (isset($data['employees'][$employeeId]['accounts'][$key])) {
+				continue;
+			}
+			$company = trim((string) $row['company_name']);
+			$person = trim((string) $row['cname']);
+			$typeName = trim((string) $row['customer_type_name']);
+			if ($typeName == "") {
+				$typeName = "Customer";
+			}
+			$data['employees'][$employeeId]['accounts'][$key] = array(
+				"key" => $key,
+				"type" => $typeName,
+				"code" => $row['client_code'],
+				"company" => ($company != "") ? $company : $person,
+				"person" => $person,
+				"turnover" => $row['turnover'],
+				"gst" => $row['gst'],
+				"address" => $row['address'],
+				"city" => $row['main_city'],
+				"pincode" => isset($row['account_pincode']) ? $row['account_pincode'] : "",
+				"dates" => array(),
+				"total_visits" => 0,
+				"total_duration_minutes" => 0,
+			);
 		}
 	}
 
@@ -521,28 +618,48 @@ class EmployeeVisitKraReport
 			 WHERE isDelete=0 AND sales_id IN (" . $ids . ")
 			 AND DATE(quotation_date) BETWEEN '" . $from . "' AND '" . $to . "'
 			 GROUP BY sales_id",
+			"total_quotations_count"
+		);
+		$this->applyGroupedKpi(
+			$data,
+			"SELECT sales_id AS employee_id,SUM(grand_total) AS metric
+			 FROM quotation_detail
+			 WHERE isDelete=0 AND sales_id IN (" . $ids . ")
+			 AND DATE(quotation_date) BETWEEN '" . $from . "' AND '" . $to . "'
+			 GROUP BY sales_id",
 			"total_quotations"
 		);
-		$piSql = "SELECT pi_sales.employee_id,COUNT(DISTINCT pi_sales.pi_id) AS metric
-			FROM (
-				SELECT q.sales_id AS employee_id,pi.id AS pi_id
-				FROM proforma_invoice_info pi
-				INNER JOIN quotation_detail q ON q.proforma_invoice_id=pi.id AND q.isDelete=0
-				WHERE pi.isDelete=0 AND pi.status=1
-					AND q.sales_id IN (" . $ids . ")
-					AND DATE(CASE WHEN pi.modified_date IS NOT NULL AND pi.modified_date!='' AND pi.modified_date!='0000-00-00 00:00:00'
-						THEN pi.modified_date ELSE pi.invoice_date END) BETWEEN '" . $from . "' AND '" . $to . "'
-				UNION
-				SELECT o.sales_id AS employee_id,pi.id AS pi_id
-				FROM proforma_invoice_info pi
-				INNER JOIN orders o ON o.proforma_invoice_id=pi.id AND o.isDelete=0
-				WHERE pi.isDelete=0 AND pi.status=1
-					AND o.sales_id IN (" . $ids . ")
-					AND DATE(CASE WHEN pi.modified_date IS NOT NULL AND pi.modified_date!='' AND pi.modified_date!='0000-00-00 00:00:00'
-						THEN pi.modified_date ELSE pi.invoice_date END) BETWEEN '" . $from . "' AND '" . $to . "'
-			) pi_sales
-			GROUP BY pi_sales.employee_id";
-		$this->applyGroupedKpi($data, $piSql, "approved_pi");
+		$piBase = "(
+				SELECT pi_sales.employee_id,pi_sales.pi_id,MAX(pi_sales.pi_amount) AS pi_amount
+				FROM (
+					SELECT q.sales_id AS employee_id,pi.id AS pi_id,pi.grand_total AS pi_amount
+					FROM proforma_invoice_info pi
+					INNER JOIN quotation_detail q ON q.proforma_invoice_id=pi.id AND q.isDelete=0
+					WHERE pi.isDelete=0 AND pi.status=1
+						AND q.sales_id IN (" . $ids . ")
+						AND DATE(CASE WHEN pi.modified_date IS NOT NULL AND pi.modified_date!='' AND pi.modified_date!='0000-00-00 00:00:00'
+							THEN pi.modified_date ELSE pi.invoice_date END) BETWEEN '" . $from . "' AND '" . $to . "'
+					UNION
+					SELECT o.sales_id AS employee_id,pi.id AS pi_id,pi.grand_total AS pi_amount
+					FROM proforma_invoice_info pi
+					INNER JOIN orders o ON o.proforma_invoice_id=pi.id AND o.isDelete=0
+					WHERE pi.isDelete=0 AND pi.status=1
+						AND o.sales_id IN (" . $ids . ")
+						AND DATE(CASE WHEN pi.modified_date IS NOT NULL AND pi.modified_date!='' AND pi.modified_date!='0000-00-00 00:00:00'
+							THEN pi.modified_date ELSE pi.invoice_date END) BETWEEN '" . $from . "' AND '" . $to . "'
+				) pi_sales
+				GROUP BY pi_sales.employee_id,pi_sales.pi_id
+			) pi_unique";
+		$this->applyGroupedKpi(
+			$data,
+			"SELECT pi_unique.employee_id,COUNT(*) AS metric FROM " . $piBase . " GROUP BY pi_unique.employee_id",
+			"approved_pi_count"
+		);
+		$this->applyGroupedKpi(
+			$data,
+			"SELECT pi_unique.employee_id,SUM(pi_unique.pi_amount) AS metric FROM " . $piBase . " GROUP BY pi_unique.employee_id",
+			"approved_pi"
+		);
 		foreach ($data['employees'] as $employeeId => $employee) {
 			$totalKm = isset($employee['kpi']['total_kilometer']) ? (float) $employee['kpi']['total_kilometer'] : 0;
 			$expense = isset($employee['kpi']['approved_expense']) ? (float) $employee['kpi']['approved_expense'] : 0;
