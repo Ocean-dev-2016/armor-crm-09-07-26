@@ -56,6 +56,15 @@ $fixedColCount = 10; // Sr .. Total Visit + Visit Duration
 	.kra-kpi.kra-kpi-ekm { background:#fff8ef; border-color:#f2d1a7; }
 	.kra-kpi-label { color:#63717c; font-size:11px; text-transform:uppercase; }
 	.kra-kpi-value { font-size:17px; font-weight:700; margin-top:3px; }
+	.kra-kpi-click {
+		cursor:pointer; transition:box-shadow .15s ease, border-color .15s ease;
+	}
+	.kra-kpi-click:hover {
+		border-color:#2f6f44; box-shadow:0 0 0 1px #2f6f44;
+	}
+	.kra-kpi-click .kra-kpi-hint {
+		display:block; margin-top:4px; font-size:10px; color:#2f6f44; font-weight:600; text-transform:none;
+	}
 	.kra-scroll { overflow:auto; max-height:620px; border-top:1px solid #ddd; }
 	.kra-table { border-collapse:separate; border-spacing:0; width:max-content; min-width:100%; margin:0; }
 	.kra-table th,.kra-table td {
@@ -129,9 +138,15 @@ $fixedColCount = 10; // Sr .. Total Visit + Visit Duration
 			</div>
 		</div>
 		<div class="kra-kpis">
-			<div class="kra-kpi"><div class="kra-kpi-label">Approved Expense</div><div class="kra-kpi-value"><?php echo kra_money($db, $employee['kpi']['approved_expense']); ?></div></div>
-			<div class="kra-kpi kra-kpi-km"><div class="kra-kpi-label">Total KM</div><div class="kra-kpi-value"><?php echo $db->rp_number_format((float) $employee['kpi']['total_kilometer'], 2); ?></div></div>
-			<div class="kra-kpi kra-kpi-ekm"><div class="kra-kpi-label">Expense / KM</div><div class="kra-kpi-value"><?php echo kra_money($db, $employee['kpi']['expense_per_km']); ?></div></div>
+			<div class="kra-kpi kra-kpi-click kra-approved-expense"
+				data-employee-id="<?php echo (int) $employee['id']; ?>"
+				data-employee-name="<?php echo kra_h($employee['name']); ?>"
+				title="Click to view approved expense by type">
+				<div class="kra-kpi-label">Approved Expense</div>
+				<div class="kra-kpi-value"><?php echo kra_money($db, $employee['kpi']['approved_expense']); ?></div>
+				<span class="kra-kpi-hint"><i class="fa fa-list-alt"></i> View by type</span>
+			</div>
+			<div class="kra-kpi kra-kpi-km"><div class="kra-kpi-label">Total KM By Bike</div><div class="kra-kpi-value"><?php echo $db->rp_number_format((float) $employee['kpi']['total_kilometer'], 2); ?></div></div>
 			<div class="kra-kpi"><div class="kra-kpi-label">Salary</div><div class="kra-kpi-value">N/A</div></div>
 			<div class="kra-kpi"><div class="kra-kpi-label">Expense + Salary</div><div class="kra-kpi-value"><?php echo kra_money($db, $employee['kpi']['approved_expense']); ?> + N/A</div></div>
 			<div class="kra-kpi"><div class="kra-kpi-label">Total Sales</div><div class="kra-kpi-value"><?php echo kra_money($db, $employee['kpi']['total_sales']); ?></div></div>

@@ -194,6 +194,7 @@ class EmployeeVisitKraReport
 			$employee['kpi'] = array(
 				"approved_expense" => 0,
 				"total_kilometer" => 0,
+				"km_expense_amount" => 0,
 				"expense_per_km" => 0,
 				"salary" => null,
 				"total_sales" => 0,
@@ -593,14 +594,46 @@ class EmployeeVisitKraReport
 			 GROUP BY sales_executive_id",
 			"approved_expense"
 		);
+		// Total KM By Bike — only kilometer expenses with Bike subcategory (Expense Master)
 		$this->applyGroupedKpi(
 			$data,
-			"SELECT sales_executive_id AS employee_id,SUM(total_kilometer) AS metric
-			 FROM expense
-			 WHERE isDelete=0 AND expense_status=1 AND sales_executive_id IN (" . $ids . ")
-			 AND DATE(expense_date) BETWEEN '" . $from . "' AND '" . $to . "'
-			 GROUP BY sales_executive_id",
+			"SELECT e.sales_executive_id AS employee_id,SUM(CAST(e.total_kilometer AS DECIMAL(14,2))) AS metric
+			 FROM expense e
+			 LEFT JOIN expence_sub_category s ON s.id=e.subcategory_id AND s.isDelete=0
+			 WHERE e.isDelete=0 AND e.expense_status=1 AND e.expense_type=2
+			 AND e.sales_executive_id IN (" . $ids . ")
+			 AND DATE(e.expense_date) BETWEEN '" . $from . "' AND '" . $to . "'
+			 AND (
+				LOWER(IFNULL(s.slug,''))='bike'
+				OR LOWER(IFNULL(s.name,''))='bike'
+			 )
+			 GROUP BY e.sales_executive_id",
 			"total_kilometer"
+		);
+		// KM expense amount kept internally (popup / calc); not shown as KPI box
+		$this->applyGroupedKpi(
+			$data,
+			"SELECT e.sales_executive_id AS employee_id,
+				SUM(
+					CAST(IFNULL(e.total_kilometer,0) AS DECIMAL(14,2))
+					* CAST(
+						IFNULL(
+							NULLIF(s.fix_amount,0),
+							IFNULL(e.fix_amount,0)
+						) AS DECIMAL(14,4)
+					)
+				) AS metric
+			 FROM expense e
+			 LEFT JOIN expence_sub_category s ON s.id=e.subcategory_id AND s.isDelete=0
+			 WHERE e.isDelete=0 AND e.expense_status=1 AND e.expense_type=2
+			 AND e.sales_executive_id IN (" . $ids . ")
+			 AND DATE(e.expense_date) BETWEEN '" . $from . "' AND '" . $to . "'
+			 AND (
+				LOWER(IFNULL(s.slug,''))='bike'
+				OR LOWER(IFNULL(s.name,''))='bike'
+			 )
+			 GROUP BY e.sales_executive_id",
+			"km_expense_amount"
 		);
 		$this->applyGroupedKpi(
 			$data,
@@ -662,9 +695,98 @@ class EmployeeVisitKraReport
 		);
 		foreach ($data['employees'] as $employeeId => $employee) {
 			$totalKm = isset($employee['kpi']['total_kilometer']) ? (float) $employee['kpi']['total_kilometer'] : 0;
-			$expense = isset($employee['kpi']['approved_expense']) ? (float) $employee['kpi']['approved_expense'] : 0;
-			$data['employees'][$employeeId]['kpi']['expense_per_km'] = ($totalKm > 0) ? ($expense / $totalKm) : 0;
+			$kmExpense = isset($employee['kpi']['km_expense_amount']) ? (float) $employee['kpi']['km_expense_amount'] : 0;
+			$data['employees'][$employeeId]['kpi']['expense_per_km'] = ($totalKm > 0) ? ($kmExpense / $totalKm) : 0;
 		}
+	}
+
+	/**
+	 * Approved expense breakdown by expense category (Hotel, Travelling, Food, etc.)
+	 */
+	public function getApprovedExpenseBreakdown($employeeId, $fromDate, $toDate, $rights)
+	{
+		$employeeId = (int) $employeeId;
+		$range = $this->normalizeDateRange($fromDate, $toDate);
+		$accessible = $this->getAccessibleEmployees(array($employeeId), $rights);
+		if ($employeeId <= 0 || empty($accessible) || !isset($accessible[$employeeId])) {
+			return array(
+				"ack" => 0,
+				"ack_msg" => "Employee not accessible.",
+				"employee" => null,
+				"range" => $range,
+				"rows" => array(),
+				"total_amount" => 0,
+				"total_count" => 0,
+			);
+		}
+
+		$employee = $accessible[$employeeId];
+		$from = $range['from'];
+		$to = $range['to'];
+		$rows = array();
+		$totalAmount = 0;
+		$totalCount = 0;
+
+		$sql = "SELECT
+				e.category_id,
+				e.subcategory_id,
+				e.expense_type,
+				COALESCE(NULLIF(TRIM(c.name), ''), 'Other / Uncategorized') AS category_name,
+				COALESCE(NULLIF(TRIM(s.name), ''), '-') AS subcategory_name,
+				COUNT(*) AS expense_count,
+				SUM(e.pass_expense_amount) AS approved_amount,
+				SUM(CAST(IFNULL(e.total_kilometer,0) AS DECIMAL(14,2))) AS total_km,
+				SUM(
+					CAST(IFNULL(e.total_kilometer,0) AS DECIMAL(14,2))
+					* CAST(IFNULL(NULLIF(s.fix_amount,0), IFNULL(e.fix_amount,0)) AS DECIMAL(14,4))
+				) AS km_calc_amount,
+				MAX(IFNULL(NULLIF(s.fix_amount,0), IFNULL(e.fix_amount,0))) AS master_rate
+			FROM expense e
+			LEFT JOIN expence_category c ON c.id=e.category_id AND c.isDelete=0
+			LEFT JOIN expence_sub_category s ON s.id=e.subcategory_id AND s.isDelete=0
+			WHERE e.isDelete=0
+				AND e.expense_status=1
+				AND e.sales_executive_id='" . $employeeId . "'
+				AND DATE(e.expense_date) BETWEEN '" . $from . "' AND '" . $to . "'
+			GROUP BY e.category_id, e.subcategory_id, e.expense_type, c.name, s.name
+			ORDER BY c.name ASC, s.name ASC, approved_amount DESC";
+
+		$result = $this->safeQuery($sql);
+		if ($result) {
+			while ($row = mysqli_fetch_assoc($result)) {
+				$amount = (float) $row['approved_amount'];
+				$count = (int) $row['expense_count'];
+				$isKm = ((int) $row['expense_type'] === 2);
+				$totalKm = (float) $row['total_km'];
+				$kmCalc = (float) $row['km_calc_amount'];
+				$rate = (float) $row['master_rate'];
+				$totalAmount += $amount;
+				$totalCount += $count;
+				$rows[] = array(
+					"category_id" => (int) $row['category_id'],
+					"subcategory_id" => (int) $row['subcategory_id'],
+					"category_name" => $row['category_name'],
+					"subcategory_name" => $row['subcategory_name'],
+					"expense_type" => (int) $row['expense_type'],
+					"is_km" => $isKm ? 1 : 0,
+					"expense_count" => $count,
+					"approved_amount" => $amount,
+					"total_km" => $totalKm,
+					"master_rate" => $rate,
+					"km_calc_amount" => $kmCalc,
+				);
+			}
+		}
+
+		return array(
+			"ack" => 1,
+			"ack_msg" => "OK",
+			"employee" => $employee,
+			"range" => $range,
+			"rows" => $rows,
+			"total_amount" => $totalAmount,
+			"total_count" => $totalCount,
+		);
 	}
 
 	private function applyGroupedKpi(&$data, $sql, $key)
