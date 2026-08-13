@@ -31,7 +31,18 @@ if ($mode === 'get_customers') {
 		while ($d = mysqli_fetch_assoc($r)) {
 			$firm = trim($d['company_name']);
 			$state = trim($d['state']);
-			$label = $firm . ($state !== '' ? ' - ' . $state : '');
+			$code = trim($d['client_code']);
+			$parts = array();
+			if ($code !== '') {
+				$parts[] = $code;
+			}
+			if ($firm !== '') {
+				$parts[] = $firm;
+			}
+			if ($state !== '') {
+				$parts[] = $state;
+			}
+			$label = implode(' - ', $parts);
 			$rows[] = array(
 				'id' => (int) $d['id'],
 				'text' => $label,

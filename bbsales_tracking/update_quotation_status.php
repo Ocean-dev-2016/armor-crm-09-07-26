@@ -8,7 +8,35 @@ $quotation_no = $db->rp_getValue("quotation_detail","quotation_no","id='".$quota
 // print_r($_REQUEST);
 // echo '</pre>';
 // exit;
-$update = $db->rp_update("quotation_detail",array("status"=>$status),"id='". $quotation_id."'",0);
+
+/* Ensure approve_by_id column exists (same pattern as orders) */
+$quoCols = $db->rp_getTableColumnNames("quotation_detail");
+$hasApproveBy = is_array($quoCols) && in_array("approve_by_id", $quoCols);
+if (!$hasApproveBy) {
+	@mysqli_query($db->myconn, "ALTER TABLE `quotation_detail` ADD `approve_by_id` INT(11) NOT NULL DEFAULT 0 AFTER `status`");
+	$hasApproveBy = true;
+}
+
+$updateRows = array("status" => $status);
+if ($status == 1) {
+	if ($_SESSION[SITE_SESS . '_ADMIN_TYPE'] != 0) {
+		$approveFlag = (int) $db->rp_getValue(
+			"page_admin_right",
+			"approve_flag",
+			"page_id='" . $page_id . "' AND admin_id='" . $_SESSION[SITE_SESS . '_ADMIN_TYPE'] . "' AND isDelete=0",
+			0
+		);
+		if ($approveFlag != 1) {
+			echo json_encode(array("ack" => 0, "ack_msg" => "You do not have Quotation Approve rights."));
+			require_once 'disconnect.php';
+			exit;
+		}
+	}
+	if ($hasApproveBy) {
+		$updateRows["approve_by_id"] = isset($_SESSION[SITE_SESS . '_ADMIN_SESS_ID']) ? (int) $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'] : 0;
+	}
+}
+$update = $db->rp_update("quotation_detail", $updateRows, "id='" . $quotation_id . "'", 0);
 $customer_id = $db->rp_getValue("quotation_detail","customer_id","id='".$quotation_id."'");
 if($status==1)
 {

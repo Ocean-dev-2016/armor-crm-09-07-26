@@ -53,10 +53,10 @@ if ($state_r) {
 			padding: 0 10px 15px;
 			box-sizing: border-box;
 		}
-		.assign-kra-col.state-col { width: 18%; min-width: 160px; }
-		.assign-kra-col.customer-col { width: 38%; min-width: 280px; }
-		.assign-kra-col.sales-col { width: 30%; min-width: 220px; }
-		.assign-kra-col.action-col { width: 14%; min-width: 120px; }
+		.assign-kra-col.state-col { width: 18%; min-width: 150px; flex: 0 0 18%; }
+		.assign-kra-col.customer-col { width: 36%; min-width: 260px; flex: 1 1 36%; max-width: 42%; }
+		.assign-kra-col.sales-col { width: 28%; min-width: 200px; flex: 0 0 28%; }
+		.assign-kra-col.action-col { width: 12%; min-width: 110px; flex: 0 0 12%; }
 		.assign-kra-col label {
 			display: block;
 			font-weight: 600;
@@ -66,12 +66,37 @@ if ($state_r) {
 		.assign-kra-col .fs-wrap,
 		.assign-kra-col .select2-container {
 			width: 100% !important;
+			max-width: 100%;
+			position: relative;
+			box-sizing: border-box;
 		}
 		.assign-kra-col .fs-label-wrap {
 			min-height: 34px;
 			line-height: 22px;
 			border: 1px solid #e5e5e5;
 			background: #fff;
+			box-sizing: border-box;
+		}
+		.assign-kra-col.customer-col .fs-dropdown {
+			left: 0 !important;
+			right: auto !important;
+			width: 100% !important;
+			min-width: 100% !important;
+			max-width: 100% !important;
+			box-sizing: border-box;
+			z-index: 1050;
+		}
+		.assign-kra-col.customer-col .fs-option {
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+		.assign-kra-col.customer-col .fs-option .fs-label {
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			display: block;
+			line-height: 1.35;
 		}
 		.assign-kra-col .select2-container .select2-choice {
 			height: 34px;
@@ -185,6 +210,9 @@ if ($state_r) {
 			.assign-kra-col.sales-col,
 			.assign-kra-col.action-col {
 				width: 100%;
+				min-width: 0;
+				max-width: 100%;
+				flex: 1 1 100%;
 			}
 		}
 	</style>
@@ -220,7 +248,7 @@ if ($state_r) {
 				<div class="portlet-body">
 					<div class="alert alert-info" style="margin-bottom:15px;padding:10px 15px;">
 						<i class="fa fa-info-circle"></i>
-						Customer: <strong>Firm Name - State</strong> &nbsp;|&nbsp;
+						Customer: <strong>Code - Customer Name - State</strong> &nbsp;|&nbsp;
 						Sales Person: <strong>Name - State</strong> &nbsp;|&nbsp;
 						Sales person list filters by selected customer state &nbsp;|&nbsp;
 						Assigned customers appear in mobile app
@@ -250,8 +278,19 @@ if ($state_r) {
 										while ($c = mysqli_fetch_assoc($customer_r)) {
 											$firm = trim($c['company_name']);
 											$state = trim($c['state']);
-											$label = $firm . ($state !== '' ? ' - ' . $state : '');
-											echo '<option value="' . (int) $c['id'] . '" data-state="' . htmlspecialchars($state, ENT_QUOTES) . '">'
+											$code = trim($c['client_code']);
+											$parts = array();
+											if ($code !== '') {
+												$parts[] = $code;
+											}
+											if ($firm !== '') {
+												$parts[] = $firm;
+											}
+											if ($state !== '') {
+												$parts[] = $state;
+											}
+											$label = implode(' - ', $parts);
+											echo '<option value="' . (int) $c['id'] . '" data-state="' . htmlspecialchars($state, ENT_QUOTES) . '" data-client-code="' . htmlspecialchars($code, ENT_QUOTES) . '" title="' . htmlspecialchars($label, ENT_QUOTES) . '">'
 												. htmlspecialchars($label) . '</option>';
 										}
 									}
@@ -405,7 +444,10 @@ function loadAssignedGrid(page) {
 			$('#kra_results').html(html);
 			$('#kra_results .pagination a').off('click').on('click', function(e) {
 				e.preventDefault();
-				loadAssignedGrid($(this).data('page'));
+				var p = $(this).data('page');
+				if (p) {
+					loadAssignedGrid(p);
+				}
 			});
 		},
 		error: function() {

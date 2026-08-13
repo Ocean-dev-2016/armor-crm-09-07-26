@@ -318,6 +318,7 @@ $ctable_r = $db->rp_getData($ctable, "*", $ctable_where, "id DESC limit $page_po
 							<option value="5" <?= ("5" == $_REQUEST['status']) ? "selected" : ""; ?>>Lost</option>
 						</select>
 					</th>
+					<th></th>
 					<th>
 						<select class="form-control input-small" id="type_of_company">
 							<option value="">Select Company</option>
@@ -390,6 +391,7 @@ $ctable_r = $db->rp_getData($ctable, "*", $ctable_where, "id DESC limit $page_po
 					<th class="fix-th1">Inquiry No.</th>
 					<th class="fix-th1">Quotation Date</th>
 					<th class="fix-th1">Status</th>
+					<th class="fix-th1">Approved By</th>
 					<th class="fix-th1">Type Of Company</th>
 					<th class="fix-th1">Firm Name</th>
 					<th class="fix-th1">Person Name</th>
@@ -614,6 +616,15 @@ $ctable_r = $db->rp_getData($ctable, "*", $ctable_where, "id DESC limit $page_po
 							}
 							?>
 							<td><?php $ctable_d['status']; ?><?php echo stripslashes($status); ?></td>
+							<td>
+								<?php
+								$approvedByName = "";
+								if (!empty($ctable_d['approve_by_id'])) {
+									$approvedByName = $db->rp_getValue("dealer_distributor_network", "name", "id='" . (int) $ctable_d['approve_by_id'] . "'", 0);
+								}
+								echo ($approvedByName != "") ? stripslashes($approvedByName) : "-";
+								?>
+							</td>
 							<td>
 								<?php echo $db->rp_getValue("company_master", "name", "id='" . $ctable_d['type_of_company'] . "'"); ?>
 							</td>

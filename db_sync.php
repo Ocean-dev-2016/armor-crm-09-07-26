@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 define('DB_SYNC_KEY', 'armor_cp_sync_2026');
-define('DB_SYNC_VERSION', '2026.08.12.2');
+define('DB_SYNC_VERSION', '2026.08.13.1');
 
 if (!isset($_GET['key']) || $_GET['key'] !== DB_SYNC_KEY) {
 	header('HTTP/1.1 403 Forbidden');
@@ -175,7 +175,20 @@ function db_sync_append_page_urls($conn, $pageId, $newUrls)
 }
 
 db_sync_log('INFO', '--- Armor CRM DB Sync v' . DB_SYNC_VERSION . ' ---');
-db_sync_log('INFO', 'Changes: Channel Partner, Expense, Visit APIs, Employee Chat, CP Order Status #267');
+db_sync_log('INFO', 'Changes: Channel Partner, Expense, Visit APIs, Employee Chat, CP Order Status #267, Quotation approve_by_id');
+
+/* Quotation Approved By (KRA / quotation viewer) */
+if (db_sync_table_exists($conn, 'quotation_detail')) {
+	db_sync_add_column_if_missing(
+		$conn,
+		'quotation_detail',
+		'approve_by_id',
+		"INT(11) NOT NULL DEFAULT 0 COMMENT 'Admin who approved quotation'",
+		array('status')
+	);
+} else {
+	db_sync_log('SKIP', 'quotation_detail not found — skip approve_by_id');
+}
 
 function db_sync_register_api_if_missing($conn, $id, $slug, $title, $url)
 {
@@ -1564,6 +1577,7 @@ $environment = isset($config['environment']) ? $config['environment'] : 'unknown
 			<li>Columns <code>orders.payment_received_flag</code>, <code>payment_received_date</code>, <code>payment_received_by</code>, <code>payment_received_amount</code>, <code>payment_received_type</code> (Pending Payment 45 days)</li>
 			<li>Column <code>sales_executive.device_id</code> + <code>sales_executive_login.device_id</code> (App login <code>token</code> → device_id for notifications)</li>
 			<li>Column <code>visit.note</code> + <code>visit.followup_date</code> (App stopVisit <code>note</code> / <code>date</code> → <code>followup_date</code>, format <code>Y-m-d H:i</code>)</li>
+			<li>Column <code>quotation_detail.approve_by_id</code> (Quotation Approve → Approved By in KRA)</li>
 		</ul>
 		<p><strong>Safe:</strong> Idempotent — run multiple times; existing data is not deleted.</p>
 		<p><strong>Security:</strong> Delete <code>db_sync.php</code> from live after final READY confirmation.</p>

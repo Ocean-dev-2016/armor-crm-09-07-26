@@ -20,6 +20,19 @@ function kra_visit_code($visit)
 	return ($code != "") ? $code : ($visit['is_completed'] ? "Done" : "Open");
 }
 
+function kra_format_datetime($value)
+{
+	$value = trim((string) $value);
+	if ($value === "" || $value === "0000-00-00 00:00:00" || $value === "0000-00-00") {
+		return "-";
+	}
+	$ts = strtotime($value);
+	if ($ts === false) {
+		return $value;
+	}
+	return date("d/m/Y H:i", $ts);
+}
+
 function kra_format_duration($minutes)
 {
 	if ($minutes === null || $minutes === "") {
@@ -233,8 +246,8 @@ $fixedColCount = 10; // Sr .. Total Visit + Visit Duration
 											<div class="kra-cell-details">
 												<div><b>Visit #:</b> <?php echo (int) $visit['id']; ?></div>
 												<div><b>Purpose:</b> <?php echo kra_h($visit['purpose_name']); ?></div>
-												<div><b>Start:</b> <?php echo kra_h($visit['start_date_time']); ?></div>
-												<div><b>Stop:</b> <?php echo $visit['is_completed'] ? kra_h($visit['stop_date_time']) : "Open"; ?></div>
+												<div><b>Start:</b> <?php echo kra_h(kra_format_datetime($visit['start_date_time'])); ?></div>
+												<div><b>Stop:</b> <?php echo $visit['is_completed'] ? kra_h(kra_format_datetime($visit['stop_date_time'])) : "Open"; ?></div>
 												<div><b>Duration:</b> <?php echo $visit['duration_minutes'] === null ? "N/A" : kra_h(kra_format_duration($visit['duration_minutes'])); ?></div>
 												<div><b>Outcome:</b> <?php echo kra_h($visit['remark_label']); ?><?php echo $visit['reason_label'] != "" ? " - " . kra_h($visit['reason_label']) : ""; ?></div>
 												<div><b>Remark:</b> <?php echo kra_h($visit['stop_remark']); ?></div>

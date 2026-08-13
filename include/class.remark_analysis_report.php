@@ -415,30 +415,56 @@ class RemarkAnalysisReport
 			return;
 		}
 		$employeeIds = array();
-		$dayKeysUsed = array();
+		$visitCounts = array();
 		foreach ($visitRows as $row) {
-			if (!empty($row['user_id'])) {
-				$employeeIds[(int) $row['user_id']] = (int) $row['user_id'];
+			$userId = (int) $row['user_id'];
+			$visitDate = trim((string) $row['visit_date']);
+			if ($userId <= 0 || $visitDate === "") {
+				continue;
 			}
+			$employeeIds[$userId] = $userId;
+			$key = $userId . '|' . $visitDate;
+			if (!isset($visitCounts[$key])) {
+				$visitCounts[$key] = 0;
+			}
+			$visitCounts[$key]++;
 		}
 		if (empty($employeeIds)) {
 			return;
 		}
+
 		$expenseMap = $this->loadExpenseMetricMap(array_values($employeeIds), $data['range']['from'], $data['range']['to']);
+		$dayKeysUsed = array();
 		foreach ($visitRows as $idx => $row) {
-			$key = ((int) $row['user_id']) . '|' . $row['visit_date'];
-			if (isset($expenseMap[$key])) {
-				$visitRows[$idx]['approved_expense'] = (float) $expenseMap[$key]['approved_expense'];
-				$visitRows[$idx]['total_kilometer'] = (float) $expenseMap[$key]['total_kilometer'];
-				$visitRows[$idx]['expense_per_km'] = (float) $expenseMap[$key]['expense_per_km'];
-				$dayKeysUsed[$key] = $expenseMap[$key];
+			$userId = (int) $row['user_id'];
+			$visitDate = trim((string) $row['visit_date']);
+			if ($userId <= 0 || $visitDate === "") {
+				continue;
 			}
+			$key = $userId . '|' . $visitDate;
+			if (!isset($expenseMap[$key]) || empty($visitCounts[$key])) {
+				continue;
+			}
+			$metric = $expenseMap[$key];
+			$share = 1 / (int) $visitCounts[$key];
+			$visitRows[$idx]['approved_expense'] = (float) $metric['approved_expense'] * $share;
+			$visitRows[$idx]['total_kilometer'] = (float) $metric['total_kilometer'] * $share;
+			$visitRows[$idx]['expense_per_km'] = (float) $metric['expense_per_km'];
+			$dayKeysUsed[$key] = $metric;
 		}
+
+		$totalKmExpense = 0;
 		foreach ($dayKeysUsed as $metric) {
 			$data['total_approved_expense'] += (float) $metric['approved_expense'];
 			$data['total_kilometer'] += (float) $metric['total_kilometer'];
+			$totalKmExpense += (float) $metric['km_expense_amount'];
 		}
-		$data['expense_per_km'] = ($data['total_kilometer'] > 0) ? ($data['total_approved_expense'] / $data['total_kilometer']) : 0;
+		$data['expense_per_km'] = ($data['total_kilometer'] > 0) ? ($totalKmExpense / $data['total_kilometer']) : 0;
+	}
+
+	private function expenseKmCastSql($alias = "e")
+	{
+		return "CAST(IFNULL(NULLIF(NULLIF(" . $alias . ".total_kilometer,''),'null'),0) AS DECIMAL(14,2))";
 	}
 
 	private function loadExpenseMetricMap($employeeIds, $from, $to)
@@ -447,29 +473,76 @@ class RemarkAnalysisReport
 		if (empty($employeeIds)) {
 			return $map;
 		}
-		$sql = "SELECT sales_executive_id AS employee_id,
+		$ids = implode(",", array_map('intval', $employeeIds));
+		$kmCast = $this->expenseKmCastSql("e");
+
+		/* Approved expense (all categories) per employee per day */
+		$sqlApproved = "SELECT sales_executive_id AS employee_id,
 				DATE(expense_date) AS expense_day,
-				SUM(pass_expense_amount) AS approved_expense,
-				SUM(total_kilometer) AS total_kilometer
+				SUM(IFNULL(pass_expense_amount,0)) AS approved_expense
 			FROM expense
 			WHERE isDelete=0 AND expense_status=1
-				AND sales_executive_id IN (" . implode(",", $employeeIds) . ")
+				AND sales_executive_id IN (" . $ids . ")
 				AND DATE(expense_date) BETWEEN '" . $from . "' AND '" . $to . "'
 			GROUP BY sales_executive_id, DATE(expense_date)";
-		$result = $this->safeQuery($sql);
-		if (!$result) {
-			return $map;
+		$result = $this->safeQuery($sqlApproved);
+		if ($result) {
+			while ($row = mysqli_fetch_assoc($result)) {
+				$key = (int) $row['employee_id'] . '|' . $row['expense_day'];
+				if (!isset($map[$key])) {
+					$map[$key] = array(
+						'approved_expense' => 0,
+						'total_kilometer' => 0,
+						'km_expense_amount' => 0,
+						'expense_per_km' => 0,
+					);
+				}
+				$map[$key]['approved_expense'] = (float) $row['approved_expense'];
+			}
 		}
-		while ($row = mysqli_fetch_assoc($result)) {
-			$key = (int) $row['employee_id'] . '|' . $row['expense_day'];
-			$expense = (float) $row['approved_expense'];
-			$km = (float) $row['total_kilometer'];
-			$map[$key] = array(
-				'approved_expense' => $expense,
-				'total_kilometer' => $km,
-				'expense_per_km' => ($km > 0) ? ($expense / $km) : 0,
-			);
+
+		/* Bike KM + KM expense (same logic as Employee Visit KRA report) */
+		$sqlBike = "SELECT e.sales_executive_id AS employee_id,
+				DATE(e.expense_date) AS expense_day,
+				SUM(" . $kmCast . ") AS total_kilometer,
+				SUM(
+					" . $kmCast . " * CAST(
+						IFNULL(
+							NULLIF(s.fix_amount,0),
+							IFNULL(e.fix_amount,0)
+						) AS DECIMAL(14,4)
+					)
+				) AS km_expense_amount
+			FROM expense e
+			LEFT JOIN expence_sub_category s ON s.id=e.subcategory_id AND s.isDelete=0
+			WHERE e.isDelete=0 AND e.expense_status=1 AND e.expense_type=2
+				AND e.sales_executive_id IN (" . $ids . ")
+				AND DATE(e.expense_date) BETWEEN '" . $from . "' AND '" . $to . "'
+				AND (
+					LOWER(IFNULL(s.slug,''))='bike'
+					OR LOWER(IFNULL(s.name,''))='bike'
+				)
+			GROUP BY e.sales_executive_id, DATE(e.expense_date)";
+		$result = $this->safeQuery($sqlBike);
+		if ($result) {
+			while ($row = mysqli_fetch_assoc($result)) {
+				$key = (int) $row['employee_id'] . '|' . $row['expense_day'];
+				if (!isset($map[$key])) {
+					$map[$key] = array(
+						'approved_expense' => 0,
+						'total_kilometer' => 0,
+						'km_expense_amount' => 0,
+						'expense_per_km' => 0,
+					);
+				}
+				$bikeKm = (float) $row['total_kilometer'];
+				$kmExpense = (float) $row['km_expense_amount'];
+				$map[$key]['total_kilometer'] = $bikeKm;
+				$map[$key]['km_expense_amount'] = $kmExpense;
+				$map[$key]['expense_per_km'] = ($bikeKm > 0) ? ($kmExpense / $bikeKm) : 0;
+			}
 		}
+
 		return $map;
 	}
 

@@ -419,7 +419,7 @@ if (isset($_REQUEST['id']) && $_REQUEST['id'] > 0 && $_REQUEST['mode'] == "isAct
                                                       }
                                                       ?>
                                                       <label class="test">Select Company<code>*</code></label>
-                                                      <select class="form-control b-3" id="type_of_company" name="type_of_company" autofocus <?php echo $disabled; ?>>
+                                                      <select class="form-control b-3" id="type_of_company" name="type_of_company" autofocus <?php echo $disabled; ?> onchange="if($('#customer_type').val()){ getCustomer($('#customer_type').val()); }">
                                                          <option value="">Select Company</option>
                                                          <?php
 
@@ -526,43 +526,8 @@ if (isset($_REQUEST['id']) && $_REQUEST['id'] > 0 && $_REQUEST['mode'] == "isAct
                                                                }
                                                             }
                                                          } else {
-                                                            if ($_REQUEST['mode'] == "add") {
-                                                               $customers = $db->rp_getData("executive", "*", "isDelete=0 AND isActive=1", "company_name ASC", 0);
-
-                                                               if ($customers) {
-                                                                  while ($customer = mysqli_fetch_assoc($customers)) {
-                                                                     if ($customer['price_list_id'] != 0) {
-                                                                        $price_list_name = $db->rp_getValue("price_list", "pricelist_name", "id='" . $customer['price_list_id'] . "'");
-                                                                     } else {
-                                                                        $price_list_name = "N/A";
-                                                                     }
-
-                                                                     /*for merchnt export*/
-                                                                     if ($customer['type_of_executive'] == 8) {
-                                                                        if (strtolower(CLIENT_STATE) == strtolower($customer['state'])) {
-                                                                           $gst_type = "(CGST:0.05%,SGST:0.05%)";
-                                                                        } else {
-                                                                           $gst_type = "(IGST:0.1%)";
-                                                                        }
-                                                                     }
-                                                                     /*for merchnt export*/ else {
-                                                                        if (strtolower(CLIENT_STATE) == strtolower($customer['state'])) {
-                                                                           $gst_type = "(CGST:9%,SGST:9%)";
-                                                                        } else {
-                                                                           $gst_type = "(IGST:18%)";
-                                                                        }
-                                                                     }
-                                                                     $customer_type1 = $db->rp_getValue("customer_type", "name", "id='" . $customer['type_of_executive'] . "'");
-                                                                  ?>
-                                                                     <option value="<?php echo $customer['id']; ?>" <?php if ($dealer_id == $customer['id']) {
-                                                                                                                        echo "selected";
-                                                                                                                     } ?> data-phone="<?php echo $customer['phone'] ?>" data-email="<?php echo $customer['email'] ?>" data-address="<?php echo $customer['address'] ?>" data-state="<?php echo $customer['state'] ?>" data-cname="<?= $customer['cname'] ?>" data-company_name="<?= $customer['company_name'] ?>" data-gstin="<?= $customer['gst'] ?>" data-price-list="<?= $price_list_name; ?>" data-cutomer-type="<?= $customer_type1; ?>" data-gst-type="<?= $gst_type ?>" data-shipping_address="<?php echo $customer['shipping_address'] ?>" data-billing_address="<?php echo $customer['billing_address'] ?>">
-                                                                        <?php echo $customer['company_name'] . " - " . $customer['cname']; ?>
-                                                                     </option>
-                                                         <?php
-                                                                  }
-                                                               }
-                                                            }
+                                                            /* Add mode: do not preload all customers (11k+ rows hangs page).
+                                                             * Customers load via getCustomer() AJAX after Customer Type is selected. */
                                                          }
                                                          ?>
                                                       </select>
@@ -1453,6 +1418,11 @@ if (isset($_REQUEST['id']) && $_REQUEST['id'] > 0 && $_REQUEST['mode'] == "isAct
       function getCustomer(ctype) {
          var companytype = $("#type_of_company").val();
          $('#dealer_id').select2("val", "");
+         if (!ctype) {
+            $('#dealer_id').html('<option value="">Select Customer</option>');
+            $('.preloader').fadeOut('slow');
+            return;
+         }
          $.ajax({
             type: "post",
             url: "ajax_get_customer.php",
@@ -1465,6 +1435,10 @@ if (isset($_REQUEST['id']) && $_REQUEST['id'] > 0 && $_REQUEST['mode'] == "isAct
                   $('#dealer_id').html(result);
                   $('.preloader').fadeOut('slow');
                });
+            },
+            error: function() {
+               $('.preloader').fadeOut('slow');
+               toastr.error("Failed to load customers. Please try again.");
             }
          })
       }

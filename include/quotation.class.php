@@ -2160,6 +2160,15 @@ class Quotation extends Functions
 
 			$update_array = array("total_qty" => $total_qty, "subtotal" => $sub_total1, "grand_total" => $grand_total, "cash_discount_amount" => $detail['cash_discount_amount'], "cash_discount" => $detail['cash_discount'], "additional_discount_amount" => $detail['additional_discount_amount'], "additional_discount" => $detail['additional_discount'], "igst_amount" => $gst_amount, "status" => 1, "remarks" => $detail['remarks'], "reference_date" => $detail['reference_date'], "reference" => $detail['reference'], "attn" => $detail['attn'], "attn_no" => $detail['attn_no'], "attn_email" => $detail['attn_email'], "transport_charge" => $detail['transport_charge'], "terms_comdition" => $detail['terms_comdition'], "faithfully" => $detail['faithfully'], "vendor_code" => $detail['vendor_code'], "tendor_code" => $detail['tendor_code'], "tendor_no" => $detail['tendor_no'], "transport_name" => $detail['transport_name'], "transport_through" => $detail['transport_through'], "packing_charge" => $detail['packing_charge'], "shipping_address" => $detail['shipping_address'], "billing_address" => $detail['billing_address'], "roundoff" => $detail['round_off'], "grand_total_rounded" => round($grand_total), "tcs_per" => TCS_CHARGE_IN_PER, "tcs_amount" => $tcs_amount, "currency_code" => $detail['currency_code'], "update_entry_flag" => 1, "transport_charge_gst" => $detail['transport_charge_gst'], "packing_charge_gst" => $detail['packing_charge_gst'], "cd_gst" => $detail['cd_gst'], "ad_gst" => $detail['ad_gst'], "type_of_company" => $detail['type_of_company'], "terms_condition_id" => $detail['terms_condition_id'], "attachment" => $this->db->clean($image_path), "sales_id" => $detail['sales_executive_id']);
 
+			/* Approved By: set logged-in user when empty (same as old auto-approved flow) */
+			$quoCols = $this->db->rp_getTableColumnNames("quotation_detail");
+			if (is_array($quoCols) && in_array("approve_by_id", $quoCols) && isset($_SESSION[SITE_SESS . '_ADMIN_SESS_ID'])) {
+				$existingApproveBy = (int) $this->db->rp_getValue("quotation_detail", "approve_by_id", "id='" . $detail['quotation_id'] . "'", 0);
+				if ($existingApproveBy <= 0) {
+					$update_array["approve_by_id"] = (int) $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'];
+				}
+			}
+
 			$isUpdated = $this->db->rp_update("quotation_detail", $update_array, "id='" . $detail['quotation_id'] . "'", 0, $log_description, $flag, $module_name, "", "");
 			if ($isUpdated) {
 

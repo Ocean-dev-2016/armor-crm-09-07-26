@@ -134,7 +134,7 @@ $sheetSummary->mergeCells("A1:C1");
 $sheetSummary->getStyle("A1")->applyFromArray($titleStyle);
 $sheetSummary->setCellValue("A2", "Period: " . $fromLabel . " to " . $toLabel);
 $sheetSummary->setCellValue("A3", "Total Visits: " . (int) $data['total_visits']);
-$sheetSummary->setCellValue("A4", "Approved Expense: " . $db->rp_number_format((float) $data['total_approved_expense'], 2) . " | Total KM: " . $db->rp_number_format((float) $data['total_kilometer'], 2) . " | Expense / KM: " . $db->rp_number_format((float) $data['expense_per_km'], 2));
+$sheetSummary->setCellValue("A4", "Approved Expense: " . $db->rp_number_format((float) $data['total_approved_expense'], 2) . " | Total KM: " . $db->rp_number_format((float) $data['total_kilometer'], 2));
 rar_excel_write_header($sheetSummary, array("Code", "Description", "Count"), 6, $headerStyle);
 $r = 7;
 foreach ($hierarchy as $parent => $children) {
@@ -167,11 +167,11 @@ $sheetVisits->setCellValue("A1", "Remark Wise Visit Detail");
 $sheetVisits->mergeCells("A1:O1");
 $sheetVisits->getStyle("A1")->applyFromArray($titleStyle);
 $sheetVisits->setCellValue("A2", "Period: " . $fromLabel . " to " . $toLabel);
-$sheetVisits->setCellValue("A3", "Approved Expense: " . $db->rp_number_format((float) $data['total_approved_expense'], 2) . " | Total KM: " . $db->rp_number_format((float) $data['total_kilometer'], 2) . " | Expense / KM: " . $db->rp_number_format((float) $data['expense_per_km'], 2));
-$visitHeaders = array("#", "Date", "Sales Person", "Customer", "Customer Code", "Visit Duration", "Remark", "Reason", "Description", "Stop Remark", "Expense", "Total KM", "Expense / KM", "Status", "Form Available");
+$sheetVisits->setCellValue("A3", "Approved Expense: " . $db->rp_number_format((float) $data['total_approved_expense'], 2) . " | Total KM: " . $db->rp_number_format((float) $data['total_kilometer'], 2));
+$visitHeaders = array("#", "Date", "Sales Person", "Customer", "Customer Code", "Visit Duration", "Remark", "Reason", "Description", "Stop Remark", "Expense", "Total KM", "Status", "Form Available");
 rar_excel_write_header($sheetVisits, $visitHeaders, 5, $headerStyle);
-$sheetVisits->getStyle("K5:M5")->getFill()->setFillType(PHPExcel_Style_Fill::FILL_SOLID)->getStartColor()->setRGB("8E44AD");
-$sheetVisits->getStyle("K5:M5")->getFont()->getColor()->setRGB("FFFFFF");
+$sheetVisits->getStyle("K5:L5")->getFill()->setFillType(PHPExcel_Style_Fill::FILL_SOLID)->getStartColor()->setRGB("8E44AD");
+$sheetVisits->getStyle("K5:L5")->getFont()->getColor()->setRGB("FFFFFF");
 $vr = 6;
 $sr = 0;
 foreach ($visits as $visit) {
@@ -211,16 +211,15 @@ foreach ($visits as $visit) {
 	$sheetVisits->setCellValue("J" . $vr, $visit['stop_remark']);
 	$sheetVisits->setCellValue("K" . $vr, (float) $visit['approved_expense']);
 	$sheetVisits->setCellValue("L" . $vr, (float) $visit['total_kilometer']);
-	$sheetVisits->setCellValue("M" . $vr, (float) $visit['expense_per_km']);
-	$sheetVisits->setCellValue("N" . $vr, $visit['is_completed'] ? "Completed" : "Open");
-	$sheetVisits->setCellValue("O" . $vr, $formAvail);
+	$sheetVisits->setCellValue("M" . $vr, $visit['is_completed'] ? "Completed" : "Open");
+	$sheetVisits->setCellValue("N" . $vr, $formAvail);
 	$vr++;
 }
 if ($vr > 6) {
-	$sheetVisits->getStyle("K6:M" . ($vr - 1))->getFill()->setFillType(PHPExcel_Style_Fill::FILL_SOLID)->getStartColor()->setRGB("FBF5FF");
-	$sheetVisits->getStyle("K6:M" . ($vr - 1))->getFont()->setBold(true);
+	$sheetVisits->getStyle("K6:L" . ($vr - 1))->getFill()->setFillType(PHPExcel_Style_Fill::FILL_SOLID)->getStartColor()->setRGB("FBF5FF");
+	$sheetVisits->getStyle("K6:L" . ($vr - 1))->getFont()->setBold(true);
 }
-rar_excel_autosize($sheetVisits, 15);
+rar_excel_autosize($sheetVisits, 14);
 
 /* ---------- Collect form rows ---------- */
 $c1Rows = array();

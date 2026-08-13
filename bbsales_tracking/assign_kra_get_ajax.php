@@ -88,20 +88,22 @@ $ctable_r = $db->rp_getData($ctable, 'id, company_name, cname, state, city, clie
 	</table>
 </div>
 <?php
-$totalPages = $show > 0 ? ceil($total / $show) : 1;
+$totalPages = $show > 0 ? (int) ceil($total / $show) : 1;
 if ($totalPages < 1) {
 	$totalPages = 1;
+}
+if ($page_num < 1) {
+	$page_num = 1;
+}
+if ($page_num > $totalPages) {
+	$page_num = $totalPages;
 }
 if ($totalPages > 1) {
 ?>
 <div class="row">
 	<div class="col-md-12 text-center">
 		<ul class="pagination pagination-sm" style="margin:12px 0 0;">
-			<?php for ($p = 1; $p <= $totalPages; $p++) { ?>
-				<li class="<?php echo ($p == $page_num) ? 'active' : ''; ?>">
-					<a href="javascript:;" data-page="<?php echo $p; ?>"><?php echo $p; ?></a>
-				</li>
-			<?php } ?>
+			<?php echo $db->rp_paginate_function($show, $page_num, $total, $totalPages); ?>
 		</ul>
 	</div>
 </div>

@@ -920,12 +920,15 @@ class EmployeeVisitKraReport
 		}
 
 		if ($kpiType === "pi_approved") {
-			$sql = "SELECT id, order_no, order_date, company_name, customer_name, grand_total,
-					IFNULL(quotation_id,0) AS quotation_id
-				FROM orders
-				WHERE isDelete=0 AND status=1 AND sales_id='" . $employeeId . "'
-					AND DATE(order_date) BETWEEN '" . $from . "' AND '" . $to . "'
-				ORDER BY order_date DESC, id DESC";
+			$adminTable = defined("CTABLE_ADMIN") ? CTABLE_ADMIN : "dealer_distributor_network";
+			$sql = "SELECT o.id, o.order_no, o.order_date, o.company_name, o.customer_name, o.grand_total,
+					IFNULL(o.quotation_id,0) AS quotation_id, IFNULL(o.approve_by_id,0) AS approve_by_id,
+					IFNULL(a.name,'') AS approved_by_name
+				FROM orders o
+				LEFT JOIN " . $adminTable . " a ON a.id=o.approve_by_id AND a.isDelete=0
+				WHERE o.isDelete=0 AND o.status=1 AND o.sales_id='" . $employeeId . "'
+					AND DATE(o.order_date) BETWEEN '" . $from . "' AND '" . $to . "'
+				ORDER BY o.order_date DESC, o.id DESC";
 			$rows = array();
 			$total = 0;
 			$res = $this->safeQuery($sql);
@@ -933,6 +936,10 @@ class EmployeeVisitKraReport
 				while ($r = mysqli_fetch_assoc($res)) {
 					$total += (float) $r['grand_total'];
 					$src = ((int) $r['quotation_id'] > 0) ? "Quotation → Order" : "Direct Sales Order";
+					$approvedBy = trim((string) $r['approved_by_name']);
+					if ($approvedBy === "") {
+						$approvedBy = ((int) $r['approve_by_id'] > 0) ? ("User #" . (int) $r['approve_by_id']) : "-";
+					}
 					$rows[] = array(
 						$r['order_no'],
 						date("d/m/Y", strtotime($r['order_date'])),
@@ -940,12 +947,13 @@ class EmployeeVisitKraReport
 						$r['customer_name'],
 						$src,
 						"Approved",
+						$approvedBy,
 						number_format((float) $r['grand_total'], 2),
 					);
 				}
 			}
 			$base['title'] = "Total PI Approved — Detail";
-			$base['columns'] = array("PI / Order No", "Date", "Company", "Customer", "Type", "Status", "Amount");
+			$base['columns'] = array("PI / Order No", "Date", "Company", "Customer", "Type", "Status", "Approved By", "Amount");
 			$base['rows'] = $rows;
 			$base['total_label'] = "Approved PI/Orders: " . count($rows) . " | Amount: " . number_format($total, 2);
 			$base['footer_note'] = "Includes Quotation transferred to Order and Direct Sales Order (status = Approved).";
@@ -953,29 +961,48 @@ class EmployeeVisitKraReport
 		}
 
 		if ($kpiType === "total_quotation") {
-			$sql = "SELECT id, quotation_no, quotation_date, company_name, customer_name, status, grand_total
-				FROM quotation_detail
-				WHERE isDelete=0 AND sales_id='" . $employeeId . "'
-					AND DATE(quotation_date) BETWEEN '" . $from . "' AND '" . $to . "'
-				ORDER BY quotation_date DESC, id DESC";
+			$adminTable = defined("CTABLE_ADMIN") ? CTABLE_ADMIN : "dealer_distributor_network";
+			$quoCols = $this->db->rp_getTableColumnNames("quotation_detail");
+			$hasApproveBy = is_array($quoCols) && in_array("approve_by_id", $quoCols);
+			if ($hasApproveBy) {
+				$sql = "SELECT q.id, q.quotation_no, q.quotation_date, q.company_name, q.customer_name, q.status, q.grand_total,
+						IFNULL(q.approve_by_id,0) AS approve_by_id, IFNULL(a.name,'') AS approved_by_name
+					FROM quotation_detail q
+					LEFT JOIN " . $adminTable . " a ON a.id=q.approve_by_id AND a.isDelete=0
+					WHERE q.isDelete=0 AND q.sales_id='" . $employeeId . "'
+						AND DATE(q.quotation_date) BETWEEN '" . $from . "' AND '" . $to . "'
+					ORDER BY q.quotation_date DESC, q.id DESC";
+			} else {
+				$sql = "SELECT id, quotation_no, quotation_date, company_name, customer_name, status, grand_total,
+						0 AS approve_by_id, '' AS approved_by_name
+					FROM quotation_detail
+					WHERE isDelete=0 AND sales_id='" . $employeeId . "'
+						AND DATE(quotation_date) BETWEEN '" . $from . "' AND '" . $to . "'
+					ORDER BY quotation_date DESC, id DESC";
+			}
 			$rows = array();
 			$total = 0;
 			$res = $this->safeQuery($sql);
 			if ($res) {
 				while ($r = mysqli_fetch_assoc($res)) {
 					$total += (float) $r['grand_total'];
+					$approvedBy = trim((string) $r['approved_by_name']);
+					if ($approvedBy === "") {
+						$approvedBy = ((int) $r['approve_by_id'] > 0) ? ("User #" . (int) $r['approve_by_id']) : "-";
+					}
 					$rows[] = array(
 						$r['quotation_no'],
 						date("d/m/Y", strtotime($r['quotation_date'])),
 						$r['company_name'],
 						$r['customer_name'],
 						$this->quotationStatusLabel($r['status']),
+						$approvedBy,
 						number_format((float) $r['grand_total'], 2),
 					);
 				}
 			}
 			$base['title'] = "Total Quotation — Detail";
-			$base['columns'] = array("Quotation No", "Date", "Company", "Customer", "Status", "Amount");
+			$base['columns'] = array("Quotation No", "Date", "Company", "Customer", "Status", "Approved By", "Amount");
 			$base['rows'] = $rows;
 			$base['total_label'] = "Quotations: " . count($rows) . " | Amount: " . number_format($total, 2);
 			return $base;

@@ -98,7 +98,10 @@ var $ = jQuery.noConflict();
 $("#loading-modal").modal('hide');
 
 
-$(window).load(function() {
+$(function() {
+   $('.preloader').fadeOut('slow');
+});
+$(window).on('load', function() {
    $('.preloader').fadeOut('slow');
 });
 

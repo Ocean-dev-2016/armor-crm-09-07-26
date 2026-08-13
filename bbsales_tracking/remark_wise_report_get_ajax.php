@@ -155,8 +155,6 @@ function rar_render_form_html($visit)
 		<strong>Approved Expense:</strong> <?php echo CURR . ' ' . $db->rp_number_format((float) $data['total_approved_expense'], 2); ?>
 		&nbsp;|&nbsp;
 		<strong>Total KM:</strong> <?php echo $db->rp_number_format((float) $data['total_kilometer'], 2); ?>
-		&nbsp;|&nbsp;
-		<strong>Expense / KM:</strong> <?php echo CURR . ' ' . $db->rp_number_format((float) $data['expense_per_km'], 2); ?>
 		<?php if (!empty($data['range']['was_limited'])) { ?>
 			<span class="text-warning">(Date range limited to max days)</span>
 		<?php } ?>
@@ -288,18 +286,15 @@ function rar_render_form_html($visit)
 				.rar-c-stop { width:14%; }
 				.rar-c-expense { width:8%; text-align:right !important; }
 				.rar-c-km { width:7%; text-align:right !important; }
-				.rar-c-ekm { width:8%; text-align:right !important; }
 				.rar-c-form { width:7%; text-align:center !important; }
 				.rar-c-status { width:7%; text-align:center !important; }
 				.rar-detail-table > thead > tr > th.rar-c-expense,
-				.rar-detail-table > thead > tr > th.rar-c-km,
-				.rar-detail-table > thead > tr > th.rar-c-ekm {
+				.rar-detail-table > thead > tr > th.rar-c-km {
 					background:#8e44ad !important;
 					border-color:#7d3c98 !important;
 				}
 				.rar-detail-table > tbody > tr > td.rar-c-expense,
-				.rar-detail-table > tbody > tr > td.rar-c-km,
-				.rar-detail-table > tbody > tr > td.rar-c-ekm {
+				.rar-detail-table > tbody > tr > td.rar-c-km {
 					background:#fbf5ff !important;
 					font-weight:700;
 					color:#5b2c6f;
@@ -333,7 +328,6 @@ function rar_render_form_html($visit)
 						<th class="rar-c-stop">Stop Remark</th>
 						<th class="rar-c-expense">Expense</th>
 						<th class="rar-c-km">KM</th>
-						<th class="rar-c-ekm">Expense / KM</th>
 						<th class="rar-c-form">Form</th>
 						<th class="rar-c-status">Status</th>
 					</tr>
@@ -419,7 +413,6 @@ function rar_render_form_html($visit)
 							</td>
 							<td class="rar-c-expense"><?php echo CURR . ' ' . $db->rp_number_format((float) $visit['approved_expense'], 2); ?></td>
 							<td class="rar-c-km"><?php echo $db->rp_number_format((float) $visit['total_kilometer'], 2); ?></td>
-							<td class="rar-c-ekm"><?php echo CURR . ' ' . $db->rp_number_format((float) $visit['expense_per_km'], 2); ?></td>
 							<td class="rar-c-form">
 								<?php if ($formHtml != "") { ?>
 									<button type="button"
