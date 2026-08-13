@@ -147,19 +147,19 @@ $employeeCount = count($employees);
 	</div>
 </div>
 
-<div class="modal fade" id="kraExpenseModal" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal fade" id="kraKpiModal" tabindex="-1" role="dialog" aria-hidden="true">
 	<div class="modal-dialog modal-lg">
 		<div class="modal-content">
-			<div class="modal-header">
-				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-				<h4 class="modal-title"><i class="fa fa-inr"></i> Approved Expense — Category Wise</h4>
+			<div class="modal-header" style="background:#2f6f44;color:#fff;">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true" style="color:#fff;opacity:.9;">&times;</button>
+				<h4 class="modal-title" id="kra_kpi_modal_title"><i class="fa fa-list"></i> KPI Detail</h4>
 			</div>
 			<div class="modal-body">
-				<p id="kra_expense_modal_meta" style="margin-bottom:12px;color:#555;"></p>
-				<div id="kra_expense_modal_loading" style="display:none;text-align:center;padding:20px;">
+				<p id="kra_kpi_modal_meta" style="margin-bottom:12px;color:#555;"></p>
+				<div id="kra_kpi_modal_loading" style="display:none;text-align:center;padding:20px;">
 					<img src="assets/admin/layout/img/ajax-loader.gif" alt="Loading">
 				</div>
-				<div id="kra_expense_modal_body"></div>
+				<div id="kra_kpi_modal_body" style="max-height:65vh;overflow:auto;"></div>
 			</div>
 			<div class="modal-footer">
 				<button type="button" class="btn default" data-dismiss="modal">Close</button>
@@ -204,90 +204,88 @@ $employeeCount = count($employees);
 			});
 		}
 
-		function openExpenseBreakdown(employeeId, employeeName) {
-			$("#kra_expense_modal_meta").text(
-				(employeeName || "Employee") + " | " +
-				$("#kra_from_date").val() + " to " + $("#kra_to_date").val()
-			);
-			$("#kra_expense_modal_body").html("");
-			$("#kra_expense_modal_loading").show();
-			$("#kraExpenseModal").modal("show");
+		function esc(v) {
+			return $("<div>").text(v == null ? "" : String(v)).html();
+		}
+
+		function openKpiDetail(kpiType, employeeId, employeeName) {
+			$("#kra_kpi_modal_title").html('<i class="fa fa-list"></i> KPI Detail');
+			$("#kra_kpi_modal_meta").text((employeeName || "Employee") + " | " + $("#kra_from_date").val() + " to " + $("#kra_to_date").val());
+			$("#kra_kpi_modal_body").html("");
+			$("#kra_kpi_modal_loading").show();
+			$("#kraKpiModal").modal("show");
 
 			$.ajax({
-				url: "employee_visit_kra_expense_ajax.php",
+				url: "employee_visit_kra_kpi_detail_ajax.php",
 				type: "GET",
 				dataType: "json",
 				data: {
+					kpi_type: kpiType,
 					employee_id: employeeId,
 					from_date: $("#kra_from_date").val(),
 					to_date: $("#kra_to_date").val()
 				},
 				success: function (res) {
-					$("#kra_expense_modal_loading").hide();
+					$("#kra_kpi_modal_loading").hide();
 					if (!res || res.ack != 1) {
-						$("#kra_expense_modal_body").html(
-							'<div class="alert alert-danger">' +
-							((res && res.ack_msg) ? res.ack_msg : "Failed to load expense breakdown.") +
-							"</div>"
+						$("#kra_kpi_modal_body").html(
+							'<div class="alert alert-danger">' + esc((res && res.ack_msg) ? res.ack_msg : "Failed to load detail.") + "</div>"
 						);
 						return;
 					}
-					$("#kra_expense_modal_meta").text(
+					$("#kra_kpi_modal_title").html('<i class="fa fa-list"></i> ' + esc(res.title || "KPI Detail"));
+					$("#kra_kpi_modal_meta").text(
 						(res.employee_name || employeeName || "Employee") +
 						" | " + (res.from_label || "") + " to " + (res.to_label || "")
 					);
 					if (!res.rows || !res.rows.length) {
-						$("#kra_expense_modal_body").html(
-							'<div class="alert alert-info">No approved expense found for this period.</div>'
-						);
+						$("#kra_kpi_modal_body").html('<div class="alert alert-info">No detail records found for this KPI.</div>');
+						if (res.total_label) {
+							$("#kra_kpi_modal_body").append('<p><strong>' + esc(res.total_label) + "</strong></p>");
+						}
+						if (res.footer_note) {
+							$("#kra_kpi_modal_body").append('<p style="font-size:12px;color:#666;">' + esc(res.footer_note) + "</p>");
+						}
 						return;
 					}
-					var html = '<div class="table-responsive"><table class="table table-bordered table-striped" style="margin-bottom:0;">';
-					html += "<thead><tr><th>Sr.</th><th>Category</th><th>Travel / Sub Category</th><th class=\"text-center\">Count</th><th class=\"text-center\">KM</th><th class=\"text-right\">Rate / KM</th><th class=\"text-right\">KM Calc</th><th class=\"text-right\">Approved Amount</th></tr></thead><tbody>";
+					var html = '<div class="table-responsive"><table class="table table-bordered table-striped table-condensed" style="margin-bottom:8px;font-size:12px;">';
+					html += "<thead><tr><th>Sr.</th>";
+					$.each(res.columns || [], function (i, col) {
+						html += "<th>" + esc(col) + "</th>";
+					});
+					html += "</tr></thead><tbody>";
 					$.each(res.rows, function (i, row) {
-						var km = row.is_km ? (row.total_km || 0) : "-";
-						var rate = row.is_km ? (row.master_rate_label || "-") : "-";
-						var kmCalc = row.is_km ? (row.km_calc_amount_label || "-") : "-";
-						var subName = row.subcategory_name || "-";
-						if (row.is_km) {
-							subName = subName + " (KM)";
-						}
-						html += "<tr>";
-						html += "<td>" + (i + 1) + "</td>";
-						html += "<td>" + $("<div>").text(row.category_name || "Other").html() + "</td>";
-						html += "<td>" + $("<div>").text(subName).html() + "</td>";
-						html += "<td class=\"text-center\">" + (row.expense_count || 0) + "</td>";
-						html += "<td class=\"text-center\">" + km + "</td>";
-						html += "<td class=\"text-right\">" + rate + "</td>";
-						html += "<td class=\"text-right\">" + kmCalc + "</td>";
-						html += "<td class=\"text-right\">" + (row.approved_amount_label || "") + "</td>";
+						html += "<tr><td>" + (i + 1) + "</td>";
+						$.each(row, function (j, cell) {
+							html += "<td>" + esc(cell) + "</td>";
+						});
 						html += "</tr>";
 					});
-					html += "<tr class=\"kra-exp-total\"><td colspan=\"3\"><strong>Total</strong></td>";
-					html += "<td class=\"text-center\"><strong>" + (res.total_count || 0) + "</strong></td>";
-					html += "<td colspan=\"3\"></td>";
-					html += "<td class=\"text-right\"><strong>" + (res.total_amount_label || "") + "</strong></td></tr>";
 					html += "</tbody></table></div>";
-					html += '<p style="margin-top:10px;font-size:12px;color:#666;"><i class="fa fa-info-circle"></i> Category = Expense Master category (Hotel / Travelling / Food / Other…). Travel/Sub = Bike, Car, Auto/Train… KM Calc = KM × master <b>fix_amount</b>.</p>';
-					$("#kra_expense_modal_body").html(html);
+					if (res.total_label) {
+						html += '<p style="margin:0 0 6px;"><strong>' + esc(res.total_label) + "</strong></p>";
+					}
+					if (res.footer_note) {
+						html += '<p style="margin:0;font-size:12px;color:#666;"><i class="fa fa-info-circle"></i> ' + esc(res.footer_note) + "</p>";
+					}
+					$("#kra_kpi_modal_body").html(html);
 				},
 				error: function () {
-					$("#kra_expense_modal_loading").hide();
-					$("#kra_expense_modal_body").html(
-						'<div class="alert alert-danger">Failed to load expense breakdown.</div>'
-					);
+					$("#kra_kpi_modal_loading").hide();
+					$("#kra_kpi_modal_body").html('<div class="alert alert-danger">Failed to load KPI detail.</div>');
 				}
 			});
 		}
 
-		$(document).on("click", ".kra-approved-expense", function () {
+		$(document).on("click", ".kra-kpi-detail", function () {
 			var empId = $(this).data("employee-id");
 			var empName = $(this).data("employee-name") || "";
-			if (!empId) {
-				toastr.error("Employee not found.");
+			var kpiType = $(this).data("kpi-type") || "";
+			if (!empId || !kpiType) {
+				toastr.error("Detail not available.");
 				return;
 			}
-			openExpenseBreakdown(empId, empName);
+			openKpiDetail(kpiType, empId, empName);
 		});
 
 		$("#kra_filter_btn").on("click", loadReport);

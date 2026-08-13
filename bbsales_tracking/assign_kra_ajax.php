@@ -148,29 +148,18 @@ if ($mode === 'get_sales_summary') {
 		0
 	);
 
-	$pi_count = 0;
-	$pi_value = 0;
-	$piSql = "SELECT COUNT(*) AS cnt, COALESCE(SUM(pi_amount),0) AS amt
-		FROM (
-			SELECT pi_sales.pi_id, MAX(pi_sales.pi_amount) AS pi_amount
-			FROM (
-				SELECT pi.id AS pi_id, pi.grand_total AS pi_amount
-				FROM proforma_invoice_info pi
-				INNER JOIN quotation_detail q ON q.proforma_invoice_id=pi.id AND q.isDelete=0
-				WHERE pi.isDelete=0 AND pi.status=1 AND q.sales_id='" . $sales_person_id . "'
-				UNION
-				SELECT pi.id AS pi_id, pi.grand_total AS pi_amount
-				FROM proforma_invoice_info pi
-				INNER JOIN orders o ON o.proforma_invoice_id=pi.id AND o.isDelete=0
-				WHERE pi.isDelete=0 AND pi.status=1 AND o.sales_id='" . $sales_person_id . "'
-			) pi_sales
-			GROUP BY pi_sales.pi_id
-		) pi_unique";
-	$piRes = @mysqli_query($db->myconn, $piSql);
-	if ($piRes && ($piRow = mysqli_fetch_assoc($piRes))) {
-		$pi_count = (int) $piRow['cnt'];
-		$pi_value = (float) $piRow['amt'];
-	}
+	$pi_count = (int) $db->rp_getValue(
+		'orders',
+		'COUNT(*)',
+		"isDelete=0 AND status=1 AND sales_id='" . $sales_person_id . "'",
+		0
+	);
+	$pi_value = (float) $db->rp_getValue(
+		'orders',
+		'SUM(grand_total)',
+		"isDelete=0 AND status=1 AND sales_id='" . $sales_person_id . "'",
+		0
+	);
 
 	$typeLabel = isset($sp['type']) ? ucwords(str_replace('_', ' ', $sp['type'])) : '';
 	$quotation_value_label = CURR . ' ' . $db->rp_number_format((float) $quotation_value, 2);

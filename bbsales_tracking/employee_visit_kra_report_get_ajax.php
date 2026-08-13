@@ -138,24 +138,41 @@ $fixedColCount = 10; // Sr .. Total Visit + Visit Duration
 			</div>
 		</div>
 		<div class="kra-kpis">
-			<div class="kra-kpi kra-kpi-click kra-approved-expense"
-				data-employee-id="<?php echo (int) $employee['id']; ?>"
-				data-employee-name="<?php echo kra_h($employee['name']); ?>"
-				title="Click to view approved expense by type">
-				<div class="kra-kpi-label">Approved Expense</div>
-				<div class="kra-kpi-value"><?php echo kra_money($db, $employee['kpi']['approved_expense']); ?></div>
-				<span class="kra-kpi-hint"><i class="fa fa-list-alt"></i> View by type</span>
+			<?php
+			$empId = (int) $employee['id'];
+			$empName = kra_h($employee['name']);
+			$kpiBoxes = array(
+				array("approved_expense", "Approved Expense", kra_money($db, $employee['kpi']['approved_expense']), "", 1),
+				array("km_bike", "Total KM By Bike", $db->rp_number_format((float) $employee['kpi']['total_kilometer'], 2), "kra-kpi-km", 1),
+				array("salary", "Salary", "N/A", "", 1),
+				array("expense_salary", "Expense + Salary", kra_money($db, $employee['kpi']['approved_expense']) . " + N/A", "", 1),
+				array("total_sales", "Total Sales", kra_money($db, $employee['kpi']['total_sales']), "", 1),
+				array("total_visit", "Total Visit", (int) $employee['kpi']['total_visits'], "", 1),
+				array("total_duration", "Total Duration", kra_h(kra_format_duration(isset($employee['kpi']['total_duration_minutes']) ? $employee['kpi']['total_duration_minutes'] : 0)), "", 1),
+				array("completed_open", "Completed / Open", ((int) $employee['kpi']['completed_visits']) . " / " . ((int) $employee['kpi']['open_visits']), "", 1),
+				array("kra_assigned", "KRA Assigned", (int) (isset($employee['kpi']['kra_assigned']) ? $employee['kpi']['kra_assigned'] : 0), "", 0),
+				array("total_quotation", "Total Quotation", ((int) (isset($employee['kpi']['total_quotations_count']) ? $employee['kpi']['total_quotations_count'] : 0)) . " | " . kra_money($db, $employee['kpi']['total_quotations']), "", 1),
+				array("pi_approved", "Total PI Approved", ((int) (isset($employee['kpi']['approved_pi_count']) ? $employee['kpi']['approved_pi_count'] : 0)) . " | " . kra_money($db, $employee['kpi']['approved_pi']), "", 1),
+			);
+			foreach ($kpiBoxes as $box) {
+				$extraClass = $box[3] != "" ? " " . $box[3] : "";
+				$clickable = !empty($box[4]);
+				$clickClass = $clickable ? " kra-kpi-click kra-kpi-detail" : "";
+			?>
+			<div class="kra-kpi<?php echo $clickClass . $extraClass; ?>"
+				<?php if ($clickable) { ?>
+				data-kpi-type="<?php echo kra_h($box[0]); ?>"
+				data-employee-id="<?php echo $empId; ?>"
+				data-employee-name="<?php echo $empName; ?>"
+				title="Click to view detail"
+				<?php } ?>>
+				<div class="kra-kpi-label"><?php echo kra_h($box[1]); ?></div>
+				<div class="kra-kpi-value"><?php echo $box[2]; ?></div>
+				<?php if ($clickable) { ?>
+				<span class="kra-kpi-hint"><i class="fa fa-search"></i> View detail</span>
+				<?php } ?>
 			</div>
-			<div class="kra-kpi kra-kpi-km"><div class="kra-kpi-label">Total KM By Bike</div><div class="kra-kpi-value"><?php echo $db->rp_number_format((float) $employee['kpi']['total_kilometer'], 2); ?></div></div>
-			<div class="kra-kpi"><div class="kra-kpi-label">Salary</div><div class="kra-kpi-value">N/A</div></div>
-			<div class="kra-kpi"><div class="kra-kpi-label">Expense + Salary</div><div class="kra-kpi-value"><?php echo kra_money($db, $employee['kpi']['approved_expense']); ?> + N/A</div></div>
-			<div class="kra-kpi"><div class="kra-kpi-label">Total Sales</div><div class="kra-kpi-value"><?php echo kra_money($db, $employee['kpi']['total_sales']); ?></div></div>
-			<div class="kra-kpi"><div class="kra-kpi-label">Total Visit</div><div class="kra-kpi-value"><?php echo (int) $employee['kpi']['total_visits']; ?></div></div>
-			<div class="kra-kpi"><div class="kra-kpi-label">Total Duration</div><div class="kra-kpi-value"><?php echo kra_h(kra_format_duration(isset($employee['kpi']['total_duration_minutes']) ? $employee['kpi']['total_duration_minutes'] : 0)); ?></div></div>
-			<div class="kra-kpi"><div class="kra-kpi-label">Completed / Open</div><div class="kra-kpi-value"><?php echo (int) $employee['kpi']['completed_visits']; ?> / <?php echo (int) $employee['kpi']['open_visits']; ?></div></div>
-			<div class="kra-kpi"><div class="kra-kpi-label">KRA Assigned</div><div class="kra-kpi-value"><?php echo (int) (isset($employee['kpi']['kra_assigned']) ? $employee['kpi']['kra_assigned'] : 0); ?></div></div>
-			<div class="kra-kpi"><div class="kra-kpi-label">Total Quotation</div><div class="kra-kpi-value"><?php echo (int) (isset($employee['kpi']['total_quotations_count']) ? $employee['kpi']['total_quotations_count'] : 0); ?> | <?php echo kra_money($db, $employee['kpi']['total_quotations']); ?></div></div>
-			<div class="kra-kpi"><div class="kra-kpi-label">Total PI Approved</div><div class="kra-kpi-value"><?php echo (int) (isset($employee['kpi']['approved_pi_count']) ? $employee['kpi']['approved_pi_count'] : 0); ?> | <?php echo kra_money($db, $employee['kpi']['approved_pi']); ?></div></div>
+			<?php } ?>
 		</div>
 
 		<div class="kra-scroll">

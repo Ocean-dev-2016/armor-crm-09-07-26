@@ -662,35 +662,24 @@ class EmployeeVisitKraReport
 			 GROUP BY sales_id",
 			"total_quotations"
 		);
-		$piBase = "(
-				SELECT pi_sales.employee_id,pi_sales.pi_id,MAX(pi_sales.pi_amount) AS pi_amount
-				FROM (
-					SELECT q.sales_id AS employee_id,pi.id AS pi_id,pi.grand_total AS pi_amount
-					FROM proforma_invoice_info pi
-					INNER JOIN quotation_detail q ON q.proforma_invoice_id=pi.id AND q.isDelete=0
-					WHERE pi.isDelete=0 AND pi.status=1
-						AND q.sales_id IN (" . $ids . ")
-						AND DATE(CASE WHEN pi.modified_date IS NOT NULL AND pi.modified_date!='' AND pi.modified_date!='0000-00-00 00:00:00'
-							THEN pi.modified_date ELSE pi.invoice_date END) BETWEEN '" . $from . "' AND '" . $to . "'
-					UNION
-					SELECT o.sales_id AS employee_id,pi.id AS pi_id,pi.grand_total AS pi_amount
-					FROM proforma_invoice_info pi
-					INNER JOIN orders o ON o.proforma_invoice_id=pi.id AND o.isDelete=0
-					WHERE pi.isDelete=0 AND pi.status=1
-						AND o.sales_id IN (" . $ids . ")
-						AND DATE(CASE WHEN pi.modified_date IS NOT NULL AND pi.modified_date!='' AND pi.modified_date!='0000-00-00 00:00:00'
-							THEN pi.modified_date ELSE pi.invoice_date END) BETWEEN '" . $from . "' AND '" . $to . "'
-				) pi_sales
-				GROUP BY pi_sales.employee_id,pi_sales.pi_id
-			) pi_unique";
+		// Total PI Approved = Approved Sales Orders (status=1)
+		// includes: Quotation transferred to Order + Direct Sales Order created
 		$this->applyGroupedKpi(
 			$data,
-			"SELECT pi_unique.employee_id,COUNT(*) AS metric FROM " . $piBase . " GROUP BY pi_unique.employee_id",
+			"SELECT sales_id AS employee_id,COUNT(*) AS metric
+			 FROM orders
+			 WHERE isDelete=0 AND status=1 AND sales_id IN (" . $ids . ")
+			 AND DATE(order_date) BETWEEN '" . $from . "' AND '" . $to . "'
+			 GROUP BY sales_id",
 			"approved_pi_count"
 		);
 		$this->applyGroupedKpi(
 			$data,
-			"SELECT pi_unique.employee_id,SUM(pi_unique.pi_amount) AS metric FROM " . $piBase . " GROUP BY pi_unique.employee_id",
+			"SELECT sales_id AS employee_id,SUM(grand_total) AS metric
+			 FROM orders
+			 WHERE isDelete=0 AND status=1 AND sales_id IN (" . $ids . ")
+			 AND DATE(order_date) BETWEEN '" . $from . "' AND '" . $to . "'
+			 GROUP BY sales_id",
 			"approved_pi"
 		);
 		foreach ($data['employees'] as $employeeId => $employee) {
@@ -787,6 +776,369 @@ class EmployeeVisitKraReport
 			"total_amount" => $totalAmount,
 			"total_count" => $totalCount,
 		);
+	}
+
+	/**
+	 * Detailed rows for KPI popup (approved expense, sales, visits, quotations, PI, etc.)
+	 */
+	public function getKpiDetail($employeeId, $fromDate, $toDate, $kpiType, $rights)
+	{
+		$employeeId = (int) $employeeId;
+		$kpiType = trim((string) $kpiType);
+		$range = $this->normalizeDateRange($fromDate, $toDate);
+		$accessible = $this->getAccessibleEmployees(array($employeeId), $rights);
+		$empty = array(
+			"ack" => 0,
+			"ack_msg" => "Employee not accessible.",
+			"title" => "KPI Detail",
+			"employee" => null,
+			"range" => $range,
+			"columns" => array(),
+			"rows" => array(),
+			"footer_note" => "",
+			"total_label" => "",
+		);
+		if ($employeeId <= 0 || empty($accessible) || !isset($accessible[$employeeId])) {
+			return $empty;
+		}
+
+		$employee = $accessible[$employeeId];
+		$from = $range['from'];
+		$to = $range['to'];
+		$base = array(
+			"ack" => 1,
+			"ack_msg" => "OK",
+			"employee" => $employee,
+			"range" => $range,
+			"footer_note" => "",
+			"total_label" => "",
+		);
+
+		if ($kpiType === "approved_expense" || $kpiType === "expense_salary") {
+			$break = $this->getApprovedExpenseBreakdown($employeeId, $fromDate, $toDate, $rights);
+			$rows = array();
+			foreach ($break['rows'] as $r) {
+				$rows[] = array(
+					$r['category_name'],
+					isset($r['subcategory_name']) ? $r['subcategory_name'] : "-",
+					(int) $r['expense_count'],
+					!empty($r['is_km']) ? $r['total_km'] : "-",
+					!empty($r['is_km']) ? number_format((float) $r['master_rate'], 2) : "-",
+					!empty($r['is_km']) ? number_format((float) $r['km_calc_amount'], 2) : "-",
+					number_format((float) $r['approved_amount'], 2),
+				);
+			}
+			$base['title'] = ($kpiType === "expense_salary") ? "Expense + Salary Detail" : "Approved Expense — Category Wise";
+			$base['columns'] = array("Category", "Sub Category", "Count", "KM", "Rate/KM", "KM Calc", "Approved Amount");
+			$base['rows'] = $rows;
+			$base['total_label'] = "Total Approved: " . number_format((float) $break['total_amount'], 2) . " | Count: " . (int) $break['total_count'];
+			$base['footer_note'] = ($kpiType === "expense_salary")
+				? "Salary mapping is not configured (N/A). Expense above is approved expense only."
+				: "KM Calc = KM × Expense Master fix_amount.";
+			return $base;
+		}
+
+		if ($kpiType === "salary") {
+			$base['title'] = "Salary";
+			$base['columns'] = array("Info");
+			$base['rows'] = array(array("Salary remains N/A until employee to sales person salary mapping is configured."));
+			$base['footer_note'] = "";
+			return $base;
+		}
+
+		if ($kpiType === "km_bike") {
+			$sql = "SELECT e.expense_date, e.start_kilometer, e.end_kilometer, e.total_kilometer,
+					e.fix_amount, e.total, e.pass_expense_amount, e.pass_remark,
+					COALESCE(s.name,'Bike') AS sub_name, IFNULL(s.fix_amount, e.fix_amount) AS master_rate
+				FROM expense e
+				LEFT JOIN expence_sub_category s ON s.id=e.subcategory_id AND s.isDelete=0
+				WHERE e.isDelete=0 AND e.expense_status=1 AND e.expense_type=2
+					AND e.sales_executive_id='" . $employeeId . "'
+					AND DATE(e.expense_date) BETWEEN '" . $from . "' AND '" . $to . "'
+					AND (LOWER(IFNULL(s.slug,''))='bike' OR LOWER(IFNULL(s.name,''))='bike')
+				ORDER BY e.expense_date, e.id";
+			$rows = array();
+			$totalKm = 0;
+			$totalAmt = 0;
+			$res = $this->safeQuery($sql);
+			if ($res) {
+				while ($r = mysqli_fetch_assoc($res)) {
+					$km = (float) $r['total_kilometer'];
+					$rate = (float) $r['master_rate'];
+					$calc = $km * $rate;
+					$totalKm += $km;
+					$totalAmt += (float) $r['pass_expense_amount'];
+					$rows[] = array(
+						date("d/m/Y", strtotime($r['expense_date'])),
+						$r['sub_name'],
+						$r['start_kilometer'],
+						$r['end_kilometer'],
+						number_format($km, 2),
+						number_format($rate, 2),
+						number_format($calc, 2),
+						number_format((float) $r['pass_expense_amount'], 2),
+					);
+				}
+			}
+			$base['title'] = "Total KM By Bike — Detail";
+			$base['columns'] = array("Date", "Vehicle", "Start KM", "End KM", "Total KM", "Rate", "KM Calc", "Approved Amt");
+			$base['rows'] = $rows;
+			$base['total_label'] = "Total KM: " . number_format($totalKm, 2) . " | Approved: " . number_format($totalAmt, 2);
+			return $base;
+		}
+
+		if ($kpiType === "total_sales") {
+			$sql = "SELECT id, order_no, order_date, company_name, customer_name, status, grand_total,
+					IFNULL(quotation_id,0) AS quotation_id
+				FROM orders
+				WHERE isDelete=0 AND status NOT IN (-1,-2,3) AND sales_id='" . $employeeId . "'
+					AND DATE(order_date) BETWEEN '" . $from . "' AND '" . $to . "'
+				ORDER BY order_date DESC, id DESC";
+			$rows = array();
+			$total = 0;
+			$res = $this->safeQuery($sql);
+			if ($res) {
+				while ($r = mysqli_fetch_assoc($res)) {
+					$total += (float) $r['grand_total'];
+					$src = ((int) $r['quotation_id'] > 0) ? "From Quotation" : "Direct Order";
+					$rows[] = array(
+						$r['order_no'],
+						date("d/m/Y", strtotime($r['order_date'])),
+						$r['company_name'],
+						$r['customer_name'],
+						$src,
+						$this->orderStatusLabel($r['status']),
+						number_format((float) $r['grand_total'], 2),
+					);
+				}
+			}
+			$base['title'] = "Total Sales — Order Detail";
+			$base['columns'] = array("Order No", "Date", "Company", "Customer", "Source", "Status", "Amount");
+			$base['rows'] = $rows;
+			$base['total_label'] = "Orders: " . count($rows) . " | Amount: " . number_format($total, 2);
+			return $base;
+		}
+
+		if ($kpiType === "pi_approved") {
+			$sql = "SELECT id, order_no, order_date, company_name, customer_name, grand_total,
+					IFNULL(quotation_id,0) AS quotation_id
+				FROM orders
+				WHERE isDelete=0 AND status=1 AND sales_id='" . $employeeId . "'
+					AND DATE(order_date) BETWEEN '" . $from . "' AND '" . $to . "'
+				ORDER BY order_date DESC, id DESC";
+			$rows = array();
+			$total = 0;
+			$res = $this->safeQuery($sql);
+			if ($res) {
+				while ($r = mysqli_fetch_assoc($res)) {
+					$total += (float) $r['grand_total'];
+					$src = ((int) $r['quotation_id'] > 0) ? "Quotation → Order" : "Direct Sales Order";
+					$rows[] = array(
+						$r['order_no'],
+						date("d/m/Y", strtotime($r['order_date'])),
+						$r['company_name'],
+						$r['customer_name'],
+						$src,
+						"Approved",
+						number_format((float) $r['grand_total'], 2),
+					);
+				}
+			}
+			$base['title'] = "Total PI Approved — Detail";
+			$base['columns'] = array("PI / Order No", "Date", "Company", "Customer", "Type", "Status", "Amount");
+			$base['rows'] = $rows;
+			$base['total_label'] = "Approved PI/Orders: " . count($rows) . " | Amount: " . number_format($total, 2);
+			$base['footer_note'] = "Includes Quotation transferred to Order and Direct Sales Order (status = Approved).";
+			return $base;
+		}
+
+		if ($kpiType === "total_quotation") {
+			$sql = "SELECT id, quotation_no, quotation_date, company_name, customer_name, status, grand_total
+				FROM quotation_detail
+				WHERE isDelete=0 AND sales_id='" . $employeeId . "'
+					AND DATE(quotation_date) BETWEEN '" . $from . "' AND '" . $to . "'
+				ORDER BY quotation_date DESC, id DESC";
+			$rows = array();
+			$total = 0;
+			$res = $this->safeQuery($sql);
+			if ($res) {
+				while ($r = mysqli_fetch_assoc($res)) {
+					$total += (float) $r['grand_total'];
+					$rows[] = array(
+						$r['quotation_no'],
+						date("d/m/Y", strtotime($r['quotation_date'])),
+						$r['company_name'],
+						$r['customer_name'],
+						$this->quotationStatusLabel($r['status']),
+						number_format((float) $r['grand_total'], 2),
+					);
+				}
+			}
+			$base['title'] = "Total Quotation — Detail";
+			$base['columns'] = array("Quotation No", "Date", "Company", "Customer", "Status", "Amount");
+			$base['rows'] = $rows;
+			$base['total_label'] = "Quotations: " . count($rows) . " | Amount: " . number_format($total, 2);
+			return $base;
+		}
+
+		if ($kpiType === "kra_assigned") {
+			$execCols = $this->db->rp_getTableColumnNames("executive");
+			$hasCustomerType = in_array("type_of_executive", $execCols);
+			$typeSelect = $hasCustomerType
+				? ", COALESCE(ct.name,'Customer') AS customer_type"
+				: ", 'Customer' AS customer_type";
+			$typeJoin = $hasCustomerType
+				? " LEFT JOIN customer_type ct ON ct.id=e.type_of_executive AND ct.isDelete=0 "
+				: "";
+			$sql = "SELECT e.client_code, e.company_name, e.cname, e.state, e.main_city, e.phone
+					" . $typeSelect . "
+				FROM executive e
+				" . $typeJoin . "
+				WHERE e.isDelete=0 AND e.seid='" . $employeeId . "'
+					AND e.seid!=0 AND e.seid IS NOT NULL AND e.seid!=''
+				ORDER BY e.company_name ASC, e.cname ASC
+				LIMIT 500";
+			$rows = array();
+			$res = $this->safeQuery($sql);
+			if ($res) {
+				while ($r = mysqli_fetch_assoc($res)) {
+					$rows[] = array(
+						$r['client_code'],
+						$r['company_name'],
+						$r['cname'],
+						$r['customer_type'],
+						$r['state'],
+						$r['main_city'],
+						$r['phone'],
+					);
+				}
+			}
+			$totalAssigned = (int) $this->db->rp_getTotalRecord(
+				"executive",
+				"isDelete=0 AND seid='" . $employeeId . "' AND seid!=0 AND seid IS NOT NULL AND seid!=''",
+				0
+			);
+			$base['title'] = "KRA Assigned Customers";
+			$base['columns'] = array("Code", "Firm Name", "Person", "Type", "State", "City", "Phone");
+			$base['rows'] = $rows;
+			$base['total_label'] = "Assigned: " . $totalAssigned . (count($rows) < $totalAssigned ? " (showing first " . count($rows) . ")" : "");
+			return $base;
+		}
+
+		if ($kpiType === "total_visit" || $kpiType === "total_duration" || $kpiType === "completed_open") {
+			$sql = "SELECT v.id, v.start_date_time, v.stop_date_time, v.firm_name, v.client_name, v.remark, v.stop_remark,
+					v.remark_code, v.reason_code, pm.name AS purpose_name,
+					e.company_name, e.client_code
+				FROM visit v
+				LEFT JOIN executive e ON e.id=v.customer_id
+				LEFT JOIN purpose_master pm ON pm.id=v.purpose_id
+				WHERE v.isDelete=0 AND v.user_id='" . $employeeId . "'
+					AND DATE(CASE
+						WHEN v.start_date_time IS NOT NULL AND v.start_date_time!='' AND v.start_date_time!='0000-00-00 00:00:00'
+						THEN v.start_date_time ELSE v.created_date END)
+					BETWEEN '" . $from . "' AND '" . $to . "'
+				ORDER BY v.start_date_time DESC, v.id DESC
+				LIMIT 500";
+			$rows = array();
+			$completed = 0;
+			$open = 0;
+			$totalMins = 0;
+			$res = $this->safeQuery($sql);
+			if ($res) {
+				while ($r = mysqli_fetch_assoc($res)) {
+					$isDone = $this->isValidDateTime($r['stop_date_time']);
+					if ($isDone) {
+						$completed++;
+					} else {
+						$open++;
+					}
+					$mins = $this->durationMinutes($r['start_date_time'], $r['stop_date_time']);
+					if ($mins !== null) {
+						$totalMins += (int) $mins;
+					}
+					$account = trim((string) $r['company_name']);
+					if ($account == "") {
+						$account = trim((string) $r['firm_name']);
+					}
+					if ($account == "") {
+						$account = trim((string) $r['client_name']);
+					}
+					$codes = $this->normalizeRemarkCodes($r);
+					$code = ($codes['reason_code'] != "") ? $codes['reason_code'] : $codes['remark_code'];
+					if ($code == "") {
+						$code = $isDone ? "Done" : "Open";
+					}
+					$rows[] = array(
+						(int) $r['id'],
+						$this->isValidDateTime($r['start_date_time']) ? date("d/m/Y H:i", strtotime($r['start_date_time'])) : "-",
+						$r['client_code'],
+						$account,
+						isset($r['purpose_name']) ? $r['purpose_name'] : "",
+						$code,
+						$isDone ? "Completed" : "Open",
+						($mins === null) ? "-" : $this->formatDurationLabel($mins),
+					);
+				}
+			}
+			$titleMap = array(
+				"total_visit" => "Total Visit — Detail",
+				"total_duration" => "Total Duration — Visit Detail",
+				"completed_open" => "Completed / Open Visits — Detail",
+			);
+			$base['title'] = isset($titleMap[$kpiType]) ? $titleMap[$kpiType] : "Visit Detail";
+			$base['columns'] = array("Visit #", "Start", "Code", "Account", "Purpose", "Outcome", "Status", "Duration");
+			$base['rows'] = $rows;
+			$base['total_label'] = "Visits: " . count($rows) . " | Completed: " . $completed . " | Open: " . $open . " | Duration: " . $this->formatDurationLabel($totalMins);
+			return $base;
+		}
+
+		$empty['ack'] = 0;
+		$empty['ack_msg'] = "Unknown KPI type.";
+		$empty['employee'] = $employee;
+		return $empty;
+	}
+
+	private function orderStatusLabel($status)
+	{
+		$status = (int) $status;
+		$map = array(
+			-2 => "Disapproved",
+			-1 => "Draft/Cart",
+			0 => "Pending",
+			1 => "Approved",
+			3 => "Cancelled",
+			4 => "Account Approved",
+		);
+		return isset($map[$status]) ? $map[$status] : ("Status " . $status);
+	}
+
+	private function quotationStatusLabel($status)
+	{
+		$status = (int) $status;
+		$map = array(
+			-2 => "Disapproved",
+			-1 => "Draft",
+			0 => "Pending",
+			1 => "Approved",
+			3 => "Cancelled",
+			4 => "Converted to Order",
+			5 => "Lost",
+		);
+		return isset($map[$status]) ? $map[$status] : ("Status " . $status);
+	}
+
+	private function formatDurationLabel($minutes)
+	{
+		$minutes = (int) $minutes;
+		if ($minutes < 0) {
+			return "-";
+		}
+		$hours = (int) floor($minutes / 60);
+		$mins = $minutes % 60;
+		if ($hours > 0) {
+			return $hours . "h " . $mins . "m";
+		}
+		return $mins . " min";
 	}
 
 	private function applyGroupedKpi(&$data, $sql, $key)
