@@ -1615,6 +1615,10 @@ class SalesExecutive extends Functions
 				$d = html_entity_decode($d);
 				$relCertFileNames = array();
 				$merge_file = array();
+				$polyfill = dirname(__FILE__) . '/../bbsales_tracking/include/mbstring_polyfill.php';
+				if (file_exists($polyfill)) {
+					include_once $polyfill;
+				}
 				require('../bbsales_tracking/mpdf60/mpdf.php');
 				$mpdf = new mPDF(
 					'', // mode - default ''
