@@ -189,7 +189,7 @@ define("VISITING_DOWNLOAD_PATH",SITEURL."download/".VISITING_TITLE);
 // online or offline time (active minit)
 define("ACTIVE_TIME","10"); // here 10 is minit
 
-define("DEFAULTIMG","http://via.placeholder.com/200x200?text=:(");
+define("DEFAULTIMG", SITEURL . "images/no-image.svg");
 define("TRACKING_TIME_LIVE_API","180000"); // 10 min
 define("TRACKING_TIME_LOCAL_API","180000"); // milisecond to second then link 60 second  60/2=30 second a entry pdse
 define("DISTANCE_API","3"); // 5 meter 
