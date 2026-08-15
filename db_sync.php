@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 define('DB_SYNC_KEY', 'armor_cp_sync_2026');
-define('DB_SYNC_VERSION', '2026.08.13.1');
+define('DB_SYNC_VERSION', '2026.08.15.1');
 
 if (!isset($_GET['key']) || $_GET['key'] !== DB_SYNC_KEY) {
 	header('HTTP/1.1 403 Forbidden');
@@ -175,7 +175,7 @@ function db_sync_append_page_urls($conn, $pageId, $newUrls)
 }
 
 db_sync_log('INFO', '--- Armor CRM DB Sync v' . DB_SYNC_VERSION . ' ---');
-db_sync_log('INFO', 'Changes: Channel Partner, Expense, Visit APIs, Employee Chat, CP Order Status #267, Quotation approve_by_id');
+db_sync_log('INFO', 'Changes: Channel Partner flag restore, Expense, Visit APIs, Employee Chat, CP Order Status #267, Quotation approve_by_id');
 
 /* Quotation Approved By (KRA / quotation viewer) */
 if (db_sync_table_exists($conn, 'quotation_detail')) {
@@ -256,6 +256,19 @@ if (!db_sync_column_exists($conn, 'executive', 'channel_partner_flag')) {
 	db_sync_run_query($conn, $sql, 'Add executive.channel_partner_flag');
 } else {
 	db_sync_log('SKIP', 'executive.channel_partner_flag already exists');
+}
+
+/* Restore flag if dump/import overwrote CP executives (keeps type=3 portal menus) */
+if (db_sync_table_exists($conn, 'channel_partner_customer') && db_sync_column_exists($conn, 'executive', 'channel_partner_flag')) {
+	$sql = "UPDATE `executive` e
+		INNER JOIN (
+			SELECT DISTINCT channel_partner_id
+			FROM `channel_partner_customer`
+			WHERE isDelete=0 AND channel_partner_id>0
+		) c ON c.channel_partner_id = e.id
+		SET e.channel_partner_flag=1
+		WHERE e.isDelete=0 AND (e.channel_partner_flag=0 OR e.channel_partner_flag IS NULL)";
+	db_sync_run_query($conn, $sql, 'Restore channel_partner_flag=1 for executives that have CP customers');
 }
 
 /* ------------------------------------------------------------------

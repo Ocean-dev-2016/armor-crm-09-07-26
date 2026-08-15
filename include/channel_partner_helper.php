@@ -30,7 +30,16 @@ if (!function_exists('cp_is_channel_partner_login')) {
 			"id='" . $cpId . "' AND isDelete=0",
 			0
 		);
-		return ((int) $flag === 1);
+		if ((int) $flag === 1) {
+			return true;
+		}
+		/* Fallback: CP customers exist even if dump reset the flag to 0 */
+		$cpCust = $db->rp_getTotalRecord(
+			"channel_partner_customer",
+			"channel_partner_id='" . $cpId . "' AND isDelete=0",
+			0
+		);
+		return ((int) $cpCust > 0);
 	}
 }
 
