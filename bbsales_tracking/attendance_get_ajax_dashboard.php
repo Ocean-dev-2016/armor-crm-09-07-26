@@ -191,7 +191,7 @@ table
            // {
            //   $img = $ctable_d['image_path'] = DEFAULTIMG;
            // }
-            $img = ATTENDANCE.$ctable_d['image_path'];
+            $img = armor_attendance_image(isset($ctable_d['image_path']) ? $ctable_d['image_path'] : '');
            ?>
         <tr>
            <td><?php echo date('h:i A',strtotime($ctable_d['date_time']));?></td>

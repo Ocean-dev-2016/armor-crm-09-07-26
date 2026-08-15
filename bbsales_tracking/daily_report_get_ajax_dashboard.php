@@ -280,13 +280,7 @@
         {
         ?>
         <?php 
-           if ($ctable_d['image_path']!="" && file_exists(ATTENDANCE.$ctable_d['image_path'])) {
-             $img = ATTENDANCE.$ctable_d['image_path'];
-           }
-           else
-           {
-             $img = $ctable_d['image_path'] = DEFAULTIMG;
-           }
+           $img = armor_attendance_image(isset($ctable_d['image_path']) ? $ctable_d['image_path'] : '');
            ?>
           <tr>
             <td><?php echo ++$count; ?></td>

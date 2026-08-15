@@ -374,13 +374,7 @@ $ctable_r = $db->rp_getData($ctable,"*",$ctable_where,"date_time DESC limit $pag
 											  <?php 
 												while($attendance_d=mysqli_fetch_assoc($attendance))
 												{ 
-													if ($attendance_d['image_path']!="" && file_exists(ATTENDANCE.$attendance_d['image_path'])) {
-														$img = ATTENDANCE.$attendance_d['image_path'];
-													}
-													else
-													{
-														$img = $attendance_d['image_path'] = DEFAULTIMG;
-													}
+													$img = armor_attendance_image(isset($attendance_d['image_path']) ? $attendance_d['image_path'] : '');
 												?>
 													<tr>
 														<td><?php echo date('h:i A',strtotime($attendance_d['date_time']));?></td>

@@ -5,14 +5,7 @@ $ctable = "attendance";
 $id=$_REQUEST['id'];
 $ctable_r = $db->rp_getData($ctable,"*","id='".$_REQUEST['id']."'","",0);
 $ctable_d = mysqli_fetch_array($ctable_r);
-if($ctable_d['image_path']!="" && file_exists(ATTENDANCE.$ctable_d['image_path'])) 
-{
-	$img = ATTENDANCE.$ctable_d['image_path'];
-}
-else
-{
-	$img = $ctable_d['image_path'] = DEFAULTIMG;
-}
+$img = armor_attendance_image(isset($ctable_d['image_path']) ? $ctable_d['image_path'] : '');
 
 $salesexename = $db->rp_getValue("sales_executive","name","id='".$ctable_d['sales_id']."'");
 $response = array("ack"=>1,"ack_msg"=>"Sales Tracking Fetched!!");

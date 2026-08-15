@@ -196,6 +196,32 @@ define("DISTANCE_API","3"); // 5 meter
 define("TRACKING_LIVE_URL","http://localhost:8080/armor_crm_08_07/202526/");  
 
 define("ATTENDANCE","../images/attendance/");
+define("ATTENDANCE_DIR", str_replace('\\', '/', dirname(__DIR__)) . "/images/attendance/");
+define("ATTENDANCE_URL", rtrim(SITEURL, '/') . "/images/attendance/");
+
+if (!function_exists('armor_attendance_image')) {
+	function armor_attendance_image($image_path)
+	{
+		$image_path = str_replace('\\', '/', trim((string) $image_path));
+		$image_path = ltrim($image_path, '/');
+		if ($image_path === '' || $image_path === '0') {
+			return DEFAULTIMG;
+		}
+		$dir = rtrim(ATTENDANCE_DIR, '/') . '/';
+		$url = rtrim(ATTENDANCE_URL, '/') . '/';
+		$try = array($image_path);
+		$base = basename($image_path);
+		if ($base !== '' && $base !== $image_path) {
+			$try[] = $base;
+		}
+		foreach ($try as $rel) {
+			if (is_file($dir . $rel)) {
+				return $url . str_replace(' ', '%20', $rel);
+			}
+		}
+		return DEFAULTIMG;
+	}
+}
 
 define("CUSTOMER_COMPLAIN_NO","COMP/");
 define("NEWS","images/news/");

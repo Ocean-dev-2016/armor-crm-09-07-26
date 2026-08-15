@@ -59,13 +59,7 @@ th { border: 1px solid #595959;background: #f0e6cc;}
         while($ctable_d = mysqli_fetch_array($ctable_r)){
         ?>
         <?php 
-           if ($ctable_d['image_path']!="" && file_exists(ATTENDANCE.$ctable_d['image_path'])) {
-             $img = ATTENDANCE.$ctable_d['image_path'];
-           }
-           else
-           {
-             $img = $ctable_d['image_path'] = DEFAULTIMG;
-           }
+           $img = armor_attendance_image(isset($ctable_d['image_path']) ? $ctable_d['image_path'] : '');
            ?>
         <tr>
            <td><?php echo date('h:i A',strtotime($ctable_d['date_time']));?></td>

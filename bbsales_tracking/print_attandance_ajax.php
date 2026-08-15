@@ -189,14 +189,7 @@ $ctable_r = $db->rp_getData("attendance","*",$ctable_where,"id DESC",0);
             $AttandanceType= array('1' =>"In" ,'2' =>"Out" ,'3' =>"Auto Out" ,'4' =>"Logout With Out" ,'5' =>"Out On Nextday"  ,"6"=>"Out from server");
             while($ctable_d = mysqli_fetch_array($ctable_r)){
 
-            if ($ctable_d['image_path']!="" && file_exists(ATTENDANCE.$ctable_d['image_path'])) 
-            {
-              $img = ATTENDANCE.$ctable_d['image_path'];
-          }
-          else
-          {
-              $img = $ctable_d['image_path'] = DEFAULTIMG;
-          }
+            $img = armor_attendance_image(isset($ctable_d['image_path']) ? $ctable_d['image_path'] : '');
 
             $sales_person_table_r = $db->rp_getData("sales_executive","*","id='".$ctable_d['sales_id']."' AND isDelete=0 ","",0);
 

@@ -1212,7 +1212,7 @@ if ($is_valid_api_key) {
 					$current_year = date("Y");
 					$current_month = date("M");
 
-					$yearlyFolderPath = "../images/attendance/{$current_year}/{$current_month}/";
+					$yearlyFolderPath = ATTENDANCE_DIR . $current_year . "/" . $current_month . "/";
 					if (!is_dir($yearlyFolderPath)) {
 						mkdir($yearlyFolderPath, 0777, true);
 					}
