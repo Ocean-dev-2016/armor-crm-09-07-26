@@ -687,12 +687,14 @@
                                 {
                                     "key": "rate",
                                     "value": "",
-                                    "type": "text"
+                                    "type": "text",
+                                    "description": "Optional GROSS rate (before discount). Leave empty to keep original product rate"
                                 },
                                 {
                                     "key": "discount",
                                     "value": "",
-                                    "type": "text"
+                                    "type": "text",
+                                    "description": "Disc %. Rate stays original — disc is not applied on discounted net"
                                 }
                             ]
                         },
@@ -706,7 +708,7 @@
                                 "service_channel_partner.php"
                             ]
                         },
-                        "description": "Update cart line qty / rate / discount."
+                        "description": "Update cart line qty / rate / discount.\nrate = GROSS (original product rate, before discount). Optional — omit to keep existing original rate and only change discount.\nDo NOT send unitprice / discounted net as rate.\n#251/#249 items[].rate and items[].original_price are always before discount."
                     },
                     "response": []
                 },

@@ -748,6 +748,7 @@ class ChannelPartnerOrder
 					'cat_no' => $catno ? $catno : '',
 					'qty' => round($qty, 2),
 					'rate' => round($rate, 2),
+					'original_price' => round($rate, 2),
 					'discount' => round($disc, 2),
 					'gst_percent' => $gstPct,
 					'amount' => round($lineBase + $gstAmt, 2),
@@ -1040,16 +1041,26 @@ class ChannelPartnerOrder
 			"product_id='" . (int) $row['pro_id'] . "' AND weight_id='" . $this->db->clean($row['weight_id']) . "' AND isDelete=0",
 			0
 		);
-		$rate = isset($detail['rate']) && $detail['rate'] !== '' ? $detail['rate'] : null;
+		/* Rate is always GROSS (before discount). unitprice in DB is NET after discount.
+		 * Discount-only update must keep original_price — never treat unitprice as Rate. */
+		$storedGross = $this->lineGrossRate($row);
+		$storedNet = isset($row['unitprice']) ? (float) $row['unitprice'] : 0;
+		$incomingRate = (isset($detail['rate']) && $detail['rate'] !== '' && is_numeric($detail['rate']))
+			? (float) $detail['rate']
+			: null;
 		$disc = isset($detail['discount']) && $detail['discount'] !== '' ? $detail['discount'] : null;
-		if ($rate === null) {
-			/* reverse: current unitprice is net; keep as rate if no discount change without rate */
-			$rate = (float) $row['unitprice'];
-			if ($disc === null && isset($row['discount']) && (float) $row['discount'] > 0) {
-				/* approximate rate before discount */
-				$d = (float) $row['discount'];
-				$rate = $rate / (1 - ($d / 100));
-			}
+		if ($incomingRate === null) {
+			$rate = $storedGross;
+		} else if (
+			$storedGross > 0.009
+			&& $storedNet > 0.009
+			&& abs($incomingRate - $storedNet) < 0.05
+			&& abs($storedGross - $storedNet) > 0.05
+		) {
+			/* App sent discounted net as rate — keep original list rate */
+			$rate = $storedGross;
+		} else {
+			$rate = $incomingRate;
 		}
 		if ($disc === null) {
 			$disc = isset($row['discount']) ? $row['discount'] : 0;

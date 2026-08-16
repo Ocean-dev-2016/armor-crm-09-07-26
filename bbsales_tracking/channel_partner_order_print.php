@@ -101,7 +101,6 @@ $buyer_addr = !empty($ord['billing_address']) ? $ord['billing_address'] : (isset
 $buyer_mobile = '';
 $buyer_email = '';
 $buyer_state = '';
-$seller_state = isset($cp['state']) ? trim($cp['state']) : '';
 
 $cp_end_id = isset($ord['channel_partner_customer_id']) ? (int) $ord['channel_partner_customer_id'] : 0;
 if ($cp_end_id > 0) {
@@ -253,15 +252,27 @@ if (!$gst_on) {
 	$grand = round($taxable + $igst_amount, 2);
 }
 
-$gst_same_state = false;
+/* Place of supply = CP Customer. Gujarat (GSTIN 24) = CGST+SGST; any other state = IGST.
+ * Do not match against seller GSTIN — a wrong/other CP print GST was splitting CGST/SGST for Maharashtra. */
+if (!function_exists('cp_pi_is_gujarat_state')) {
+	function cp_pi_is_gujarat_state($state)
+	{
+		$s = strtolower(trim((string) $state));
+		if ($s === '') {
+			return false;
+		}
+		$s = preg_replace('/[^a-z]/', '', $s);
+		return ($s === 'gujarat' || $s === 'gj' || strpos($s, 'gujarat') === 0);
+	}
+}
+$GUJARAT_GST_CODE = '24';
 $buyer_gst_clean = strtoupper(preg_replace('/\s+/', '', (string) $buyer_gst));
-$seller_gst_clean = strtoupper(preg_replace('/\s+/', '', (string) $pi_gst));
 $buyer_gst_code = (strlen($buyer_gst_clean) >= 2 && ctype_digit(substr($buyer_gst_clean, 0, 2))) ? substr($buyer_gst_clean, 0, 2) : '';
-$seller_gst_code = (strlen($seller_gst_clean) >= 2 && ctype_digit(substr($seller_gst_clean, 0, 2))) ? substr($seller_gst_clean, 0, 2) : '';
-if ($buyer_gst_code !== '' && $seller_gst_code !== '') {
-	$gst_same_state = ($buyer_gst_code === $seller_gst_code);
-} else if ($buyer_state !== '' && $seller_state !== '') {
-	$gst_same_state = (strtolower($buyer_state) === strtolower($seller_state));
+$gst_same_state = true;
+if ($buyer_gst_code !== '') {
+	$gst_same_state = ($buyer_gst_code === $GUJARAT_GST_CODE);
+} else if ($buyer_state !== '') {
+	$gst_same_state = cp_pi_is_gujarat_state($buyer_state);
 }
 
 $saved_msg = isset($_REQUEST['saved']) && $_REQUEST['saved'] == '1';
@@ -398,7 +409,7 @@ $auto_print = isset($_REQUEST['p']) && $_REQUEST['p'] == '1';
 						<td>
 							<?php echo htmlspecialchars($label); ?>
 							<?php if ($gst_on && $gst_pct !== '' && $gst_pct !== null) { ?>
-								<div class="muted">GST <?php echo htmlspecialchars($gst_pct); ?>%</div>
+								<div class="muted"><?php echo $gst_same_state ? 'GST' : 'IGST'; ?> <?php echo htmlspecialchars($gst_pct); ?>%</div>
 							<?php } ?>
 						</td>
 						<td class="text-center"><?php echo htmlspecialchars($hsn); ?></td>
@@ -425,18 +436,20 @@ $auto_print = isset($_REQUEST['p']) && $_REQUEST['p'] == '1';
 			</tr>
 		</table>
 		<?php
-		$terms_rowspan = 1; /* Taxable */
+		/* Rowspan covers: Sub Total + optional CD/AD + Taxable + GST row(s) + Grand Total */
+		$gst_footer_rows = 1;
+		if ($gst_on && $gst_same_state && $igst_amount > 0) {
+			$gst_footer_rows = 2;
+		}
+		$terms_rowspan = 1;
 		if ($cd > 0) {
 			$terms_rowspan++;
 		}
 		if ($ad > 0) {
 			$terms_rowspan++;
 		}
-		if ($gst_on) {
-			$terms_rowspan += ($gst_same_state && $igst_amount > 0) ? 2 : 1;
-		} else {
-			$terms_rowspan++;
-		}
+		$terms_rowspan++; /* Taxable Amount */
+		$terms_rowspan += $gst_footer_rows;
 		$terms_rowspan++; /* Grand Total */
 		$discPctLabel = rtrim(rtrim(number_format($overall_discount_per, 2, '.', ''), '0'), '.');
 		if ($discPctLabel === '') {
@@ -503,7 +516,7 @@ $auto_print = isset($_REQUEST['p']) && $_REQUEST['p'] == '1';
 			</tr>
 				<?php } else { ?>
 			<tr>
-				<td><strong><?php echo $gst_same_state ? 'GST' : 'IGST'; ?></strong></td>
+				<td><strong>IGST</strong></td>
 				<td class="text-right"><?php echo $currency . ' ' . number_format($igst_amount, 2); ?></td>
 			</tr>
 				<?php } ?>
