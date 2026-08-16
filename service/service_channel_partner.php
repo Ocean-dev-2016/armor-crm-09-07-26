@@ -26,12 +26,12 @@
  * #257 get_cp_my_stock                     — My Stock Main (Product & Code)
  * #258 get_cp_my_stock_movements           — My Stock Inward / Outward ledger
  * #259 get_cp_payment_parties              — Receive Payment: party list + payment types
- * #260 get_cp_payment_orders               — Receive Payment: orders for party (popup fields)
- * #261 save_cp_receive_payment             — Save payment (popup Save Payment button)
- * #262 get_cp_party_ledger                 — Party Ledger / CP Customer Ledger (Tally style)
+ * #260 get_cp_payment_orders               — Orders for party (partial: remaining_amount, can_receive=1 until remaining 0)
+ * #261 save_cp_receive_payment             — Save payment (partial accumulate; flag=1 only when remaining 0)
+ * #262 get_cp_party_ledger                 — Party Ledger (each receipt is a credit; pending stays Dr)
  * #263 delete_cp_customer_order            — Delete Pending customer order (+ stock credit)
  * #264 update_cp_customer_order            — Edit Pending customer order
- * #265 get_cp_payment_pdf                  — Receive Payment Print PDF (party statement)
+ * #265 get_cp_payment_pdf                  — Receive Payment Print PDF (Received / Pending per order)
  * #266 add_cp_customer_order_item          — Edit Order: add item (+ Add Item)
  * #267 update_cp_customer_order_status     — Status: Pending → Dispatched (same as web dropdown)
  * #268 delete_cp_customer_order_item       — Edit Order: delete one item

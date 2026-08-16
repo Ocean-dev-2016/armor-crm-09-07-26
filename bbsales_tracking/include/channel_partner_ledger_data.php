@@ -3,6 +3,10 @@
  * Shared ledger rows builder for CP Customer Ledger (screen / print / excel).
  * Expects $db. Returns array($ledger, $opening).
  */
+$cpHelperFile = dirname(__FILE__) . '/../../include/channel_partner_helper.php';
+if (file_exists($cpHelperFile)) {
+	require_once $cpHelperFile;
+}
 function cp_build_customer_ledger($db, $cpFilter, $partyFilter)
 {
 	$ledger = array();

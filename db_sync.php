@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 define('DB_SYNC_KEY', 'armor_cp_sync_2026');
-define('DB_SYNC_VERSION', '2026.08.15.1');
+define('DB_SYNC_VERSION', '2026.08.16.1');
 
 if (!isset($_GET['key']) || $_GET['key'] !== DB_SYNC_KEY) {
 	header('HTTP/1.1 403 Forbidden');
@@ -175,7 +175,7 @@ function db_sync_append_page_urls($conn, $pageId, $newUrls)
 }
 
 db_sync_log('INFO', '--- Armor CRM DB Sync v' . DB_SYNC_VERSION . ' ---');
-db_sync_log('INFO', 'Changes: Channel Partner flag restore, Expense, Visit APIs, Employee Chat, CP Order Status #267, Quotation approve_by_id');
+db_sync_log('INFO', 'Changes: Channel Partner flag restore, Expense, Visit APIs, Employee Chat, CP Order Status #267, CP Partial Payment #260/#261, Quotation approve_by_id');
 
 /* Quotation Approved By (KRA / quotation viewer) */
 if (db_sync_table_exists($conn, 'quotation_detail')) {
@@ -828,6 +828,27 @@ db_sync_add_column_if_missing(
 	"tinyint(1) NOT NULL DEFAULT 0 COMMENT '1=Cash 2=Cheque 3=Online 4=Other'",
 	array('payment_received_amount', 'payment_received_flag')
 );
+
+/* CP Partial Payment: flag=1 only when fully paid. Heal wrongly closed partial orders. APIs #260 #261 #262 #265 */
+if (db_sync_table_exists($conn, 'orders') && db_sync_column_exists($conn, 'orders', 'payment_received_amount')) {
+	db_sync_run_query(
+		$conn,
+		"UPDATE `orders` SET `payment_received_flag`=0
+		WHERE `isDelete`=0 AND `channel_partner_order_flag`=1 AND `payment_received_flag`=1
+		AND IFNULL(`payment_received_amount`,0) + 0.009 < IFNULL(`grand_total`,0)",
+		'Heal CP partial payments marked complete (flag=0 when remaining > 0) — APIs #260/#261'
+	);
+	db_sync_run_query(
+		$conn,
+		"UPDATE `orders` SET `payment_received_flag`=1
+		WHERE `isDelete`=0 AND `channel_partner_order_flag`=1
+		AND IFNULL(`payment_received_amount`,0) > 0
+		AND IFNULL(`grand_total`,0) > 0
+		AND IFNULL(`payment_received_amount`,0) + 0.009 >= IFNULL(`grand_total`,0)
+		AND (`payment_received_flag`=0 OR `payment_received_flag` IS NULL)",
+		'Heal CP fully-paid orders (flag=1 when amount >= grand_total) — APIs #260/#261'
+	);
+}
 db_sync_append_page_urls($conn, 565, array(
 	'order_payment_received_ajax.php',
 	'dealer_orders_manage.php',
@@ -1587,7 +1608,8 @@ $environment = isset($config['environment']) ? $config['environment'] : 'unknown
 			<li>Visit forms: <code>visit_consultant_form</code> (C1/C2), <code>visit_high_rate_form</code> + <code>visit_high_rate_form_item</code> (E1)</li>
 			<li>Column <code>orders.channel_partner_order_flag</code> (1=Channel Partner Order)</li>
 			<li>Columns <code>orders.cp_portal_order_flag</code>, <code>cp_order_mode</code> (CP portal order → Convert to Order)</li>
-			<li>Columns <code>orders.payment_received_flag</code>, <code>payment_received_date</code>, <code>payment_received_by</code>, <code>payment_received_amount</code>, <code>payment_received_type</code> (Pending Payment 45 days)</li>
+			<li>Columns <code>orders.payment_received_flag</code>, <code>payment_received_date</code>, <code>payment_received_by</code>, <code>payment_received_amount</code>, <code>payment_received_type</code> (CP Receive Payment. <code>flag=1</code> only when fully paid; <code>payment_received_amount</code> is cumulative. Each receipt is a row in <code>payment</code> table. APIs <code>#259-#261</code>, PDF <code>#265</code>, Ledger <code>#262</code>)</li>
+			<li>Heal: CP orders with partial amount no longer stay <code>payment_received_flag=1</code></li>
 			<li>Column <code>sales_executive.device_id</code> + <code>sales_executive_login.device_id</code> (App login <code>token</code> → device_id for notifications)</li>
 			<li>Column <code>visit.note</code> + <code>visit.followup_date</code> (App stopVisit <code>note</code> / <code>date</code> → <code>followup_date</code>, format <code>Y-m-d H:i</code>)</li>
 			<li>Column <code>quotation_detail.approve_by_id</code> (Quotation Approve → Approved By in KRA)</li>

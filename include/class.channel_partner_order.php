@@ -1476,8 +1476,11 @@ class ChannelPartnerOrder
 				if ($party == '') {
 					$party = trim($row['person_name']);
 				}
-				$paidFlag = (int) $row['payment_received_flag'];
 				$paidAmt = (float) $row['payment_received_amount'];
+				$grandAmt = (float) $row['grand_total'];
+				$remaining = max(0, round($grandAmt - $paidAmt, 2));
+				$isPaid = ($paidAmt > 0.009 && $remaining <= 0.009);
+				$isPartial = (!$isPaid && $paidAmt > 0.009);
 				$printMeta = $this->orderPrintMeta((int) $row['id'], $wf['status']);
 				$result[] = array_merge(array(
 					'order_id' => (int) $row['id'],
@@ -1489,11 +1492,18 @@ class ChannelPartnerOrder
 					'mobile_no' => isset($row['mobile_no']) ? $row['mobile_no'] : '',
 					'address' => !empty($row['shipping_address']) ? $row['shipping_address'] : (isset($row['customer_address']) ? $row['customer_address'] : ''),
 					'total_qty' => round((float) $qty, 2),
-					'amount' => round((float) $row['grand_total'], 2),
-					'amount_display' => number_format((float) $row['grand_total'], 2),
-					'payment_label' => ($paidFlag === 1 && $paidAmt > 0) ? ('Received ' . number_format($paidAmt, 2)) : 'Pending',
-					'payment_received_flag' => $paidFlag,
+					'amount' => round($grandAmt, 2),
+					'amount_display' => number_format($grandAmt, 2),
+					'payment_label' => $isPaid
+						? ('Received ' . number_format($paidAmt, 2))
+						: ($isPartial
+							? ('Partial ' . number_format($paidAmt, 2) . ' / Pending ' . number_format($remaining, 2))
+							: 'Pending'),
+					'payment_received_flag' => $isPaid ? 1 : 0,
 					'payment_received_amount' => round($paidAmt, 2),
+					'remaining_amount' => $remaining,
+					'is_partial' => $isPartial ? 1 : 0,
+					'can_receive' => $isPaid ? 0 : 1,
 					'status' => $wf['status'],
 					'status_label' => $wf['status_label'],
 					'baki_amount' => $wf['baki_amount'],
@@ -2410,8 +2420,11 @@ class ChannelPartnerOrder
 				'sub_total' => $subTotal,
 				'gst_amount' => $gstAmount,
 				'grand_total' => $grandTotal,
-				'payment_received_flag' => (int) $row['payment_received_flag'],
+				'payment_received_flag' => ($wf['baki_amount'] <= 0.009 && (float) $row['payment_received_amount'] > 0.009) ? 1 : 0,
 				'payment_received_amount' => round((float) $row['payment_received_amount'], 2),
+				'remaining_amount' => round((float) $wf['baki_amount'], 2),
+				'is_partial' => ($wf['baki_amount'] > 0.009 && (float) $row['payment_received_amount'] > 0.009) ? 1 : 0,
+				'can_receive' => ($wf['baki_amount'] > 0.009) ? 1 : 0,
 				'status' => $wf['status'],
 				'status_label' => $wf['status_label'],
 				'baki_amount' => $wf['baki_amount'],

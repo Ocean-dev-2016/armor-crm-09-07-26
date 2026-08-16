@@ -1,7 +1,7 @@
 {
     "info": {
         "name": "Armor Fire CRM - Full API Collection (Backend Verified)",
-        "description": "Complete API collection generated from live PHP service source code.\n\nGenerated: 2026-07-10 13:59:58\nUpdated: 2026-08-07 — CP Delete Order Item #268 + Order Status #267 + Cart #248-#256\nUpdated: 2026-08-12 — CP Customer Order PDF Download #269 (Pending print file_url)\nAll requests: POST multipart/form-data\nAuth: `key` (API key) + `s` (service id or slug)\n\nEnvironments:\n- Live: https://armor-crm.oceanhub.co.in\n- Local: http://localhost:8080/armor_crm_08_07/202526\n\nSet collection variable `base_url` before testing.\nAPI key: 1226\n\n**Common Login (#2):** `service_sales_executive.php` — result.user_type = sales_executive | channel_partner\n**CP Dashboard (#247):** Login #2 → result.cp_apis.dashboard = 247\nEmployee Chat folder: service_employee_chat.php (#236-#240)\nService #39 (sync_offline_customers) includes all CRM columns + channel_partner_flag.\n**CP My Stock:** #257-#258 in service_channel_partner.php\n**CP Receive Payment:** #259-#261 + Print PDF #265 in service_channel_partner.php\n**CP Party Ledger:** #262 in service_channel_partner.php\n**CP Cart:** ONE Add Cart API #250 (service_channel_partner.php). Folder: Channel Partner App — Customer Order + Cart. Demo values: CP 12229 / party 8 / pwp_id 2095.\n**CP Order Edit/Delete:** #263 delete, #264 update (Pending only) in service_channel_partner.php",
+        "description": "Complete API collection generated from live PHP service source code.\n\nGenerated: 2026-07-10 13:59:58\nUpdated: 2026-08-07 — CP Delete Order Item #268 + Order Status #267 + Cart #248-#256\nUpdated: 2026-08-16 — CP Partial Payment (#260 remaining / #261 accumulate, #262 ledger credits, #255/#256 remaining)\nAll requests: POST multipart/form-data\nAuth: `key` (API key) + `s` (service id or slug)\n\nEnvironments:\n- Live: https://armor-crm.oceanhub.co.in\n- Local: http://localhost:8080/armor_crm_08_07/202526\n\nSet collection variable `base_url` before testing.\nAPI key: 1226\n\n**Common Login (#2):** `service_sales_executive.php` — result.user_type = sales_executive | channel_partner\n**CP Dashboard (#247):** Login #2 → result.cp_apis.dashboard = 247\nEmployee Chat folder: service_employee_chat.php (#236-#240)\nService #39 (sync_offline_customers) includes all CRM columns + channel_partner_flag.\n**CP My Stock:** #257-#258 in service_channel_partner.php\n**CP Receive Payment:** #259-#261 + Print PDF #265 in service_channel_partner.php\n**CP Party Ledger:** #262 in service_channel_partner.php\n**CP Cart:** ONE Add Cart API #250 (service_channel_partner.php). Folder: Channel Partner App — Customer Order + Cart. Demo values: CP 12229 / party 8 / pwp_id 2095.\n**CP Order Edit/Delete:** #263 delete, #264 update (Pending only) in service_channel_partner.php",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "item": [
@@ -915,7 +915,7 @@
                                 "service_channel_partner.php"
                             ]
                         },
-                        "description": "Same as web Manage Customer Order list. Status: pending | pending_payment | completed.\nPending rows include can_dispatch=1 + status_options. Use #267 to mark Dispatched.\n\n**PDF (Pending / not dispatched):**\n- can_download_pdf=1, can_print=1\n- print_url = absolute web print page\n- download_pdf_api=269 → call #269 with order_id → use response.file_url to download"
+                        "description": "Same as web Manage Customer Order list. Status: pending | pending_payment | completed.\nPayment: remaining_amount, is_partial, can_receive=1 while remaining>0, payment_label e.g. Partial 10,000 / Pending 6,000.\nPending rows include can_dispatch=1 + status_options. Use #267 to mark Dispatched.\n\n**PDF (Pending / not dispatched):**\n- can_download_pdf=1, can_print=1\n- print_url = absolute web print page\n- download_pdf_api=269 → call #269 with order_id → use response.file_url to download"
                     },
                     "response": []
                 },
@@ -960,7 +960,7 @@
                                 "service_channel_partner.php"
                             ]
                         },
-                        "description": "Order header + items[] + print/PDF fields.\nPending (not dispatched): can_download_pdf=1, print_url (absolute), download_pdf_api=269.\nApp: call #269 download_cp_customer_order_pdf → open/save result.file_url"
+                        "description": "Order header + items[] + print/PDF fields.\nPayment: remaining_amount, is_partial, can_receive, baki_amount.\nPending (not dispatched): can_download_pdf=1, print_url (absolute), download_pdf_api=269.\nApp: call #269 download_cp_customer_order_pdf → open/save result.file_url"
                     },
                     "response": []
                 },
@@ -1404,7 +1404,7 @@
         },
         {
             "name": "Channel Partner App — Receive Payment (#259-#261, #265)",
-            "description": "Same as web Receive Payment (channel_partner_payment.php).\n\n**App flow:**\n1) #259 Parties dropdown + payment_types\n2) Select party → #260 Orders (Pending / Received)\n3) Receive Payment click → open popup from #260 row (party_name, order_no, order_amount, suggested_amount, payment_types)\n4) #261 Save payment (order_id, paid_amount, payment_type, remark)\n5) #265 Print PDF (party_id) → file_url\n\nPayment types: 1=Cash, 2=Cheque, 3=Online/NEFT/UPI, 4=Other\n\nEndpoint: service/service_channel_partner.php\nkey=1226",
+            "description": "Same as web Receive Payment — **partial payment allowed**.\nExample: order 16000, first #261 paid_amount=10000 → remaining_amount=6000, can_receive=1, is_partial=1. Second #261 paid_amount=6000 → remaining=0, payment_received_flag=1.\n\n**App list / set:**\n1) #259 party dropdown (no change)\n2) #260 list: show order_amount, payment_received_amount, remaining_amount, payment_status_label\n3) Receive button **if can_receive=1** (remaining > 0). Hide only when remaining=0\n4) Popup: suggested_amount = remaining_amount (not full order). User may type less\n5) #261 save this receipt only (do not send running total)\n6) After save: refresh #260. If remaining_amount>0 keep Receive button\n7) #265 PDF: total_received + total_pending\n8) #262 Ledger: order debit + each receipt credit; closing = pending\n\nPayment types: 1=Cash, 2=Cheque, 3=Online/NEFT/UPI, 4=Other\nEndpoint: service/service_channel_partner.php key=1226",
             "item": [
                 {
                     "name": "CP Payment Parties (#259)",
@@ -1493,7 +1493,7 @@
                                 "service_channel_partner.php"
                             ]
                         },
-                        "description": "Orders for selected party.\nOn Receive Payment click use row where can_receive=1:\n- party_name → Party / Customer Name\n- order_no → Against Order Number\n- order_amount → Order Amount\n- suggested_amount → Payment Received Amount (editable)\n- payment_types[] → Payment Type dropdown\nRemark default: Payment received from {party_name} against Order {order_no}"
+                        "description": "Orders for selected party. Partial payment fields:\n- order_amount (16000)\n- payment_received_amount (10000)\n- remaining_amount (6000) ← show as Pending\n- payment_status: pending | partial | received\n- payment_status_label e.g. Partial 10,000.00 / Pending 6,000.00\n- is_partial=1, can_receive=1 until remaining=0\n- suggested_amount = remaining_amount (popup default)\n- payment_received_flag=1 only when fully paid\n\nReceive button: can_receive=1 only.\nPopup: party_name, order_no, order_amount, suggested_amount, payment_types[]\nRemark default: Payment received from {party_name} against Order {order_no}"
                     },
                     "response": []
                 },
@@ -1530,7 +1530,7 @@
                                     "key": "paid_amount",
                                     "value": "",
                                     "type": "text",
-                                    "description": "Required > 0"
+                                    "description": "This receipt only (not running total). Must be <= remaining_amount from #260. Example: 10000 then later 6000"
                                 },
                                 {
                                     "key": "payment_type",
@@ -1556,7 +1556,7 @@
                                 "service_channel_partner.php"
                             ]
                         },
-                        "description": "Save Payment Received against order (same as web Save Payment button)."
+                        "description": "Save this receipt against order (accumulate).\npaid_amount = this collection only.\nResponse: paid_amount (this), total_received, remaining_amount, payment_received_flag (1 only if remaining=0), is_partial.\nIf remaining_amount>0 App must keep Receive button and call #260 again.\nError if paid_amount > remaining."
                     },
                     "response": []
                 },
@@ -1601,7 +1601,7 @@
                                 "service_channel_partner.php"
                             ]
                         },
-                        "description": "Same as web Print PDF / Share PDF.\nGenerates Payment Receive Statement PDF.\nReturns: file_url, file_name, title, total_order, total_received, total_pending\nApp: open/download file_url"
+                        "description": "Same as web Print PDF / Share PDF.\nPDF shows Received + Pending per order.\ntotal_pending uses remaining (16000-10000=6000), not full order.\nReturns: file_url, file_name, title, total_order, total_received, total_pending"
                     },
                     "response": []
                 }
@@ -1609,7 +1609,7 @@
         },
         {
             "name": "Channel Partner App — Party Ledger (#262)",
-            "description": "Same as web CP Customer Ledger (channel_partner_ledger.php) — Tally style.\n\n**App flow:**\n1) Call #262 with channel_partner_id + party_id=0 (All Parties)\n2) Use response.parties[] for Party dropdown\n3) On party change, call #262 again with selected party_id\n4) Show result[]: date_display, particulars, voucher, debit_display, credit_display, balance_display\n5) Footer: closing_balance_display\n6) Receive Payment button → API #259\n7) PDF: response.file_url = full absolute PDF URL (same style as #265). Also print_url points to same PDF when pdf_ok=1.\n\nEndpoint: service/service_channel_partner.php\nkey=1226",
+            "description": "Same as web CP Customer Ledger (channel_partner_ledger.php) — Tally style.\nPartial payment: Sales Order debit 16000 + first receipt credit 10000 → closing 6000 Dr; second receipt 6000 → 0.\nEach #261 save is a separate credit row.\n\n**App flow:**\n1) Call #262 with channel_partner_id + party_id=0 (All Parties)\n2) Use response.parties[] for Party dropdown\n3) On party change, call #262 again with selected party_id\n4) Show result[]: date_display, particulars, voucher, debit_display, credit_display, balance_display\n5) Footer: closing_balance_display (pending remains Dr)\n6) Receive Payment button → API #259 (can_receive while remaining>0)\n7) PDF: response.file_url = full absolute PDF URL (same style as #265). Also print_url points to same PDF when pdf_ok=1.\n\nEndpoint: service/service_channel_partner.php\nkey=1226",
             "item": [
                 {
                     "name": "CP Party Ledger — All Parties (#262)",

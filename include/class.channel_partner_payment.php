@@ -369,6 +369,7 @@ class ChannelPartnerPayment
 			'total_received' => round($prep['new_paid'], 2),
 			'remaining_amount' => round($prep['remaining'], 2),
 			'payment_received_flag' => (int) $prep['flag'],
+			'is_partial' => ((int) $prep['flag'] === 1) ? 0 : 1,
 			'payment_type' => $paymentType,
 			'payment_type_label' => $typeLabel,
 			'payment_received_date' => $now,
