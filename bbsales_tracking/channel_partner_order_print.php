@@ -101,6 +101,7 @@ $buyer_addr = !empty($ord['billing_address']) ? $ord['billing_address'] : (isset
 $buyer_mobile = '';
 $buyer_email = '';
 $buyer_state = '';
+$buyer_city = '';
 
 $cp_end_id = isset($ord['channel_partner_customer_id']) ? (int) $ord['channel_partner_customer_id'] : 0;
 if ($cp_end_id > 0) {
@@ -111,6 +112,7 @@ if ($cp_end_id > 0) {
 		$buyer_mobile = isset($end['mobile_no']) ? $end['mobile_no'] : '';
 		$buyer_email = isset($end['email']) ? $end['email'] : '';
 		$buyer_state = isset($end['state']) ? trim($end['state']) : '';
+		$buyer_city = isset($end['city']) ? trim($end['city']) : '';
 		$addrParts = array_filter(array(
 			isset($end['address']) ? $end['address'] : '',
 			isset($end['city']) ? $end['city'] : '',
@@ -252,8 +254,10 @@ if (!$gst_on) {
 	$grand = round($taxable + $igst_amount, 2);
 }
 
-/* Place of supply = CP Customer. Gujarat (GSTIN 24) = CGST+SGST; any other state = IGST.
- * Do not match against seller GSTIN — a wrong/other CP print GST was splitting CGST/SGST for Maharashtra. */
+/* GST rule (CP Customer PI):
+ *  - Customer state = Gujarat → CGST + SGST (intra-state)
+ *  - Customer state = any other (Maharashtra etc.) → IGST (inter-state)
+ * Grand total = Taxable + GST (same amount either way). GSTIN does not override State. */
 if (!function_exists('cp_pi_is_gujarat_state')) {
 	function cp_pi_is_gujarat_state($state)
 	{
@@ -265,14 +269,18 @@ if (!function_exists('cp_pi_is_gujarat_state')) {
 		return ($s === 'gujarat' || $s === 'gj' || strpos($s, 'gujarat') === 0);
 	}
 }
-$GUJARAT_GST_CODE = '24';
 $buyer_gst_clean = strtoupper(preg_replace('/\s+/', '', (string) $buyer_gst));
 $buyer_gst_code = (strlen($buyer_gst_clean) >= 2 && ctype_digit(substr($buyer_gst_clean, 0, 2))) ? substr($buyer_gst_clean, 0, 2) : '';
 $gst_same_state = true;
-if ($buyer_gst_code !== '') {
-	$gst_same_state = ($buyer_gst_code === $GUJARAT_GST_CODE);
-} else if ($buyer_state !== '') {
+if ($buyer_state !== '') {
 	$gst_same_state = cp_pi_is_gujarat_state($buyer_state);
+} else {
+	$place = strtolower($buyer_city . ' ' . $buyer_addr);
+	if (strpos($place, 'maharashtra') !== false || strpos($place, 'mumbai') !== false) {
+		$gst_same_state = false;
+	} else if ($buyer_gst_code !== '') {
+		$gst_same_state = ($buyer_gst_code === '24');
+	}
 }
 
 $saved_msg = isset($_REQUEST['saved']) && $_REQUEST['saved'] == '1';
