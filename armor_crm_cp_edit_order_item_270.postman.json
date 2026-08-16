@@ -1,0 +1,101 @@
+{
+    "info": {
+        "name": "Armor CRM — CP Edit Order Item (#270)",
+        "description": "NEW API only. Existing collection armor_crm_api_collection.postman.json is unchanged.\n\n#266 = Add item (new line).\n#270 = Edit existing line (qty / rate / discount).\n#268 = Delete item.\n\nEndpoint: POST service/service_channel_partner.php\nkey=1226\n\n**App flow:**\n1) #256 get_cp_customer_order_detail → items[].item_id, items[].rate (GROSS original), items[].discount\n2) User edits qty / discount / rate on that line\n3) #270 with order_id + item_id + qty + discount. rate optional (leave empty to keep original product rate)\n4) Response result = updated order detail (same as #256)\n\n**Rate rule (same as cart #251):**\nrate = GROSS before discount. Do NOT send discounted net / unitprice.\nDiscount-only change keeps original_price.\nExample: Rate 9300, Disc 10 → net 8370. Edit Disc 20 → Rate still 9300, net 7440.\n\nPending orders only (can_edit=1).\nLive: https://crm.mahadevcasting.in\nLocal: http://localhost:8080/armor_crm_08_07/202526",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "CP Edit Order Item (#270)",
+            "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                    "mode": "formdata",
+                    "formdata": [
+                        {
+                            "key": "key",
+                            "value": "1226",
+                            "type": "text"
+                        },
+                        {
+                            "key": "s",
+                            "value": "270",
+                            "type": "text"
+                        },
+                        {
+                            "key": "channel_partner_id",
+                            "value": "{{channel_partner_id}}",
+                            "type": "text",
+                            "description": "From Login #2"
+                        },
+                        {
+                            "key": "order_id",
+                            "value": "{{order_id}}",
+                            "type": "text",
+                            "description": "From #256 — Pending only (can_edit=1)"
+                        },
+                        {
+                            "key": "item_id",
+                            "value": "{{item_id}}",
+                            "type": "text",
+                            "description": "From #256 items[].item_id"
+                        },
+                        {
+                            "key": "qty",
+                            "value": "1",
+                            "type": "text",
+                            "description": "Required if changing qty. Must be > 0"
+                        },
+                        {
+                            "key": "rate",
+                            "value": "",
+                            "type": "text",
+                            "description": "Optional GROSS rate (before discount). Leave empty to keep original product rate"
+                        },
+                        {
+                            "key": "discount",
+                            "value": "",
+                            "type": "text",
+                            "description": "Disc %. Rate stays original — do not send net as rate"
+                        }
+                    ]
+                },
+                "url": {
+                    "raw": "{{base_url}}/service/service_channel_partner.php",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "service",
+                        "service_channel_partner.php"
+                    ]
+                },
+                "description": "Edit one existing product line on Pending CP customer order.\n\nRequired: key, s=270, channel_partner_id, order_id, item_id\nOptional: qty, rate (GROSS), discount\n\nResponse: ack, item_id, qty, rate, original_price, discount, sub_total, gst_amount, grand_total, result (full #256 detail).\nStock: only qty difference is debited/credited if order already stock-debited.\n\nAdd new line → still use #266.\nDelete line → #268."
+            },
+            "response": []
+        }
+    ],
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:8080/armor_crm_08_07/202526",
+            "type": "string"
+        },
+        {
+            "key": "channel_partner_id",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "order_id",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "item_id",
+            "value": "",
+            "type": "string"
+        }
+    ]
+}

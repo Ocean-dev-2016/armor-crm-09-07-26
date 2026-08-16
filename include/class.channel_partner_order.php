@@ -1999,6 +1999,211 @@ class ChannelPartnerOrder
 	}
 
 	/**
+	 * Edit one existing line on a Pending CP customer order (qty / rate / discount).
+	 * Rate is GROSS (original, before discount) — same as cart #251.
+	 * Stock adjusts the qty difference only when order is already stock-debited.
+	 */
+	public function UpdateCustomerOrderItem($detail)
+	{
+		$cpId = isset($detail['channel_partner_id']) ? (int) $detail['channel_partner_id'] : 0;
+		$orderId = isset($detail['order_id']) ? (int) $detail['order_id'] : (isset($detail['id']) ? (int) $detail['id'] : 0);
+		$itemId = 0;
+		if (isset($detail['item_id']) && (int) $detail['item_id'] > 0) {
+			$itemId = (int) $detail['item_id'];
+		} else if (isset($detail['order_item_id']) && (int) $detail['order_item_id'] > 0) {
+			$itemId = (int) $detail['order_item_id'];
+		}
+
+		$cpCheck = $this->validateCp($cpId);
+		if ($cpCheck['ack'] != 1) {
+			return $cpCheck;
+		}
+		if ($orderId <= 0) {
+			return array('ack' => 0, 'ack_msg' => 'order_id is required.');
+		}
+		if ($itemId <= 0) {
+			return array('ack' => 0, 'ack_msg' => 'item_id is required. Use items[].item_id from API #256.');
+		}
+		$order = $this->loadCpCustomerOrder($cpId, $orderId);
+		if (!$order) {
+			return array('ack' => 0, 'ack_msg' => 'Order not found.');
+		}
+		$mod = $this->assertOrderModifiable($order);
+		if ($mod['ack'] != 1) {
+			return $mod;
+		}
+
+		$ir = $this->db->rp_getData(
+			'order_product_item',
+			'*',
+			"id='" . $itemId . "' AND order_id='" . $orderId . "' AND isDelete=0",
+			'',
+			0
+		);
+		if (!$ir || mysqli_num_rows($ir) == 0) {
+			return array('ack' => 0, 'ack_msg' => 'Order item not found.');
+		}
+		$row = mysqli_fetch_assoc($ir);
+
+		$qty = (isset($detail['qty']) && $detail['qty'] !== '') ? (float) $detail['qty'] : (float) $row['pro_qty'];
+		if ($qty <= 0) {
+			return array('ack' => 0, 'ack_msg' => 'Qty must be greater than 0.');
+		}
+
+		$pwpId = (isset($detail['pwp_id']) && (int) $detail['pwp_id'] > 0) ? (int) $detail['pwp_id'] : 0;
+		if ($pwpId <= 0) {
+			$pwpId = (int) $this->db->rp_getValue(
+				'product_weight_price',
+				'id',
+				"product_id='" . (int) $row['pro_id'] . "' AND weight_id='" . $this->db->clean($row['weight_id']) . "' AND isDelete=0",
+				0
+			);
+		}
+		if ($pwpId <= 0) {
+			return array('ack' => 0, 'ack_msg' => 'Product variant not found.');
+		}
+
+		/* Rate is always GROSS (before discount). unitprice in DB is NET. */
+		$storedGross = $this->lineGrossRate($row);
+		$storedNet = isset($row['unitprice']) ? (float) $row['unitprice'] : 0;
+		$incomingRate = (isset($detail['rate']) && $detail['rate'] !== '' && is_numeric($detail['rate']))
+			? (float) $detail['rate']
+			: null;
+		$disc = isset($detail['discount']) && $detail['discount'] !== '' ? $detail['discount'] : null;
+		if ($incomingRate === null) {
+			$rate = $storedGross;
+		} else if (
+			$storedGross > 0.009
+			&& $storedNet > 0.009
+			&& abs($incomingRate - $storedNet) < 0.05
+			&& abs($storedGross - $storedNet) > 0.05
+		) {
+			$rate = $storedGross;
+		} else {
+			$rate = $incomingRate;
+		}
+		if ($disc === null) {
+			$disc = isset($row['discount']) ? $row['discount'] : 0;
+		}
+
+		$built = $this->buildItemFromPwp($cpId, $pwpId, $qty, $rate, $disc);
+		if ($built['ack'] != 1) {
+			return $built;
+		}
+		$it = $built['item'];
+
+		$oldQty = (float) $row['pro_qty'];
+		$qtyDiff = $qty - $oldQty;
+		$stockDebited = !empty($order['cp_stock_debited']) && (int) $order['cp_stock_debited'] === 1;
+		$needForCheck = $stockDebited ? max(0, $qtyDiff) : $qty;
+		if ($needForCheck > 0.009) {
+			$stockCheck = $this->objStock->validateItemsStock($cpId, array(array(
+				'pid' => $it['pid'],
+				'weight_id' => $it['weight_id'],
+				'qty' => $needForCheck,
+				'pro_name' => $it['pro_name'],
+			)));
+			if (empty($stockCheck['ack'])) {
+				return array('ack' => 0, 'ack_msg' => isset($stockCheck['ack_msg']) ? $stockCheck['ack_msg'] : 'Insufficient stock.');
+			}
+		}
+
+		$gstFlag = $this->resolveGstApplyFlag($detail, $order);
+		$lineBase = $qty * (float) $it['price'];
+		if (isset($detail['amount']) && $detail['amount'] !== '' && is_numeric($detail['amount'])) {
+			$lineBase = (float) $detail['amount'];
+		} else if (isset($detail['line_base']) && $detail['line_base'] !== '' && is_numeric($detail['line_base'])) {
+			$lineBase = (float) $detail['line_base'];
+		}
+		$gstPct = isset($it['gst_percent']) ? (float) $it['gst_percent'] : 0;
+		$gstAmt = $gstFlag ? (($lineBase * $gstPct) / 100) : 0;
+		if (isset($detail['item_gst_amount']) && $detail['item_gst_amount'] !== '' && is_numeric($detail['item_gst_amount'])) {
+			$gstAmt = $gstFlag ? (float) $detail['item_gst_amount'] : 0;
+		}
+
+		$updItem = array(
+			'pro_qty' => $it['qty'],
+			'remaining_qty' => $it['qty'],
+			'unitprice' => $it['price'],
+			'totalprice' => $this->db->rp_num($lineBase),
+			'discount' => $it['discount'],
+			'discount_amount' => $it['discount_amount'],
+			'box_qty' => $it['box_qty'],
+			'cartoon_qty' => $it['cartoon_qty'],
+			'modified_date' => date('Y-m-d H:i:s'),
+		);
+		if ($this->hasOriginalPriceColumn()) {
+			$updItem['original_price'] = $this->db->rp_num($this->itemOriginalPrice($it));
+		}
+		$colIg = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `order_product_item` LIKE 'igst_amount'");
+		if ($colIg && mysqli_num_rows($colIg) > 0) {
+			$updItem['igst_amount'] = $this->db->rp_num($gstAmt);
+		}
+		$this->db->rp_update('order_product_item', $updItem, "id='" . $itemId . "' AND order_id='" . $orderId . "'", 0);
+
+		$this->applyOrderTotals($orderId, $gstFlag, $detail);
+
+		$stockMsg = '';
+		if ($stockDebited && abs($qtyDiff) > 0.009) {
+			$salesId = isset($order['sales_id']) ? (int) $order['sales_id'] : 0;
+			$orderNo = isset($order['order_no']) ? $order['order_no'] : $this->ensureOrderNo($orderId);
+			if ($qtyDiff > 0) {
+				$debitRes = $this->objStock->addMovement(
+					$cpId,
+					(int) $it['pid'],
+					$it['weight_id'],
+					$it['pro_name'],
+					-1 * $qtyDiff,
+					'OUT edit item Customer Order ' . $orderNo,
+					$orderId,
+					$salesId,
+					'out'
+				);
+				if (empty($debitRes['ack'])) {
+					$stockMsg = ' (Stock: ' . (isset($debitRes['ack_msg']) ? $debitRes['ack_msg'] : 'debit failed') . ')';
+				}
+			} else {
+				$creditRes = $this->objStock->addMovement(
+					$cpId,
+					(int) $it['pid'],
+					$it['weight_id'],
+					$it['pro_name'],
+					abs($qtyDiff),
+					'IN edit item Customer Order ' . $orderNo,
+					$orderId,
+					$salesId,
+					'in'
+				);
+				if (empty($creditRes['ack'])) {
+					$stockMsg = ' (Stock: ' . (isset($creditRes['ack_msg']) ? $creditRes['ack_msg'] : 'credit failed') . ')';
+				}
+			}
+		}
+
+		$detailOut = $this->GetOrderDetail(array('channel_partner_id' => $cpId, 'order_id' => $orderId));
+		$result = isset($detailOut['result']) ? $detailOut['result'] : array();
+		return array(
+			'ack' => 1,
+			'ack_msg' => 'Order item updated.' . $stockMsg,
+			'order_id' => $orderId,
+			'order_no' => isset($order['order_no']) ? $order['order_no'] : $this->ensureOrderNo($orderId),
+			'item_id' => $itemId,
+			'qty' => round($qty, 2),
+			'rate' => round($this->lineGrossRate(array(
+				'unitprice' => $it['price'],
+				'discount' => $it['discount'],
+				'original_price' => $this->itemOriginalPrice($it),
+			)), 2),
+			'original_price' => round($this->itemOriginalPrice($it), 2),
+			'discount' => round((float) $it['discount'], 2),
+			'sub_total' => isset($result['sub_total']) ? $result['sub_total'] : 0,
+			'gst_amount' => isset($result['gst_amount']) ? $result['gst_amount'] : 0,
+			'grand_total' => isset($result['grand_total']) ? $result['grand_total'] : 0,
+			'result' => $result,
+		);
+	}
+
+	/**
 	 * Soft-delete one line from Pending CP customer order (Edit Order → Delete Item).
 	 * Credits stock back for that qty when order already stock-debited.
 	 * At least one item must remain — use #263 to delete whole order.

@@ -33,6 +33,7 @@
  * #264 update_cp_customer_order            — Edit Pending customer order
  * #265 get_cp_payment_pdf                  — Receive Payment Print PDF (Received / Pending per order)
  * #266 add_cp_customer_order_item          — Edit Order: add item (+ Add Item)
+ * #270 update_cp_customer_order_item       — Edit Order: edit one existing item (qty/rate/discount)
  * #267 update_cp_customer_order_status     — Status: Pending → Dispatched (same as web dropdown)
  * #268 delete_cp_customer_order_item       — Edit Order: delete one item
  * #269 download_cp_customer_order_pdf      — Customer Order PDF download (Pending → file_url)
@@ -370,6 +371,34 @@ if ($is_valid_api_key) {
 					$detail['gst_apply_flag'] = (int) $_REQUEST['gst_apply_flag'];
 				}
 				$db->printJSON($objCPOrder->AddCustomerOrderItem($detail));
+			}
+		} else if ($service == 'update_cp_customer_order_item' || $service == 'edit_cp_customer_order_item' || $service == 270) {
+			if ($channel_partner_id <= 0) {
+				$db->printJSON(array(
+					'ack' => 0,
+					'ack_msg' => 'channel_partner_id is required. Use value from Login API #2 result.channel_partner_id',
+				));
+			} else {
+				$detail = array(
+					'channel_partner_id' => $channel_partner_id,
+					'order_id' => isset($_REQUEST['order_id']) ? (int) $_REQUEST['order_id'] : (isset($_REQUEST['id']) ? (int) $_REQUEST['id'] : 0),
+					'item_id' => isset($_REQUEST['item_id']) ? (int) $_REQUEST['item_id'] : 0,
+					'order_item_id' => isset($_REQUEST['order_item_id']) ? (int) $_REQUEST['order_item_id'] : 0,
+					'qty' => isset($_REQUEST['qty']) ? $_REQUEST['qty'] : '',
+					'rate' => isset($_REQUEST['rate']) ? $_REQUEST['rate'] : null,
+					'discount' => isset($_REQUEST['discount']) ? $_REQUEST['discount'] : null,
+					'pwp_id' => isset($_REQUEST['pwp_id']) ? (int) $_REQUEST['pwp_id'] : 0,
+					'amount' => isset($_REQUEST['amount']) ? $_REQUEST['amount'] : (isset($_REQUEST['line_base']) ? $_REQUEST['line_base'] : null),
+					'line_base' => isset($_REQUEST['line_base']) ? $_REQUEST['line_base'] : null,
+					'item_gst_amount' => isset($_REQUEST['item_gst_amount']) ? $_REQUEST['item_gst_amount'] : (isset($_REQUEST['line_gst_amount']) ? $_REQUEST['line_gst_amount'] : null),
+					'sub_total' => isset($_REQUEST['sub_total']) ? $_REQUEST['sub_total'] : (isset($_REQUEST['subtotal']) ? $_REQUEST['subtotal'] : null),
+					'gst_amount' => isset($_REQUEST['gst_amount']) ? $_REQUEST['gst_amount'] : null,
+					'grand_total' => isset($_REQUEST['grand_total']) ? $_REQUEST['grand_total'] : null,
+				);
+				if (isset($_REQUEST['gst_apply_flag']) && $_REQUEST['gst_apply_flag'] !== '') {
+					$detail['gst_apply_flag'] = (int) $_REQUEST['gst_apply_flag'];
+				}
+				$db->printJSON($objCPOrder->UpdateCustomerOrderItem($detail));
 			}
 		} else if ($service == 'delete_cp_customer_order_item' || $service == 'remove_cp_customer_order_item' || $service == 268) {
 			if ($channel_partner_id <= 0) {
