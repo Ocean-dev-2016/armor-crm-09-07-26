@@ -51,7 +51,7 @@ $sheet = $objPHPExcel->setActiveSheetIndex(0);
 $sheet->setTitle('Receive Payment');
 
 $sheet->setCellValue('A1', 'Receive Payment — Against Order');
-$sheet->mergeCells('A1:F1');
+$sheet->mergeCells('A1:G1');
 $sheet->setCellValue('A2', 'Channel Partner');
 $sheet->setCellValue('B2', $cp_name);
 $sheet->setCellValue('A3', 'Party');
@@ -59,32 +59,35 @@ $sheet->setCellValue('B3', $partyRow['company_name'] . (!empty($partyRow['person
 $sheet->setCellValue('A4', 'Exported On');
 $sheet->setCellValue('B4', date('d-m-Y h:i A'));
 
-$headers = array('Sr No', 'Order No', 'Date', 'Order Amount', 'Payment Status', 'Received Amount');
+$headers = array('Sr No', 'Order No', 'Date', 'Order Amount', 'Payment Status', 'Received Amount', 'Pending Amount');
 $col = 'A';
 foreach ($headers as $h) {
 	$sheet->setCellValue($col . '6', $h);
 	$col++;
 }
-$sheet->getStyle('A6:F6')->getFont()->setBold(true);
+$sheet->getStyle('A6:G6')->getFont()->setBold(true);
 
 $rowCount = 7;
 $sr = 0;
 $totalOrder = 0;
 $totalPaid = 0;
+$totalPending = 0;
 foreach ($orders as $o) {
 	$sr++;
-	$paidFlag = isset($o['payment_received_flag']) ? (int) $o['payment_received_flag'] : 0;
-	$orderAmt = (float) $o['grand_total'];
-	$paidAmt = ($paidFlag === 1) ? (float) $o['payment_received_amount'] : 0;
+	$pay = cp_order_payment_state($o['grand_total'], $o['payment_received_amount']);
+	$orderAmt = $pay['order_amount'];
+	$paidAmt = $pay['paid_amount'];
 	$totalOrder += $orderAmt;
 	$totalPaid += $paidAmt;
+	$totalPending += $pay['remaining_amount'];
 
 	$sheet->setCellValue('A' . $rowCount, $sr);
 	$sheet->setCellValue('B' . $rowCount, $o['order_no']);
 	$sheet->setCellValue('C' . $rowCount, date('d-m-Y', strtotime($o['order_date'])));
 	$sheet->setCellValue('D' . $rowCount, number_format($orderAmt, 2, '.', ''));
-	$sheet->setCellValue('E' . $rowCount, ($paidFlag === 1) ? 'RECEIVED' : 'PENDING');
+	$sheet->setCellValue('E' . $rowCount, $pay['status_short']);
 	$sheet->setCellValue('F' . $rowCount, number_format($paidAmt, 2, '.', ''));
+	$sheet->setCellValue('G' . $rowCount, number_format($pay['remaining_amount'], 2, '.', ''));
 	$rowCount++;
 }
 
@@ -94,9 +97,10 @@ $sheet->setCellValue('C' . $rowCount, 'Total');
 $sheet->setCellValue('D' . $rowCount, number_format($totalOrder, 2, '.', ''));
 $sheet->setCellValue('E' . $rowCount, '');
 $sheet->setCellValue('F' . $rowCount, number_format($totalPaid, 2, '.', ''));
-$sheet->getStyle('C' . $rowCount . ':F' . $rowCount)->getFont()->setBold(true);
+$sheet->setCellValue('G' . $rowCount, number_format($totalPending, 2, '.', ''));
+$sheet->getStyle('C' . $rowCount . ':G' . $rowCount)->getFont()->setBold(true);
 
-foreach (range('A', 'F') as $c) {
+foreach (range('A', 'G') as $c) {
 	$sheet->getColumnDimension($c)->setAutoSize(true);
 }
 

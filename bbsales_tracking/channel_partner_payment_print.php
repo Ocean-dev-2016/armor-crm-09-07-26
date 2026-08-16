@@ -95,12 +95,12 @@ $totalOrder = 0;
 $totalPaid = 0;
 $totalPending = 0;
 foreach ($orders as $o) {
-	$paidFlag = isset($o['payment_received_flag']) ? (int) $o['payment_received_flag'] : 0;
-	$orderAmt = (float) $o['grand_total'];
-	$paidAmt = ($paidFlag === 1) ? (float) $o['payment_received_amount'] : 0;
+	$pay = cp_order_payment_state($o['grand_total'], $o['payment_received_amount']);
+	$orderAmt = $pay['order_amount'];
+	$paidAmt = $pay['paid_amount'];
 	$totalOrder += $orderAmt;
 	$totalPaid += $paidAmt;
-	$totalPending += ($paidFlag === 1) ? 0 : $orderAmt;
+	$totalPending += $pay['remaining_amount'];
 }
 $wordsReceived = '';
 try {
@@ -218,8 +218,9 @@ $minRows = 8;
 					<th style="width:20%;">Order / Bill No</th>
 					<th style="width:12%;">Date</th>
 					<th style="width:16%;">Order Amount</th>
+					<th style="width:14%;">Received</th>
+					<th style="width:14%;">Pending</th>
 					<th style="width:18%;">Payment Status</th>
-					<th style="width:28%;">Received Amount</th>
 				</tr>
 				<?php
 				$sr = 0;
@@ -228,13 +229,13 @@ $minRows = 8;
 					foreach ($orders as $o) {
 						$sr++;
 						$rowCount++;
-						$paidFlag = isset($o['payment_received_flag']) ? (int) $o['payment_received_flag'] : 0;
-						$orderAmt = (float) $o['grand_total'];
-						$paidAmt = ($paidFlag === 1) ? (float) $o['payment_received_amount'] : 0;
+						$pay = cp_order_payment_state($o['grand_total'], $o['payment_received_amount']);
+						$orderAmt = $pay['order_amount'];
+						$paidAmt = $pay['paid_amount'];
 						$typeId = isset($o['payment_received_type']) ? (int) $o['payment_received_type'] : 0;
-						$typeTxt = ($paidFlag === 1 && isset($payTypeLabel[$typeId])) ? ' / ' . $payTypeLabel[$typeId] : '';
+						$typeTxt = ($paidAmt > 0.009 && isset($payTypeLabel[$typeId])) ? ' / ' . $payTypeLabel[$typeId] : '';
 						$payDate = '';
-						if ($paidFlag === 1 && !empty($o['payment_received_date']) && $o['payment_received_date'] != '0000-00-00 00:00:00') {
+						if ($paidAmt > 0.009 && !empty($o['payment_received_date']) && $o['payment_received_date'] != '0000-00-00 00:00:00') {
 							$payDate = date('d-m-Y', strtotime($o['payment_received_date']));
 						}
 						?>
@@ -243,21 +244,24 @@ $minRows = 8;
 							<td><strong><?php echo htmlspecialchars($o['order_no']); ?></strong></td>
 							<td class="text-center"><?php echo date('d-m-Y', strtotime($o['order_date'])); ?></td>
 							<td class="text-right"><?php echo number_format($orderAmt, 2); ?></td>
-							<td class="text-center <?php echo ($paidFlag === 1) ? 'status-ok' : 'status-pending'; ?>">
-								<?php echo ($paidFlag === 1) ? ('RECEIVED' . $typeTxt) : 'PENDING'; ?>
+							<td class="text-right"><?php echo number_format($paidAmt, 2); ?></td>
+							<td class="text-right" style="color:<?php echo $pay['remaining_amount'] > 0.009 ? '#c0392b' : '#1e7e34'; ?>;font-weight:700;">
+								<?php echo number_format($pay['remaining_amount'], 2); ?>
+							</td>
+							<td class="text-center <?php echo $pay['is_paid'] ? 'status-ok' : 'status-pending'; ?>">
+								<?php echo $pay['status_short'] . $typeTxt; ?>
 								<?php if ($payDate != '') { ?><div class="muted"><?php echo $payDate; ?></div><?php } ?>
 							</td>
-							<td class="text-right"><?php echo number_format($paidAmt, 2); ?></td>
 						</tr>
 						<?php
 					}
 				} else {
 					$rowCount = 1;
-					echo '<tr><td colspan="6" class="text-center">No orders found for this party.</td></tr>';
+				echo '<tr><td colspan="7" class="text-center">No orders found for this party.</td></tr>';
 				}
 				/* Blank filler rows — SO/PI style full page body */
 				for ($i = $rowCount; $i < $minRows; $i++) {
-					echo '<tr class="blank-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td></tr>';
+					echo '<tr class="blank-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>';
 				}
 				?>
 			</table>

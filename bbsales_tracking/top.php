@@ -25,7 +25,7 @@ $ctableAPK        = "application_info";
 				<li class="classic-menu-dropdown <?php if ($page == 'channel_partner_customer') { ?>active<?php } ?>">
 					<a href="channel_partner_customer_manage.php"><i class="fa fa-users"></i> My Customers</a>
 				</li>
-				<li class="classic-menu-dropdown <?php if ($page == 'channel_partner_order' || (isset($_REQUEST['cp_mode']) && $_REQUEST['cp_mode'] == 'customer')) { ?>active<?php } ?>">
+				<li class="classic-menu-dropdown <?php if ($page == 'channel_partner_order') { ?>active<?php } ?>">
 					<a href="channel_partner_order_manage.php"><i class="fa fa-shopping-cart"></i> Customer Order</a>
 				</li>
 				<li class="classic-menu-dropdown <?php if ($page == 'channel_partner_stock') { ?>active<?php } ?>">

@@ -533,7 +533,7 @@ class ChannelPartnerCustomer extends Functions
 		$phone = !empty($cp['mobile_no1']) ? $cp['mobile_no1'] : (isset($cp['phone']) ? $cp['phone'] : '');
 
 		$orderWhere = "customer_id='" . $cpId . "' AND channel_partner_order_flag=1 AND channel_partner_customer_id>0 AND isDelete=0 AND status NOT IN (-2,3)";
-		$pendingPayWhere = $orderWhere . " AND (payment_received_flag=0 OR payment_received_flag IS NULL)";
+		$pendingPayWhere = $orderWhere . " AND IFNULL(payment_received_amount,0) < IFNULL(grand_total,0)";
 
 		$my_customers = (int) $this->db->rp_getTotalRecord($this->ctable, "channel_partner_id='" . $cpId . "' AND isDelete=0", 0);
 		$customer_orders = (int) $this->db->rp_getTotalRecord("orders", $orderWhere, 0);
@@ -663,7 +663,7 @@ class ChannelPartnerCustomer extends Functions
 		$paidFlag = isset($row['payment_received_flag']) ? (int) $row['payment_received_flag'] : 0;
 		$paidAmt = isset($row['payment_received_amount']) ? (float) $row['payment_received_amount'] : 0;
 		$grand = isset($row['grand_total']) ? (float) $row['grand_total'] : 0;
-		$isPaid = ($paidFlag === 1 && $paidAmt > 0);
+		$isPaid = ($paidAmt > 0.009 && ($grand - $paidAmt) <= 0.009);
 		$isDispatched = ($status >= 5 && $status != 3 && $status != -2);
 		if ($isPaid) {
 			$statusKey = 'completed';

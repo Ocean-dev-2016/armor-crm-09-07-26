@@ -115,22 +115,23 @@ if ($type == 'payment') {
 	$sr = 0;
 	foreach ($orders as $o) {
 		$sr++;
-		$paidFlag = isset($o['payment_received_flag']) ? (int) $o['payment_received_flag'] : 0;
-		$orderAmt = (float) $o['grand_total'];
-		$paidAmt = ($paidFlag === 1) ? (float) $o['payment_received_amount'] : 0;
+		$pay = cp_order_payment_state($o['grand_total'], $o['payment_received_amount']);
+		$orderAmt = $pay['order_amount'];
+		$paidAmt = $pay['paid_amount'];
 		$totalOrder += $orderAmt;
 		$totalPaid += $paidAmt;
-		$totalPending += ($paidFlag === 1) ? 0 : $orderAmt;
-		$statusTxt = ($paidFlag === 1) ? 'RECEIVED' : 'PENDING';
-		$statusCls = ($paidFlag === 1) ? 'ok' : 'pend';
+		$totalPending += $pay['remaining_amount'];
+		$statusTxt = $pay['status_short'];
+		$statusCls = $pay['is_paid'] ? 'ok' : 'pend';
 		$rowsHtml .= '<tr><td class="tc">' . $sr . '</td><td><b>' . htmlspecialchars($o['order_no']) . '</b></td>'
 			. '<td class="tc">' . date('d-m-Y', strtotime($o['order_date'])) . '</td>'
 			. '<td class="tr">' . number_format($orderAmt, 2) . '</td>'
 			. '<td class="tc ' . $statusCls . '">' . $statusTxt . '</td>'
-			. '<td class="tr">' . number_format($paidAmt, 2) . '</td></tr>';
+			. '<td class="tr">' . number_format($paidAmt, 2) . '</td>'
+			. '<td class="tr pend">' . number_format($pay['remaining_amount'], 2) . '</td></tr>';
 	}
 	if ($rowsHtml == '') {
-		$rowsHtml = '<tr><td colspan="6" class="tc">No orders found.</td></tr>';
+		$rowsHtml = '<tr><td colspan="7" class="tc">No orders found.</td></tr>';
 	}
 	$partyAddr = '';
 	$partyMobile = '';
@@ -146,19 +147,19 @@ if ($type == 'payment') {
 		$partyGst = isset($partyRow['gst']) ? $partyRow['gst'] : '';
 	}
 	$html = '<html><head><style>' . $css . '</style></head><body>';
-	$html .= '<table><tr><td colspan="6" class="title">PAYMENT RECEIVE STATEMENT</td></tr><tr>'
-		. '<td colspan="3"><b>Party / Buyer</b><br><b>' . htmlspecialchars($partyLabel) . '</b><br>'
+	$html .= '<table><tr><td colspan="7" class="title">PAYMENT RECEIVE STATEMENT</td></tr><tr>'
+		. '<td colspan="4"><b>Party / Buyer</b><br><b>' . htmlspecialchars($partyLabel) . '</b><br>'
 		. htmlspecialchars($partyAddr)
 		. ($partyMobile != '' ? '<br>Mobile: ' . htmlspecialchars($partyMobile) : '')
 		. ($partyGst != '' ? '<br>GSTIN: ' . htmlspecialchars($partyGst) : '') . '</td>'
 		. '<td colspan="3"><b>From:</b> ' . htmlspecialchars($pi_company) . '<br>'
 		. ($pi_gst != '' ? '<b>GSTIN:</b> ' . htmlspecialchars($pi_gst) . '<br>' : '')
 		. '<b>Print Date:</b> ' . date('d-M-Y') . '</td></tr></table>';
-	$html .= '<table><tr class="th"><th>Sr</th><th>Order No</th><th>Date</th><th>Order Amount</th><th>Status</th><th>Received</th></tr>'
+	$html .= '<table><tr class="th"><th>Sr</th><th>Order No</th><th>Date</th><th>Order Amount</th><th>Status</th><th>Received</th><th>Pending</th></tr>'
 		. $rowsHtml
 		. '<tr class="gray"><td colspan="3" class="tr"><b>Total Order</b></td><td class="tr"><b>' . number_format($totalOrder, 2) . '</b></td>'
-		. '<td class="tr"><b>Total Received</b></td><td class="tr"><b>' . number_format($totalPaid, 2) . '</b></td></tr>'
-		. '<tr class="gray"><td colspan="5" class="tr"><b>Pending</b></td><td class="tr pend"><b>' . number_format($totalPending, 2) . '</b></td></tr></table>';
+		. '<td class="tr"><b>Total Received</b></td><td class="tr"><b>' . number_format($totalPaid, 2) . '</b></td>'
+		. '<td class="tr pend"><b>' . number_format($totalPending, 2) . '</b></td></tr></table>';
 	$html .= '</body></html>';
 	$fileBase = 'CP_Payment_' . preg_replace('/[^A-Za-z0-9_\-]/', '_', $partyLabel) . '_' . date('Ymd_His');
 	$shareTitle = 'Payment Receive Statement - ' . $partyLabel;

@@ -50,7 +50,7 @@ if ($is_cp_dashboard) {
 		),
 		array(
 			'label' => 'Pending Payments',
-			'value' => (int) $db->rp_getTotalRecord("orders", "customer_id='" . $cp_id . "' AND channel_partner_order_flag=1 AND channel_partner_customer_id>0 AND isDelete=0 AND status NOT IN (-1,-2,3) AND (payment_received_flag=0 OR payment_received_flag IS NULL)", 0),
+			'value' => (int) $db->rp_getTotalRecord("orders", "customer_id='" . $cp_id . "' AND channel_partner_order_flag=1 AND channel_partner_customer_id>0 AND isDelete=0 AND status>=5 AND status NOT IN (-1,-2,3) AND (payment_received_flag=0 OR payment_received_flag IS NULL OR IFNULL(payment_received_amount,0) < IFNULL(grand_total,0))", 0),
 			'icon' => 'fa-inr',
 			'link' => 'channel_partner_payment.php',
 			'hint' => 'Baki payments',
@@ -76,25 +76,20 @@ if ($is_cp_dashboard) {
 		while ($row = mysqli_fetch_assoc($recentOrderR)) {
 			$row['party_name'] = $db->rp_getValue("channel_partner_customer", "company_name", "id='" . (int) $row['channel_partner_customer_id'] . "'", 0);
 			$cp_recent_orders[] = $row;
-			if ((int) $row['payment_received_flag'] !== 1) {
-				$cp_pending_orders[] = $row;
-			}
 		}
 	}
-	if (count($cp_pending_orders) < 5) {
-		$pendingR = $db->rp_getData(
-			"orders",
-			"id,order_no,order_date,grand_total,status,channel_partner_customer_id,payment_received_flag,payment_received_amount",
-			"customer_id='" . $cp_id . "' AND channel_partner_order_flag=1 AND channel_partner_customer_id>0 AND isDelete=0 AND status NOT IN (-1,-2,3) AND (payment_received_flag=0 OR payment_received_flag IS NULL)",
-			"id DESC LIMIT 5",
-			0
-		);
-		$cp_pending_orders = array();
-		if ($pendingR) {
-			while ($row = mysqli_fetch_assoc($pendingR)) {
-				$row['party_name'] = $db->rp_getValue("channel_partner_customer", "company_name", "id='" . (int) $row['channel_partner_customer_id'] . "'", 0);
-				$cp_pending_orders[] = $row;
-			}
+	$pendingR = $db->rp_getData(
+		"orders",
+		"id,order_no,order_date,grand_total,status,channel_partner_customer_id,payment_received_flag,payment_received_amount",
+		"customer_id='" . $cp_id . "' AND channel_partner_order_flag=1 AND channel_partner_customer_id>0 AND isDelete=0 AND status>=5 AND status NOT IN (-1,-2,3) AND (payment_received_flag=0 OR payment_received_flag IS NULL OR IFNULL(payment_received_amount,0) < IFNULL(grand_total,0))",
+		"id DESC LIMIT 5",
+		0
+	);
+	$cp_pending_orders = array();
+	if ($pendingR) {
+		while ($row = mysqli_fetch_assoc($pendingR)) {
+			$row['party_name'] = $db->rp_getValue("channel_partner_customer", "company_name", "id='" . (int) $row['channel_partner_customer_id'] . "'", 0);
+			$cp_pending_orders[] = $row;
 		}
 	}
 }
@@ -468,7 +463,7 @@ if ($is_cp_dashboard) {
 						$paidFlag = isset($row['payment_received_flag']) ? (int) $row['payment_received_flag'] : 0;
 						$paidAmt = isset($row['payment_received_amount']) ? (float) $row['payment_received_amount'] : 0;
 						$grand = isset($row['grand_total']) ? (float) $row['grand_total'] : 0;
-						$isPaid = ($paidFlag === 1 && $paidAmt > 0);
+						$isPaid = ($paidAmt > 0.009 && ($grand - $paidAmt) <= 0.009);
 						$isDispatched = ($status >= 5 && $status != 3 && $status != -2);
 						if ($isPaid) {
 							return array('Completed', 'completed', 0);
@@ -545,8 +540,8 @@ if ($is_cp_dashboard) {
 				<div class="col-md-5">
 					<div class="cp-box">
 						<div class="cp-box-hd">
-							<a class="cp-more" href="channel_partner_payment.php">Receive</a>
-							<h4>Payment Follow-up</h4>
+							<a class="cp-more" href="channel_partner_payment.php">View all</a>
+							<h4>Pending Payment</h4>
 							<span class="cp-sub">Pending / baki payments</span>
 						</div>
 						<div class="cp-box-bd">

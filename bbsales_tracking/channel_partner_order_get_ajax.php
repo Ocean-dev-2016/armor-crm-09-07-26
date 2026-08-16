@@ -27,7 +27,16 @@ if ($search != '') {
 	))";
 }
 
-$get_total_rows = $db->rp_getTotalRecord("orders", $where);
+$countSql = "SELECT COUNT(*) AS cnt
+	FROM orders o
+	LEFT JOIN channel_partner_customer c ON c.id=o.channel_partner_customer_id
+	WHERE $where";
+$get_total_rows = 0;
+$countRes = mysqli_query($db->myconn, $countSql);
+if ($countRes) {
+	$countRow = mysqli_fetch_assoc($countRes);
+	$get_total_rows = isset($countRow['cnt']) ? (int) $countRow['cnt'] : 0;
+}
 $total_pages = ceil($get_total_rows / $item_per_page);
 $page_position = (($page_number - 1) * $item_per_page);
 
@@ -50,7 +59,10 @@ function cp_customer_order_workflow($status, $paidFlag, $grandTotal, $paidAmount
 	$paidFlag = (int) $paidFlag;
 	$grandTotal = (float) $grandTotal;
 	$paidAmount = (float) $paidAmount;
-	$isPaid = ($paidFlag === 1 && $paidAmount > 0);
+	$payState = function_exists('cp_order_payment_state')
+		? cp_order_payment_state($grandTotal, $paidAmount)
+		: array('is_paid' => (($paidAmount > 0.009) && (($grandTotal - $paidAmount) <= 0.009)) ? 1 : 0);
+	$isPaid = ((int) $payState['is_paid'] === 1);
 	$isDispatched = ($status >= 5 && $status != 3 && $status != -2);
 	$baki = $isPaid ? 0 : max(0, $grandTotal - $paidAmount);
 
@@ -125,9 +137,10 @@ function cp_customer_order_workflow($status, $paidFlag, $grandTotal, $paidAmount
 			}
 			$paidAmt = (float) $row['payment_received_amount'];
 			$paidFlag = (int) $row['payment_received_flag'];
-			$paid = ($paidFlag === 1 && $paidAmt > 0)
-				? 'Received ' . number_format($paidAmt, 2)
-				: 'Pending';
+			$payState = function_exists('cp_order_payment_state')
+				? cp_order_payment_state($row['grand_total'], $paidAmt)
+				: array('status_label' => (($paidFlag === 1 && $paidAmt > 0) ? ('Received ' . number_format($paidAmt, 2)) : 'Pending'));
+			$paid = $payState['status_label'];
 			$wf = cp_customer_order_workflow($row['status'], $paidFlag, $row['grand_total'], $paidAmt);
 			$partyId = (int) $row['channel_partner_customer_id'];
 			$canEdit = !empty($wf['can_dispatch']); /* Pending only */

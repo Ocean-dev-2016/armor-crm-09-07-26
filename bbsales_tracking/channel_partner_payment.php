@@ -142,31 +142,41 @@ if ($selected_party > 0) {
 							<th>Order No</th>
 							<th>Date</th>
 							<th>Order Amount</th>
+							<th>Received</th>
+							<th>Pending</th>
 							<th>Payment Status</th>
 							<th>Receive</th>
 						</tr>
 					</thead>
 					<tbody>
 					<?php foreach ($orders as $o) {
-						$paid = isset($o['payment_received_flag']) ? (int) $o['payment_received_flag'] : 0;
+						$pay = cp_order_payment_state($o['grand_total'], $o['payment_received_amount']);
 						?>
 						<tr>
 							<td><strong><?php echo htmlspecialchars($o['order_no']); ?></strong></td>
 							<td><?php echo date('d-m-Y', strtotime($o['order_date'])); ?></td>
 							<td><?php echo number_format((float) $o['grand_total'], 2); ?></td>
+							<td><?php echo number_format($pay['paid_amount'], 2); ?></td>
+							<td style="font-weight:700;<?php echo $pay['remaining_amount'] > 0.009 ? 'color:#c0392b;' : 'color:#1e7e34;'; ?>">
+								<?php echo number_format($pay['remaining_amount'], 2); ?>
+							</td>
 							<td>
-								<?php if ($paid === 1) { ?>
-									<span class="label label-success">Received <?php echo number_format((float) $o['payment_received_amount'], 2); ?></span>
+								<?php if ($pay['is_paid']) { ?>
+									<span class="label label-success"><?php echo htmlspecialchars($pay['status_label']); ?></span>
+								<?php } else if ($pay['is_partial']) { ?>
+									<span class="label label-warning"><?php echo htmlspecialchars($pay['status_label']); ?></span>
 								<?php } else { ?>
 									<span class="label label-danger">Pending</span>
 								<?php } ?>
 							</td>
 							<td>
-								<?php if ($paid !== 1) { ?>
+								<?php if ($pay['can_receive']) { ?>
 								<button type="button" class="btn btn-sm btn-success btn-receive"
 									data-order-id="<?php echo (int) $o['id']; ?>"
 									data-order-no="<?php echo htmlspecialchars($o['order_no'], ENT_QUOTES, 'UTF-8'); ?>"
 									data-grand-total="<?php echo (float) $o['grand_total']; ?>"
+									data-paid-amount="<?php echo $pay['paid_amount']; ?>"
+									data-remaining="<?php echo $pay['remaining_amount']; ?>"
 									data-party-name="<?php echo htmlspecialchars($partyRow ? $partyRow['company_name'] : '', ENT_QUOTES, 'UTF-8'); ?>">
 									<i class="fa fa-money"></i> Receive Payment
 								</button>
@@ -206,8 +216,17 @@ if ($selected_party > 0) {
 					<input type="text" class="form-control" id="pr_order_amount" readonly>
 				</div>
 				<div class="form-group">
+					<label>Already Received</label>
+					<input type="text" class="form-control" id="pr_already_received" readonly style="background:#f7f7f7;">
+				</div>
+				<div class="form-group">
+					<label>Pending Amount</label>
+					<input type="text" class="form-control" id="pr_pending_amount" readonly style="background:#fff3cd;font-weight:700;color:#c0392b;">
+				</div>
+				<div class="form-group">
 					<label>Payment Received Amount <code>*</code></label>
 					<input type="number" step="0.01" min="0.01" class="form-control" id="pr_paid_amount">
+					<span class="help-block">Ahiya aa receipt ni amount lakho. Comment: 16000 ma 10000, pachhi 6000 alag thi.</span>
 				</div>
 				<div class="form-group">
 					<label>Payment Type <code>*</code></label>
@@ -245,11 +264,16 @@ $('#btn_share_payment_pdf').on('click', function () {
 	});
 });
 $('.btn-receive').on('click', function () {
+	var remaining = parseFloat($(this).data('remaining')) || parseFloat($(this).data('grand-total')) || 0;
+	var already = parseFloat($(this).data('paid-amount')) || 0;
 	$('#pr_order_id').val($(this).data('order-id'));
 	$('#pr_order_no').val($(this).data('order-no'));
 	$('#pr_order_amount').val($(this).data('grand-total'));
+	$('#pr_already_received').val(already.toFixed(2));
+	$('#pr_pending_amount').val(remaining.toFixed(2));
 	$('#pr_party_name').val($(this).data('party-name'));
-	$('#pr_paid_amount').val($(this).data('grand-total'));
+	$('#pr_paid_amount').val(remaining.toFixed(2));
+	$('#pr_paid_amount').attr('max', remaining.toFixed(2));
 	$('#pr_payment_type').val('');
 	$('#pr_remark').val('Payment received from ' + $(this).data('party-name') + ' against Order ' + $(this).data('order-no'));
 	$('#paymentReceivedModal').modal('show');
@@ -261,6 +285,11 @@ $('#pr_save_btn').on('click', function () {
 	var remark = $.trim($('#pr_remark').val());
 	if (!orderId || !paidAmount || parseFloat(paidAmount) <= 0) {
 		alert('Enter valid amount');
+		return;
+	}
+	var pendingAmt = parseFloat($('#pr_pending_amount').val()) || 0;
+	if (pendingAmt > 0 && parseFloat(paidAmount) > pendingAmt + 0.009) {
+		alert('Amount cannot exceed pending ' + pendingAmt.toFixed(2));
 		return;
 	}
 	if (!paymentType) {

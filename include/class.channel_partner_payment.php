@@ -5,6 +5,7 @@
  */
 require_once dirname(__FILE__) . '/main.class.php';
 require_once dirname(__FILE__) . '/function.class.php';
+require_once dirname(__FILE__) . '/channel_partner_helper.php';
 require_once dirname(__FILE__) . '/class.channel_partner_stock.php';
 
 class ChannelPartnerPayment
@@ -173,10 +174,10 @@ class ChannelPartnerPayment
 				$typeMap[(int) $t['id']] = $t['label'];
 			}
 			while ($o = mysqli_fetch_assoc($or)) {
-				$paidFlag = isset($o['payment_received_flag']) ? (int) $o['payment_received_flag'] : 0;
-				$paidAmt = ($paidFlag === 1) ? (float) $o['payment_received_amount'] : 0;
-				$grand = (float) $o['grand_total'];
-				$canReceive = ($paidFlag !== 1) ? 1 : 0;
+				$pay = cp_order_payment_state($o['grand_total'], $o['payment_received_amount']);
+				$grand = $pay['order_amount'];
+				$paidAmt = $pay['paid_amount'];
+				$canReceive = (int) $pay['can_receive'];
 				if ($canReceive) {
 					$pendingCount++;
 				} else {
@@ -185,7 +186,7 @@ class ChannelPartnerPayment
 				$typeId = isset($o['payment_received_type']) ? (int) $o['payment_received_type'] : 0;
 				$payDate = '';
 				$payDateDisplay = '';
-				if ($paidFlag === 1 && !empty($o['payment_received_date']) && $o['payment_received_date'] != '0000-00-00 00:00:00') {
+				if ($paidAmt > 0.009 && !empty($o['payment_received_date']) && $o['payment_received_date'] != '0000-00-00 00:00:00') {
 					$payDate = $o['payment_received_date'];
 					$payDateDisplay = date('d-m-Y', strtotime($o['payment_received_date']));
 				}
@@ -196,18 +197,19 @@ class ChannelPartnerPayment
 					'order_date_display' => ($o['order_date'] != '' && $o['order_date'] != '0000-00-00') ? date('d-m-Y', strtotime($o['order_date'])) : '-',
 					'order_amount' => round($grand, 2),
 					'order_amount_display' => number_format($grand, 2),
-					'payment_received_flag' => $paidFlag,
-					'payment_status' => ($paidFlag === 1) ? 'received' : 'pending',
-					'payment_status_label' => ($paidFlag === 1)
-						? ('Received ' . number_format($paidAmt, 2))
-						: 'Pending',
+					'payment_received_flag' => (int) $pay['is_paid'],
+					'payment_status' => $pay['status_key'],
+					'payment_status_label' => $pay['status_label'],
 					'payment_received_amount' => round($paidAmt, 2),
+					'remaining_amount' => $pay['remaining_amount'],
+					'remaining_amount_display' => number_format($pay['remaining_amount'], 2),
+					'is_partial' => (int) $pay['is_partial'],
 					'payment_received_date' => $payDate,
 					'payment_received_date_display' => $payDateDisplay,
 					'payment_type' => $typeId,
 					'payment_type_label' => isset($typeMap[$typeId]) ? $typeMap[$typeId] : '',
 					'can_receive' => $canReceive,
-					'suggested_amount' => round($grand, 2),
+					'suggested_amount' => $pay['remaining_amount'],
 				);
 			}
 		}
@@ -265,7 +267,7 @@ class ChannelPartnerPayment
 
 		$order = $this->db->rp_getData(
 			'orders',
-			'id,order_no,customer_id,customer_type,sales_id,grand_total,payment_received_flag,isDelete,status,channel_partner_order_flag,channel_partner_customer_id',
+			'id,order_no,customer_id,customer_type,sales_id,grand_total,payment_received_flag,payment_received_amount,isDelete,status,channel_partner_order_flag,channel_partner_customer_id',
 			"id='" . $orderId . "' AND isDelete=0",
 			'',
 			0
@@ -281,28 +283,34 @@ class ChannelPartnerPayment
 		if ((int) $row['status'] === -2 || (int) $row['status'] === 3) {
 			return array('ack' => 0, 'ack_msg' => 'Cannot receive payment for cancelled/rejected order.');
 		}
-		if ((int) $row['payment_received_flag'] === 1) {
+		$prep = cp_prepare_receive_payment($row, $paidAmount);
+		if ((int) $prep['ack'] !== 1) {
+			return array('ack' => 0, 'ack_msg' => $prep['ack_msg']);
+		}
+		if (!empty($prep['already'])) {
 			return array(
 				'ack' => 1,
-				'ack_msg' => 'Payment already marked as received for ' . $row['order_no'],
+				'ack_msg' => $prep['ack_msg'],
 				'already' => 1,
 				'order_id' => $orderId,
 				'order_no' => $row['order_no'],
+				'remaining_amount' => 0,
 			);
 		}
 
 		$now = date('Y-m-d H:i:s');
 		$payDate = date('Y-m-d');
 		$orderNo = $row['order_no'];
+		$thisPaid = $prep['this_amount'];
 
 		$updRows = array(
-			'payment_received_flag' => 1,
+			'payment_received_flag' => (int) $prep['flag'],
 			'payment_received_date' => $now,
 			'payment_received_by' => $cpId,
 		);
 		$amtCol = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `orders` LIKE 'payment_received_amount'");
 		if ($amtCol && mysqli_num_rows($amtCol) > 0) {
-			$updRows['payment_received_amount'] = $paidAmount;
+			$updRows['payment_received_amount'] = $prep['new_paid'];
 		}
 		$typeCol = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `orders` LIKE 'payment_received_type'");
 		if ($typeCol && mysqli_num_rows($typeCol) > 0) {
@@ -325,7 +333,7 @@ class ChannelPartnerPayment
 				'customer_type' => isset($row['customer_type']) ? $row['customer_type'] : '',
 				'customer_id' => (int) $row['customer_id'],
 				'sales_executive_id' => (int) $row['sales_id'],
-				'paid_amount' => $paidAmount,
+				'paid_amount' => $thisPaid,
 				'payment_date' => $payDate,
 				'payment_type' => $paymentType,
 				'remark' => $payRemark,
@@ -353,11 +361,14 @@ class ChannelPartnerPayment
 
 		return array(
 			'ack' => 1,
-			'ack_msg' => 'Payment Received saved for Order ' . $orderNo . ' — Amount: ' . number_format($paidAmount, 2) . ($typeLabel != '' ? ' (' . $typeLabel . ')' : '') . $stockMsg,
+			'ack_msg' => $prep['ack_msg'] . ($typeLabel != '' ? ' (' . $typeLabel . ')' : '') . $stockMsg,
 			'order_id' => $orderId,
 			'order_no' => $orderNo,
 			'party_id' => $endCustId,
-			'paid_amount' => round($paidAmount, 2),
+			'paid_amount' => round($thisPaid, 2),
+			'total_received' => round($prep['new_paid'], 2),
+			'remaining_amount' => round($prep['remaining'], 2),
+			'payment_received_flag' => (int) $prep['flag'],
 			'payment_type' => $paymentType,
 			'payment_type_label' => $typeLabel,
 			'payment_received_date' => $now,
@@ -429,14 +440,14 @@ class ChannelPartnerPayment
 		$sr = 0;
 		foreach ($orders as $o) {
 			$sr++;
-			$paidFlag = isset($o['payment_received_flag']) ? (int) $o['payment_received_flag'] : 0;
-			$orderAmt = (float) $o['grand_total'];
-			$paidAmt = ($paidFlag === 1) ? (float) $o['payment_received_amount'] : 0;
+			$pay = cp_order_payment_state($o['grand_total'], $o['payment_received_amount']);
+			$orderAmt = $pay['order_amount'];
+			$paidAmt = $pay['paid_amount'];
 			$totalOrder += $orderAmt;
 			$totalPaid += $paidAmt;
-			$totalPending += ($paidFlag === 1) ? 0 : $orderAmt;
-			$statusTxt = ($paidFlag === 1) ? 'RECEIVED' : 'PENDING';
-			$statusCls = ($paidFlag === 1) ? 'ok' : 'pend';
+			$totalPending += $pay['remaining_amount'];
+			$statusTxt = $pay['status_short'];
+			$statusCls = $pay['is_paid'] ? 'ok' : 'pend';
 			$rowsHtml .= '<tr><td class="tc">' . $sr . '</td><td><b>' . htmlspecialchars($o['order_no']) . '</b></td>'
 				. '<td class="tc">' . date('d-m-Y', strtotime($o['order_date'])) . '</td>'
 				. '<td class="tr">' . number_format($orderAmt, 2) . '</td>'

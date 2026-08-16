@@ -43,7 +43,7 @@ if (!$colCheck || mysqli_num_rows($colCheck) === 0) {
 
 $order = $db->rp_getData(
 	"orders",
-	"id,order_no,customer_id,customer_type,sales_id,grand_total,payment_received_flag,isDelete,status,channel_partner_order_flag,channel_partner_customer_id",
+	"id,order_no,customer_id,customer_type,sales_id,grand_total,payment_received_flag,payment_received_amount,isDelete,status,channel_partner_order_flag,channel_partner_customer_id",
 	"id='" . $orderId . "' AND isDelete=0",
 	"",
 	0
@@ -62,8 +62,18 @@ if (function_exists('cp_is_channel_partner_login') && cp_is_channel_partner_logi
 		exit;
 	}
 }
-if ((int) $row['payment_received_flag'] === 1) {
-	echo json_encode(array('ack' => 1, 'ack_msg' => 'Payment already marked as received for ' . $row['order_no'], 'already' => 1));
+if ((int) $row['status'] === -2 || (int) $row['status'] === 3) {
+	echo json_encode(array('ack' => 0, 'ack_msg' => 'Cannot receive payment for cancelled/rejected order.'));
+	exit;
+}
+
+$prep = cp_prepare_receive_payment($row, $paidAmount);
+if ((int) $prep['ack'] !== 1) {
+	echo json_encode(array('ack' => 0, 'ack_msg' => $prep['ack_msg']));
+	exit;
+}
+if (!empty($prep['already'])) {
+	echo json_encode(array('ack' => 1, 'ack_msg' => $prep['ack_msg'], 'already' => 1));
 	exit;
 }
 
@@ -71,15 +81,16 @@ $now = date('Y-m-d H:i:s');
 $payDate = date('Y-m-d');
 $by = isset($_SESSION[SITE_SESS . '_ADMIN_SESS_ID']) ? (int) $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'] : 0;
 $orderNo = $row['order_no'];
+$thisPaid = $prep['this_amount'];
 
 $updRows = array(
-	"payment_received_flag" => 1,
+	"payment_received_flag" => (int) $prep['flag'],
 	"payment_received_date" => $now,
 	"payment_received_by" => $by,
 );
 $amtCol = @mysqli_query($db->myconn, "SHOW COLUMNS FROM `orders` LIKE 'payment_received_amount'");
 if ($amtCol && mysqli_num_rows($amtCol) > 0) {
-	$updRows['payment_received_amount'] = $paidAmount;
+	$updRows['payment_received_amount'] = $prep['new_paid'];
 }
 $typeCol = @mysqli_query($db->myconn, "SHOW COLUMNS FROM `orders` LIKE 'payment_received_type'");
 if ($typeCol && mysqli_num_rows($typeCol) > 0) {
@@ -104,7 +115,7 @@ if ($payTable && mysqli_num_rows($payTable) > 0) {
 		'customer_type' => isset($row['customer_type']) ? $row['customer_type'] : '',
 		'customer_id' => (int) $row['customer_id'],
 		'sales_executive_id' => (int) $row['sales_id'],
-		'paid_amount' => $paidAmount,
+		'paid_amount' => $thisPaid,
 		'payment_date' => $payDate,
 		'payment_type' => $paymentType,
 		'remark' => $payRemark,
@@ -137,9 +148,12 @@ if ($isCpOrder && $endCustId > 0) {
 
 echo json_encode(array(
 	'ack' => 1,
-	'ack_msg' => 'Payment Received saved for Order ' . $orderNo . ' — Amount: ' . number_format($paidAmount, 2) . ($typeLabel != '' ? ' (' . $typeLabel . ')' : '') . $stockMsg,
+	'ack_msg' => $prep['ack_msg'] . ($typeLabel != '' ? ' (' . $typeLabel . ')' : '') . $stockMsg,
 	'order_no' => $orderNo,
-	'paid_amount' => $paidAmount,
+	'paid_amount' => $thisPaid,
+	'total_received' => $prep['new_paid'],
+	'remaining_amount' => $prep['remaining'],
+	'payment_received_flag' => (int) $prep['flag'],
 	'payment_type' => $paymentType,
 	'payment_received_date' => $now,
 	'payment_saved' => $payInsertOk ? 1 : 0,

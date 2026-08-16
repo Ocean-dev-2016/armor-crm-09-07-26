@@ -141,7 +141,7 @@ class ChannelPartnerOrder
 		$paidFlag = (int) $paidFlag;
 		$grandTotal = (float) $grandTotal;
 		$paidAmount = (float) $paidAmount;
-		$isPaid = ($paidFlag === 1 && $paidAmount > 0);
+		$isPaid = ($paidAmount > 0.009 && ($grandTotal - $paidAmount) <= 0.009);
 		$isDispatched = ($status >= 5 && $status != 3 && $status != -2);
 		$baki = $isPaid ? 0 : max(0, $grandTotal - $paidAmount);
 		if ($isPaid) {

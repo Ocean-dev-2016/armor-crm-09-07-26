@@ -4,11 +4,10 @@ $page_slug = 'channel_partner_order';
 $ctable = "orders";
 $ctable1 = "Customer Order";
 $main_page = "channel_partner";
-$page = "channel_partner_order";
+$page = $page_slug;
 $page_title = "Manage " . $ctable1;
 $page_hierarchy = array(
-	array("link" => "", "title" => "Sales & Marketing"),
-	array("link" => "channel_partner_customer_manage.php", "title" => "Channel Partner"),
+	array("link" => "", "title" => "Channel Partner"),
 	array("link" => "channel_partner_order_manage.php", "title" => $page_title)
 );
 include("connect.php");
@@ -58,6 +57,9 @@ if (!function_exists('cp_is_channel_partner_login') || !cp_is_channel_partner_lo
 									<input class="btn btn-success btn-sm" type="button" value="Clear" onclick="clearSearchOrders();">
 								</div>
 							</form>
+							<p class="help-block" style="margin:10px 0 0;">
+								Partial payment Receive Payment page par jase. Order amount thi ochhu receive thatu hoy to Pending amount dekhase.
+							</p>
 						</div>
 					</div>
 					<div class="portlet light">
@@ -66,6 +68,9 @@ if (!function_exists('cp_is_channel_partner_login') || !cp_is_channel_partner_lo
 								<div class="col-md-6">
 									<a href="channel_partner_order_simple.php?cp_mode=customer" class="btn sbold green">
 										Add Customer Order <i class="fa fa-shopping-cart"></i>
+									</a>
+									<a href="channel_partner_payment.php" class="btn default">
+										<i class="fa fa-inr"></i> Receive Payment
 									</a>
 								</div>
 							</div>
@@ -127,10 +132,13 @@ function loadDataTable() {
 		]
 	});
 }
+function ajaxUrl(extra) {
+	return data_url + "?show=" + extra.show + "&searchName=" + extra.searchName;
+}
 function displayRecords(numRecords) {
 	searchName = encodeURIComponent(($("#searchName").val() || "").trim());
 	$("#results").html("");
-	$("#results").load(data_url + "?show=" + numRecords + "&searchName=" + searchName, function(response, status) {
+	$("#results").load(ajaxUrl({ show: numRecords, searchName: searchName }), function(response, status) {
 		if (status === "error") {
 			$("#results").html('<div class="alert alert-danger">Failed to load order listing. Please refresh.</div>');
 			return;
@@ -142,7 +150,7 @@ function displayRecords(numRecords) {
 		var numRecords = $("#numRecords").val();
 		$(".loading-div").show();
 		var page = $(this).attr("data-page");
-		$("#results").load(data_url + "?show=" + numRecords + "&searchName=" + searchName, { "page": page }, function() {
+		$("#results").load(ajaxUrl({ show: numRecords, searchName: searchName }), { "page": page }, function() {
 			$(".loading-div").hide();
 			loadDataTable();
 		});

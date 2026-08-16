@@ -39,23 +39,9 @@ function cp_build_customer_ledger($db, $cpFilter, $partyFilter)
 				'type' => 'order',
 				'order_id' => (int) $o['id'],
 			);
-			if ((int) $o['payment_received_flag'] === 1 && (float) $o['payment_received_amount'] > 0) {
-				$pdate = (!empty($o['payment_received_date']) && $o['payment_received_date'] != '0000-00-00 00:00:00')
-					? date('Y-m-d', strtotime($o['payment_received_date']))
-					: $o['order_date'];
-				$ptypeLabels = array(1 => 'Cash', 2 => 'Cheque', 3 => 'Online', 4 => 'Other');
-				$pt = isset($ptypeLabels[$o['payment_received_type']]) ? $ptypeLabels[$o['payment_received_type']] : 'Payment';
-				$ledger[] = array(
-					'date' => $pdate,
-					'sort' => strtotime($pdate) . '2' . str_pad($o['id'], 8, '0', STR_PAD_LEFT),
-					'particular' => 'Payment Received (' . $pt . ') against ' . $o['order_no'] . ' — ' . $partyName,
-					'party' => $partyName,
-					'vch' => 'RCPT/' . $o['order_no'],
-					'debit' => 0,
-					'credit' => (float) $o['payment_received_amount'],
-					'type' => 'payment',
-					'order_id' => (int) $o['id'],
-				);
+			$credits = cp_ledger_payment_credits($db, $o, $partyName);
+			foreach ($credits as $cr) {
+				$ledger[] = $cr;
 			}
 		}
 	}
