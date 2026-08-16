@@ -22,18 +22,75 @@ class ChannelPartnerCustomer extends Functions
 		return array("ack" => 1);
 	}
 
-	public function GetChannelPartnerList()
+	/**
+	 * Sales IDs whose assigned Channel Partners this executive may see:
+	 * self + reporting team (same chain as GetDealer / SE customer list).
+	 */
+	private function getChannelPartnerSalesIds($salesId)
+	{
+		$salesId = (int) $salesId;
+		if ($salesId <= 0) {
+			return array();
+		}
+		$ids = array($salesId);
+		$get_sales_type = $this->db->rp_getValue("sales_executive", "type", "isDelete=0 AND id='" . $salesId . "'", 0);
+		$key = '';
+		if ($get_sales_type == "sales_manager") {
+			$key = "sm_id";
+		} else if ($get_sales_type == "area_sales_manager") {
+			$key = "asm_id";
+		} else if ($get_sales_type == "sales_officer") {
+			$key = "so_id";
+		} else if ($get_sales_type == "sales_executive" || $get_sales_type == "area_manager") {
+			$key = "se_id";
+		}
+		if ($key != '') {
+			$team_r = $this->db->rp_getData("sales_executive", "id", "isDelete=0 AND isActive=1 AND " . $key . "='" . $salesId . "'", "", 0);
+			if ($team_r) {
+				while ($row = mysqli_fetch_assoc($team_r)) {
+					$ids[] = (int) $row['id'];
+				}
+			}
+		}
+		$ids = array_values(array_unique(array_filter($ids)));
+		return $ids;
+	}
+
+	public function GetChannelPartnerList($detail = array())
 	{
 		$tableCheck = $this->ensureTableReady();
 		if ($tableCheck['ack'] != 1) {
 			return $tableCheck;
 		}
 
+		$salesId = 0;
+		if (is_array($detail)) {
+			if (isset($detail['sales_id']) && (int) $detail['sales_id'] > 0) {
+				$salesId = (int) $detail['sales_id'];
+			} else if (isset($detail['sales_executive_id']) && (int) $detail['sales_executive_id'] > 0) {
+				$salesId = (int) $detail['sales_executive_id'];
+			}
+		}
+		if ($salesId <= 0) {
+			return array(
+				"ack" => 0,
+				"developer_msg" => "sales_id missing",
+				"ack_msg" => "sales_id is required.",
+				"total" => 0,
+				"result" => array(),
+			);
+		}
+
+		$seidIn = $this->getChannelPartnerSalesIds($salesId);
+		if (empty($seidIn)) {
+			$seidIn = array($salesId);
+		}
+
 		$result = array();
 		$cp_r = $this->db->rp_getData(
 			"executive",
 			"*",
-			"channel_partner_flag=1 AND customer_flag=0 AND isDelete=0",
+			"channel_partner_flag=1 AND customer_flag=0 AND isDelete=0 AND seid IN (" . implode(",", $seidIn) . ")",
 			"company_name ASC",
 			0
 		);

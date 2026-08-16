@@ -4331,7 +4331,16 @@ if ($is_valid_api_key) {
 		} else if ($service == "get_channel_partner_list" || $service == 223) {
 			require_once('../include/class.channel_partner_customer.php');
 			$objCP = new ChannelPartnerCustomer();
-			$ack = $objCP->GetChannelPartnerList();
+			$sales_id = '';
+			if (isset($_REQUEST['sales_id']) && $_REQUEST['sales_id'] !== '') {
+				$sales_id = $db->clean($_REQUEST['sales_id']);
+			} else if (isset($_REQUEST['sales_executive_id']) && $_REQUEST['sales_executive_id'] !== '') {
+				$sales_id = $db->clean($_REQUEST['sales_executive_id']);
+			}
+			$ack = $objCP->GetChannelPartnerList(array(
+				'sales_id' => $sales_id,
+				'sales_executive_id' => $sales_id,
+			));
 			$db->printJSON($ack);
 		} else if ($service == "get_channel_partner_customer_list" || $service == 224) {
 			require_once('../include/class.channel_partner_customer.php');
