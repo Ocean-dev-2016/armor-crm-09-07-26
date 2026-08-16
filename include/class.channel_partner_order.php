@@ -15,6 +15,7 @@ class ChannelPartnerOrder
 	private $objOrder;
 	private $objProduct;
 	private $objStock;
+	private $hasOriginalPriceCol = null;
 
 	function __construct()
 	{
@@ -382,6 +383,44 @@ class ChannelPartnerOrder
 	}
 
 	/**
+	 * Form Rate is BEFORE discount. DB unitprice is NET after discount.
+	 * Prefer original_price; else reverse discount so Edit does not shrink rate.
+	 */
+	public function lineGrossRate($row)
+	{
+		$disc = isset($row['discount']) ? (float) $row['discount'] : 0;
+		$unit = isset($row['unitprice']) ? (float) $row['unitprice'] : 0;
+		$orig = isset($row['original_price']) ? (float) $row['original_price'] : 0;
+		if ($orig > 0.00001) {
+			return round($orig, 2);
+		}
+		if ($disc > 0 && $disc < 100 && $unit > 0) {
+			return round($unit / (1 - ($disc / 100)), 2);
+		}
+		return round($unit, 2);
+	}
+
+	private function hasOriginalPriceColumn()
+	{
+		if ($this->hasOriginalPriceCol === null) {
+			$col = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `order_product_item` LIKE 'original_price'");
+			$this->hasOriginalPriceCol = ($col && mysqli_num_rows($col) > 0);
+		}
+		return $this->hasOriginalPriceCol;
+	}
+
+	private function itemOriginalPrice($it)
+	{
+		if (isset($it['original_price']) && $it['original_price'] !== '' && is_numeric($it['original_price'])) {
+			return (float) $it['original_price'];
+		}
+		if (isset($it['rate_before_discount']) && $it['rate_before_discount'] !== '' && is_numeric($it['rate_before_discount'])) {
+			return (float) $it['rate_before_discount'];
+		}
+		return 0;
+	}
+
+	/**
 	 * Products for Customer Order form (CP pricing + My Stock qty).
 	 */
 	public function GetOrderProducts($detail)
@@ -682,8 +721,7 @@ class ChannelPartnerOrder
 			while ($row = mysqli_fetch_assoc($ir)) {
 				$pid = (int) $row['pro_id'];
 				$qty = (float) $row['pro_qty'];
-				$rate = (float) $row['unitprice'];
-				/* unitprice already net after discount in AddToCart path; use discount % if stored */
+				$rate = $this->lineGrossRate($row);
 				$disc = isset($row['discount']) ? (float) $row['discount'] : 0;
 				$lineBase = isset($row['totalprice']) ? (float) $row['totalprice'] : ($qty * $rate);
 				$gstPct = (float) $this->db->rp_getValue('product', 'igst', "id='" . $pid . "' AND isDelete=0", 0);
@@ -1044,6 +1082,9 @@ class ChannelPartnerOrder
 			'discount_amount' => $it['discount_amount'],
 			'modified_date' => date('Y-m-d H:i:s'),
 		);
+		if ($this->hasOriginalPriceColumn()) {
+			$upd['original_price'] = $this->db->rp_num($this->itemOriginalPrice($it));
+		}
 		$this->db->rp_update('order_product_item', $upd, "id='" . $itemId . "' AND order_id='" . $cartId . "'", 0);
 
 		$cart = $this->formatCartResponse($cpId, $cartId);
@@ -1817,6 +1858,9 @@ class ChannelPartnerOrder
 				'cartoon_qty' => $it['cartoon_qty'],
 				'modified_date' => date('Y-m-d H:i:s'),
 			);
+			if ($this->hasOriginalPriceColumn()) {
+				$updItem['original_price'] = $this->db->rp_num($this->itemOriginalPrice($it));
+			}
 			$colIg = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `order_product_item` LIKE 'igst_amount'");
 			if ($colIg && mysqli_num_rows($colIg) > 0) {
 				$updItem['igst_amount'] = $this->db->rp_num($saveGstAmt);
@@ -1850,6 +1894,10 @@ class ChannelPartnerOrder
 				1,
 				date('Y-m-d H:i:s'),
 			);
+			if ($this->hasOriginalPriceColumn()) {
+				$rows[] = 'original_price';
+				$values[] = $this->db->rp_num($this->itemOriginalPrice($it));
+			}
 			$colIg = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `order_product_item` LIKE 'igst_amount'");
 			if ($colIg && mysqli_num_rows($colIg) > 0) {
 				$rows[] = 'igst_amount';
@@ -2164,6 +2212,10 @@ class ChannelPartnerOrder
 					1,
 					date('Y-m-d H:i:s'),
 				);
+				if ($this->hasOriginalPriceColumn()) {
+					$rows[] = 'original_price';
+					$values[] = $this->db->rp_num($this->itemOriginalPrice($it));
+				}
 				$colIg = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `order_product_item` LIKE 'igst_amount'");
 				if ($colIg && mysqli_num_rows($colIg) > 0) {
 					$rows[] = 'igst_amount';
@@ -2287,7 +2339,7 @@ class ChannelPartnerOrder
 					'weight_id' => $it['weight_id'],
 					'product_name' => $it['pro_name'],
 					'qty' => round((float) $it['pro_qty'], 2),
-					'rate' => round((float) $it['unitprice'], 2),
+					'rate' => $this->lineGrossRate($it),
 					'discount' => isset($it['discount']) ? round((float) $it['discount'], 2) : 0,
 					'gst_percent' => round($gstPct, 2),
 					'line_base' => round($lineBase, 2),

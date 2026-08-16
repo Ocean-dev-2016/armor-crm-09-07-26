@@ -6,7 +6,7 @@ $page_id=406;$page_slug='page_admin';
 include("connect.php");
 $ctable = "dealer_distributor_network";
 $ctable1 = "Admin Management";
-$TYPE=array(3=>"Customer",2=>"Sales Exective","0","Super Admin");
+$TYPE=array(4=>"Channel Partner",3=>"Customer",2=>"Sales Officer","0"=>"Super Admin");
 $ctable_where = "";
 // Get the total number of rows in the table
 
@@ -126,7 +126,7 @@ $ctable_r = $db->rp_getData($ctable,"*",$ctable_where." AND id!=41","id DESC lim
                 <td><?php echo $count; ?></td>
                 <td><?php echo stripslashes($ctable_d['name']); ?></td>
                 <?php
-                if($ctable_d['type']==3)
+                if($ctable_d['type']==3 || $ctable_d['type']==4)
                 {
                 ?>
                 <td><a onclick="location.href='executive_crud.php?mode=edit&type=<?php echo $ctable_d['admin_type']?>&id=<?php echo $ctable_d['customer_id'];?>'" style="cursor: pointer;" title="Edit"><?php echo stripslashes($ctable_d['username']); ?></a></td>
@@ -142,7 +142,16 @@ $ctable_r = $db->rp_getData($ctable,"*",$ctable_where." AND id!=41","id DESC lim
 
                 <!-- <td><?php echo stripslashes($ctable_d['username']); ?></td>				 -->
                 <td><?php echo $db->rp_getValue("admin_type","name","id='".$ctable_d['admin_type']."'",0); ?></td>	
-                <td><?= $TYPE[$ctable_d['type']];?></td>			
+                <td><?php
+					$typeLabel = isset($TYPE[$ctable_d['type']]) ? $TYPE[$ctable_d['type']] : $ctable_d['type'];
+					if ($ctable_d['type'] == 3 && $ctable_d['customer_id'] > 0) {
+						$cpListFlag = $db->rp_getValue("executive", "channel_partner_flag", "id='".$ctable_d['customer_id']."' AND isDelete=0", 0);
+						if ((int) $cpListFlag === 1) {
+							$typeLabel = "Channel Partner";
+						}
+					}
+					echo $typeLabel;
+				?></td>			
                 <td><?php echo stripslashes($ctable_d['email']); ?></td>				
                 <!-- <td>
                 <a class="btn btn-info btn-sm" onClick="window.location.href='<?php echo $ctable; ?>_crud.php?mode=edit&id=<?php echo $ctable_d['id']; ?>'" title="Edit"><i class="fa fa-pencil"></i></a>

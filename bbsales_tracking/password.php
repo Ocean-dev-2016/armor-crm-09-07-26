@@ -1,6 +1,6 @@
 <?php
 /**
- * Customer / Channel Partner login (dealer_distributor_network).
+ * Customer login (type=3) / Channel Partner login (type=4) — dealer_distributor_network.
  * Phone + Password only — no Login Type required.
  */
 error_reporting(0);
@@ -65,7 +65,7 @@ if ($res_d['type'] == 1) {
 	$_SESSION[SITE_SESS . 'REFERANCE_ID'] = $res_d['user_id'];
 } else if ($res_d['type'] == 2) {
 	$_SESSION[SITE_SESS . 'REFERANCE_ID'] = $res_d['sales_executive_id'];
-} else if ($res_d['type'] == 3) {
+} else if ($res_d['type'] == 3 || $res_d['type'] == 4) {
 	$_SESSION[SITE_SESS . 'REFERANCE_ID'] = $res_d['customer_id'];
 } else {
 	$_SESSION[SITE_SESS . 'REFERANCE_ID'] = 0;
@@ -89,7 +89,9 @@ if (isset($_REQUEST['from']) && $_REQUEST['from'] != "") {
 
 /* Channel Partner → land on CP customers; others dashboard */
 $isCp = false;
-if ((int) $res_d['type'] === 3 && (int) $res_d['customer_id'] > 0) {
+if ((int) $res_d['type'] === 4) {
+	$isCp = true;
+} else if ((int) $res_d['type'] === 3 && (int) $res_d['customer_id'] > 0) {
 	$cpFlag = $db->rp_getValue(
 		"executive",
 		"channel_partner_flag",

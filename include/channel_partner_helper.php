@@ -1,7 +1,7 @@
 <?php
 /**
  * Channel Partner web-login helpers (PHP 5.6 compatible).
- * CP system user: dealer_distributor_network.type=3, customer_id = executive.id (channel_partner_flag=1).
+ * CP system user: dealer_distributor_network.type=4 (new) or type=3 with channel_partner_flag=1 (legacy).
  */
 
 if (!function_exists('cp_get_login_channel_partner_id')) {
@@ -17,7 +17,9 @@ if (!function_exists('cp_get_login_channel_partner_id')) {
 if (!function_exists('cp_is_channel_partner_login')) {
 	function cp_is_channel_partner_login($db)
 	{
-		if (!isset($_SESSION[SITE_SESS . 'REFERANCE_TYPE']) || (int) $_SESSION[SITE_SESS . 'REFERANCE_TYPE'] != 3) {
+		$refType = isset($_SESSION[SITE_SESS . 'REFERANCE_TYPE']) ? (int) $_SESSION[SITE_SESS . 'REFERANCE_TYPE'] : 0;
+		/* type 4 = Channel Partner login; type 3 = Customer (legacy CP users also type 3) */
+		if ($refType != 3 && $refType != 4) {
 			return false;
 		}
 		$cpId = cp_get_login_channel_partner_id();
@@ -30,7 +32,7 @@ if (!function_exists('cp_is_channel_partner_login')) {
 			"id='" . $cpId . "' AND isDelete=0",
 			0
 		);
-		if ((int) $flag === 1) {
+		if ($refType == 4 || (int) $flag === 1) {
 			return true;
 		}
 		/* Fallback: CP customers exist even if dump reset the flag to 0 */
@@ -57,7 +59,7 @@ if (!function_exists('cp_whatsapp_phone_digits')) {
 		$ddn = $db->rp_getData(
 			"dealer_distributor_network",
 			"phone,username",
-			"customer_id='" . $cpId . "' AND type='3' AND isDelete=0",
+			"customer_id='" . $cpId . "' AND type IN ('3','4') AND isDelete=0",
 			"id DESC",
 			0
 		);

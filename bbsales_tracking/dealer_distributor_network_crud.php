@@ -16,6 +16,7 @@ $username		= "";
 $sales_executive_id		= "";
 $customer_id			= "";
 $password		= "";
+$login_kind		= "";
 
 if(isset($_REQUEST['submit'])){
 	
@@ -36,11 +37,15 @@ if(isset($_REQUEST['submit'])){
 	}
 	else if($customer_id!="")
 	{
-		$name   = $db->rp_getValue("executive","cname","id='".$customer_id."'");
+		$firm   = $db->rp_getValue("executive","company_name","id='".$customer_id."'");
+		$person = $db->rp_getValue("executive","cname","id='".$customer_id."'");
+		$name   = (trim($firm) != "") ? $firm : $person;
 	}
 	else if($user_id!="")
 	{
-		$name   = $db->rp_getValue("executive","cname","id='".$user_id."'");
+		$firm   = $db->rp_getValue("executive","company_name","id='".$user_id."'");
+		$person = $db->rp_getValue("executive","cname","id='".$user_id."'");
+		$name   = (trim($firm) != "") ? $firm : $person;
 
 	}
 	if(isset($_REQUEST['mode']) && $_REQUEST['mode']=="add"){
@@ -77,8 +82,8 @@ if(isset($_REQUEST['submit'])){
 						$name,									
 						$type,									
 						$admin_type_id,
-						($type == 3) ? 0 : $user_id,
-						($type == 3) ? $customer_id : 0,
+						($type == 3 || $type == 4) ? 0 : $user_id,
+						($type == 3 || $type == 4) ? $customer_id : 0,
 						($type == 2) ? $sales_executive_id : 0,
 						$username,
 						$username,
@@ -111,7 +116,7 @@ if(isset($_REQUEST['submit'])){
 						"email"				=> $email,
 						"sales_executive_id"				=> ($type == 2) ? $sales_executive_id : 0,
 						"user_id"				=> ($type == 1) ? $user_id : 0,
-						"customer_id"			=> ($type == 3) ? $customer_id : 0,
+						"customer_id"			=> ($type == 3 || $type == 4) ? $customer_id : 0,
 						"phone"					=> $username,
 						// "password"				=> md5($password),						
 					
@@ -141,6 +146,14 @@ if(isset($_REQUEST['id']) && $_REQUEST['id']>0 && $_REQUEST['mode']=="edit"){
 	$user_id			= htmlentities($ctable_d['user_id']);	
 	$customer_id		= htmlentities($ctable_d['customer_id']);
 	$sales_executive_id			= htmlentities($ctable_d['sales_executive_id']);	
+
+	$login_kind = $type;
+	if (($type == 3 || $type == '3') && $customer_id != '') {
+		$cpFlagEdit = $db->rp_getValue("executive", "channel_partner_flag", "id='".$customer_id."' AND isDelete=0", 0);
+		if ((int) $cpFlagEdit === 1) {
+			$login_kind = 4;
+		}
+	}
 
 	
 }
@@ -233,7 +246,8 @@ if(isset($_REQUEST['id']) && $_REQUEST['id']>0 && $_REQUEST['mode']=="isActive" 
 											<label> Type <code>*</code></label>
 											<select type="text" class="form-control" name="type" id="type"   onchange="getTypeofUser(this.value)">
 											<option value="">Select Type</option>
-											<option value="3" <?= ($type == 3) ? "selected" : ""; ?>>Customer / Channel Partner</option>
+											<option value="3" <?= ($login_kind == 3 || ($login_kind == "" && $type == 3)) ? "selected" : ""; ?>>Customer</option>
+											<option value="4" <?= ($login_kind == 4 || $type == 4) ? "selected" : ""; ?>>Channel Partner</option>
 											<option value="2" <?= ($type == 2) ? "selected" : ""; ?>>Sales Officer</option>
 											</select>
 										</div>
@@ -250,9 +264,9 @@ if(isset($_REQUEST['id']) && $_REQUEST['id']>0 && $_REQUEST['mode']=="isActive" 
 									</div>
 									<div class="col-md-6 cust_user hidden">
 										<div class="form-group">
-											<label>Select Customer<code>*</code></label>
+											<label id="cust_user_label">Select Firm<code>*</code></label>
 											<select type="text" class="form-control" name="customer_id" id="customer_id" >
-											<option value="">Select Customer</option>
+											<option value="">Select Firm</option>
 											</select>
 										</div>
 									</div>
@@ -314,7 +328,7 @@ $(document).ready(function(){$(".form-control").bind("keyup change",function(){ 
 	
 	if(mode=="edit")
 	{
-		var type="<?= $type; ?>";
+		var type="<?= ($login_kind != '' ? $login_kind : $type); ?>";
 		getTypeofUser(type);
 	}
  });
@@ -331,11 +345,11 @@ function check_form(){
 		return false;
 	}
 	var type=$("#type").val();
-	if(type==3)
+	if(type==3 || type==4)
 	{
 		if($("#customer_id").val()=="" || $("#customer_id").val().split(" ").join("")=="")
 		{
-			alert("Please Select Customer.");
+			alert(type==4 ? "Please Select Channel Partner." : "Please Select Customer.");
 			$("#customer_id").focus().parent().addClass("has-error");
 			return false;
 		}
@@ -410,7 +424,7 @@ function check_form(){
 			$(".se_user").removeClass("hidden");
 			$(".cust_user").addClass("hidden");
 		}
-		else if(type_id==3 || type_id==1)
+		else if(type_id==3 || type_id==4 || type_id==1)
 		{
 			if(mode=="edit")
 			{
@@ -420,7 +434,16 @@ function check_form(){
 			{
 				var customer_id="";
 			}
-			GetUser(customer_id);
+			var kind = (type_id==4) ? "channel_partner" : "customer";
+			if(type_id==4)
+			{
+				$("#cust_user_label").html("Select Channel Partner<code>*</code>");
+			}
+			else
+			{
+				$("#cust_user_label").html("Select Customer<code>*</code>");
+			}
+			GetUser(customer_id, kind);
 			$(".se_user").addClass("hidden");
 			$(".cust_user").removeClass("hidden");
 		}
@@ -445,13 +468,13 @@ function check_form(){
        		}
    	 	});
 	}
-	function GetUser(customer_id)
+	function GetUser(customer_id, kind)
 	{
 		
 		$.ajax({
         	type: "POST",
         	url: "ajax_get_user.php",
-        	data:'user_id='+customer_id,
+        	data:'user_id='+customer_id+'&kind='+(kind || 'customer'),
         	beforeSend:function(){
             },
         	success: function(data){

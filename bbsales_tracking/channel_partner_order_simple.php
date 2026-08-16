@@ -96,11 +96,22 @@ if ($edit_order_id > 0 && $cp_mode == 'customer') {
 			$lineBase = isset($eit['totalprice']) ? (float) $eit['totalprice'] : ((float) $eit['pro_qty'] * (float) $eit['unitprice']);
 			$lineGst = isset($eit['igst_amount']) ? (float) $eit['igst_amount'] : 0;
 			$gstPct = (float) $db->rp_getValue("product", "igst", "id='" . $pid . "' AND isDelete=0", 0);
+			$discPct = isset($eit['discount']) ? (float) $eit['discount'] : 0;
+			$rateShow = isset($eit['original_price']) ? (float) $eit['original_price'] : 0;
+			$unitNet = isset($eit['unitprice']) ? (float) $eit['unitprice'] : 0;
+			/* unitprice is NET after discount — never show it as Rate or discount is applied twice on save */
+			if ($rateShow <= 0) {
+				if ($discPct > 0 && $discPct < 100 && $unitNet > 0) {
+					$rateShow = $unitNet / (1 - ($discPct / 100));
+				} else {
+					$rateShow = $unitNet;
+				}
+			}
 			$edit_lines_js[] = array(
 				'pwp_id' => $pwp,
 				'qty' => (float) $eit['pro_qty'],
-				'rate' => (float) $eit['unitprice'],
-				'discount' => isset($eit['discount']) ? (float) $eit['discount'] : 0,
+				'rate' => round($rateShow, 2),
+				'discount' => $discPct,
 				'amount' => round($lineBase, 2),
 				'gst_amount' => round($lineGst, 2),
 				'gst_percent' => $gstPct,
@@ -126,6 +137,9 @@ if ($cp_customers_r) {
 $next_id = (int) $db->getLastInsertId("orders");
 $order_no_display = "ORD-" . $next_id;
 $order_date = date("d-m-Y");
+if ($edit_order_id > 0 && isset($edit_ord['order_date']) && $edit_ord['order_date'] != '0000-00-00') {
+	$order_date = date("d-m-Y", strtotime($edit_ord['order_date']));
+}
 
 $page_title = ($edit_order_id > 0)
 	? ("Edit Customer Order" . ($edit_order_no != '' ? ' — ' . $edit_order_no : ''))
@@ -937,12 +951,15 @@ function applyCpEditLines() {
 	function fillRow($row, line) {
 		var $sel = $row.find(".cp-product-select");
 		var pwpId = line.pwp_id ? String(line.pwp_id) : "";
-		/* Skip catalog overwrite so saved App/Web rate+discount stay intact */
+		/* Do not refill catalog rate — that would overwrite saved Rate */
+		$row.data("cpSkipFill", 1);
 		cpSkipProductFill = true;
 		if (pwpId !== "" && pwpId !== "0") {
-			$sel.val(pwpId).trigger("change");
+			$sel.val(pwpId);
+			if ($sel.hasClass("select2-hidden-accessible") || $sel.data("select2")) {
+				try { $sel.trigger("change.select2"); } catch (e) {}
+			}
 		}
-		cpSkipProductFill = false;
 
 		var $opt = $sel.find("option:selected");
 		var gst = parseFloat($opt.attr("data-gst"));
@@ -957,6 +974,10 @@ function applyCpEditLines() {
 		$row.find(".cp-disc").val((line.discount !== undefined && line.discount !== null) ? line.discount : 0);
 
 		recalcRow($row);
+		setTimeout(function () {
+			cpSkipProductFill = false;
+			$row.removeData("cpSkipFill");
+		}, 80);
 
 		/* Fallback: if calc still 0 but DB has amount (App-saved line) */
 		var baseNow = parseFloat($row.data("base")) || 0;
@@ -1013,21 +1034,18 @@ function getRowProductId($row) {
 
 function fillRowFromProduct($row) {
 	var $opt = $row.find(".cp-product-select option:selected");
-	var rate = $opt.data("pricelist");
-	var gst = $opt.data("gst");
-	var disc = $opt.data("discount");
-	if (rate === undefined || rate === null || rate === "") {
-		rate = $opt.attr("data-pricelist");
-	}
-	if (gst === undefined || gst === null || gst === "") {
-		gst = $opt.attr("data-gst");
-	}
-	if (disc === undefined || disc === null || disc === "") {
-		disc = $opt.attr("data-discount");
-	}
+	var rate = $opt.attr("data-pricelist");
+	var orig = $opt.attr("data-original-price");
+	var gst = $opt.attr("data-gst");
+	var disc = $opt.attr("data-discount");
 	rate = parseFloat(rate) || 0;
+	orig = parseFloat(orig) || 0;
 	gst = parseFloat(gst) || 0;
 	disc = parseFloat(disc) || 0;
+	/* List price + Disc % — do not use already-discounted sell_price or Disc is applied twice */
+	if (orig > 0 && disc > 0) {
+		rate = orig;
+	}
 	$row.find(".cp-rate").val(rate > 0 ? fmtAmt(rate) : "");
 	$row.find(".cp-disc").val(disc > 0 ? fmtAmt(disc) : "0");
 	$row.find(".cp-gst-val").val(gst);
@@ -1137,10 +1155,11 @@ $(document).ready(function () {
 	});
 
 	$(document).on("change", ".cp-product-select", function () {
-		if (cpSkipProductFill) {
+		var $row = $(this).closest("tr");
+		if (cpSkipProductFill || $row.data("cpSkipFill")) {
 			return;
 		}
-		fillRowFromProduct($(this).closest("tr"));
+		fillRowFromProduct($row);
 	});
 
 	$(document).on("keyup change", ".cp-qty, .cp-rate, .cp-disc", function () {
