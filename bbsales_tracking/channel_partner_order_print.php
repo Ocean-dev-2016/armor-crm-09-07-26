@@ -141,37 +141,103 @@ $order_date = (!empty($ord['order_date']) && $ord['order_date'] != '0000-00-00' 
 	? date('d-M-Y', strtotime($ord['order_date']))
 	: '';
 
+if (!function_exists('cp_pi_line_calc')) {
+	/**
+	 * Rate = original (before discount). Amount = after discount.
+	 * Discounted Value = Rate * Qty * Disc%  (same as Admin PI).
+	 */
+	function cp_pi_line_calc($it)
+	{
+		$qty = isset($it['pro_qty']) ? (float) $it['pro_qty'] : 0;
+		$unitNet = isset($it['unitprice']) ? (float) $it['unitprice'] : 0;
+		$orig = isset($it['original_price']) ? (float) $it['original_price'] : 0;
+		$discPct = isset($it['discount']) ? (float) $it['discount'] : 0;
+		$discAmt = isset($it['discount_amount']) ? (float) $it['discount_amount'] : 0;
+		$lineAmt = isset($it['totalprice']) ? (float) $it['totalprice'] : 0;
+
+		if ($orig <= 0.00001 && $discPct > 0 && $discPct < 100 && $unitNet > 0) {
+			$orig = $unitNet / (1 - ($discPct / 100));
+		}
+		if ($orig <= 0.00001 && isset($it['price']) && (float) $it['price'] > 0) {
+			$orig = (float) $it['price'];
+		}
+		if ($orig <= 0.00001) {
+			$orig = $unitNet;
+		}
+		if ($discAmt <= 0.00001 && $discPct > 0 && $orig > 0) {
+			$discAmt = ($orig * $discPct) / 100;
+		}
+		if ($discPct <= 0.00001 && $discAmt > 0 && $orig > 0) {
+			$discPct = ($discAmt / $orig) * 100;
+		}
+		if ($discAmt <= 0.00001 && $orig > 0 && $unitNet > 0 && ($orig - $unitNet) > 0.009) {
+			$discAmt = $orig - $unitNet;
+			if ($discPct <= 0.00001) {
+				$discPct = ($discAmt / $orig) * 100;
+			}
+		}
+		if ($lineAmt <= 0.00001) {
+			$net = ($unitNet > 0) ? $unitNet : max(0, $orig - $discAmt);
+			$lineAmt = $qty * $net;
+		}
+		$discTotal = $discAmt * $qty;
+		if ($discTotal <= 0.00001 && $orig > 0 && $qty > 0) {
+			$mrpLine = $orig * $qty;
+			if ($mrpLine - $lineAmt > 0.009) {
+				$discTotal = $mrpLine - $lineAmt;
+				if ($discPct <= 0.00001 && $mrpLine > 0) {
+					$discPct = ($discTotal / $mrpLine) * 100;
+				}
+			}
+		}
+		$mrpLine = $orig * $qty;
+		return array(
+			'qty' => $qty,
+			'rate' => round($orig, 2),
+			'disc_pct' => round($discPct, 2),
+			'disc_value' => round($discTotal, 2),
+			'amount' => round($lineAmt, 2),
+			'mrp' => round($mrpLine, 2),
+		);
+	}
+}
+
 $sub_total = 0;
 $total_qty = 0;
 $igst_amount = 0;
-foreach ($items as $it) {
-	$lineQty = isset($it['pro_qty']) ? (float) $it['pro_qty'] : 0;
-	$lineRate = 0;
-	if (isset($it['unitprice']) && (float) $it['unitprice'] > 0) {
-		$lineRate = (float) $it['unitprice'];
-	} else if (isset($it['original_price']) && (float) $it['original_price'] > 0) {
-		$lineRate = (float) $it['original_price'];
-	} else if (isset($it['price']) && (float) $it['price'] > 0) {
-		$lineRate = (float) $it['price'];
-	}
-	$lineAmt = isset($it['totalprice']) ? (float) $it['totalprice'] : ($lineQty * $lineRate);
-	$sub_total += $lineAmt;
-	$total_qty += $lineQty;
+$total_item_discount = 0;
+$total_mrp_amount = 0;
+foreach ($items as $k => $it) {
+	$ln = cp_pi_line_calc($it);
+	$items[$k]['_pi'] = $ln;
+	$sub_total += $ln['amount'];
+	$total_qty += $ln['qty'];
+	$total_item_discount += $ln['disc_value'];
+	$total_mrp_amount += $ln['mrp'];
 	if ($gst_on) {
 		$lineGst = isset($it['igst_amount']) ? (float) $it['igst_amount'] : 0;
-		if ($lineGst <= 0) {
+		if ($lineGst <= 0.00001) {
 			$pct = (float) $db->rp_getValue("product", "igst", "id='" . (int) $it['pro_id'] . "' AND isDelete=0", 0);
 			if ($pct > 0) {
-				$lineGst = ($lineAmt * $pct) / 100;
+				$lineGst = ($ln['amount'] * $pct) / 100;
 			}
 		}
 		$igst_amount += $lineGst;
 	}
 }
+$sub_total = round($sub_total, 2);
+$total_item_discount = round($total_item_discount, 2);
+$total_mrp_amount = round($total_mrp_amount, 2);
+$overall_discount_per = ($total_mrp_amount > 0.00001)
+	? round(($total_item_discount / $total_mrp_amount) * 100, 2)
+	: 0;
 
 $cd = isset($ord['cash_discount_amount']) ? (float) $ord['cash_discount_amount'] : 0;
 $ad = isset($ord['additional_discount_amount']) ? (float) $ord['additional_discount_amount'] : 0;
-$taxable = $sub_total - $cd - $ad;
+$taxable = round($sub_total - $cd - $ad, 2);
+if ($taxable < 0) {
+	$taxable = 0;
+}
 if (!$gst_on) {
 	$igst_amount = 0;
 	$grand = $taxable;
@@ -179,7 +245,12 @@ if (!$gst_on) {
 	if ($igst_amount <= 0 && isset($ord['igst_amount']) && (float) $ord['igst_amount'] > 0) {
 		$igst_amount = (float) $ord['igst_amount'];
 	}
-	$grand = $taxable + $igst_amount;
+	/* GST on taxable (after cash / additional discount) */
+	if ($sub_total > 0.00001 && ($cd > 0.009 || $ad > 0.009) && $igst_amount > 0) {
+		$igst_amount = round(($igst_amount * $taxable) / $sub_total, 2);
+	}
+	$igst_amount = round($igst_amount, 2);
+	$grand = round($taxable + $igst_amount, 2);
 }
 
 $gst_same_state = false;
@@ -223,7 +294,7 @@ $auto_print = isset($_REQUEST['p']) && $_REQUEST['p'] == '1';
 	}
 	.header-note { padding: 6px 12px; font-size: 12px; border-bottom: 1px solid #ccc; white-space: pre-wrap; }
 	.title-row { background: #A9A9A9; text-align: center; font-weight: 700; letter-spacing: 1px; font-size: 15px; }
-	.th-head { background: #1a6b8a; color: #fff; text-align: center; font-size: 12px; }
+	.th-head { background: #1a6b8a; color: #fff; text-align: center; font-size: 11px; }
 	.text-right { text-align: right; }
 	.text-center { text-align: center; }
 	.footer-img { width: 100%; display: block; }
@@ -292,39 +363,28 @@ $auto_print = isset($_REQUEST['p']) && $_REQUEST['p'] == '1';
 
 		<table class="main" style="margin-top:-1px;">
 			<tr class="th-head">
-				<th style="width:6%;">Sr</th>
-				<th style="width:40%;">Product</th>
-				<th style="width:12%;">HSN</th>
-				<th style="width:10%;">Qty</th>
-				<th style="width:14%;">Rate</th>
-				<th style="width:18%;">Amount</th>
+				<th style="width:5%;">Sr</th>
+				<th style="width:28%;">Product</th>
+				<th style="width:10%;">HSN</th>
+				<th style="width:8%;">Qty</th>
+				<th style="width:12%;">Rate</th>
+				<th style="width:9%;">Discount %</th>
+				<th style="width:13%;">Discounted Value</th>
+				<th style="width:15%;">Amount</th>
 			</tr>
 			<?php
 			$sr = 0;
 			if (!empty($items)) {
 				foreach ($items as $it) {
 					$sr++;
+					$ln = isset($it['_pi']) ? $it['_pi'] : cp_pi_line_calc($it);
 					$pro_name = !empty($it['pro_name']) ? $it['pro_name'] : $db->rp_getValue("product", "name", "id='" . (int) $it['pro_id'] . "'");
 					$size = $db->rp_getValue("weight", "name", "id='" . (int) $it['weight_id'] . "' AND isDelete=0");
 					$catno = $db->rp_getValue("product_weight_price", "catno", "product_id='" . (int) $it['pro_id'] . "' AND weight_id='" . (int) $it['weight_id'] . "'", 0);
 					$hsn = $db->rp_getValue("product", "hsn_code", "id='" . (int) $it['pro_id'] . "' AND isDelete=0", 0);
 					$gst_pct = $db->rp_getValue("product", "igst", "id='" . (int) $it['pro_id'] . "' AND isDelete=0", 0);
-					$qty = isset($it['pro_qty']) ? (float) $it['pro_qty'] : 0;
-					$amt = isset($it['totalprice']) ? (float) $it['totalprice'] : 0;
-					$rate = 0;
-					if (isset($it['unitprice']) && (float) $it['unitprice'] > 0) {
-						$rate = (float) $it['unitprice'];
-					} else if (isset($it['original_price']) && (float) $it['original_price'] > 0) {
-						$rate = (float) $it['original_price'];
-					} else if (isset($it['price']) && (float) $it['price'] > 0) {
-						$rate = (float) $it['price'];
-					}
-					if ($rate <= 0 && $qty > 0 && $amt > 0) {
-						$rate = $amt / $qty;
-					}
-					if ($amt <= 0) {
-						$amt = $qty * $rate;
-					}
+					$qty = $ln['qty'];
+					$qtyShow = (abs($qty - round($qty)) < 0.00001) ? (string) (int) round($qty) : number_format($qty, 2);
 					$label = $pro_name;
 					if ($size != '' && stripos($label, $size) === false) {
 						$label .= ' - ' . $size;
@@ -342,38 +402,61 @@ $auto_print = isset($_REQUEST['p']) && $_REQUEST['p'] == '1';
 							<?php } ?>
 						</td>
 						<td class="text-center"><?php echo htmlspecialchars($hsn); ?></td>
-						<td class="text-center"><?php echo $qty; ?></td>
-						<td class="text-right"><?php echo number_format($rate, 2); ?></td>
-						<td class="text-right"><?php echo number_format($amt, 2); ?></td>
+						<td class="text-center"><?php echo $qtyShow; ?></td>
+						<td class="text-right"><?php echo number_format($ln['rate'], 2); ?></td>
+						<td class="text-center"><?php echo number_format($ln['disc_pct'], 2); ?></td>
+						<td class="text-right"><?php echo number_format($ln['disc_value'], 2); ?></td>
+						<td class="text-right"><?php echo number_format($ln['amount'], 2); ?></td>
 					</tr>
 					<?php
 				}
 			} else {
-				echo '<tr><td colspan="6" class="text-center">No items</td></tr>';
+				echo '<tr><td colspan="8" class="text-center">No items</td></tr>';
 			}
+			$qtyTotShow = (abs($total_qty - round($total_qty)) < 0.00001) ? (string) (int) round($total_qty) : number_format($total_qty, 2);
 			?>
 			<tr>
 				<td colspan="3" class="text-right"><strong>Total Qty</strong></td>
-				<td class="text-center"><strong><?php echo $total_qty; ?></strong></td>
+				<td class="text-center"><strong><?php echo $qtyTotShow; ?></strong></td>
 				<td></td>
+				<td></td>
+				<td class="text-right"><strong><?php echo number_format($total_item_discount, 2); ?></strong></td>
 				<td class="text-right"><strong><?php echo $currency . ' ' . number_format($sub_total, 2); ?></strong></td>
 			</tr>
 		</table>
-
+		<?php
+		$terms_rowspan = 1; /* Taxable */
+		if ($cd > 0) {
+			$terms_rowspan++;
+		}
+		if ($ad > 0) {
+			$terms_rowspan++;
+		}
+		if ($gst_on) {
+			$terms_rowspan += ($gst_same_state && $igst_amount > 0) ? 2 : 1;
+		} else {
+			$terms_rowspan++;
+		}
+		$terms_rowspan++; /* Grand Total */
+		$discPctLabel = rtrim(rtrim(number_format($overall_discount_per, 2, '.', ''), '0'), '.');
+		if ($discPctLabel === '') {
+			$discPctLabel = '0';
+		}
+		?>
 		<table class="main" style="margin-top:-1px;">
 			<tr>
-				<td style="width:55%;background-color:lightgray;">
+				<td style="width:52%;background-color:lightgray;">
 					<?php if ($pi_gst != '') { ?>
 						<strong>GSTIN NO. : <?php echo htmlspecialchars($pi_gst); ?></strong>
 					<?php } else { ?>
 						<strong>Seller :</strong> <?php echo htmlspecialchars($pi_company); ?>
 					<?php } ?>
 				</td>
-				<td style="width:25%;background-color:lightgray;"><strong>Sub Total</strong></td>
-				<td class="text-right" style="width:20%;background-color:lightgray;"><strong><?php echo $currency . ' ' . number_format($sub_total, 2); ?></strong></td>
+				<td style="width:26%;background-color:lightgray;"><strong>Discount (<?php echo $discPctLabel; ?>%)</strong></td>
+				<td class="text-right" style="width:22%;background-color:lightgray;"><strong><?php echo $currency . ' ' . number_format($total_item_discount, 2); ?></strong></td>
 			</tr>
 			<tr>
-				<td rowspan="8" style="vertical-align:top;">
+				<td rowspan="<?php echo (int) $terms_rowspan; ?>" style="vertical-align:top;">
 					<?php if (trim(strip_tags($pi_bank)) != '') { ?>
 						<strong>Bank Details</strong><br>
 						<?php echo html_entity_decode($pi_bank); ?>
@@ -389,8 +472,8 @@ $auto_print = isset($_REQUEST['p']) && $_REQUEST['p'] == '1';
 						<br><br><strong>Note:</strong><br><?php echo nl2br(htmlspecialchars($ord['remarks'])); ?>
 					<?php } ?>
 				</td>
-				<td><strong>Taxable Amount</strong></td>
-				<td class="text-right"><?php echo $currency . ' ' . number_format($taxable, 2); ?></td>
+				<td><strong>Sub Total</strong></td>
+				<td class="text-right"><strong><?php echo $currency . ' ' . number_format($sub_total, 2); ?></strong></td>
 			</tr>
 			<?php if ($cd > 0) { ?>
 			<tr>
@@ -404,6 +487,10 @@ $auto_print = isset($_REQUEST['p']) && $_REQUEST['p'] == '1';
 				<td class="text-right"><?php echo $currency . ' ' . number_format($ad, 2); ?></td>
 			</tr>
 			<?php } ?>
+			<tr>
+				<td><strong>Taxable Amount</strong></td>
+				<td class="text-right"><?php echo $currency . ' ' . number_format($taxable, 2); ?></td>
+			</tr>
 			<?php if ($gst_on) { ?>
 				<?php if ($gst_same_state && $igst_amount > 0) { ?>
 			<tr>
