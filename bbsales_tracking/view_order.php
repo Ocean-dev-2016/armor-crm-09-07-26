@@ -390,7 +390,7 @@ tbody
 		</tr>
 		<?php
 		$ITEMS=array();
-		$items1=$db->rp_getData("order_product_item","*","order_id='".$quotation_id."'");
+		$items1=$db->rp_getData("order_product_item","*","order_id='".$quotation_id."' AND isDelete=0");
 		while ($item1=mysqli_fetch_assoc($items1)) 
 		{
 			$item1['display_order']=$db->rp_getValue("product","display_order","id='".$item1['pro_id']."' AND isDelete=0");

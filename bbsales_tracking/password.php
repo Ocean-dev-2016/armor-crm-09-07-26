@@ -87,23 +87,6 @@ if (isset($_REQUEST['from']) && $_REQUEST['from'] != "") {
 	$db->rp_location($_REQUEST['from']);
 }
 
-/* Channel Partner → land on CP customers; others dashboard */
-$isCp = false;
-if ((int) $res_d['type'] === 4) {
-	$isCp = true;
-} else if ((int) $res_d['type'] === 3 && (int) $res_d['customer_id'] > 0) {
-	$cpFlag = $db->rp_getValue(
-		"executive",
-		"channel_partner_flag",
-		"id='" . (int) $res_d['customer_id'] . "' AND isDelete=0",
-		0
-	);
-	$isCp = ((int) $cpFlag === 1);
-}
-
-if ($isCp) {
-	$db->rp_location("channel_partner_customer_manage.php");
-} else {
-	$db->rp_location("dashboard.php");
-}
+/* Customer → customer_dashboard; Channel Partner → CP dashboard; others → main dashboard */
+$db->rp_location("dashboard.php");
 ?>

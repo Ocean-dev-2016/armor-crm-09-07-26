@@ -17,7 +17,7 @@ if ($page_number <= 0) {
 	$page_number = 1;
 }
 
-$where = "o.customer_id='" . $cp_id . "' AND o.channel_partner_order_flag=1 AND o.cp_order_mode='customer' AND o.channel_partner_customer_id>0 AND o.isDelete=0";
+$where = "o.customer_id='" . $cp_id . "' AND o.channel_partner_order_flag=1 AND o.cp_order_mode='customer' AND o.channel_partner_customer_id>0 AND o.isDelete=0 AND o.status!=-1";
 if ($search != '') {
 	$s = mysqli_real_escape_string($db->myconn, $search);
 	$where .= " AND (order_no LIKE '%" . $s . "%' OR company_name LIKE '%" . $s . "%' OR channel_partner_customer_id IN (

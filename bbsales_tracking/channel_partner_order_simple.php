@@ -94,8 +94,11 @@ if ($edit_order_id > 0 && $cp_mode == 'customer') {
 				);
 			}
 			$lineBase = isset($eit['totalprice']) ? (float) $eit['totalprice'] : ((float) $eit['pro_qty'] * (float) $eit['unitprice']);
-			$lineGst = isset($eit['igst_amount']) ? (float) $eit['igst_amount'] : 0;
 			$gstPct = (float) $db->rp_getValue("product", "igst", "id='" . $pid . "' AND isDelete=0", 0);
+			$lineGst = isset($eit['igst_amount']) ? (float) $eit['igst_amount'] : 0;
+			if ($edit_gst_flag && $lineGst <= 0 && $gstPct > 0) {
+				$lineGst = ($lineBase * $gstPct) / 100;
+			}
 			$discPct = isset($eit['discount']) ? (float) $eit['discount'] : 0;
 			$rateShow = isset($eit['original_price']) ? (float) $eit['original_price'] : 0;
 			$unitNet = isset($eit['unitprice']) ? (float) $eit['unitprice'] : 0;
@@ -516,6 +519,11 @@ if (isset($_REQUEST['btn_save']) || isset($_REQUEST['submit'])) {
 			$portalUpd['gst_apply_flag'] = $gst_apply_flag;
 		}
 		$db->rp_update("orders", $portalUpd, "id='" . (int) $reply['order_id'] . "'", 0);
+
+		/* PlaceOrderPanel often leaves igst_amount=0 even when With GST — persist line GST + grand total */
+		require_once dirname(__FILE__) . '/../include/class.channel_partner_order.php';
+		$objCpGst = new ChannelPartnerOrder();
+		$objCpGst->RecalcGstAndTotals((int) $reply['order_id'], $gst_apply_flag);
 
 		/* Debit CP stock for customer orders */
 		if ($cp_mode == 'customer') {

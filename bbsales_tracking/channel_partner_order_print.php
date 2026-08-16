@@ -100,6 +100,8 @@ $buyer_gst = isset($ord['gst']) ? $ord['gst'] : (isset($ord['name_gstin']) ? $or
 $buyer_addr = !empty($ord['billing_address']) ? $ord['billing_address'] : (isset($ord['address']) ? $ord['address'] : '');
 $buyer_mobile = '';
 $buyer_email = '';
+$buyer_state = '';
+$seller_state = isset($cp['state']) ? trim($cp['state']) : '';
 
 $cp_end_id = isset($ord['channel_partner_customer_id']) ? (int) $ord['channel_partner_customer_id'] : 0;
 if ($cp_end_id > 0) {
@@ -109,6 +111,7 @@ if ($cp_end_id > 0) {
 		$buyer_gst = !empty($end['gst']) ? $end['gst'] : $buyer_gst;
 		$buyer_mobile = isset($end['mobile_no']) ? $end['mobile_no'] : '';
 		$buyer_email = isset($end['email']) ? $end['email'] : '';
+		$buyer_state = isset($end['state']) ? trim($end['state']) : '';
 		$addrParts = array_filter(array(
 			isset($end['address']) ? $end['address'] : '',
 			isset($end['city']) ? $end['city'] : '',
@@ -127,9 +130,6 @@ $gst_on = isset($ord['gst_apply_flag']) ? (int) $ord['gst_apply_flag'] : 1;
 
 $items = array();
 $items_r = $db->rp_getData("order_product_item", "*", "order_id='" . $order_id . "' AND isDelete=0", "id ASC", 0);
-if (!$items_r || mysqli_num_rows($items_r) == 0) {
-	$items_r = $db->rp_getData("order_product_item", "*", "order_id='" . $order_id . "'", "id ASC", 0);
-}
 if ($items_r) {
 	while ($it = mysqli_fetch_assoc($items_r)) {
 		$items[] = $it;
@@ -143,18 +143,55 @@ $order_date = (!empty($ord['order_date']) && $ord['order_date'] != '0000-00-00' 
 
 $sub_total = 0;
 $total_qty = 0;
+$igst_amount = 0;
 foreach ($items as $it) {
-	$sub_total += isset($it['totalprice']) ? (float) $it['totalprice'] : ((float) $it['pro_qty'] * (float) $it['price']);
-	$total_qty += isset($it['pro_qty']) ? (float) $it['pro_qty'] : 0;
+	$lineQty = isset($it['pro_qty']) ? (float) $it['pro_qty'] : 0;
+	$lineRate = 0;
+	if (isset($it['unitprice']) && (float) $it['unitprice'] > 0) {
+		$lineRate = (float) $it['unitprice'];
+	} else if (isset($it['original_price']) && (float) $it['original_price'] > 0) {
+		$lineRate = (float) $it['original_price'];
+	} else if (isset($it['price']) && (float) $it['price'] > 0) {
+		$lineRate = (float) $it['price'];
+	}
+	$lineAmt = isset($it['totalprice']) ? (float) $it['totalprice'] : ($lineQty * $lineRate);
+	$sub_total += $lineAmt;
+	$total_qty += $lineQty;
+	if ($gst_on) {
+		$lineGst = isset($it['igst_amount']) ? (float) $it['igst_amount'] : 0;
+		if ($lineGst <= 0) {
+			$pct = (float) $db->rp_getValue("product", "igst", "id='" . (int) $it['pro_id'] . "' AND isDelete=0", 0);
+			if ($pct > 0) {
+				$lineGst = ($lineAmt * $pct) / 100;
+			}
+		}
+		$igst_amount += $lineGst;
+	}
 }
 
-$igst_amount = isset($ord['igst_amount']) ? (float) $ord['igst_amount'] : 0;
 $cd = isset($ord['cash_discount_amount']) ? (float) $ord['cash_discount_amount'] : 0;
 $ad = isset($ord['additional_discount_amount']) ? (float) $ord['additional_discount_amount'] : 0;
 $taxable = $sub_total - $cd - $ad;
-$grand = isset($ord['grand_total']) && $ord['grand_total'] !== '' && $ord['grand_total'] !== null
-	? (float) $ord['grand_total']
-	: ($taxable + ($gst_on ? $igst_amount : 0));
+if (!$gst_on) {
+	$igst_amount = 0;
+	$grand = $taxable;
+} else {
+	if ($igst_amount <= 0 && isset($ord['igst_amount']) && (float) $ord['igst_amount'] > 0) {
+		$igst_amount = (float) $ord['igst_amount'];
+	}
+	$grand = $taxable + $igst_amount;
+}
+
+$gst_same_state = false;
+$buyer_gst_clean = strtoupper(preg_replace('/\s+/', '', (string) $buyer_gst));
+$seller_gst_clean = strtoupper(preg_replace('/\s+/', '', (string) $pi_gst));
+$buyer_gst_code = (strlen($buyer_gst_clean) >= 2 && ctype_digit(substr($buyer_gst_clean, 0, 2))) ? substr($buyer_gst_clean, 0, 2) : '';
+$seller_gst_code = (strlen($seller_gst_clean) >= 2 && ctype_digit(substr($seller_gst_clean, 0, 2))) ? substr($seller_gst_clean, 0, 2) : '';
+if ($buyer_gst_code !== '' && $seller_gst_code !== '') {
+	$gst_same_state = ($buyer_gst_code === $seller_gst_code);
+} else if ($buyer_state !== '' && $seller_state !== '') {
+	$gst_same_state = (strtolower($buyer_state) === strtolower($seller_state));
+}
 
 $saved_msg = isset($_REQUEST['saved']) && $_REQUEST['saved'] == '1';
 $auto_print = isset($_REQUEST['p']) && $_REQUEST['p'] == '1';
@@ -273,13 +310,26 @@ $auto_print = isset($_REQUEST['p']) && $_REQUEST['p'] == '1';
 					$hsn = $db->rp_getValue("product", "hsn_code", "id='" . (int) $it['pro_id'] . "' AND isDelete=0", 0);
 					$gst_pct = $db->rp_getValue("product", "igst", "id='" . (int) $it['pro_id'] . "' AND isDelete=0", 0);
 					$qty = isset($it['pro_qty']) ? (float) $it['pro_qty'] : 0;
-					$rate = isset($it['price']) ? (float) $it['price'] : 0;
-					$amt = isset($it['totalprice']) ? (float) $it['totalprice'] : ($qty * $rate);
+					$amt = isset($it['totalprice']) ? (float) $it['totalprice'] : 0;
+					$rate = 0;
+					if (isset($it['unitprice']) && (float) $it['unitprice'] > 0) {
+						$rate = (float) $it['unitprice'];
+					} else if (isset($it['original_price']) && (float) $it['original_price'] > 0) {
+						$rate = (float) $it['original_price'];
+					} else if (isset($it['price']) && (float) $it['price'] > 0) {
+						$rate = (float) $it['price'];
+					}
+					if ($rate <= 0 && $qty > 0 && $amt > 0) {
+						$rate = $amt / $qty;
+					}
+					if ($amt <= 0) {
+						$amt = $qty * $rate;
+					}
 					$label = $pro_name;
-					if ($size != '') {
+					if ($size != '' && stripos($label, $size) === false) {
 						$label .= ' - ' . $size;
 					}
-					if ($catno != '') {
+					if ($catno != '' && strpos($label, '#' . $catno) === false && strpos($label, $catno) === false) {
 						$label .= ' (#' . $catno . ')';
 					}
 					?>
@@ -354,12 +404,23 @@ $auto_print = isset($_REQUEST['p']) && $_REQUEST['p'] == '1';
 				<td class="text-right"><?php echo $currency . ' ' . number_format($ad, 2); ?></td>
 			</tr>
 			<?php } ?>
-			<?php if ($gst_on && $igst_amount > 0) { ?>
+			<?php if ($gst_on) { ?>
+				<?php if ($gst_same_state && $igst_amount > 0) { ?>
 			<tr>
-				<td><strong>GST / IGST</strong></td>
+				<td><strong>CGST</strong></td>
+				<td class="text-right"><?php echo $currency . ' ' . number_format($igst_amount / 2, 2); ?></td>
+			</tr>
+			<tr>
+				<td><strong>SGST</strong></td>
+				<td class="text-right"><?php echo $currency . ' ' . number_format($igst_amount / 2, 2); ?></td>
+			</tr>
+				<?php } else { ?>
+			<tr>
+				<td><strong><?php echo $gst_same_state ? 'GST' : 'IGST'; ?></strong></td>
 				<td class="text-right"><?php echo $currency . ' ' . number_format($igst_amount, 2); ?></td>
 			</tr>
-			<?php } else if (!$gst_on) { ?>
+				<?php } ?>
+			<?php } else { ?>
 			<tr>
 				<td><strong>GST</strong></td>
 				<td class="text-right">Not Applied (Without GST)</td>

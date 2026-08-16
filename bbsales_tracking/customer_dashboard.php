@@ -42,7 +42,7 @@ if ($is_cp_dashboard) {
 		),
 		array(
 			'label' => 'Customer Orders',
-			'value' => (int) $db->rp_getTotalRecord("orders", "customer_id='" . $cp_id . "' AND channel_partner_order_flag=1 AND channel_partner_customer_id>0 AND isDelete=0 AND status NOT IN (-2,3)", 0),
+			'value' => (int) $db->rp_getTotalRecord("orders", "customer_id='" . $cp_id . "' AND channel_partner_order_flag=1 AND channel_partner_customer_id>0 AND isDelete=0 AND status NOT IN (-1,-2,3)", 0),
 			'icon' => 'fa-shopping-cart',
 			'link' => 'channel_partner_order_manage.php',
 			'hint' => 'All customer SOs',
@@ -50,7 +50,7 @@ if ($is_cp_dashboard) {
 		),
 		array(
 			'label' => 'Pending Payments',
-			'value' => (int) $db->rp_getTotalRecord("orders", "customer_id='" . $cp_id . "' AND channel_partner_order_flag=1 AND channel_partner_customer_id>0 AND isDelete=0 AND status NOT IN (-2,3) AND (payment_received_flag=0 OR payment_received_flag IS NULL)", 0),
+			'value' => (int) $db->rp_getTotalRecord("orders", "customer_id='" . $cp_id . "' AND channel_partner_order_flag=1 AND channel_partner_customer_id>0 AND isDelete=0 AND status NOT IN (-1,-2,3) AND (payment_received_flag=0 OR payment_received_flag IS NULL)", 0),
 			'icon' => 'fa-inr',
 			'link' => 'channel_partner_payment.php',
 			'hint' => 'Baki payments',
@@ -68,7 +68,7 @@ if ($is_cp_dashboard) {
 	$recentOrderR = $db->rp_getData(
 		"orders",
 		"id,order_no,order_date,grand_total,status,channel_partner_customer_id,payment_received_flag,payment_received_amount",
-		"customer_id='" . $cp_id . "' AND channel_partner_order_flag=1 AND channel_partner_customer_id>0 AND isDelete=0 AND status NOT IN (-2,3)",
+		"customer_id='" . $cp_id . "' AND channel_partner_order_flag=1 AND channel_partner_customer_id>0 AND isDelete=0 AND status NOT IN (-1,-2,3)",
 		"id DESC LIMIT 5",
 		0
 	);
@@ -85,7 +85,7 @@ if ($is_cp_dashboard) {
 		$pendingR = $db->rp_getData(
 			"orders",
 			"id,order_no,order_date,grand_total,status,channel_partner_customer_id,payment_received_flag,payment_received_amount",
-			"customer_id='" . $cp_id . "' AND channel_partner_order_flag=1 AND channel_partner_customer_id>0 AND isDelete=0 AND status NOT IN (-2,3) AND (payment_received_flag=0 OR payment_received_flag IS NULL)",
+			"customer_id='" . $cp_id . "' AND channel_partner_order_flag=1 AND channel_partner_customer_id>0 AND isDelete=0 AND status NOT IN (-1,-2,3) AND (payment_received_flag=0 OR payment_received_flag IS NULL)",
 			"id DESC LIMIT 5",
 			0
 		);

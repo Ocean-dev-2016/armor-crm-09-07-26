@@ -1583,7 +1583,13 @@ class ChannelPartnerOrder
 
 	/**
 	 * Persist GST mode + recalculate line GST and order totals (After Place / Update).
+	 * Public so web PlaceOrderPanel path can sync With GST the same way as App PlaceOrder.
 	 */
+	public function RecalcGstAndTotals($orderId, $gstFlag)
+	{
+		$this->syncGstModeOnOrder($orderId, $gstFlag);
+	}
+
 	private function syncGstModeOnOrder($orderId, $gstFlag)
 	{
 		$orderId = (int) $orderId;
@@ -1625,12 +1631,14 @@ class ChannelPartnerOrder
 				$sub += $line;
 				$qtyTot += $qty;
 				if ($gstFlag) {
+					$pct = (float) $this->db->rp_getValue('product', 'igst', "id='" . (int) $row['pro_id'] . "' AND isDelete=0", 0);
+					$fromPct = ($line * $pct) / 100;
+					$storedGst = 0;
 					if (isset($row['igst_amount']) && $row['igst_amount'] !== '' && $row['igst_amount'] !== null) {
-						$gstTot += (float) $row['igst_amount'];
-					} else {
-						$pct = (float) $this->db->rp_getValue('product', 'igst', "id='" . (int) $row['pro_id'] . "' AND isDelete=0", 0);
-						$gstTot += ($line * $pct) / 100;
+						$storedGst = (float) $row['igst_amount'];
 					}
+					/* Stored 0 with gst_apply_flag=1 is stale (PlaceOrderPanel) — use product GST % */
+					$gstTot += ($storedGst > 0.00001) ? $storedGst : $fromPct;
 				}
 			}
 		}
@@ -2324,7 +2332,10 @@ class ChannelPartnerOrder
 				$gstPct = (float) $this->db->rp_getValue('product', 'igst', "id='" . (int) $it['pro_id'] . "' AND isDelete=0", 0);
 				$lineGst = 0;
 				if ($gstFlag) {
-					$lineGst = isset($it['igst_amount']) ? (float) $it['igst_amount'] : (($lineBase * $gstPct) / 100);
+					$lineGst = isset($it['igst_amount']) ? (float) $it['igst_amount'] : 0;
+					if ($lineGst <= 0 && $gstPct > 0) {
+						$lineGst = ($lineBase * $gstPct) / 100;
+					}
 				}
 				$pwpId = (int) $this->db->rp_getValue(
 					'product_weight_price',
@@ -2350,22 +2361,11 @@ class ChannelPartnerOrder
 			}
 		}
 
-		/* Prefer live item sum (correct columns: orders.subtotal / orders.igst_amount) */
+		/* Live item sum is source of truth. Stored igst_amount/grand_total can be 0 after PlaceOrderPanel. */
 		$calc = $this->sumOrderItemTotals($orderId, $gstFlag);
 		$subTotal = $calc['sub_total'];
 		$gstAmount = $calc['gst_amount'];
 		$grandTotal = $calc['grand_total'];
-		if (isset($row['subtotal']) && (float) $row['subtotal'] > 0) {
-			$subTotal = round((float) $row['subtotal'], 2);
-		}
-		if (isset($row['igst_amount'])) {
-			$gstAmount = $gstFlag ? round((float) $row['igst_amount'], 2) : 0;
-		}
-		if (isset($row['grand_total']) && (float) $row['grand_total'] > 0) {
-			$grandTotal = round((float) $row['grand_total'], 2);
-		} else {
-			$grandTotal = round($subTotal + $gstAmount, 2);
-		}
 
 		$printMeta = $this->orderPrintMeta((int) $row['id'], $wf['status']);
 		return array(

@@ -353,7 +353,7 @@ $weight_total = 0;
 				$ITEMS = array();
 				$total_item_discount = 0;
 				$total_mrp_amount = 0;
-				$items1 = $db->rp_getData("order_product_item", "*", "order_id='" . $order_id . "'");
+				$items1 = $db->rp_getData("order_product_item", "*", "order_id='" . $order_id . "' AND isDelete=0");
 				while ($item1 = mysqli_fetch_assoc($items1)) {
 					$item1['display_order'] = $db->rp_getValue("product", "display_order", "id='" . $item1['pro_id'] . "' AND isDelete=0");
 					$item1['weight_display_order'] = $db->rp_getValue("weight", "display_order", "id='" . $item1['weight_id'] . "' AND isDelete=0");
@@ -370,6 +370,9 @@ $weight_total = 0;
 					$count = 0;
 					$GST = 0;
 					foreach ($ITEMS as $item) {
+						if (isset($item['isDelete']) && (int) $item['isDelete'] === 1) {
+							continue;
+						}
 
 						$pro_name = $db->rp_getValue("product", "name", "id='" . $item['pro_id'] . "' AND isDelete=0");
 						$size = $db->rp_getValue("weight", "name", "id='" . $item['weight_id'] . "' AND isDelete=0");
