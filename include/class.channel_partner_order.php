@@ -1603,11 +1603,19 @@ class ChannelPartnerOrder
 				$line = isset($row['totalprice']) ? (float) $row['totalprice'] : ((float) $row['pro_qty'] * (float) $row['unitprice']);
 				$pct = (float) $this->db->rp_getValue('product', 'igst', "id='" . (int) $row['pro_id'] . "' AND isDelete=0", 0);
 				$gstAmt = $gstFlag ? (($line * $pct) / 100) : 0;
+				$itemUpd = array();
 				$colIg = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `order_product_item` LIKE 'igst_amount'");
 				if ($colIg && mysqli_num_rows($colIg) > 0) {
+					$itemUpd['igst_amount'] = $this->db->rp_num($gstAmt);
+				}
+				$colTax = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `order_product_item` LIKE 'taxable'");
+				if ($colTax && mysqli_num_rows($colTax) > 0) {
+					$itemUpd['taxable'] = $this->db->rp_num($line);
+				}
+				if (!empty($itemUpd)) {
 					$this->db->rp_update(
 						'order_product_item',
-						array('igst_amount' => $this->db->rp_num($gstAmt)),
+						$itemUpd,
 						"id='" . (int) $row['id'] . "'",
 						0
 					);
@@ -1670,7 +1678,12 @@ class ChannelPartnerOrder
 				$gst = round((float) $detail['igst_amount'], 2);
 			}
 			if (isset($detail['grand_total']) && $detail['grand_total'] !== '' && is_numeric($detail['grand_total'])) {
-				$grand = round((float) $detail['grand_total'], 2);
+				$sentGrand = round((float) $detail['grand_total'], 2);
+				$expectedGrand = round($sub + ($gstFlag ? $gst : 0), 2);
+				/* Ignore a sent grand total that is only the subtotal (GST omitted) */
+				if (!$gstFlag || abs($sentGrand - $expectedGrand) <= 1) {
+					$grand = $sentGrand;
+				}
 			}
 			if (!$gstFlag) {
 				$gst = 0;
@@ -1678,6 +1691,11 @@ class ChannelPartnerOrder
 					$grand = $sub;
 				}
 			}
+		}
+
+		/* GST is on but grand total still equals subtotal — add GST */
+		if ($gstFlag && $gst > 0 && abs($grand - $sub) <= 0.05) {
+			$grand = round($sub + $gst, 2);
 		}
 
 		$upd = array(
@@ -1688,6 +1706,10 @@ class ChannelPartnerOrder
 			'remaining_amount' => round($grand),
 			'modified_date' => date('Y-m-d H:i:s'),
 		);
+		$colGtRound = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `orders` LIKE 'grand_total_rounded'");
+		if ($colGtRound && mysqli_num_rows($colGtRound) > 0) {
+			$upd['grand_total_rounded'] = round($grand);
+		}
 		$colGst = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `orders` LIKE 'gst_apply_flag'");
 		if ($colGst && mysqli_num_rows($colGst) > 0) {
 			$upd['gst_apply_flag'] = ((int) $gstFlag === 0) ? 0 : 1;

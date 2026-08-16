@@ -522,6 +522,34 @@ $weight_total = 0;
 				</tr>
 			</tbody>
 		</table>
+		<?php
+		// Grand Total = Taxable + IGST + TCS (stored grand_total_rounded often misses GST)
+		if (!isset($totalprice1)) { $totalprice1 = 0; }
+		$total_tax_amt = floatval($totalprice1) - floatval($cart_detail_d['cash_discount_amount']) - floatval($cart_detail_d['additional_discount_amount']) + floatval($cart_detail_d['transport_charge']) + floatval($cart_detail_d['packing_charge']);
+		$igst_amt = floatval($cart_detail_d['igst_amount']);
+		$tcs_amt = floatval($cart_detail_d['tcs_amount']);
+		$calc_before_round = $total_tax_amt + $igst_amt + $tcs_amt;
+		$calc_rounded = round($calc_before_round);
+		$display_grand_total = floatval($cart_detail_d['grand_total_rounded']);
+		$stored_grand = floatval($cart_detail_d['grand_total']);
+		if ($display_grand_total <= 0) {
+			$display_grand_total = $stored_grand;
+		}
+		if (($igst_amt > 0 || $tcs_amt > 0) && abs($display_grand_total - $total_tax_amt) <= 1) {
+			if (abs($stored_grand - $calc_rounded) <= 1 && $stored_grand > $display_grand_total) {
+				$display_grand_total = round($stored_grand);
+			} else {
+				$display_grand_total = $calc_rounded;
+			}
+		}
+		if ($display_grand_total <= 0) {
+			$display_grand_total = $calc_rounded;
+		}
+		$display_roundoff = $cart_detail_d['roundoff'];
+		if ((string)$display_roundoff === '' || $display_roundoff === null || (($igst_amt > 0 || $tcs_amt > 0) && abs(floatval($cart_detail_d['grand_total_rounded']) - $total_tax_amt) <= 1)) {
+			$display_roundoff = $db->rp_num($calc_rounded - $calc_before_round, 2);
+		}
+		?>
 		<table style="width:250mm!important;">
 			<tbody class="<?= $cl; ?>">
 				<tr class="font-size">
@@ -630,7 +658,7 @@ $weight_total = 0;
 					?>
 
 					<td colspan="4" class="text-left" style="font-size: 14px;"><strong>Total Taxable Amount</strong></td>
-					<?php $total_tax_amt = $totalprice1 - ($cart_detail_d['cash_discount_amount'] + $cart_detail_d['additional_discount_amount']) + ($cart_detail_d['transport_charge'] + $cart_detail_d['packing_charge']); ?>
+					<?php /* $total_tax_amt already calculated above for grand total */ ?>
 					<td colspan="4" class="text-right" style="font-size: 14px;"><strong><?php echo $currency . ' ' . $db->rp_number_format($total_tax_amt, 2); ?></strong></td>
 				</tr>
 				<?php
@@ -738,7 +766,7 @@ $weight_total = 0;
 						<br> -->
 						<b>Bill Amount In Words</b> :
 						<?php
-						$grand_total_words = $ntw->rp_convertNumToWord($cart_detail_d['grand_total_rounded']);
+						$grand_total_words = $ntw->rp_convertNumToWord($display_grand_total);
 						echo ucwords(strtolower($grand_total_words));
 						?>
 					</td>
@@ -746,7 +774,7 @@ $weight_total = 0;
 						<strong>Round Off</strong>
 					</td>
 					<td colspan="4" class="text-right"><strong>
-							<?php echo $currency . $cart_detail_d['roundoff']; ?>
+							<?php echo $currency . $display_roundoff; ?>
 						</strong></td>
 				</tr>
 				<tr>
@@ -759,7 +787,7 @@ $weight_total = 0;
 					</td>
 					<td colspan="4" class="text-right" style="background-color: <?= GRAND_TOTAL_COLOR ?>;font-size: 16px;"><strong>
 							<?php
-							echo $currency . ' ' . $db->rp_number_format($cart_detail_d['grand_total_rounded'], 2);
+							echo $currency . ' ' . $db->rp_number_format($display_grand_total, 2);
 							?>
 						</strong>
 					</td>
@@ -828,7 +856,10 @@ $weight_total = 0;
 						$InvoiceIds = implode(",", $InvoiceIds);
 						// echo $InvoiceIds;exit;
 						$total_pro_qty = $db->rp_getValue("order_product_item", "SUM(pro_qty)", "id In (" . $InvoiceIds . ") AND isDelete=0", 0);
-						$total_pro_taxable = $db->rp_getValue("order_product_item", "SUM(taxable)", "id In (" . $InvoiceIds . ") AND isDelete=0", 0);
+						$total_pro_taxable = floatval($db->rp_getValue("order_product_item", "SUM(taxable)", "id In (" . $InvoiceIds . ") AND isDelete=0", 0));
+						if ($total_pro_taxable <= 0) {
+							$total_pro_taxable = floatval($db->rp_getValue("order_product_item", "SUM(totalprice)", "id In (" . $InvoiceIds . ") AND isDelete=0", 0));
+						}
 
 						$cash_amount = ($total_pro_taxable * $cart_detail_d['cash_discount']) / 100;
 						if ($cash_amount > $total_pro_taxable) {

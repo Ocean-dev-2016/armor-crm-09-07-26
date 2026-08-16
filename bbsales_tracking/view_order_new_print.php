@@ -485,20 +485,32 @@ $order_unit_arr = array("-1" => "Box", "-2" => "Strip", "-3" => "Pallet", "1" =>
 			</tbody>
 		</table>
 		<?php
-		// Resolve Grand Total for print (fallback when DB grand_total_rounded is 0)
+		// Grand Total = Taxable + IGST + TCS (stored grand_total_rounded often misses GST)
 		if (!isset($totalprice1)) { $totalprice1 = 0; }
 		$total_tax_amt = floatval($totalprice1) - floatval($cart_detail_d['cash_discount_amount']) - floatval($cart_detail_d['additional_discount_amount']) + floatval($cart_detail_d['transport_charge']) + floatval($cart_detail_d['packing_charge']);
-		$calc_before_round = $total_tax_amt + floatval($cart_detail_d['igst_amount']) + floatval($cart_detail_d['tcs_amount']);
+		$igst_amt = floatval($cart_detail_d['igst_amount']);
+		$tcs_amt = floatval($cart_detail_d['tcs_amount']);
+		$calc_before_round = $total_tax_amt + $igst_amt + $tcs_amt;
+		$calc_rounded = round($calc_before_round);
 		$display_grand_total = floatval($cart_detail_d['grand_total_rounded']);
+		$stored_grand = floatval($cart_detail_d['grand_total']);
 		if ($display_grand_total <= 0) {
-			$display_grand_total = floatval($cart_detail_d['grand_total']);
+			$display_grand_total = $stored_grand;
+		}
+		// Stored total equals taxable (GST not added) — use calculated inclusive total
+		if (($igst_amt > 0 || $tcs_amt > 0) && abs($display_grand_total - $total_tax_amt) <= 1) {
+			if (abs($stored_grand - $calc_rounded) <= 1 && $stored_grand > $display_grand_total) {
+				$display_grand_total = round($stored_grand);
+			} else {
+				$display_grand_total = $calc_rounded;
+			}
 		}
 		if ($display_grand_total <= 0) {
-			$display_grand_total = round($calc_before_round);
+			$display_grand_total = $calc_rounded;
 		}
 		$display_roundoff = $cart_detail_d['roundoff'];
-		if ((string)$display_roundoff === '' || $display_roundoff === null) {
-			$display_roundoff = round($calc_before_round) - $calc_before_round;
+		if ((string)$display_roundoff === '' || $display_roundoff === null || (($igst_amt > 0 || $tcs_amt > 0) && abs(floatval($cart_detail_d['grand_total_rounded']) - $total_tax_amt) <= 1)) {
+			$display_roundoff = $db->rp_num($calc_rounded - $calc_before_round, 2);
 		}
 		// Dynamic rowspan for bank/terms (ends before Round Off / Bill Amount In Words)
 		$terms_rowspan = 2; // Sub Total, Taxable
@@ -779,7 +791,10 @@ $order_unit_arr = array("-1" => "Box", "-2" => "Strip", "-3" => "Pallet", "1" =>
 						$InvoiceIds = implode(",", $InvoiceIds);
 						// echo $InvoiceIds;exit;
 						$total_pro_qty = $db->rp_getValue("order_product_item", "SUM(pro_qty)", "id In (" . $InvoiceIds . ") AND isDelete=0", 0);
-						$total_pro_taxable = $db->rp_getValue("order_product_item", "SUM(taxable)", "id In (" . $InvoiceIds . ") AND isDelete=0", 0);
+						$total_pro_taxable = floatval($db->rp_getValue("order_product_item", "SUM(taxable)", "id In (" . $InvoiceIds . ") AND isDelete=0", 0));
+						if ($total_pro_taxable <= 0) {
+							$total_pro_taxable = floatval($db->rp_getValue("order_product_item", "SUM(totalprice)", "id In (" . $InvoiceIds . ") AND isDelete=0", 0));
+						}
 
 						$cash_amount = ($total_pro_taxable * $cart_detail_d['cash_discount']) / 100;
 						if ($cash_amount > $total_pro_taxable) {
