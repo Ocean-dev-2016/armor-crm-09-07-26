@@ -91,13 +91,25 @@ if ($mode === 'get_sales_persons') {
 		$stateList = array_unique($stateList);
 	}
 
+	// Filter sales persons using "Add Class Area" mapping (sales_executive_map_area),
+	// not relying on sales_executive.state (which may differ from assigned area state).
 	$where = assign_kra_app_sales_where();
 	if (!empty($stateList)) {
-		$escaped = array();
+		$escapedStateNames = array();
 		foreach ($stateList as $st) {
-			$escaped[] = "'" . $db->clean($st) . "'";
+			$escapedStateNames[] = "'" . $db->clean($st) . "'";
 		}
-		$where .= ' AND state IN (' . implode(',', $escaped) . ')';
+
+		// state table is `class` and cities belong to `class.id` via `city.state_id`.
+		$stateWhere = "class.name IN (" . implode(',', $escapedStateNames) . ") AND class.isDelete=0";
+
+		$where .= " AND id IN (
+			SELECT DISTINCT sam.sales_executive_id
+			FROM sales_executive_map_area sam
+			INNER JOIN city c ON c.id = sam.city_id
+			INNER JOIN class ON class.id = c.state_id
+			WHERE sam.isDelete=0 AND {$stateWhere}
+		)";
 	}
 
 	$rows = array();
