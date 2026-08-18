@@ -133,11 +133,36 @@ function initMap() {
             map = null;
         }
 
-        map = L.map('map').setView([locations[0].lat, locations[0].lng], 15);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '© OpenStreetMap'
-        }).addTo(map);
+        });
+
+        // High-Quality Google Hybrid / Satellite Layer (Free, Watermark-free)
+        var googleSat = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+        });
+
+        // Google Streets Layer
+        var googleStreets = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+        });
+
+        var baseMaps = {
+            "Google Satellite (HD)": googleSat,
+            "Google Streets": googleStreets,
+            "OpenStreetMap": osmLayer
+        };
+
+        map = L.map('map', {
+            center: [locations[0].lat, locations[0].lng],
+            zoom: 15,
+            layers: [googleSat] // default to Google Satellite
+        });
+
+        L.control.layers(baseMaps).addTo(map);
 
         var latlngs = [];
         var typePinArray = [
@@ -187,20 +212,47 @@ function initMap() {
             });
 
             var marker = L.marker([v.lat, v.lng], { icon: customIcon, title: v.type }).addTo(map);
-            var popupContent = "<div style='min-width:220px;'><h4><b>" + (i + 1) + ") " + v.date + "</b></h4><p style='margin:0;font-size:12px;line-height:1.4;'><b>Lat:</b> " + v.lat + "<br/><b>Long:</b> " + v.lng + "<br/><b>Type:</b> " + v.type + "<br/><b>Address:</b> " + v.address + "<br/><b>Name:</b> " + v.name + "</p></div>";
-            marker.bindPopup(popupContent, { autoPan: true, autoPanPadding: [50, 50], maxWidth: 300 });
+            var popupContent = "<div class='map-popup-card' style='min-width:260px;max-width:340px;'>" +
+                "<h4>" + (i + 1) + ") " + v.date + "</h4>" +
+                "<p><b>Sales Person:</b> " + v.name + "</p>" +
+                (v.type ? "<p><b>Type:</b> <span class='badge' style='background:#0b58a2;color:#fff;'>" + v.type + "</span></p>" : "") +
+                "<p class='map-popup-address'><b>📍 Address:</b> " + (v.address ? v.address : "N/A") + "</p>" +
+                "<p style='font-size:11px;color:#777;'><b>GPS:</b> " + v.lat + ", " + v.lng + "</p>" +
+                "</div>";
+            marker.bindPopup(popupContent, { autoPan: true, autoPanPadding: [50, 50], maxWidth: 360 });
 
             latlngs.push([v.lat, v.lng]);
         });
 
         if (latlngs.length > 0) {
             routeLine = L.polyline(latlngs, {
-                color: '#005db5',
-                weight: 5,
-                opacity: 0.9,
+                color: '#00d0ff',
+                weight: 6,
+                opacity: 0.95,
                 smoothFactor: 1
             }).addTo(map);
             map.fitBounds(routeLine.getBounds(), { padding: [30, 30] });
+
+            // Animated Moving Pulse Pin along the route
+            if (latlngs.length > 1) {
+                var animCircle = L.circleMarker(latlngs[0], {
+                    radius: 9,
+                    color: '#ffffff',
+                    weight: 3,
+                    fillColor: '#ff0055',
+                    fillOpacity: 1
+                }).addTo(map);
+
+                var animIndex = 0;
+                var animInterval = window.setInterval(function() {
+                    if (!map || !animCircle) {
+                        window.clearInterval(animInterval);
+                        return;
+                    }
+                    animIndex = (animIndex + 1) % latlngs.length;
+                    animCircle.setLatLng(latlngs[animIndex]);
+                }, 120);
+            }
         }
     } else {
         if (map) {
@@ -208,9 +260,9 @@ function initMap() {
             map = null;
         }
         map = L.map('map').setView([22.2939994, 70.7892855], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap'
+        L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
         }).addTo(map);
     }
 }

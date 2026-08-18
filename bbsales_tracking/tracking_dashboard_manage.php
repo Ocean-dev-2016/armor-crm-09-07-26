@@ -64,6 +64,44 @@ $date=date('d-m-Y');
 			.leaflet-popup {
 				z-index: 500 !important;
 			}
+			.leaflet-popup-content-wrapper {
+				border-radius: 8px !important;
+				box-shadow: 0 5px 20px rgba(0,0,0,0.25) !important;
+				padding: 4px !important;
+			}
+			.leaflet-popup-content {
+				font-size: 14px !important;
+				line-height: 1.5 !important;
+				color: #222 !important;
+				margin: 12px 14px !important;
+			}
+			.map-popup-card h4 {
+				font-size: 16px !important;
+				font-weight: 700 !important;
+				color: #0b58a2 !important;
+				margin: 0 0 8px 0 !important;
+				border-bottom: 1px solid #eee;
+				padding-bottom: 6px;
+			}
+			.map-popup-card p {
+				margin: 0 !important;
+				font-size: 13px !important;
+				color: #333 !important;
+				line-height: 1.6 !important;
+			}
+			.map-popup-card b {
+				color: #111 !important;
+				font-weight: 600 !important;
+			}
+			.map-popup-address {
+				background: #f8f9fa;
+				border-left: 3px solid #00d0ff;
+				padding: 5px 8px;
+				margin: 6px 0 !important;
+				border-radius: 3px;
+				font-size: 13px !important;
+				color: #222 !important;
+			}
 		</style>
    	</head>
 	<body class="page-md">

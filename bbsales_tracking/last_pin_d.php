@@ -114,11 +114,34 @@ function initMap() {
             map = null;
         }
 
-        map = L.map('map').setView([locations[0].lat, locations[0].lng], 15);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '© OpenStreetMap'
-        }).addTo(map);
+        });
+
+        var googleSat = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+        });
+
+        var googleStreets = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+        });
+
+        var baseMaps = {
+            "Google Satellite (HD)": googleSat,
+            "Google Streets": googleStreets,
+            "OpenStreetMap": osmLayer
+        };
+
+        map = L.map('map', {
+            center: [locations[0].lat, locations[0].lng],
+            zoom: 15,
+            layers: [googleSat]
+        });
+
+        L.control.layers(baseMaps).addTo(map);
 
         var bounds = [];
         $.each(locations, function(i, v) {
@@ -130,8 +153,14 @@ function initMap() {
             });
 
             var marker = L.marker([v.lat, v.lng], { icon: customIcon, title: v.type }).addTo(map);
-            var popupContent = "<h4><b>" + (i + 1) + ") " + v.date + "</b></h4><p><b>Lat:</b> " + v.lat + "<br/><b>Long:</b> " + v.lng + "<br/><b>Type:</b> " + v.type + "<br/><b>Address:</b> " + v.address + "<br/><b>Name:</b> " + v.name + "</p>";
-            marker.bindPopup(popupContent);
+            var popupContent = "<div class='map-popup-card' style='min-width:260px;max-width:340px;'>" +
+                "<h4>" + (i + 1) + ") " + v.date + "</h4>" +
+                "<p><b>Sales Person:</b> " + v.name + "</p>" +
+                (v.type ? "<p><b>Type:</b> <span class='badge' style='background:#0b58a2;color:#fff;'>" + v.type + "</span></p>" : "") +
+                "<p class='map-popup-address'><b>📍 Address:</b> " + (v.address ? v.address : "N/A") + "</p>" +
+                "<p style='font-size:11px;color:#777;'><b>GPS:</b> " + v.lat + ", " + v.lng + "</p>" +
+                "</div>";
+            marker.bindPopup(popupContent, { autoPan: true, autoPanPadding: [50, 50], maxWidth: 360 });
             bounds.push([v.lat, v.lng]);
         });
 
@@ -146,9 +175,9 @@ function initMap() {
             map = null;
         }
         map = L.map('map').setView([22.2939994, 70.7892855], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap'
+        L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
         }).addTo(map);
     }
 }
