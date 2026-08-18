@@ -667,18 +667,29 @@ class Expense extends Functions
 
 		// STOP / End KM
 		if ($type_flag == "2" || $type_flag == 2) {
-			if ($tmp_id == "") {
-				return array("ack" => 0, "developer_msg" => "id required for end km", "ack_msg" => "Trip id missing. Please start trip again.");
-			}
 			if ($end_km === "" || !is_numeric($end_km)) {
 				return array("ack" => 0, "developer_msg" => "end_km required", "ack_msg" => "Please enter End km.");
 			}
 
-			$data = $this->db->rp_getData("expense_tmp", "*", "id='" . $tmp_id . "' AND sales_executive_id='" . $sales_executive_id . "' AND isDelete=0", "", 0);
-			if (!$data) {
+			$data = false;
+			if ($tmp_id != "") {
+				$data = $this->db->rp_getData("expense_tmp", "*", "id='" . $tmp_id . "' AND sales_executive_id='" . $sales_executive_id . "' AND isDelete=0", "", 0);
+			}
+
+			// If id not passed or not found by id, lookup the latest open trip for this sales person
+			if (!$data || mysqli_num_rows($data) == 0) {
+				$openWhere = "sales_executive_id='" . $sales_executive_id . "' AND isDelete=0 AND isActive=1 AND (end_date_time IS NULL OR end_date_time='' OR end_date_time='0000-00-00 00:00:00')";
+				if ($subcat_id) {
+					$openWhere .= " AND subcategory_id='" . $subcat_id . "'";
+				}
+				$data = $this->db->rp_getData("expense_tmp", "*", $openWhere, "id DESC LIMIT 1", 0);
+			}
+
+			if (!$data || mysqli_num_rows($data) == 0) {
 				return array("ack" => 0, "developer_msg" => "expense_tmp not found", "ack_msg" => "Trip not found. Please start trip again.");
 			}
 			$r = mysqli_fetch_assoc($data);
+			$tmp_id = $r['id'];
 			$start_kilometer = floatval($r['start_km']);
 			$end_kilometer = floatval($end_km);
 
