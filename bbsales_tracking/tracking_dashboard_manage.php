@@ -12,6 +12,8 @@ $date=date('d-m-Y');
 		<?php include("include_css.php"); ?>
 		<link rel="stylesheet" type="text/css" href="assets/global/plugins/jquery-ui/jquery-ui.min.css"/>
 		<link rel="stylesheet" type="text/css" href="css/dashboard.css"/>
+		<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+		<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 		<style type="text/css">
 			/*#mapd
 			{
@@ -43,6 +45,24 @@ $date=date('d-m-Y');
 			.p-0
 			{
 				padding: 0!important;
+			}
+			#map, .leaflet-container {
+				z-index: 1 !important;
+			}
+			.leaflet-pane {
+				z-index: 10 !important;
+			}
+			.leaflet-top, .leaflet-bottom {
+				z-index: 20 !important;
+			}
+			.device_floating, .pin_floating, #pin_panel, #device_panel, .floating, .floating.panel {
+				z-index: 9999 !important;
+				background-color: #ffffff !important;
+				box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
+				border: 1px solid #ccc !important;
+			}
+			.leaflet-popup {
+				z-index: 500 !important;
 			}
 		</style>
    	</head>
@@ -192,8 +212,8 @@ $date=date('d-m-Y');
 									</div>
 								</div>
 								<div class="col-md-10">
-									<div class="portlet light com-height" style="overflow-x: auto;">
-									   <div class="portlet-body">
+									<div class="portlet light com-height" style="position: relative;">
+									   <div class="portlet-body" style="position: relative;">
 									   		
 									   		<!-- <device INFO -->
 									   		<div class="device_floating" id="device_toggle"><img src="<?="../images/device_info.png"?>" width="20px;" height="25px;">

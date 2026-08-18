@@ -102,100 +102,63 @@
    </div>
 </div>
 <script>
-var map;
-var markerCluster;
-var markers = []
+var map = null;
 
 function initMap() {
     if (locations.length > 0) {
         var location_count = locations.length;
-        var j = 0;
-        var map = new google.maps.Map(document.getElementById('map'), {
-            zoom: 5,
-            center: {
-                lat: locations[0].lat,
-                lng: locations[0].lng
-            },
-        });
-        var infowindow = new google.maps.InfoWindow();
-        var bounds = new google.maps.LatLngBounds();
-        $.each(locations, function(i, v) {
-            var marker = new google.maps.Marker({
-                position: {
-                    lat: locations[i].lat,
-                    lng: locations[i].lng
-                },
-                map: map,
-                icon: '../images/pin/last-pin.png',
-                title: locations[i]['type'],
+        var pinico = "../images/pin/";
 
+        if (map) {
+            map.remove();
+            map = null;
+        }
+
+        map = L.map('map').setView([locations[0].lat, locations[0].lng], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        var bounds = [];
+        $.each(locations, function(i, v) {
+            var customIcon = L.icon({
+                iconUrl: pinico + 'last-pin.png',
+                iconSize: [32, 32],
+                iconAnchor: [16, 32],
+                popupAnchor: [0, -32]
             });
-            bounds.extend(marker.getPosition());
-            google.maps.event.addListener(marker, 'click', (function(marker, i) {
-                return function() {
-                    if (locations[i]['status'] == "offline") {
-                        var color = "red";
-                    } else if (locations[i]['status'] == "online") {
-                        var color = "green";
-                    }
-                    //alert(locations[i]['address']);
-                    /*if(locations[i]['address']==undefined){
-                        var address = "";
-                    }else{
-                        var address = locations[i]['address'];
-                    }*/
-                    // infowindow.setContent("<h1>" + (i + 1) + ") " + locations[i]['date'] + "</h1><p>Lat:" + locations[i]['lat'] + "<br/> Long:" + locations[i]['lng'] + " <br/>" + locations[i]['type'] + "<p><b>Address</b>:" + locations[i]['address'] + "<br/><p><b>Name:" + locations[i]['name'] + "<br/><a style='color:" + color + "'>" + locations[i]['status'] + "</a></b></h4></p>");
-                    infowindow.setContent("<h1>" + (i + 1) + ") " + locations[i]['date'] + "</h1><p>Lat:" + locations[i]['lat'] + "<br/> Long:" + locations[i]['lng'] + " <br/>" + locations[i]['type'] + "<p><b>Address</b>:" + locations[i]['address'] + "<br/><p><b>Name:" + locations[i]['name'] +"</b></h4></p>");
-                    infowindow.open(map, marker);
-                }
-            })(marker, i));
-        })
-        map.fitBounds(bounds);
-        var flightPath = new google.maps.Polyline({
-            // path: locations,
-            geodesic: true,
-            strokeColor: '#FF0000',
-            strokeOpacity: 1.0,
-            strokeWeight: 2
+
+            var marker = L.marker([v.lat, v.lng], { icon: customIcon, title: v.type }).addTo(map);
+            var popupContent = "<h4><b>" + (i + 1) + ") " + v.date + "</b></h4><p><b>Lat:</b> " + v.lat + "<br/><b>Long:</b> " + v.lng + "<br/><b>Type:</b> " + v.type + "<br/><b>Address:</b> " + v.address + "<br/><b>Name:</b> " + v.name + "</p>";
+            marker.bindPopup(popupContent);
+            bounds.push([v.lat, v.lng]);
         });
-        flightPath.setMap(map);
-        for (var i = 0; i < location_count; i++) {
-            var cityCircle = new google.maps.Circle({
-                strokeColor: '#518FFB',
-                strokeOpacity: 0.8,
-                strokeWeight: 2,
-                fillColor: '#518FFB',
-                fillOpacity: 0.35,
-                map: map,
-                center: {
-                    lat: locations[i].lat,
-                    lng: locations[i].lng
-                },
-                radius: 10
-            });
+
+        if (bounds.length > 1) {
+            map.fitBounds(bounds, { padding: [30, 30] });
+        } else if (bounds.length === 1) {
+            map.setView(bounds[0], 16);
         }
     } else {
-        var mapOptions = {
-            center: {
-                'lat': 22.2939994,
-                'lng': 70.7892855
-            },
-            zoom: 14
-        };
-
-        // Map object
-        map = new google.maps.Map(document.getElementById('map'), mapOptions);
+        if (map) {
+            map.remove();
+            map = null;
+        }
+        map = L.map('map').setView([22.2939994, 70.7892855], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
     }
 }
 
 function clearMarker() {
     locations = [];
-
-    for (var i = 0; i < markers.length; i++) {
-        markers[i].setMap(map);
+    if (map) {
+        map.remove();
+        map = null;
     }
-    if (markerCluster)
-        markerCluster.clearMarkers();
 }
 var locations = [];
 var labels = [];
@@ -207,8 +170,7 @@ displayRecords();
 function displayRecords() {
     var date = $("#date").val();
     if (result.ack == 1) {
-        //clearMarker();
-        var locs = result.result
+        var locs = result.result;
         $.each(locs, function(i, v) {
             locations.push({
                 date: v.date,
@@ -219,7 +181,7 @@ function displayRecords() {
                 type: v.type,
                 icon: v.icon,
                 status: v.status,
-                address:v.address,
+                address: v.address,
             });
             labels.push(v.date);
         });

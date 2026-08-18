@@ -118,50 +118,29 @@ $('#tracking_sync').click(function() {
   initMap();
 });
 
-var map;
-var markerCluster;
-var markers = []
-// Symbol that gets animated along the polyline
-var lineSymbol = {
-  path: google.maps.SymbolPath.CIRCLE,
-  scale: 8,
-  strokeColor: '#005db5',
-  strokeWidth: '#005db5'
-};
-function animateCircle(polyline) {
-  var count = 0;
-  // fallback icon if the poly has no icon to animate
-  var defaultIcon = [
-    {
-      icon: lineSymbol,
-      offset: '100%'
-    }
-  ];
-  window.setInterval(function() {
-    // count = (count + 1) % 200;
-    count = (count + 1);
-    var icons = polyline.get('icons') || defaultIcon;
-    icons[0].offset = (count / 2) + '%';
-    polyline.set('icons', icons);
-  }, 20);
-}
+var map = null;
+var markersLayer = null;
+var routeLine = null;
+
 function initMap() { 
     if (locations.length > 0) {
         var location_count = locations.length;
         var j = 0;
-        var map = new google.maps.Map(document.getElementById('map'), {
-            zoom: 19,
-            center: {
-                lat: locations[0].lat,
-                lng: locations[0].lng
-            },
-        });
-        var infowindow = new google.maps.InfoWindow();
-        var bounds = new google.maps.LatLngBounds();
         var pinico = "../images/pin/";
-        var pin = "";
-        if($("#tracking_sync").prop("checked") == true){
-          var typePinArray = [
+
+        if (map) {
+            map.remove();
+            map = null;
+        }
+
+        map = L.map('map').setView([locations[0].lat, locations[0].lng], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        var latlngs = [];
+        var typePinArray = [
             "visit123",
             "login",
             "logout",
@@ -184,170 +163,64 @@ function initMap() {
             "change-pasdsword",
             "hour-sync",
             "addfollowup",
-            "addleave",
-          ];
-        }
-        else
-        {
-          var typePinArray = [
-            "visit123",
-            "login",
-            "logout",
-            "attandance-in",
-            "attandance-out",
-            "imgpsh_fullsize_anim",
-            "create-order",
-            "create-customer",
-            "add-expance",
-            "add-visit",
-            "add-inquiry",
-            "edit-inquiry",
-            "delete-inquiry",
-            "add-area",
-            "add-complain",
-            "add-meeting",
-            "add-meeting-member",
-            "edit-meeting",
-            "delete-meeting-member",
-            "change-pasdsword",
-            "hour-sync",
-            "addfollowup",
-            "addleave",
-          ];
-        }
+            "addleave"
+        ];
+
         $.each(locations, function(i, v) {
-
-            pin = pinico +''+ typePinArray[locations[i]['mytype']]+".png";
-            
-            /*if (locations[i]['mytype'] == "1") {
-                pin = pinico + "login.png";
-            } else if (locations[i]['mytype'] == "2") {
-                pin = pinico + "logout.png";
-            } else if (locations[i]['mytype'] == "3") {
-                pin = pinico + "attendance_in.png";
-            } else if (locations[i]['mytype'] == "4") {
-                pin = pinico + "attendance_out.png";
-            } else if (locations[i]['mytype'] == "5") {
-                pin = pinico + "capture.png1";
-                // pin = "";
-            } else if (locations[i]['mytype'] == "6") {
-                pin = pinico + "visit.png";
-            } else if (locations[i]['mytype'] == "logout") {
-                pin = pinico + "logout.png";
-            } else {
-                pin = pinico + "visit123.png";
-            }*/
-
-            if (++j === location_count) {
-                var marker = new google.maps.Marker({
-                    position: {
-                        lat: locations[i].lat,
-                        lng: locations[i].lng
-                    },
-                    map: map,
-                    icon: pinico + "last-pin.png",
-                    title: locations[i]['type'],
-                });
-            } else {
-                var marker = new google.maps.Marker({
-                    position: {
-                        lat: locations[i].lat,
-                        lng: locations[i].lng
-                    },
-                    map: map,
-                    icon: pin,
-                    title: locations[i]['type'],
-
-                });
+            if ($("#tracking_sync").prop("checked") != true && v.mytype == 5) {
+                // skip tracking sync pins if not checked
+                latlngs.push([v.lat, v.lng]);
+                return;
             }
-            bounds.extend(marker.getPosition());
-            google.maps.event.addListener(marker, 'click', (function(marker, i) {
-                return function() {
-                    if (locations[i]['status'] == "offline") {
-                        var color = "red";
-                    } else if (locations[i]['status'] == "online") {
-                        var color = "green";
-                    }
-                  
-                    // infowindow.setContent("<h1>" + (i + 1) + ") " + locations[i]['date'] + "</h1><p>Lat:" + locations[i]['lat'] + "<br/> Long:" + locations[i]['lng'] + " <br/>" + locations[i]['type'] + "<p><b>Address</b>:" + locations[i]['address'] + "<br/><h4><b>Name:" + locations[i]['name'] + "<br/><a style='color:" + color + "'>" + locations[i]['status'] + "</a></b></h4></p>");
-                    infowindow.setContent("<h1>" + (i + 1) + ") " + locations[i]['date'] + "</h1><p>Lat:" + locations[i]['lat'] + "<br/> Long:" + locations[i]['lng'] + " <br/>" + locations[i]['type'] + "<p><b>Address</b>:" + locations[i]['address'] + "<br/><h4><b>Name:" + locations[i]['name'] +"</b></h4></p>");
-                    infowindow.open(map, marker);
-                }
-            })(marker, i));
-        })
-        map.fitBounds(bounds);
 
-        /*var flightPath = new google.maps.Polyline({
-            path: locations,
-            geodesic: true,
-            strokeColor: 'orange',
-            strokeOpacity: 1.0,
-            strokeWeight: 8,
-            icons: [{
-                icon: {path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW},
-                offset: '100%',
-                repeat: '1000px'
-            }]
-        });*/
-        var flightPath2 = new google.maps.Polyline({
-            path: locations,
-            geodesic: true,
-            strokeColor: '#005db5',
-            strokeOpacity: 1.0,
-            strokeWeight: 6,
-            icons: [{
-                icon: lineSymbol,
-                offset: '100%',
-                // repeat: '1000px'
-            }]
-        });
-        // flightPath.setMap(map);
-        flightPath2.setMap(map);
-        // console.log(flightPath2);
-        // $('#animinput').val(data(flightPath2));
-        animateCircle(flightPath2);
-        map.drawRoute({
-            origin: location,
-            destination: location,
+            var pinName = (typePinArray[v.mytype] !== undefined) ? typePinArray[v.mytype] : "traking-sync";
+            var iconUrl = pinico + pinName + ".png";
+            if (i === location_count - 1) {
+                iconUrl = pinico + "last-pin.png";
+            }
 
-            travelMode: 'DRIVING',
-            transitOptions: TransitOptions,
-            drivingOptions: DrivingOptions,
-            unitSystem: UnitSystem,
-            avoidHighways: Boolean,
-            avoidTolls: Boolean,
-            strokeColor: '#FF0000',
-            strokeOpacity: 0.6,
-            strokeWeight: 6,
+            var customIcon = L.icon({
+                iconUrl: iconUrl,
+                iconSize: [28, 28],
+                iconAnchor: [14, 28],
+                popupAnchor: [0, -28]
+            });
+
+            var marker = L.marker([v.lat, v.lng], { icon: customIcon, title: v.type }).addTo(map);
+            var popupContent = "<div style='min-width:220px;'><h4><b>" + (i + 1) + ") " + v.date + "</b></h4><p style='margin:0;font-size:12px;line-height:1.4;'><b>Lat:</b> " + v.lat + "<br/><b>Long:</b> " + v.lng + "<br/><b>Type:</b> " + v.type + "<br/><b>Address:</b> " + v.address + "<br/><b>Name:</b> " + v.name + "</p></div>";
+            marker.bindPopup(popupContent, { autoPan: true, autoPanPadding: [50, 50], maxWidth: 300 });
+
+            latlngs.push([v.lat, v.lng]);
         });
-        var circle = new google.maps.Circle({
-            map: map,
-            radius: 16093, // 10 miles in metres
-            fillColor: '#AA0000'
-        });
-        circle.bindTo('center', marker, 'position');
+
+        if (latlngs.length > 0) {
+            routeLine = L.polyline(latlngs, {
+                color: '#005db5',
+                weight: 5,
+                opacity: 0.9,
+                smoothFactor: 1
+            }).addTo(map);
+            map.fitBounds(routeLine.getBounds(), { padding: [30, 30] });
+        }
     } else {
-        var mapOptions = {
-            center: {
-                'lat': 22.2939994,
-                'lng': 70.7892855
-            },
-            zoom: 14
-        };
-
-        // Map object
-        map = new google.maps.Map(document.getElementById('map'), mapOptions);
+        if (map) {
+            map.remove();
+            map = null;
+        }
+        map = L.map('map').setView([22.2939994, 70.7892855], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
     }
 }
 
 function clearMarker() {
     locations = [];
-
-    for (var i = 0; i < markers.length; i++) {
-        markers[i].setMap(map);
+    if (map) {
+        map.remove();
+        map = null;
     }
-    if (markerCluster)
-        markerCluster.clearMarkers();
 }
 var locations = [];
 var labels = [];
@@ -359,8 +232,7 @@ displayRecords();
 function displayRecords() {
 
     if (result.ack == 1) {
-        //clearMarker();
-        var locs = result.result
+        var locs = result.result;
         $.each(locs, function(i, v) {
             locations.push({
                 date: v.date,
@@ -382,58 +254,6 @@ function displayRecords() {
         clearMarker();
         toastr.error(result.ack_msg, "Sorry");
     }
-}
-
-function playPin()
-{
-  // initMap();
-  var map = new google.maps.Map(document.getElementById('map'), {
-            zoom: 19,
-            center: {
-                lat: locations[0].lat,
-                lng: locations[0].lng
-            },
-        });
-      var locs = result.result;
-        $.each(locs, function(i, v) {
-            locations.push({
-                date: v.date,
-                name: v.name,
-                lat: parseFloat(v.lat),
-                lng: parseFloat(v.lng),
-                type_slug: v.type_slug,
-                address: v.address,
-                type: v.type,
-                icon: v.icon,
-                status: v.status,
-                mytype: v.mytype,
-                address: v.address
-            });
-           // labels.push(v.date);
-        });
-       /*google.maps.Map(document.getElementById('map'), {
-            zoom: 19,
-            center: {
-                lat: locations[0].lat,
-                lng: locations[0].lng
-            },
-        });*/
-        // console.log(locations);
-      var flightPath2 = new google.maps.Polyline({
-            path: locations,
-            geodesic: true,
-            strokeColor: '#005db5',
-            strokeOpacity: 1.0,
-            strokeWeight: 6,
-            icons: [{
-                icon: lineSymbol,
-                offset: '100%',
-                // repeat: '1000px'
-            }]
-        });  
-        // console.log(flightPath2);
-        flightPath2.setMap(map);
-        animateCircle(flightPath2);
 }
 
 function update_km(sales_id,route_date)

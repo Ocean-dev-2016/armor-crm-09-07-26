@@ -193,7 +193,7 @@ define("DEFAULTIMG", SITEURL . "images/no-image.svg");
 define("TRACKING_TIME_LIVE_API","180000"); // 10 min
 define("TRACKING_TIME_LOCAL_API","180000"); // milisecond to second then link 60 second  60/2=30 second a entry pdse
 define("DISTANCE_API","3"); // 5 meter 
-define("TRACKING_LIVE_URL","http://localhost:8080/armor_crm_08_07/202526/");  
+define("TRACKING_LIVE_URL", SITEURL);  
 
 define("ATTENDANCE","../images/attendance/");
 define("ATTENDANCE_DIR", str_replace('\\', '/', dirname(__DIR__)) . "/images/attendance/");
