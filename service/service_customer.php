@@ -1275,8 +1275,7 @@ if($is_valid_api_key)
 						}
 						if(($_REQUEST['ToDate']=="") && ($_REQUEST['FromDate']==""))
 						{
-							$month=date("m");
-							$ctable_where .= "AND MONTH(expense_date) = '".$month."'";
+							// When dates are not provided, show full expense history (no month restriction).
 						}
 					$expense_r = $db->rp_getData("expense","*",$ctable_where,"expense_date DESC",0);						
 					if($expense_r)

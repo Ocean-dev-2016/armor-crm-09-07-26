@@ -1607,13 +1607,6 @@ if ($is_valid_api_key) {
 					$ctable_where1 .= " AND expense_claim_type='" . $expense_claim_type . "'";
 				}
 
-				if (($_REQUEST['ToDate'] == "") && ($_REQUEST['FromDate'] == "")) {
-					//$month=date("d");
-					$month = date('Y-m-d');
-					$ctable_where .= "AND DATE(expense_date) = '" . $month . "'";
-					$ctable_where1 .= "AND DATE(expense_date) = '" . $month . "'";
-				}
-
 				$expense_r = $db->rp_getData("expense", "*", $ctable_where, "id DESC,expense_date DESC", 0, $limit);
 				$grand_total = $db->rp_getValue("expense", "SUM(total)", $ctable_where1, 0);
 				$pass_grand_total = $db->rp_getValue("expense", "SUM(pass_expense_amount)", $ctable_where1 . " AND expense_status = 1 ", 0); // pass amount					
