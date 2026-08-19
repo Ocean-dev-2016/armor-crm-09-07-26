@@ -32,6 +32,10 @@ $stockObj = new ChannelPartnerStock($db);
 		<?php } else { ?>
 			— Main Stock (Product Name &amp; Code wise)
 		<?php } ?>
+		<a class="btn btn-sm yellow-crusta pull-right" style="color:#fff;margin-top:-4px;"
+			href="channel_partner_stock_excel.php?view=<?php echo htmlspecialchars($view); ?>&amp;cp_id=<?php echo (int) $cp_id; ?>">
+			<i class="fa fa-file-excel-o"></i> Export Excel
+		</a>
 	</div>
 
 	<?php if ($view === 'main') {

@@ -524,6 +524,26 @@ $ctable_r = $db->rp_getData($ctable, "*", $ctable_where, "id DESC limit $page_po
 									echo "";
 								} ?></td>
 							<td><?php echo stripslashes($ctable_d['stop_remark']);
+								$isShortNote = (!empty($ctable_d['remark_code']) && $ctable_d['remark_code'] == 'F') || (stripos($ctable_d['stop_remark'], 'SHORT NOTE') !== false);
+								if ($isShortNote) {
+									$shortNoteVal = "";
+									if (!empty($ctable_d['note'])) {
+										$shortNoteVal = trim($ctable_d['note']);
+									} else if (!empty($ctable_d['remark'])) {
+										$shortNoteVal = trim($ctable_d['remark']);
+									}
+									if ($shortNoteVal == "" && !empty($ctable_d['stop_remark']) && preg_match('/SHORT NOTE\s*[-:]?\s*(.+)$/is', $ctable_d['stop_remark'], $snMatch)) {
+										$extractedNote = trim($snMatch[1]);
+										if ($extractedNote != "" && stripos($extractedNote, '(F)') === false) {
+											$shortNoteVal = $extractedNote;
+										}
+									}
+									if ($shortNoteVal != "" && strcasecmp($shortNoteVal, trim(stripslashes($ctable_d['stop_remark']))) !== 0) {
+										echo '<div style="margin-top:6px;padding:6px;border:1px solid #cce5ff;background:#e8f4fd;font-size:12px;line-height:1.5;border-radius:3px;">';
+										echo '<b style="color:#004085;">Remark / Note:</b> <b style="color:#111;font-size:13px;">' . nl2br(htmlspecialchars($shortNoteVal)) . '</b>';
+										echo '</div>';
+									}
+								}
 								/* Show Consultant Detail form under Visit Stop Remark */
 								if (!empty($ctable_d['consultant_form_id']) || (!empty($ctable_d['remark_code']) && $ctable_d['remark_code'] == 'C')) {
 									$vcf = $db->rp_getData("visit_consultant_form", "*", "visit_id='" . $ctable_d['id'] . "' AND isDelete=0", "id DESC", 0);

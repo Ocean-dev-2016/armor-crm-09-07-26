@@ -72,11 +72,14 @@ if ($is_cp_login) {
 					<div class="portlet light">
 						<div class="portlet-title">
 							<div class="caption"><i class="fa fa-cubes"></i> <?php echo $is_cp_login ? 'My Stock' : 'Channel Partner Stock'; ?></div>
-							<?php if ($is_cp_login) { ?>
 							<div class="actions">
+								<a href="javascript:;" id="btn_cp_stock_excel" class="btn btn-sm yellow-crusta" style="color:#fff;" title="Export Excel">
+									<i class="fa fa-file-excel-o"></i> Export Excel
+								</a>
+								<?php if ($is_cp_login) { ?>
 								<a href="channel_partner_print_settings.php" class="btn btn-sm blue"><i class="fa fa-file-text-o"></i> SO/PI Format</a>
+								<?php } ?>
 							</div>
-							<?php } ?>
 						</div>
 						<div class="portlet-body">
 							<?php if (!$is_cp_login) { ?>
@@ -128,6 +131,20 @@ if ($is_cp_login) {
 <?php include("include_js.php"); ?>
 <script type="text/javascript">
 var currentStockView = "<?php echo $view === 'inout' ? 'inout' : 'main'; ?>";
+var isCpLogin = <?php echo $is_cp_login ? 'true' : 'false'; ?>;
+var cpLoginId = <?php echo (int) $cp_login_id; ?>;
+
+function getSelectedCpId() {
+	if (isCpLogin) {
+		return cpLoginId;
+	}
+	return parseInt($("#cp_id").val() || 0, 10) || 0;
+}
+
+function stockExcelUrl() {
+	var cpId = getSelectedCpId();
+	return "channel_partner_stock_excel.php?view=" + encodeURIComponent(currentStockView) + "&cp_id=" + cpId;
+}
 
 function displayRecords() {
 	$(".loading-div").show();
@@ -169,6 +186,15 @@ $(document).ready(function () {
 		$("#cp_stock_view_tabs .nav-tabs li").removeClass("active");
 		$(this).closest("li").addClass("active");
 		displayRecords();
+	});
+	$("#btn_cp_stock_excel").on("click", function (e) {
+		e.preventDefault();
+		var cpId = getSelectedCpId();
+		if (!cpId) {
+			alert("Please select Channel Partner first.");
+			return;
+		}
+		window.location.href = stockExcelUrl();
 	});
 });
 </script>

@@ -124,7 +124,25 @@ $ctable_r = $db->rp_getData($ctable,"*",$ctable_where." AND id!=41","id DESC lim
             </td>
                 
                 <td><?php echo $count; ?></td>
-                <td><?php echo stripslashes($ctable_d['name']); ?></td>
+                <td><?php
+					$displayName = stripslashes($ctable_d['name']);
+					$execId = (int) $ctable_d['customer_id'];
+					if ($execId <= 0) {
+						$execId = (int) $ctable_d['user_id'];
+					}
+					$isCpUser = ((int) $ctable_d['type'] === 4);
+					if (!$isCpUser && $execId > 0 && ((int) $ctable_d['type'] === 3)) {
+						$cpNameFlag = $db->rp_getValue("executive", "channel_partner_flag", "id='" . $execId . "' AND isDelete=0", 0);
+						$isCpUser = ((int) $cpNameFlag === 1);
+					}
+					if ($isCpUser && $execId > 0) {
+						$firmName = $db->rp_getValue("executive", "company_name", "id='" . $execId . "' AND isDelete=0", 0);
+						if (trim((string) $firmName) !== '') {
+							$displayName = stripslashes($firmName);
+						}
+					}
+					echo $displayName;
+				?></td>
                 <?php
                 if($ctable_d['type']==3 || $ctable_d['type']==4)
                 {
