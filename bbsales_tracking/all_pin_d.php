@@ -38,6 +38,25 @@ else
 	$date=date('d-m-Y',strtotime($_REQUEST['date']));
 	$response=$sales_executive->trackSalesPin($id,$date);
 
+	// Get Attendance In Photo on that date
+	$att_date = date('Y-m-d', strtotime($_REQUEST['date']));
+	$att_img_raw = $db->rp_getValue("attendance", "image_path", "sales_id='" . $id . "' AND DATE(date_time)='" . $att_date . "' AND isDelete=0 AND inout_status='in' ORDER BY date_time ASC LIMIT 1", 0);
+	if (!$att_img_raw) {
+		$att_img_raw = $db->rp_getValue("attendance", "image_path", "sales_id='" . $id . "' AND DATE(date_time)='" . $att_date . "' AND isDelete=0 ORDER BY date_time ASC LIMIT 1", 0);
+	}
+	$user_avatar = "";
+	if ($att_img_raw != "") {
+		$user_avatar = function_exists('armor_attendance_image') ? armor_attendance_image($att_img_raw) : (SITEURL . "resource/attendance/" . $att_img_raw);
+	}
+	if ($user_avatar == "") {
+		$sales_profile_img = $db->rp_getValue("sales_executive", "image_path", "id='" . $id . "'", 0);
+		if ($sales_profile_img != "") {
+			$user_avatar = SITEURL . "resource/image/" . $sales_profile_img;
+		} else {
+			$user_avatar = SITEURL . "images/noimage.png";
+		}
+	}
+
 
 	// this code for status (offline/online) purpose only (this is for single user purpose)
 	/*if($id!="")
@@ -225,34 +244,157 @@ function initMap() {
         });
 
         if (latlngs.length > 0) {
-            routeLine = L.polyline(latlngs, {
-                color: '#00d0ff',
-                weight: 6,
-                opacity: 0.95,
-                smoothFactor: 1
-            }).addTo(map);
-            map.fitBounds(routeLine.getBounds(), { padding: [30, 30] });
+            // Fetch real road route geometry from OSRM (Open Source Routing Machine) in batches of waypoints
+            function buildOsrmRoute(points, callback) {
+                if (points.length < 2) {
+                    callback(points);
+                    return;
+                }
+                // Limit waypoints for url to avoid length overflow (sample key checkpoints + all stops)
+                var sampled = [];
+                var maxWaypoints = 25;
+                if (points.length <= maxWaypoints) {
+                    sampled = points;
+                } else {
+                    var step = (points.length - 1) / (maxWaypoints - 1);
+                    for (var s = 0; s < maxWaypoints; s++) {
+                        var idx = Math.min(points.length - 1, Math.round(s * step));
+                        if (sampled.length === 0 || sampled[sampled.length - 1] !== points[idx]) {
+                            sampled.push(points[idx]);
+                        }
+                    }
+                }
 
-            // Animated Moving Pulse Pin along the route
-            if (latlngs.length > 1) {
-                var animCircle = L.circleMarker(latlngs[0], {
-                    radius: 9,
-                    color: '#ffffff',
-                    weight: 3,
-                    fillColor: '#ff0055',
-                    fillOpacity: 1
+                var coordStr = sampled.map(function(pt) {
+                    return pt[1].toFixed(6) + ',' + pt[0].toFixed(6); // lng,lat
+                }).join(';');
+
+                var osrmUrl = 'https://router.project-osrm.org/route/v1/driving/' + coordStr + '?overview=full&geometries=geojson';
+                
+                $.ajax({
+                    url: osrmUrl,
+                    dataType: 'json',
+                    timeout: 5000,
+                    success: function(data) {
+                        if (data && data.routes && data.routes.length > 0 && data.routes[0].geometry && data.routes[0].geometry.coordinates) {
+                            var roadCoords = data.routes[0].geometry.coordinates.map(function(c) {
+                                return [c[1], c[0]]; // lat,lng
+                            });
+                            callback(roadCoords);
+                        } else {
+                            callback(points);
+                        }
+                    },
+                    error: function() {
+                        callback(points); // fallback to recorded points
+                    }
+                });
+            }
+
+            buildOsrmRoute(latlngs, function(actualRoutePath) {
+                // Swiggy/Zomato Style Glowing Road Path
+                // 1. Casing / Shadow Glow
+                var routeCasing = L.polyline(actualRoutePath, {
+                    color: '#004c8f',
+                    weight: 8,
+                    opacity: 0.7,
+                    lineCap: 'round',
+                    lineJoin: 'round'
                 }).addTo(map);
 
-                var animIndex = 0;
-                var animInterval = window.setInterval(function() {
-                    if (!map || !animCircle) {
-                        window.clearInterval(animInterval);
-                        return;
+                // 2. Main Delivery Line (Cyan / Neon Blue like Zomato/Swiggy Delivery Route)
+                routeLine = L.polyline(actualRoutePath, {
+                    color: '#00d0ff',
+                    weight: 5,
+                    opacity: 0.95,
+                    lineCap: 'round',
+                    lineJoin: 'round'
+                }).addTo(map);
+
+                map.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
+                
+                // User Attendance In Photo Avatar Badge with Pulse Animation along the Route
+                if (actualRoutePath.length > 1) {
+                    var userPhotoUrl = "<?= !empty($user_avatar) ? $user_avatar : SITEURL . 'images/noimage.png' ?>";
+                    
+                    var createAvatarBadge = function(angle) {
+                        return '<div class="user-track-avatar-wrapper" style="position:relative;width:56px;height:56px;display:flex;align-items:center;justify-content:center;">' +
+                            // Outer Pulsing Aura
+                            '<div style="position:absolute;width:52px;height:52px;border-radius:50%;background:rgba(11,88,162,0.3);animation:userAvatarPulse 1.6s infinite;"></div>' +
+                            // Circular Attendance Photo Frame
+                            '<div style="width:44px;height:44px;border-radius:50%;background:#ffffff;box-shadow:0 4px 12px rgba(0,0,0,0.4);border:2.5px solid #0b58a2;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative;z-index:2;">' +
+                            '<img src="' + userPhotoUrl + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.src=\'../images/noimage.png\'">' +
+                            '</div>' +
+                            // Mini Floating Bike / Scooter Badge at the bottom-right corner
+                            '<div class="mini-bike-badge" style="position:absolute;bottom:0px;right:0px;width:22px;height:22px;border-radius:50%;background:#fc8019;border:1.5px solid #ffffff;box-shadow:0 2px 5px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:3;transform:rotate(' + angle + 'deg);">' +
+                            '<svg style="width:13px;height:13px;fill:#ffffff;" viewBox="0 0 24 24"><path d="M15.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM5 12c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 8.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5zm14-8.5c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 8.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5zm-8.2-7.8l-1.9-3.2c-.3-.5-.9-.8-1.5-.8h-3.4v2h2.6l1.2 2-3.1 5.3 1.7 1 3-5.2 2.7 4.5c.3.5.9.8 1.5.8h4.4v-2h-3.7l-3.5-5.9z"/></svg>' +
+                            '</div>' +
+                            '</div>';
+                    };
+
+                    if (!$('#user-avatar-track-style').length) {
+                        $('head').append('<style id="user-avatar-track-style">@keyframes userAvatarPulse{0%{transform:scale(0.85);opacity:0.9;}70%{transform:scale(1.4);opacity:0;}100%{transform:scale(1.4);opacity:0;}}</style>');
                     }
-                    animIndex = (animIndex + 1) % latlngs.length;
-                    animCircle.setLatLng(latlngs[animIndex]);
-                }, 120);
-            }
+
+                    // Pre-compute interpolated dense steps and angle bearings for smooth directional movement
+                    var fullInterpolated = [];
+                    function getBearing(p1, p2) {
+                        var lat1 = p1[0] * Math.PI / 180;
+                        var lat2 = p2[0] * Math.PI / 180;
+                        var dLng = (p2[1] - p1[1]) * Math.PI / 180;
+                        var y = Math.sin(dLng) * Math.cos(lat2);
+                        var x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+                        var brng = Math.atan2(y, x) * 180 / Math.PI;
+                        return (brng + 360) % 360;
+                    }
+
+                    for (var r = 0; r < actualRoutePath.length - 1; r++) {
+                        var pt1 = actualRoutePath[r];
+                        var pt2 = actualRoutePath[r + 1];
+                        var heading = getBearing(pt1, pt2);
+                        var dist = Math.sqrt(Math.pow(pt2[0] - pt1[0], 2) + Math.pow(pt2[1] - pt1[1], 2));
+                        var subSteps = Math.max(15, Math.round(dist * 7000));
+                        for (var st = 0; st < subSteps; st++) {
+                            var factor = st / subSteps;
+                            fullInterpolated.push({
+                                lat: pt1[0] + (pt2[0] - pt1[0]) * factor,
+                                lng: pt1[1] + (pt2[1] - pt1[1]) * factor,
+                                angle: heading
+                            });
+                        }
+                    }
+
+                    if (fullInterpolated.length > 0) {
+                        var initialItem = fullInterpolated[0];
+                        var avatarIcon = L.divIcon({
+                            className: 'user-track-avatar-marker',
+                            html: createAvatarBadge(initialItem.angle),
+                            iconSize: [56, 56],
+                            iconAnchor: [28, 28]
+                        });
+
+                        var bikeMarker = L.marker([initialItem.lat, initialItem.lng], { icon: avatarIcon, zIndexOffset: 1000 }).addTo(map);
+
+                        var animIndex = 0;
+                        var animSpeedMs = 60; // Slow, realistic driving speed
+                        var animInterval = window.setInterval(function() {
+                            if (!map || !bikeMarker) {
+                                window.clearInterval(animInterval);
+                                return;
+                            }
+                            animIndex = (animIndex + 1) % fullInterpolated.length;
+                            var currentPos = fullInterpolated[animIndex];
+                            bikeMarker.setLatLng([currentPos.lat, currentPos.lng]);
+
+                            // Rotate mini bike badge towards movement direction
+                            var $miniBike = $(bikeMarker._icon).find('.mini-bike-badge');
+                            if ($miniBike.length) {
+                                $miniBike.css('transform', 'rotate(' + currentPos.angle + 'deg)');
+                            }
+                        }, animSpeedMs);
+                    }
+                }
+            });
         }
     } else {
         if (map) {
