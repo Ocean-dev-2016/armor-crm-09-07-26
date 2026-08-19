@@ -310,6 +310,18 @@ $ctable_r = $db->rp_getData($ctable, "*", $ctable_where, "id DESC", 0);
 							echo "";
 						} ?></td>
 					<td><?php echo stripslashes($ctable_d['stop_remark']);
+						$isShortNote = (!empty($ctable_d['remark_code']) && $ctable_d['remark_code'] == 'F') || (stripos($ctable_d['stop_remark'], 'SHORT NOTE') !== false);
+						if ($isShortNote) {
+							$shortNoteVal = "";
+							if (!empty($ctable_d['note'])) {
+								$shortNoteVal = trim($ctable_d['note']);
+							} else if (!empty($ctable_d['remark']) && empty($ctable_d['note'])) {
+								$shortNoteVal = trim($ctable_d['remark']);
+							}
+							if ($shortNoteVal != "") {
+								echo '<br/><small><b>Remark / Note:</b> <b style="font-size:12px;">' . nl2br(htmlspecialchars($shortNoteVal)) . '</b></small>';
+							}
+						}
 						if (!empty($ctable_d['consultant_form_id']) || (!empty($ctable_d['remark_code']) && $ctable_d['remark_code'] == 'C')) {
 							$vcf = $db->rp_getData("visit_consultant_form", "*", "visit_id='" . $ctable_d['id'] . "' AND isDelete=0", "id DESC", 0);
 							if ($vcf) {
@@ -323,6 +335,24 @@ $ctable_r = $db->rp_getData($ctable, "*", $ctable_where, "id DESC", 0);
 									echo ' | Mail: ' . htmlspecialchars($vf['email']);
 								}
 								echo ' | ' . htmlspecialchars($vf['city']) . ', ' . htmlspecialchars($vf['state']) . ' - ' . htmlspecialchars($vf['pincode']);
+								echo '</small>';
+							}
+						}
+						if (!empty($ctable_d['high_rate_form_id']) || (!empty($ctable_d['remark_code']) && $ctable_d['remark_code'] == 'E')) {
+							$hrf = $db->rp_getData("visit_high_rate_form", "*", "visit_id='" . $ctable_d['id'] . "' AND isDelete=0", "id DESC", 0);
+							if ($hrf) {
+								$hf = mysqli_fetch_assoc($hrf);
+								echo '<br/><small><b>High Rate Analysis</b>';
+								echo ' | Customer: ' . htmlspecialchars($hf['customer_name']);
+								if (!empty($hf['payment_option'])) {
+									$payLabel = $hf['payment_option'];
+									if ($payLabel === '0') {
+										$payLabel = 'Advance';
+									} else if ($payLabel === '1') {
+										$payLabel = '30 Days';
+									}
+									echo ' | Payment: ' . htmlspecialchars($payLabel);
+								}
 								echo '</small>';
 							}
 						}

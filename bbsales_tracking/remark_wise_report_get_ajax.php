@@ -405,9 +405,20 @@ function rar_render_form_html($visit)
 							<td class="rar-c-reason"><span class="rar-code"><?php echo rar_h($visit['reason_code'] != "" ? $visit['reason_code'] : "-"); ?></span></td>
 							<td class="rar-c-desc"><?php echo rar_h($desc); ?></td>
 							<td class="rar-c-stop">
-								<?php echo rar_h($visit['stop_remark'] != "" ? $visit['stop_remark'] : "-"); ?>
-								<?php $visitNote = isset($visit['note']) ? trim($visit['note']) : ''; ?>
-								<?php if ($visitNote != '') { ?>
+								<b><?php echo rar_h($visit['stop_remark'] != "" ? $visit['stop_remark'] : "-"); ?></b>
+								<?php
+								$isShortNote = ($visit['remark_code'] == 'F') || (stripos((string) $visit['stop_remark'], 'SHORT NOTE') !== false);
+								$visitNote = isset($visit['note']) ? trim($visit['note']) : '';
+								if ($visitNote == '' && $isShortNote && !empty($visit['meeting_purpose'])) {
+									$visitNote = trim($visit['meeting_purpose']);
+								}
+								if ($isShortNote && $visitNote != '') {
+								?>
+									<div style="margin-top:6px;padding:6px 8px;border:1px solid #cce5ff;background:#e8f4fd;font-size:12px;line-height:1.5;border-radius:4px;">
+										<b style="color:#004085;"><i class="fa fa-sticky-note-o"></i> Remark / Note:</b><br/>
+										<b style="color:#111;font-size:13px;"><?php echo nl2br(rar_h($visitNote)); ?></b>
+									</div>
+								<?php } else if ($visitNote != '') { ?>
 									<br><small class="text-info"><i class="fa fa-sticky-note-o"></i> <?php echo rar_h($visitNote); ?></small>
 								<?php } ?>
 							</td>

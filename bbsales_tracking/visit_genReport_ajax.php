@@ -289,7 +289,31 @@ while ($row = mysqli_fetch_array($ctable1_r)) {
         $value =  "";
       }
     } else if ($j == 22) {
-      $value = stripslashes($row['stop_remark']);
+      $stopRemarkVal = stripslashes($row['stop_remark']);
+      $isShortNote = (!empty($row['remark_code']) && $row['remark_code'] == 'F') || (stripos($stopRemarkVal, 'SHORT NOTE') !== false);
+      if ($isShortNote) {
+        $shortNoteVal = !empty($row['note']) ? trim($row['note']) : (!empty($row['remark']) ? trim($row['remark']) : "");
+        if ($shortNoteVal != "") {
+          $stopRemarkVal .= " | Remark / Note: " . $shortNoteVal;
+        }
+      }
+      if (!empty($row['consultant_form_id']) || (!empty($row['remark_code']) && $row['remark_code'] == 'C')) {
+        $vcf = $db->rp_getData("visit_consultant_form", "*", "visit_id='" . $row['id'] . "' AND isDelete=0", "id DESC", 0);
+        if ($vcf) {
+          $vf = mysqli_fetch_assoc($vcf);
+          $typeLabel = (isset($vf['consultant_type']) && $vf['consultant_type'] == "government") ? "Government Consultant" : "Private Consultant";
+          $stopRemarkVal .= " | Consultant Detail (" . $typeLabel . ") - Firm: " . $vf['firm_name'] . ", Contact: " . $vf['contact_person'] . ", Mo: " . $vf['mobile'] . ", " . $vf['city'] . ", " . $vf['state'];
+        }
+      }
+      if (!empty($row['high_rate_form_id']) || (!empty($row['remark_code']) && $row['remark_code'] == 'E')) {
+        $hrf = $db->rp_getData("visit_high_rate_form", "*", "visit_id='" . $row['id'] . "' AND isDelete=0", "id DESC", 0);
+        if ($hrf) {
+          $hf = mysqli_fetch_assoc($hrf);
+          $payLabel = !empty($hf['payment_option']) ? ($hf['payment_option'] === '0' ? 'Advance' : ($hf['payment_option'] === '1' ? '30 Days' : $hf['payment_option'])) : '';
+          $stopRemarkVal .= " | High Rate Analysis - Customer: " . $hf['customer_name'] . ($payLabel != '' ? ", Payment: " . $payLabel : '');
+        }
+      }
+      $value = $stopRemarkVal;
     } else if ($j == 23) {
       if ($row['stop_date_time'] != "0000-00-00 00:00:00") {
         $value = date('d-m-Y h:i A', strtotime($row['stop_date_time']));

@@ -406,6 +406,20 @@ background-color: #e5e5e5 !important;position: sticky;top: 0; z-index: 1;
 						</td>
 						<td><?php if($ctable_d['start_date_time']!="0000-00-00 00:00:00"){echo date('d-m-Y h:i A',strtotime($ctable_d['start_date_time']));} else{echo "";}?></td>
 						<td><?php echo stripslashes($ctable_d['stop_remark']);
+							$isShortNote = (!empty($ctable_d['remark_code']) && $ctable_d['remark_code'] == 'F') || (stripos($ctable_d['stop_remark'], 'SHORT NOTE') !== false);
+							if ($isShortNote) {
+								$shortNoteVal = "";
+								if (!empty($ctable_d['note'])) {
+									$shortNoteVal = trim($ctable_d['note']);
+								} else if (!empty($ctable_d['remark']) && empty($ctable_d['note'])) {
+									$shortNoteVal = trim($ctable_d['remark']);
+								}
+								if ($shortNoteVal != "") {
+									echo '<div style="margin-top:6px;padding:6px;border:1px solid #cce5ff;background:#e8f4fd;font-size:12px;line-height:1.5;border-radius:3px;">';
+									echo '<b style="color:#004085;">Remark / Note:</b> <b style="color:#111;font-size:13px;">' . nl2br(htmlspecialchars($shortNoteVal)) . '</b>';
+									echo '</div>';
+								}
+							}
 							if (!empty($ctable_d['consultant_form_id']) || (!empty($ctable_d['remark_code']) && $ctable_d['remark_code'] == 'C')) {
 								$vcf = $db->rp_getData("visit_consultant_form", "*", "visit_id='" . $ctable_d['id'] . "' AND isDelete=0", "id DESC", 0);
 								if ($vcf) {

@@ -199,6 +199,15 @@ foreach ($visits as $visit) {
 		$dm = $durMins % 60;
 		$durLabel = ($dh > 0) ? ($dh . "h " . $dm . "m") : ($dm . " min");
 	}
+	$stopRemarkExcel = $visit['stop_remark'];
+	$isShortNote = ($visit['remark_code'] == 'F') || (stripos((string) $visit['stop_remark'], 'SHORT NOTE') !== false);
+	$visitNote = isset($visit['note']) ? trim($visit['note']) : '';
+	if ($visitNote == '' && $isShortNote && !empty($visit['meeting_purpose'])) {
+		$visitNote = trim($visit['meeting_purpose']);
+	}
+	if ($visitNote != '') {
+		$stopRemarkExcel .= ($stopRemarkExcel != '' ? "\n" : "") . "Remark / Note: " . $visitNote;
+	}
 	$sheetVisits->setCellValue("A" . $vr, $sr);
 	$sheetVisits->setCellValue("B" . $vr, $dateLabel);
 	$sheetVisits->setCellValue("C" . $vr, $visit['sales_person']);
@@ -208,7 +217,8 @@ foreach ($visits as $visit) {
 	$sheetVisits->setCellValue("G" . $vr, $visit['remark_code']);
 	$sheetVisits->setCellValue("H" . $vr, $visit['reason_code']);
 	$sheetVisits->setCellValue("I" . $vr, $desc);
-	$sheetVisits->setCellValue("J" . $vr, $visit['stop_remark']);
+	$sheetVisits->setCellValue("J" . $vr, $stopRemarkExcel);
+	$sheetVisits->getStyle("J" . $vr)->getAlignment()->setWrapText(true);
 	$sheetVisits->setCellValue("K" . $vr, (float) $visit['approved_expense']);
 	$sheetVisits->setCellValue("L" . $vr, (float) $visit['total_kilometer']);
 	$sheetVisits->setCellValue("M" . $vr, $visit['is_completed'] ? "Completed" : "Open");
