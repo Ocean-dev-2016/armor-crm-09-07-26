@@ -37,6 +37,13 @@ if (
     $ctable_where .= " AND process_one_sales_executive_id = " . $_REQUEST['sales_executive'];
 }
 
+if (isset($_REQUEST['approval_type']) && $_REQUEST['approval_type'] != "" && $_REQUEST['approval_type'] != "null") {
+    $approval_type = (int) $_REQUEST['approval_type'];
+    if ($approval_type > 0) {
+        $ctable_where .= " AND process_one_approval_type = '" . $approval_type . "'";
+    }
+}
+
 
 if (
     (empty($_REQUEST['sales_executive']) || $_REQUEST['sales_executive'] == "null") &&

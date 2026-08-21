@@ -72,7 +72,7 @@ include("connect.php");
                             </div>
                             <div class="portlet-body">
                                 <div class="slimScrollDiv">
-                                    <div class="row" style="height: 85px;">
+                                    <div class="row" style="min-height: 85px;">
                                         <div class="col-md-2 col-xs-2 col-sm-2" style="margin-top:10px">
                                             <label>Select Sales Person</label>
                                             <div class="form-group" role="form">
@@ -137,6 +137,23 @@ include("connect.php");
                                                     ?>
                                                         <option <?= ($sales_executive_d['id'] == $_SESSION[SITE_SESS . 'REFERANCE_ID']) ? "selected" : ""; ?> <?php echo ($sales_executive_d == $sales_executive_d['id']) ? "selected" : ""; ?> value="<?php echo $sales_executive_d['id'] ?>"><?php echo $sales_executive_d['name']; ?></option>
                                                     <?php
+                                                    }
+                                                    ?>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 col-xs-3 col-sm-3" style="margin-top:10px">
+                                            <label>Approval Type</label>
+                                            <div class="form-group" role="form">
+                                                <select class="form-control" name="approval_type" id="approval_type">
+                                                    <option value="">--- Select Approval Type ---</option>
+                                                    <?php
+                                                    if (!empty($db->approval_type_arr) && is_array($db->approval_type_arr)) {
+                                                        foreach ($db->approval_type_arr as $atype_id => $atype_name) {
+                                                    ?>
+                                                            <option value="<?php echo htmlspecialchars($atype_id); ?>"><?php echo htmlspecialchars($atype_name); ?></option>
+                                                    <?php
+                                                        }
                                                     }
                                                     ?>
                                                 </select>
@@ -239,6 +256,7 @@ include("connect.php");
             var city = "";
             var df1 = "";
             var sales_executive = "";
+            var approval_type = "";
             var customer_id = "";
                 $('#ToDate').datepicker({  datepicker: true, autoclose: true });
                $('#FromDate').datepicker({  datepicker: true, autoclose: true });
@@ -255,9 +273,11 @@ include("connect.php");
                
                 searchName = '';
                 sales_executive = '';
+                approval_type = '';
                 FromDate = "";
                 ToDate = "";
                 $("#searchName").val("");
+                $("#approval_type").val("");
 
                 $("#sales_executive").select2('destroy');
                 $("#sales_executive").val();
@@ -292,17 +312,24 @@ include("connect.php");
                }
             function displayRecords(numRecords) {
                 var sales_executive = $("#sales_executive").val();
+                var approval_type = $("#approval_type").val();
                 var searchName = $("#searchName").val();
                 searchName = encodeURIComponent(searchName.trim());
 
                 $("#results").html("");
-                $("#results").load(data_url + "?show=" + numRecords + "&sales_executive=" + sales_executive + "&ToDate=" + ToDate + "&FromDate=" + FromDate + "&searchName=" + searchName, function() {
+                $("#results").load(data_url + "?show=" + numRecords + "&sales_executive=" + sales_executive + "&approval_type=" + encodeURIComponent(approval_type) + "&ToDate=" + ToDate + "&FromDate=" + FromDate + "&searchName=" + searchName, function() {
                     loadDataTable();
                 }); //load initial records
             }
 
             $(document).ready(function() {
                 displayRecords(100, 1);
+                $("#approval_type").on("change", function() {
+                    displayRecords(100, 1);
+                });
+                $("#sales_executive").on("change", function() {
+                    displayRecords(100, 1);
+                });
             });
 
          function del_conf(id) {
@@ -417,8 +444,9 @@ include("connect.php");
                 var searchName = $("#searchName").val();
                 searchName = encodeURIComponent(searchName.trim());
                 var sales_executive = String($("#sales_executive").val());
+                var approval_type = String($("#approval_type").val() || "");
                 // type = $("#type").val();
-                var myWindow = window.open('consultant_approval_process_print.php?searchName=' + searchName + '&sales_executive=' + sales_executive +'&ToDate='+ToDate+'&FromDate='+FromDate, '', 'width=700,height=800');
+                var myWindow = window.open('consultant_approval_process_print.php?searchName=' + searchName + '&sales_executive=' + sales_executive + '&approval_type=' + encodeURIComponent(approval_type) + '&ToDate='+ToDate+'&FromDate='+FromDate, '', 'width=700,height=800');
                 myWindow.print();
             }
         </script>
