@@ -736,7 +736,7 @@
 
 																	?>
 																	<option value="<?php echo $customer['id']; ?>" <?php if ($customer_id == $customer['id']) {echo "selected";
-																	} ?> data-phone="<?php echo $customer['phone'] ?>" data-email="<?php echo $customer['email'] ?>" data-address="<?php echo $customer['address'] ?>" data-state="<?php echo $customer['state'] ?>" data-cname="<?= $customer['cname'] ?>" data-customer_id="<?= $customer['top_cat_id'] ?>"  data-gstin="<?= $customer['gst'] ?>" data-price-list="<?= $price_list_name; ?>" data-cutomer-type="<?= $customer_type1; ?>" data-gst-type="<?= $gst_type?>" data-gst-type="<?= $gst_type ?>"><?php echo $customer['company_name']." - ".$customer['cname']; ?></option>
+																	} ?> data-phone="<?php echo $customer['phone'] ?>" data-email="<?php echo $customer['email'] ?>" data-address="<?php echo $customer['address'] ?>" data-state="<?php echo $customer['state'] ?>" data-cname="<?= $customer['cname'] ?>" data-customer_id="<?= $customer['top_cat_id'] ?>"  data-gstin="<?= $customer['gst'] ?>" data-price-list="<?= $price_list_name; ?>" data-cutomer-type="<?= $customer_type1; ?>" data-gst-type="<?= $gst_type?>" data-gst-type="<?= $gst_type ?>" data-channel-partner-flag="<?php echo ((int) $customer['channel_partner_flag'] === 1) ? '1' : '0'; ?>"><?php echo $customer['company_name']." - ".$customer['cname']; ?></option>
 																	<?php
 																}
 																	}
@@ -788,7 +788,7 @@
 																	$customer_type1 = $db->rp_getValue("customer_type", "name", "id='" . $customer['type_of_executive'] . "'");
 																	?>
 																	<option value="<?php echo $customer['id']; ?>" <?php if ($customer_id == $customer['id']) {echo "selected";
-																	} ?> data-phone="<?php echo $customer['phone'] ?>" data-email="<?php echo $customer['email'] ?>" data-address="<?php echo $customer['address'] ?>" data-state="<?php echo $customer['state'] ?>" data-cname="<?= $customer['cname'] ?>" data-customer_id="<?= $customer['top_cat_id'] ?>"  data-gstin="<?= $customer['gst'] ?>" data-price-list="<?= $price_list_name; ?>" data-cutomer-type="<?= $customer_type1; ?>" data-gst-type="<?= $gst_type?>" data-gst-type="<?= $gst_type ?>" data-shipping_address="<?php echo $customer['shipping_address'] ?>" data-billing_address="<?php echo $customer['billing_address'] ?>"><?php echo $customer['company_name']." - ".$customer['cname']; ?></option>
+																	} ?> data-phone="<?php echo $customer['phone'] ?>" data-email="<?php echo $customer['email'] ?>" data-address="<?php echo $customer['address'] ?>" data-state="<?php echo $customer['state'] ?>" data-cname="<?= $customer['cname'] ?>" data-customer_id="<?= $customer['top_cat_id'] ?>"  data-gstin="<?= $customer['gst'] ?>" data-price-list="<?= $price_list_name; ?>" data-cutomer-type="<?= $customer_type1; ?>" data-gst-type="<?= $gst_type?>" data-gst-type="<?= $gst_type ?>" data-shipping_address="<?php echo $customer['shipping_address'] ?>" data-billing_address="<?php echo $customer['billing_address'] ?>" data-channel-partner-flag="<?php echo ((int) $customer['channel_partner_flag'] === 1) ? '1' : '0'; ?>"><?php echo $customer['company_name']." - ".$customer['cname']; ?></option>
 																	<?php
 																				}
 																}
@@ -2038,6 +2038,7 @@
 
 
 			function getCategory(cus_id) {
+				refreshMaxItemDiscountFromCustomer();
 				$.ajax({
 					type: "post",
 					url: "ajax_get_category_from_customer.php",
@@ -2156,6 +2157,35 @@
 				}
 
 			//--------------Calculation for qty ,total------------------------//
+			<?php
+			$order_discount_customer_id = 0;
+			if (isset($customer_id) && (int) $customer_id > 0) {
+				$order_discount_customer_id = (int) $customer_id;
+			} else if (isset($dealer_id) && (int) $dealer_id > 0) {
+				$order_discount_customer_id = (int) $dealer_id;
+			}
+			$order_force_cp = (isset($c_type) && $c_type == 'channel_partner');
+			$MAX_ITEM_DISCOUNT_PCT = function_exists('cp_get_max_item_discount_percent')
+				? (int) cp_get_max_item_discount_percent($db, $order_discount_customer_id, $order_force_cp)
+				: ($order_force_cp ? 50 : 44);
+			?>
+			var MAX_ITEM_DISCOUNT_PCT = <?php echo (int) $MAX_ITEM_DISCOUNT_PCT; ?>;
+			var ORDER_IS_CHANNEL_PARTNER = <?php echo $order_force_cp ? 'true' : 'false'; ?>;
+
+			function refreshMaxItemDiscountFromCustomer() {
+				if (ORDER_IS_CHANNEL_PARTNER) {
+					MAX_ITEM_DISCOUNT_PCT = 50;
+					return;
+				}
+				var cpFlag = 0;
+				if ($("#customer_id option:selected").length && $("#customer_id").val()) {
+					cpFlag = parseInt($("#customer_id option:selected").attr("data-channel-partner-flag") || "0", 10) || 0;
+				} else if ($("#channel_partner_order_flag").val() == "1") {
+					cpFlag = 1;
+				}
+				MAX_ITEM_DISCOUNT_PCT = (cpFlag === 1) ? 50 : 44;
+			}
+
 			function recalculateRow(t,discount_type="") {
 
 				var row = $(t).parent('td').parent('tr');
@@ -2314,14 +2344,14 @@
 					price = $(row).find("td").find("input.price").val();
 				}
 
-				if (parseFloat(discount_amount_new) > (parseFloat(original_price) * 50 / 100)) {
-					toastr.error("You cant add Discount More Than 50%");
+				if (parseFloat(discount_amount_new) > (parseFloat(original_price) * MAX_ITEM_DISCOUNT_PCT / 100)) {
+					toastr.error("You cant add Discount More Than " + MAX_ITEM_DISCOUNT_PCT + "%");
 					$(row).find("td").find("input.discount_amount").val(0);
 					discount_amount_new=0;
 				} 
-				if(parseFloat(discount) > 50)
+				if(parseFloat(discount) > MAX_ITEM_DISCOUNT_PCT)
 				{
-					toastr.error("You cant add Discount More Than 50%");
+					toastr.error("You cant add Discount More Than " + MAX_ITEM_DISCOUNT_PCT + "%");
 					$(row).find("td").find("input.discount").val(0);
 					discount=0;
 				}

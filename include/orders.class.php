@@ -5,6 +5,7 @@ require_once("class.log.php");
 require_once("class.system.php");
 require_once("product.class.php");
 require_once("push_notification.class.php");
+require_once("channel_partner_helper.php");
 
 class Order extends Functions
 {
@@ -982,7 +983,8 @@ class Order extends Functions
 
 							$discount_amount = $p['original_price'] - $p['price'];
 							$discount = ($p['original_price'] > 0) ? (($discount_amount * 100) / $p['original_price']) : 0;
-							$disc_err = $this->validateItemDiscountMax50($discount, $discount_amount, $p['original_price']);
+							list($discCustId, $discForceCp) = $this->getDiscountCustomerContext($detail);
+							$disc_err = $this->validateItemDiscountMax50($discount, $discount_amount, $p['original_price'], $discCustId, $discForceCp);
 							if ($disc_err) {
 								return $disc_err;
 							}
@@ -1042,10 +1044,13 @@ class Order extends Functions
 									$original_price = $p['original_price'];
 
 									$user_discount = $p['discount'];
+									list($discCustId, $discForceCp) = $this->getDiscountCustomerContext($detail);
 									$disc_err = $this->validateItemDiscountMax50(
 										$user_discount,
 										isset($p['discount_amount']) ? $p['discount_amount'] : 0,
-										isset($p['original_price']) ? $p['original_price'] : 0
+										isset($p['original_price']) ? $p['original_price'] : 0,
+										$discCustId,
+										$discForceCp
 									);
 									if ($disc_err) {
 										return $disc_err;
@@ -1444,10 +1449,13 @@ class Order extends Functions
 									$original_price = isset($p['original_price']) && $p['original_price'] !== '' && $p['original_price'] !== null ? $p['original_price'] : $unitprice;
 
 									$user_discount = isset($p['discount']) ? $p['discount'] : 0;
+									list($discCustId, $discForceCp) = $this->getDiscountCustomerContext($detail);
 									$disc_err = $this->validateItemDiscountMax50(
 										$user_discount,
 										isset($p['discount_amount']) ? $p['discount_amount'] : 0,
-										$original_price
+										$original_price,
+										$discCustId,
+										$discForceCp
 									);
 									if ($disc_err) {
 										return $disc_err;
@@ -1729,10 +1737,13 @@ class Order extends Functions
 								$original_price = $p['original_price'];
 
 								$user_discount = $p['discount'];
+								list($discCustId, $discForceCp) = $this->getDiscountCustomerContext($detail);
 								$disc_err = $this->validateItemDiscountMax50(
 									$user_discount,
 									isset($p['discount_amount']) ? $p['discount_amount'] : 0,
-									isset($p['original_price']) ? $p['original_price'] : 0
+									isset($p['original_price']) ? $p['original_price'] : 0,
+									$discCustId,
+									$discForceCp
 								);
 								if ($disc_err) {
 									return $disc_err;
@@ -3515,13 +3526,12 @@ class Order extends Functions
 		if ($check_cart_exist != 0) {
 			if (!empty($discount)) {
 				foreach ($discount as $d) {
-					if (isset($d['discount']) && floatval($d['discount']) > 50) {
-						$reply = array(
-							"ack" => 0,
-							"developer_msg" => "You cant add Discount More Than 50%",
-							"ack_msg" => "You cant add Discount More Than 50%",
-						);
-						return $reply;
+					list($discCustId, $discForceCp) = $this->getDiscountCustomerContext($detail);
+					if (isset($d['discount']) && floatval($d['discount']) > 0) {
+						$disc_err = $this->validateItemDiscountMax50($d['discount'], 0, 0, $discCustId, $discForceCp);
+						if ($disc_err) {
+							return $disc_err;
+						}
 					}
 					if ($detail['cart_type'] == "2") {
 						$get_item = $this->db->rp_getData($table_item, "*", "isDelete=0 AND quotation_id='" . $detail['cart_id'] . "'", "", 0);
@@ -3904,28 +3914,51 @@ class Order extends Functions
 	}
 
 	/**
-	 * Item discount max 50% (Dis% or Dis Flat vs MRP/original_price).
+	 * Item discount max: Regular Customer 44%, Channel Partner 50%.
 	 * Returns error ack array, or false when valid.
 	 */
-	private function validateItemDiscountMax50($discount, $discount_amount, $original_price)
+	private function validateItemDiscountMax50($discount, $discount_amount, $original_price, $customerId = 0, $forceCp = false)
 	{
+		if (function_exists('cp_validate_item_discount_max')) {
+			return cp_validate_item_discount_max($this->db, $discount, $discount_amount, $original_price, $customerId, $forceCp);
+		}
+		$maxPct = $forceCp ? 50 : 44;
 		$discount = floatval($discount);
 		$discount_amount = floatval($discount_amount);
 		$original_price = floatval($original_price);
-		if ($discount > 50) {
+		$msg = "You cant add Discount More Than " . $maxPct . "%";
+		if ($discount > $maxPct) {
 			return array(
 				"ack" => 0,
-				"ack_msg" => "You cant add Discount More Than 50%",
-				"developer_msg" => "You cant add Discount More Than 50%",
+				"ack_msg" => $msg,
+				"developer_msg" => $msg,
 			);
 		}
-		if ($original_price > 0 && $discount_amount > ($original_price * 50 / 100)) {
+		if ($original_price > 0 && $discount_amount > ($original_price * $maxPct / 100)) {
 			return array(
 				"ack" => 0,
-				"ack_msg" => "You cant add Discount More Than 50%",
-				"developer_msg" => "You cant add Discount More Than 50%",
+				"ack_msg" => $msg,
+				"developer_msg" => $msg,
 			);
 		}
 		return false;
+	}
+
+	private function getDiscountCustomerContext($detail)
+	{
+		$customerId = 0;
+		if (isset($detail['cid']) && (int) $detail['cid'] > 0) {
+			$customerId = (int) $detail['cid'];
+		} else if (isset($detail['customer_id']) && (int) $detail['customer_id'] > 0) {
+			$customerId = (int) $detail['customer_id'];
+		}
+		$forceCp = false;
+		if (isset($detail['channel_partner_order_flag']) && (int) $detail['channel_partner_order_flag'] === 1) {
+			$forceCp = true;
+		}
+		if (isset($detail['c_type']) && $detail['c_type'] == 'channel_partner') {
+			$forceCp = true;
+		}
+		return array($customerId, $forceCp);
 	}
 }

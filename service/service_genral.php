@@ -1800,27 +1800,55 @@ if ($is_valid_api_key) {
 				$item_gst = $GST;
 				//$item_gst=$_REQUEST['item_gst'];
 
-				// Max item discount 50% (Dis% / Dis Flat) — same as web Order/Quotation
-				$discount_check = floatval($discount);
-				$discount_amt_check = floatval($discount_amt);
-				$original_price_check = floatval($original_price);
-				if ($discount_check > 50) {
-					$ack = array(
-						"ack" => 0,
-						"ack_msg" => "You cant add Discount More Than 50%",
-						"developer_msg" => "You cant add Discount More Than 50%",
-					);
-					$db->printJSON($ack);
-					exit;
+				// Max item discount: Regular 44% / Channel Partner 50% — same as web Order/Quotation
+				$disc_customer_id = 0;
+				$disc_force_cp = false;
+				$cart_main_id = isset($_REQUEST['cart_id']) ? (int) $_REQUEST['cart_id'] : (isset($cart_id) ? (int) $cart_id : 0);
+				if ($cart_main_id > 0) {
+					if ($_REQUEST['cart_type'] == "3") {
+						$disc_customer_id = (int) $db->rp_getValue("orders", "customer_id", "id='" . $cart_main_id . "' AND isDelete=0", 0);
+						$cp_flag = (int) $db->rp_getValue("orders", "channel_partner_order_flag", "id='" . $cart_main_id . "' AND isDelete=0", 0);
+						if ($cp_flag === 1) {
+							$disc_force_cp = true;
+						}
+					} else if ($_REQUEST['cart_type'] == "2") {
+						$disc_customer_id = (int) $db->rp_getValue("quotation_detail", "dealer_id", "id='" . $cart_main_id . "' AND isDelete=0", 0);
+					} else {
+						$disc_customer_id = (int) $db->rp_getValue("cart_detail", "customer_id", "id='" . $cart_main_id . "' AND isDelete=0", 0);
+					}
 				}
-				if ($original_price_check > 0 && $discount_amt_check > ($original_price_check * 50 / 100)) {
-					$ack = array(
-						"ack" => 0,
-						"ack_msg" => "You cant add Discount More Than 50%",
-						"developer_msg" => "You cant add Discount More Than 50%",
-					);
-					$db->printJSON($ack);
-					exit;
+				if (isset($_REQUEST['customer_id']) && (int) $_REQUEST['customer_id'] > 0) {
+					$disc_customer_id = (int) $_REQUEST['customer_id'];
+				}
+				if (function_exists('cp_validate_item_discount_max')) {
+					$disc_err = cp_validate_item_discount_max($db, $discount, $discount_amt, $original_price, $disc_customer_id, $disc_force_cp);
+					if ($disc_err) {
+						$db->printJSON($disc_err);
+						exit;
+					}
+				} else {
+					$maxPct = $disc_force_cp ? 50 : 44;
+					$discount_check = floatval($discount);
+					$discount_amt_check = floatval($discount_amt);
+					$original_price_check = floatval($original_price);
+					if ($discount_check > $maxPct) {
+						$ack = array(
+							"ack" => 0,
+							"ack_msg" => "You cant add Discount More Than " . $maxPct . "%",
+							"developer_msg" => "You cant add Discount More Than " . $maxPct . "%",
+						);
+						$db->printJSON($ack);
+						exit;
+					}
+					if ($original_price_check > 0 && $discount_amt_check > ($original_price_check * $maxPct / 100)) {
+						$ack = array(
+							"ack" => 0,
+							"ack_msg" => "You cant add Discount More Than " . $maxPct . "%",
+							"developer_msg" => "You cant add Discount More Than " . $maxPct . "%",
+						);
+						$db->printJSON($ack);
+						exit;
+					}
 				}
 
 				if ($discount != "" && $discount != "0.00" && $discount != "0" && $discount != "0.0") {

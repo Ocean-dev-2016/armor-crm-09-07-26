@@ -14,6 +14,88 @@ if (!function_exists('cp_get_login_channel_partner_id')) {
 	}
 }
 
+if (!function_exists('cp_is_channel_partner_customer')) {
+	/**
+	 * True when executive is a Channel Partner (flag=1 or has CP customers).
+	 */
+	function cp_is_channel_partner_customer($db, $customerId)
+	{
+		$customerId = (int) $customerId;
+		if ($customerId <= 0 || !is_object($db)) {
+			return false;
+		}
+		$flag = $db->rp_getValue(
+			"executive",
+			"channel_partner_flag",
+			"id='" . $customerId . "' AND isDelete=0",
+			0
+		);
+		if ((int) $flag === 1) {
+			return true;
+		}
+		$cpCust = $db->rp_getTotalRecord(
+			"channel_partner_customer",
+			"channel_partner_id='" . $customerId . "' AND isDelete=0",
+			0
+		);
+		return ((int) $cpCust > 0);
+	}
+}
+
+if (!function_exists('cp_get_max_item_discount_percent')) {
+	/**
+	 * Max item Dis(%) / Dis(Flat) for Quotation & Order.
+	 * Regular Customer = 44%, Channel Partner = 50%.
+	 *
+	 * @param object $db
+	 * @param int $customerId executive.id (dealer / CP)
+	 * @param bool $forceCp true when order/quotation is already CP flow (c_type=channel_partner)
+	 * @return int
+	 */
+	function cp_get_max_item_discount_percent($db, $customerId = 0, $forceCp = false)
+	{
+		if ($forceCp) {
+			return 50;
+		}
+		if (cp_is_channel_partner_customer($db, $customerId)) {
+			return 50;
+		}
+		return 44;
+	}
+}
+
+if (!function_exists('cp_validate_item_discount_max')) {
+	/**
+	 * Validate item discount % / flat amount against max for customer type.
+	 * Returns error ack array, or false when valid.
+	 */
+	function cp_validate_item_discount_max($db, $discount, $discount_amount, $original_price, $customerId = 0, $forceCp = false)
+	{
+		$maxPct = cp_get_max_item_discount_percent($db, $customerId, $forceCp);
+		$discount = floatval($discount);
+		$discount_amount = floatval($discount_amount);
+		$original_price = floatval($original_price);
+		$msg = "You cant add Discount More Than " . $maxPct . "%";
+		if ($discount > $maxPct) {
+			return array(
+				"ack" => 0,
+				"ack_msg" => $msg,
+				"developer_msg" => $msg,
+				"max_discount" => $maxPct,
+			);
+		}
+		if ($original_price > 0 && $discount_amount > ($original_price * $maxPct / 100)) {
+			return array(
+				"ack" => 0,
+				"ack_msg" => $msg,
+				"developer_msg" => $msg,
+				"max_discount" => $maxPct,
+			);
+		}
+		return false;
+	}
+}
+
 if (!function_exists('cp_is_channel_partner_login')) {
 	function cp_is_channel_partner_login($db)
 	{

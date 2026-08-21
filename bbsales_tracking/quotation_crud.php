@@ -519,7 +519,7 @@ if (isset($_REQUEST['id']) && $_REQUEST['id'] > 0 && $_REQUEST['mode'] == "isAct
                                                                   <option value="<?php echo $customer['id']; ?>" <?php if ($dealer_id == $customer['id']) {
                                                                                                                      echo "selected";
                                                                                                                   } ?> data-phone="<?php echo $customer['phone'] ?>" data-email="<?php echo $customer['email'] ?>" data-address="<?php echo $customer['address'] ?>" data-state="<?php echo $customer['state'] ?>" data-cname="<?= $customer['cname'] ?>" data-company_name="<?= $customer['company_name'] ?>" data-gstin="<?= $customer['gst'] ?>" data-price-list="<?= $price_list_name; ?>
-																					" data-cutomer-type="<?= $customer_type1; ?>" data-gst-type="<?= $gst_type ?>">
+																					" data-cutomer-type="<?= $customer_type1; ?>" data-gst-type="<?= $gst_type ?>" data-channel-partner-flag="<?php echo ((int) $customer['channel_partner_flag'] === 1) ? '1' : '0'; ?>">
                                                                      <?php echo $customer['company_name'] . " - " . $customer['cname']; ?>
                                                                   </option>
                                                                   <?php
@@ -1444,6 +1444,7 @@ if (isset($_REQUEST['id']) && $_REQUEST['id'] > 0 && $_REQUEST['mode'] == "isAct
       }
 
       function getCategory(cus_id) {
+         refreshMaxItemDiscountFromCustomer();
          $.ajax({
             type: "post",
             url: "ajax_get_category_from_customer.php",
@@ -1547,6 +1548,22 @@ if (isset($_REQUEST['id']) && $_REQUEST['id'] > 0 && $_REQUEST['mode'] == "isAct
       }
 
       //--------------Calculation for qty ,total------------------------//
+      <?php
+      $quot_discount_customer_id = isset($dealer_id) ? (int) $dealer_id : 0;
+      $MAX_ITEM_DISCOUNT_PCT = function_exists('cp_get_max_item_discount_percent')
+         ? (int) cp_get_max_item_discount_percent($db, $quot_discount_customer_id, false)
+         : 44;
+      ?>
+      var MAX_ITEM_DISCOUNT_PCT = <?php echo (int) $MAX_ITEM_DISCOUNT_PCT; ?>;
+
+      function refreshMaxItemDiscountFromCustomer() {
+         var cpFlag = 0;
+         if ($("#dealer_id").length && $("#dealer_id").val()) {
+            cpFlag = parseInt($("#dealer_id option:selected").attr("data-channel-partner-flag") || "0", 10) || 0;
+         }
+         MAX_ITEM_DISCOUNT_PCT = (cpFlag === 1) ? 50 : 44;
+      }
+
       function recalculateRow(t, discount_type = "") {
          var row = $(t).parent('td').parent('tr');
          if (discount_type == 1) {
@@ -1684,14 +1701,14 @@ if (isset($_REQUEST['id']) && $_REQUEST['id'] > 0 && $_REQUEST['mode'] == "isAct
             price = $(row).find("td").find("input.price").val();
          }
 
-         if (parseFloat(discount_amount_new) > (parseFloat(original_price) * 50 / 100)) {
-            toastr.error("You cant add Discount More Than 50%");
+         if (parseFloat(discount_amount_new) > (parseFloat(original_price) * MAX_ITEM_DISCOUNT_PCT / 100)) {
+            toastr.error("You cant add Discount More Than " + MAX_ITEM_DISCOUNT_PCT + "%");
             $(row).find("td").find("input.discount_amount").val(0);
             discount_amount_new = 0;
          }
 
-         if (parseFloat(discount) > 50) {
-            toastr.error("You cant add Discount More Than 50%");
+         if (parseFloat(discount) > MAX_ITEM_DISCOUNT_PCT) {
+            toastr.error("You cant add Discount More Than " + MAX_ITEM_DISCOUNT_PCT + "%");
             $(row).find("td").find("input.discount").val(0);
             discount = 0;
          }

@@ -5,6 +5,7 @@ require_once("class.log.php");
 require_once("class.system.php");
 require_once("product.class.php");
 require_once("push_notification.class.php");
+require_once("channel_partner_helper.php");
 
 
 class Quotation extends Functions
@@ -1168,6 +1169,19 @@ class Quotation extends Functions
 									$original_price = $p['original_price'];
 
 									$user_discount = $p['discount'];
+									if (function_exists('cp_validate_item_discount_max')) {
+										$disc_err = cp_validate_item_discount_max(
+											$this->db,
+											$user_discount,
+											isset($p['discount_amount']) ? $p['discount_amount'] : 0,
+											isset($p['original_price']) ? $p['original_price'] : 0,
+											isset($detail['cid']) ? $detail['cid'] : 0,
+											false
+										);
+										if ($disc_err) {
+											return $disc_err;
+										}
+									}
 									if ($user_discount == 0) {
 										$discount_amount = $p['discount_amount'];
 									} else {
@@ -1475,6 +1489,19 @@ class Quotation extends Functions
 									$original_price = $p['original_price'];
 
 									$user_discount = $p['discount'];
+									if (function_exists('cp_validate_item_discount_max')) {
+										$disc_err = cp_validate_item_discount_max(
+											$this->db,
+											$user_discount,
+											isset($p['discount_amount']) ? $p['discount_amount'] : 0,
+											isset($p['original_price']) ? $p['original_price'] : 0,
+											isset($detail['cid']) ? $detail['cid'] : 0,
+											false
+										);
+										if ($disc_err) {
+											return $disc_err;
+										}
+									}
 									if ($user_discount == 0 || $user_discount == "") {
 										$discount_amount = $this->db->rp_num($p['discount_amount']);
 										if ($discount_amount == "") {
@@ -1700,6 +1727,19 @@ class Quotation extends Functions
 
 
 								$user_discount = $p['discount'];
+								if (function_exists('cp_validate_item_discount_max')) {
+									$disc_err = cp_validate_item_discount_max(
+										$this->db,
+										$user_discount,
+										isset($p['discount_amount']) ? $p['discount_amount'] : 0,
+										isset($p['original_price']) ? $p['original_price'] : 0,
+										isset($detail['cid']) ? $detail['cid'] : 0,
+										false
+									);
+									if ($disc_err) {
+										return $disc_err;
+									}
+								}
 								if ($user_discount == 0) {
 									$discount_amount = $this->db->rp_num($p['discount_amount']);
 									if ($discount_amount == "") {
@@ -2996,6 +3036,19 @@ class Quotation extends Functions
 									/*$user_discount=0;
 									$discount_amount=0;*/
 									$user_discount = $p['discount'];
+									if (function_exists('cp_validate_item_discount_max')) {
+										$disc_err = cp_validate_item_discount_max(
+											$this->db,
+											$user_discount,
+											isset($p['discount_amount']) ? $p['discount_amount'] : 0,
+											isset($p['original_price']) ? $p['original_price'] : 0,
+											isset($detail['cid']) ? $detail['cid'] : 0,
+											false
+										);
+										if ($disc_err) {
+											return $disc_err;
+										}
+									}
 									$discount_amount = ($p['original_price'] * $user_discount) / 100;
 									$unitprice_amt = $discount_amount;
 									$final_price = $this->db->rp_num($totalprice);

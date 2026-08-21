@@ -22,7 +22,8 @@ define("CRM_LOGIN_LOGO_URL", SITEURL . "images/" . CRM_LOGIN_LOGO_FILE);
 define("CRM_LOGIN_LOGO_PATH", dirname(__DIR__) . "/images/" . CRM_LOGIN_LOGO_FILE);
 // define('EXPIRE_DATE',"01-09-2025");
 // define('DO_NOT_CHANGE',"Ujlsdit4LzZsbE9tbWdRSTVWYXQrZz09");//comment by shivani
-define('DO_NOT_CHANGE',"WlBGSmRQdDNKZ3FrNjl1ZG54Tzh6dz09");
+// define('DO_NOT_CHANGE',"WlBGSmRQdDNKZ3FrNjl1ZG54Tzh6dz09"); // old expire 31-08-2026
+define('DO_NOT_CHANGE',"eVk5K2tiZ0hNSk40VDZ1M2hCMS9Sdz09"); // extended to 31-08-2027
 
 
 // define('COUNT_DOWN_FROM',"10"); //10 days
