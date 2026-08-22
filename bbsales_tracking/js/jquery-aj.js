@@ -527,6 +527,10 @@
 
 				loadNotificationList();
 				setInterval(loadNotificationList, 60000);
+
+				$("#header_notification_bar").on("show.bs.dropdown", function(){
+					loadNotificationList();
+				});
 			}
 			function delete_notification(btn,notification_id)
 			{

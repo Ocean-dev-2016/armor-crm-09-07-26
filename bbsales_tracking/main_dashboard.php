@@ -148,6 +148,235 @@ $total_quotation = $db->rp_getTotalRecord("quotation_detail", "isDelete=0", 0);
 			padding-left: 10px;
 			padding-right: 10px;
 		}
+		.today-followup-top-row {
+			margin-top: 10px;
+			margin-bottom: 10px;
+		}
+		.today-followup-top-row .today-followup-panel {
+			margin-bottom: 0;
+		}
+		/* Today's Followup card — dedicated styling */
+		.today-followup-panel .portlet-title {
+			background: linear-gradient(135deg, #1e88e5 0%, #1565c0 100%);
+			padding: 12px 18px;
+			min-height: 48px;
+		}
+		.today-followup-panel .portlet-title .caption i {
+			font-size: 18px;
+			margin-right: 8px;
+			opacity: 0.95;
+		}
+		.today-followup-panel .portlet-title .caption-subject {
+			font-size: 15px;
+			letter-spacing: 0.3px;
+		}
+		.today-followup-panel .tf-subtitle {
+			display: inline-block;
+			margin-left: 8px;
+			font-size: 12px;
+			font-weight: 400;
+			opacity: 0.85;
+			text-transform: none;
+		}
+		.today-followup-panel .portlet-title .badge {
+			background: #fff;
+			color: #1565c0;
+			font-size: 13px;
+			padding: 4px 10px;
+			margin-left: 10px;
+			border-radius: 12px;
+		}
+		.today-followup-panel .portlet-title .actions .btn {
+			color: #1565c0;
+			font-weight: 600;
+			padding: 5px 12px;
+			margin-left: 4px;
+		}
+		.today-followup-panel .portlet-title .actions .btn:hover {
+			background: #f0f7ff;
+		}
+		.today-followup-panel .tf-summary-bar {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			gap: 12px;
+			padding: 12px 18px;
+			background: #f8fafc;
+			border-bottom: 1px solid #e7ecf1;
+		}
+		.today-followup-panel .tf-stat {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			background: #fff;
+			border: 1px solid #e3e8ef;
+			border-radius: 6px;
+			padding: 6px 14px;
+			min-width: 110px;
+		}
+		.today-followup-panel .tf-stat .num {
+			font-size: 20px;
+			font-weight: 700;
+			color: #1565c0;
+			line-height: 1;
+		}
+		.today-followup-panel .tf-stat .lbl {
+			font-size: 11px;
+			color: #666;
+			text-transform: uppercase;
+			letter-spacing: 0.4px;
+		}
+		.today-followup-panel .tf-stat.tf-pending .num { color: #f39c12; }
+		.today-followup-panel .tf-stat.tf-done .num { color: #26a69a; }
+		.today-followup-panel .tf-date-label {
+			margin-left: auto;
+			font-size: 12px;
+			color: #666;
+			padding: 6px 12px;
+			background: #fff;
+			border: 1px solid #e3e8ef;
+			border-radius: 6px;
+		}
+		.today-followup-panel .tf-date-label i { color: #1565c0; margin-right: 5px; }
+		.today-followup-panel .today-followup-table-wrap {
+			max-height: 480px;
+			overflow: auto;
+			border: none;
+			border-top: 1px solid #eee;
+		}
+		.today-followup-panel .today-followup-table {
+			width: 100%;
+			table-layout: fixed;
+			margin-bottom: 0;
+			font-size: 12px;
+		}
+		.today-followup-panel .today-followup-table thead th {
+			background: #eef3f8 !important;
+			color: #2c3e50 !important;
+			font-size: 11px;
+			text-transform: uppercase;
+			letter-spacing: 0.3px;
+			padding: 10px 8px !important;
+			border-color: #dde4ec !important;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+		.today-followup-panel .today-followup-table tbody td {
+			padding: 9px 8px !important;
+			font-size: 12px;
+			line-height: 1.45;
+			border-color: #eef1f5 !important;
+			word-wrap: break-word;
+			overflow-wrap: break-word;
+		}
+		.today-followup-panel .today-followup-table tbody tr:nth-child(even) {
+			background: #fafbfc;
+		}
+		.today-followup-panel .today-followup-table tbody tr:hover {
+			background: #eef6ff !important;
+		}
+		.today-followup-panel .tf-col-no { width: 4%; text-align: center; }
+		.today-followup-panel .tf-col-customer { font-weight: 600; color: #2c3e50; }
+		.today-followup-panel .tf-col-mobile a {
+			color: #1565c0;
+			text-decoration: none;
+		}
+		.today-followup-panel .tf-col-mobile a:hover { text-decoration: underline; }
+		.today-followup-panel .tf-col-datetime {
+			font-weight: 600;
+			color: #1565c0;
+			font-size: 11px;
+			white-space: nowrap;
+		}
+		.today-followup-panel .tf-col-desc {
+			color: #555;
+			max-height: 60px;
+			overflow: hidden;
+			display: -webkit-box;
+			-webkit-line-clamp: 3;
+			-webkit-box-orient: vertical;
+		}
+		.today-followup-panel .tf-badge {
+			display: inline-block;
+			padding: 3px 8px;
+			border-radius: 4px;
+			font-size: 10px;
+			font-weight: 600;
+			text-transform: uppercase;
+			letter-spacing: 0.2px;
+			white-space: nowrap;
+		}
+		.today-followup-panel .tf-badge-through-call { background: #e0f2f1; color: #00796b; }
+		.today-followup-panel .tf-badge-through-sms { background: #e3f2fd; color: #1565c0; }
+		.today-followup-panel .tf-badge-through-email { background: #f3e5f5; color: #7b1fa2; }
+		.today-followup-panel .tf-badge-through-whatsapp { background: #e8f5e9; color: #2e7d32; }
+		.today-followup-panel .tf-badge-through-visit { background: #fff3e0; color: #e65100; }
+		.today-followup-panel .tf-badge-through-default { background: #eceff1; color: #546e7a; }
+		.today-followup-panel .tf-badge-type {
+			background: #f0f4f8;
+			color: #455a64;
+			font-size: 10px;
+			padding: 3px 7px;
+			border-radius: 4px;
+			display: inline-block;
+		}
+		.today-followup-panel .tf-badge-status-pending {
+			background: #fff8e1;
+			color: #f57c00;
+			border: 1px solid #ffe082;
+		}
+		.today-followup-panel .tf-badge-status-done {
+			background: #e8f5e9;
+			color: #2e7d32;
+			border: 1px solid #a5d6a7;
+		}
+		.today-followup-panel .tf-btn-view {
+			display: inline-block;
+			padding: 4px 10px;
+			font-size: 11px;
+			border-radius: 4px;
+			background: #1565c0;
+			color: #fff !important;
+			text-decoration: none !important;
+			white-space: nowrap;
+		}
+		.today-followup-panel .tf-btn-view:hover {
+			background: #0d47a1;
+			color: #fff;
+		}
+		.today-followup-panel .tf-empty-state {
+			padding: 50px 20px;
+			text-align: center;
+			color: #90a4ae;
+		}
+		.today-followup-panel .tf-empty-state i {
+			font-size: 42px;
+			margin-bottom: 12px;
+			display: block;
+			opacity: 0.6;
+		}
+		.today-followup-panel .tf-empty-state p {
+			margin: 0;
+			font-size: 14px;
+		}
+		.today-followup-panel .tf-table-footer {
+			padding: 10px 18px;
+			margin: 0;
+			font-size: 12px;
+			color: #666;
+			background: #f8fafc;
+			border-top: 1px solid #e7ecf1;
+		}
+		.today-followup-panel .tf-table-footer a {
+			color: #1565c0;
+			font-weight: 600;
+		}
+		@media (max-width: 991px) {
+			.today-followup-panel .tf-summary-bar { flex-direction: column; align-items: stretch; }
+			.today-followup-panel .tf-date-label { margin-left: 0; text-align: center; }
+			.today-followup-panel .today-followup-table-wrap { max-height: 360px; }
+		}
 		@media (max-width: 991px) {
 			.admin-followup-notif-row .col-md-8,
 			.admin-followup-notif-row .col-md-4 {
@@ -294,6 +523,17 @@ $total_quotation = $db->rp_getTotalRecord("quotation_detail", "isDelete=0", 0);
 					}
 					?>
 
+					<?php if ($_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0) { ?>
+					<div class="row today-followup-top-row">
+						<div class="col-md-12 col-sm-12 col-xs-12 col-lg-12" id="today-followup-data">
+							<div class="text-center" style="padding:30px;color:#999;">
+								<i class="fa fa-spinner fa-spin fa-2x"></i>
+								<p>Loading Today's Followup details...</p>
+							</div>
+						</div>
+					</div>
+					<?php } ?>
+
 					<div class="row">
 
 						<!-- <div class="col-md-12 col-sm-12 co-xs-12 col-lg-12"> -->
@@ -430,14 +670,8 @@ $total_quotation = $db->rp_getTotalRecord("quotation_detail", "isDelete=0", 0);
 						<?php
 						if ($_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0) {
 						?>
-							<div class="col-md-8 col-sm-12 col-xs-12 col-lg-8" id="today-followup-data">
-								<div class="text-center" style="padding:40px;color:#999;">
-									<i class="fa fa-spinner fa-spin fa-2x"></i>
-									<p>Loading Today's Followup...</p>
-								</div>
-							</div>
-							<div class="col-md-4 col-sm-12 col-xs-12 col-lg-4" id="dashboard-notification-data">
-								<div class="text-center" style="padding:40px;color:#999;">
+							<div class="col-md-12 col-sm-12 col-xs-12 col-lg-12" id="dashboard-notification-data">
+								<div class="text-center" style="padding:30px;color:#999;">
 									<i class="fa fa-spinner fa-spin fa-2x"></i>
 									<p>Loading Notifications...</p>
 								</div>
@@ -507,8 +741,15 @@ $total_quotation = $db->rp_getTotalRecord("quotation_detail", "isDelete=0", 0);
 		$("#followup-data").load("followup_data_get_ajax.php");
 		$("#attendance-data").load("attendance_data_get_ajax.php");
 		<?php if ($_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0) { ?>
-		$("#today-followup-data").load("today_followup_dashboard_ajax.php");
+		function loadTodayFollowupDashboard() {
+			var salesId = $("#all_sales_executive").val() || "";
+			$("#today-followup-data").load("today_followup_dashboard_ajax.php?sales_id=" + encodeURIComponent(salesId));
+		}
+		loadTodayFollowupDashboard();
 		$("#dashboard-notification-data").load("dashboard_notifications_ajax.php");
+		$("#all_sales_executive").on("change", function() {
+			loadTodayFollowupDashboard();
+		});
 		<?php } ?>
 		//$( "#sales_person_target" ).load("sales_person_target.php");
 		//$( "#outstanding_data" ).load("outstanding_data_get_ajax.php");
@@ -1766,8 +2007,11 @@ $total_quotation = $db->rp_getTotalRecord("quotation_detail", "isDelete=0", 0);
 			// getleave(todate_all,fromdate_all,all_sales_executive);
 			// getfollowup(todate_all,fromdate_all,all_sales_executive);
 			getattendance(todate_all, fromdate_all, all_sales_executive);
-
-
+			<?php if ($_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0) { ?>
+			if (typeof loadTodayFollowupDashboard === 'function') {
+				loadTodayFollowupDashboard();
+			}
+			<?php } ?>
 
 		}
 

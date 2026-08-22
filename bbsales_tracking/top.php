@@ -754,6 +754,7 @@ $ctableAPK        = "application_info";
 							</li>
 							<li>
 								<ul class="dropdown-menu-list scroller notification-container" style="height: 280px; overflow-y: auto;" data-handle-color="#637283">
+									<li class="notif-loading text-center" style="padding:20px;color:#999;"><i class="fa fa-spinner fa-spin"></i> Loading...</li>
 								</ul>
 							</li>
 						</ul>

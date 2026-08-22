@@ -9,7 +9,7 @@ if(isset($_REQUEST['mode']) && $_REQUEST['mode']!="")
 		$service=$_REQUEST['mode'];
 		if($service=="get_notifications")
 		{
-			$html=(isset($_REQUEST['html']) && $_REQUEST['html']==true)?true:false;
+			$html=(isset($_REQUEST['html']) && ($_REQUEST['html']==true || $_REQUEST['html']=='true'))?true:false;
 			$user_id="";
 			$notifications=$system->getQuickNotifications();
 			$result="";
