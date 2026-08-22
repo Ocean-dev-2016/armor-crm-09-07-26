@@ -15,10 +15,12 @@ function buildAdminNotificationHtml($system, $notification, $timeZone)
 	$ref_id = isset($notification['referance_id']) ? (int)$notification['referance_id'] : 0;
 	$view_link = '';
 	$followup_meta = '';
+	$anchor_href = 'notification_manage.php?mode=all';
 
 	if ($notif_type == 'followup' || $ref_type == 'followup') {
 		$view_link = '<a href="followuplist_manage.php?followup_type=today" class="btn btn-xs btn-info" style="margin-right:4px;"><i class="fa fa-eye"></i> View</a>';
 		$details = $system->resolveFollowupPartyNames($ref_id);
+		$anchor_href = 'followuplist_manage.php?followup_type=today';
 		$followup_meta = '
 			<div class="notif-followup-meta">
 				<span class="notif-meta-item"><i class="fa fa-user"></i> <strong>Employee:</strong> ' . htmlspecialchars(stripslashes($details['sales_name'])) . '</span>
@@ -31,13 +33,17 @@ function buildAdminNotificationHtml($system, $notification, $timeZone)
 			}
 			$followup_meta .= '</div>';
 		}
+	} else {
+		$anchor_href = 'notification_manage.php?mode=all';
 	}
 
 	return '<li>
-		<div class="notif-item-title">'.$title.'</div>
-		'.$followup_meta.'
-		'.($desc != '' ? '<div class="notif-item-desc">'.$desc.'</div>' : '').'
-		<div class="notif-item-time"><i class="fa fa-history"></i> '.$time.'</div>
+		<a href="'.$anchor_href.'" class="notif-item-anchor">
+			<div class="notif-item-title">'.$title.'</div>
+			'.$followup_meta.'
+			'.($desc != '' ? '<div class="notif-item-desc">'.$desc.'</div>' : '').'
+			<div class="notif-item-time"><i class="fa fa-history"></i> '.$time.'</div>
+		</a>
 		<div class="notif-item-actions">
 			'.$view_link.'
 			<a class="btn btn-xs btn-success" onClick="aj.delete_notification(this,'.$notification['id'].')">

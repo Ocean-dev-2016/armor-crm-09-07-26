@@ -43,9 +43,16 @@ div.xdsoft_datetimepicker{
 	padding: 0;
 	border: 1px solid #e7ecf1;
 	box-shadow: 0 5px 20px rgba(0,0,0,.15);
+	background: #fff !important;
+	color: #333 !important;
+}
+.page-header .page-header-menu .top-menu .navbar-nav > li.dropdown .dropdown-menu.admin-notif-dropdown,
+.page-header .page-header-top .top-menu .navbar-nav > li.dropdown .dropdown-menu.admin-notif-dropdown {
+	background: #fff !important;
+	color: #333 !important;
 }
 .admin-notif-dropdown .external {
-	background: #3598dc;
+	background: #3598dc !important;
 	padding: 12px 15px;
 }
 .admin-notif-dropdown .external h3 {
@@ -55,34 +62,51 @@ div.xdsoft_datetimepicker{
 }
 .admin-notif-dropdown .external a {
 	color: #fff !important;
-	opacity: 0.9;
+	opacity: 0.95;
 }
 .admin-notif-dropdown .notification-container {
 	padding: 0;
 	margin: 0;
 	list-style: none;
+	background: #fff !important;
 }
 .admin-notif-dropdown .notification-container > li {
 	border-bottom: 1px solid #f0f0f0;
 	padding: 10px 12px;
+	background: #fff !important;
+	color: #333 !important;
 }
 .admin-notif-dropdown .notification-container > li:hover {
-	background: #f9f9f9;
+	background: #f9f9f9 !important;
+}
+.admin-notif-dropdown .notif-item-anchor {
+	display: block;
+	text-decoration: none !important;
+	color: #333 !important;
+	margin-bottom: 4px;
+}
+.admin-notif-dropdown .notif-item-anchor:hover {
+	text-decoration: none !important;
+	color: #333 !important;
 }
 .admin-notif-dropdown .notif-item-title {
-	color: #333;
+	color: #222 !important;
 	font-weight: 600;
 	font-size: 13px;
 	margin-bottom: 4px;
 }
 .admin-notif-dropdown .notif-item-desc {
-	color: #666;
+	color: #555 !important;
 	font-size: 12px;
 	line-height: 1.4;
 	margin-bottom: 6px;
 }
+.admin-notif-dropdown .notif-item-desc b,
+.admin-notif-dropdown .notif-item-desc strong {
+	color: #333 !important;
+}
 .admin-notif-dropdown .notif-item-time {
-	color: #999;
+	color: #888 !important;
 	font-size: 11px;
 }
 .admin-notif-dropdown .notif-item-actions {
@@ -94,21 +118,30 @@ div.xdsoft_datetimepicker{
 .admin-notif-dropdown .notif-meta-item {
 	display: block;
 	font-size: 12px;
-	color: #444;
+	color: #444 !important;
 	line-height: 1.5;
 }
+.admin-notif-dropdown .notif-meta-item strong {
+	color: #222 !important;
+}
 .admin-notif-dropdown .notif-meta-item i {
-	color: #3598dc;
+	color: #3598dc !important;
 	width: 14px;
 }
 .admin-notif-dropdown .notif-followup-time {
 	font-size: 11px;
-	color: #666;
+	color: #666 !important;
 	margin-bottom: 4px;
+}
+.admin-notif-dropdown .notif-followup-time i {
+	color: #3598dc !important;
 }
 .admin-notif-dropdown .notif-empty {
 	padding: 30px 15px;
 	text-align: center;
-	color: #999;
+	color: #999 !important;
+}
+.admin-notif-dropdown .notif-loading {
+	color: #999 !important;
 }
 </style>
