@@ -59,6 +59,40 @@
 			}
 		}
 
+		private function sendTodayFollowupAdminNotification($followup_id, $user_id, $visitor_id, $description, $through, $followup_date)
+		{
+			if (date('Y-m-d', strtotime($followup_date)) != date('Y-m-d')) {
+				return;
+			}
+
+			require_once("push_notification.class.php");
+			$objPushNotification = new PushNotification();
+
+			$status = array("1" => "Call", "2" => "SMS", "3" => "Email", "5" => "Visit");
+			$through_label = isset($status[$through]) ? $status[$through] : "Followup";
+
+			$sales_name = $this->db->rp_getValue("sales_executive", "name", "id='" . $user_id . "' AND isDelete=0", 0);
+			if ($sales_name == "") {
+				$sales_name = "Team Member";
+			}
+
+			$customer_name = "";
+			if ($visitor_id != "" && $visitor_id > 0) {
+				$customer_name = $this->db->rp_getValue("executive", "company_name", "id='" . $visitor_id . "'", 0);
+			}
+			if ($customer_name == "") {
+				$customer_name = "Customer";
+			}
+
+			$notification_title = "Today's Followup - " . $customer_name;
+			$notification_description = $sales_name . " has a followup today at " . date("h:i A", strtotime($followup_date)) . " via " . $through_label;
+			if (trim($description) != "") {
+				$notification_description .= ". " . $description;
+			}
+
+			$objPushNotification->commonNotification(0, $followup_id, "followup", $notification_title, $notification_description, "admin", "followup");
+		}
+
 		public function CreateFollowup($user_id, $visitor_id, $description, $through, $followup_date, $followup_flag, $reference_id, $entry_type, $followup_status)
 		{
 			if ($followup_flag == "no_order_inquiry" || $followup_flag == "inquiry_followup") {
@@ -136,6 +170,7 @@
 			$ContentID = $this->db->rp_insert($this->ctable, $Values, $Columns, 0);
 
 			if ($ContentID) {
+				$this->sendTodayFollowupAdminNotification($ContentID, $user_id, $visitor_id, $description, $through, $followup_date);
 				if (/*$count==0 &&*/$reference_table != "sales_executive" && $reference_table != "quotation_detail") {
 					//echo "string";exit;
 					$Update = $this->db->rp_update($reference_table, array("status" => $followup_status), "id='" . $reference_id . "'", 0);

@@ -29,7 +29,8 @@
                 error: error,  
 				createFormElement: createFormElement,
 				callAJAX: callAJAX,  
-				getNotifications:getNotifications,	
+				getNotifications:getNotifications,
+				refreshAdminNotifications:refreshAdminNotifications,
 				redirect:redirect,					
 				getLoadingBlock:getLoadingBlock,
 				getErrorBlock:getErrorBlock,                         
@@ -482,78 +483,54 @@
 			});
 			}
 
+			function updateNotificationCount(){
+				var count = $(".notification-container > li").not(".notif-empty").length;
+				if ($(".notification-container > li.notif-empty").length) {
+					count = 0;
+				}
+				$(".notification-count").html(count);
+				$(".notification-status").html(count + " pending");
+				$(".dashboard-notif-count").html(count);
+			}
+
+			function refreshAdminNotifications(){
+				$.ajax({
+					url: "ajax_function_system.php",
+					data: { mode: "get_notifications", html: "true" },
+					success: function(result){
+						$(".notification-container").html(result);
+						updateNotificationCount();
+					}
+				});
+				if ($("#dashboard-notification-data").length) {
+					$("#dashboard-notification-data").load("dashboard_notifications_ajax.php");
+				}
+			}
+
 			function getNotifications(container){
-				var notification_ids=[];
-					setInterval(function(){
-						$.ajax({
-						url:"ajax_function_system.php",
-						data:{mode:"get_notifications"},
-						beforeSend:function(){
-							var loading_block=getLoadingBlock();
-							$(container).html();
-						},
-						error:function(){
-							var error_block=getErrorBlock();
-							$(container).html();
-						},
-						success:function(result){
-							var result=$.parseJSON(result);	
-												
-						//	$(".notification-container").html("<li><h2>No New Notifications</h2></li>");
-							$.each(result.notification_json,function(i,v){
-								if(notification_ids.indexOf(v.id)==-1)
-								{
-									toastr.options = {
-									timeOut: 0,
-									extendedTimeOut: 0,
-									tapToDismiss: true,
-								};
-								notification_ids.push(v.id);
-								$(".notification-container").append(
-								"<li>"+
-								'<a href="javascript:;">'+
-									'<span class="time" style="max-width:80px!important;">'+v.created_date+'</span>'+
-									'<span class="details">'+									
-									v.notification_title+
-									'</span>'+
-								'</a>'+
-							'</li>'
-							);
-								//toastr.success(v.notification_msg+"<br/><br/><button type='button' onClick='return aj.delete_notification(this,"+v.id+")' class='btn btn-warning'>Ok</button>");
-							}
-								
-							})
-							$(".notification-count").html(""+notification_ids.length);
-							$(".notification-status").html(""+notification_ids.length+" Pending");
-														
-						}
-						
-						});
-					},3000000);
-					setInterval(function(){
-						$.ajax({
+				function loadNotificationList(){
+					$.ajax({
 						url:"ajax_function_system.php",
 						data:{mode:"get_notifications",html:"true"},
-						beforeSend:function(){
-							var loading_block=getLoadingBlock();
-							$(container).html();
-						},
 						error:function(){
-							var error_block=getErrorBlock();
-							$(container).html();
+							if(container){ $(container).html('<li class="notif-empty">Failed to load</li>'); }
 						},
 						success:function(result){
-							
-							$(container).html(result);
+							$(".notification-container").html(result);
+							updateNotificationCount();
 						}
-						
-						});
-					},3000000);
-					
+					});
+					if ($("#dashboard-notification-data").length) {
+						$("#dashboard-notification-data").load("dashboard_notifications_ajax.php");
+					}
 				}
+
+				loadNotificationList();
+				setInterval(loadNotificationList, 60000);
+			}
 			function delete_notification(btn,notification_id)
-			{	
-					var r=confirm('Are You Sure?');
+			{
+					var r=confirm('Mark this notification as done?');
 					if(r){
 					$.ajax({
 							url:"ajax_function_system.php",
@@ -561,20 +538,16 @@
 								mode:"delete_notification",
 								notification_id:notification_id,
 								},
-							beforeSend:function(){
-								var loading_block=aj.getLoadingBlock();
-								//$(container).html();
-							},
-							error:function(){
-								var error_block=aj.getErrorBlock();
-								//$(container).html();
-							},
 							success:function(result){
 								var result=$.parseJSON(result);
-								//$(container).html(result.result);
-								$(btn).closest("li").hide(500);
+								if(result.ack==1){
+									$(btn).closest("li").fadeOut(300, function(){
+										$(this).remove();
+										updateNotificationCount();
+									});
+									refreshAdminNotifications();
+								}
 							}
-							
 						});
 					}
 				}

@@ -43,7 +43,9 @@ function rp_removeImage(c,f,i,l,d=''){
 }
 </script>  
 <script>
- //aj.getQuickNotification(".notification-container");
+<?php if (isset($_SESSION[SITE_SESS . '_ADMIN_TYPE']) && $_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0) { ?>
+aj.getNotifications(".notification-container");
+<?php } ?>
 jQuery(document).ready(function() {   
 $("ul.dropdown-menu").each(function(){
 	if($(this).html().trim()=="")

@@ -323,8 +323,8 @@ class PushNotification extends Functions
 
 	public function commonNotification($user_id,$reference_id,$reference_table,$title,$descr,$user_type,$notification_type)
 	{
-		$rows 	= array("user_id","referance_id","referance_type","notification_title","notification_description","user_type","notification_type");
-	    $values = array($user_id,$reference_id,$reference_table,$title,$descr,$user_type,$notification_type);
+		$rows 	= array("user_id","referance_id","referance_type","notification_title","notification_description","user_type","notification_type","isDelete","isActive");
+	    $values = array($user_id,$reference_id,$reference_table,$title,$descr,$user_type,$notification_type,0,1);
 	    $insert = $this->db->rp_insert("notification",$values,$rows,0);
 
 		$where11="refreshToken!='' AND id='".$user_id."'";
@@ -337,7 +337,7 @@ class PushNotification extends Functions
 		// for all order department 
 		
 		// for all hr
-	    if($notification_type=='leave_request' || $notification_type=='expense')
+	    if($notification_type=='leave_request' || $notification_type=='expense' || $notification_type=='followup')
 		{
 			$refreshTokens11 = $this->getTokenByAdminType("14","dealer_distributor_network","admin_type");
 		}

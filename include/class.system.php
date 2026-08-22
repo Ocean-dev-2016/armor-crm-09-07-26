@@ -142,15 +142,11 @@ class System extends Functions
 
 	public function deleteNotifications($notification_id)
 	{
-		$isDeleted=$this->db->rp_delete("notification","id='".$notification_id."'",0);
-		if(!empty($isDeleted))
-		{
+		$isDeleted = $this->db->rp_update("notification", array("isActive" => 0), "id='" . (int)$notification_id . "'", 0);
+		if (!empty($isDeleted)) {
 			return $isDeleted;
 		}
-		else
-		{
-			return false;
-		}
+		return false;
 	}
 
 	function fetchState($country_id)
@@ -821,7 +817,10 @@ class System extends Functions
 					// print_r($followusp);exit;
 					///// send notification And Add notification
 					$status=array("1"=>"Call","2"=>"SMS","3"=>"Email");
-					$visitor_name=$this->db->rp_getValue("executive","company_name","id='".$followusp['user_id']."'");
+					$visitor_name=$this->db->rp_getValue("executive","company_name","id='".$followusp['visitor_id']."'");
+					$sales_name=$this->db->rp_getValue("sales_executive","name","id='".$followusp['user_id']."' AND isDelete=0",0);
+					if($sales_name==""){ $sales_name="Team Member"; }
+					if($visitor_name==""){ $visitor_name="Customer"; }
 					$notification_title="Followup required for ".$visitor_name." by ".$status[$followusp['through']]." on ".date("H:i",strtotime($followusp['followup_date']));
 					$notification_description=$followusp['description'];
 					$notification_type="1";
@@ -878,6 +877,14 @@ class System extends Functions
 						    $where="refreshToken!='' AND id='".$followusp['user_id']."'";
 					        $refreshTokens[]=$this->db->rp_getValue("sales_executive","refreshToken",$where,0);
 					        $result=$PushNotification->send_notification1($msg,$refreshTokens,1);
+
+					        $admin_title = "Today's Followup - " . $visitor_name;
+					        $admin_descr = $sales_name . " has a followup at " . date("h:i A", strtotime($followusp['followup_date'])) . " via " . $status[$followusp['through']];
+					        if (trim($followusp['description']) != "") {
+					        	$admin_descr .= ". " . $followusp['description'];
+					        }
+					        $PushNotification->commonNotification(0, $followusp['id'], "followup", $admin_title, $admin_descr, "admin", "followup");
+
 					        $this->db->rp_update("followup",array("is_notification_send"=>1),"id='".$followusp['id']."'");
 				}
 				$reply=array("ack"=>1,"developer_msg"=>"Notification send successfully!","ack_msg"=>"Notification send successfully!");

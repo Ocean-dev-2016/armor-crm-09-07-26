@@ -741,25 +741,20 @@ $ctableAPK        = "application_info";
 				if ($_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0) {
 				?>
 					<li id="header_notification_bar" class="dropdown dropdown-extended dropdown-notification">
-						<a class="dropdown-toggle" href="notification_manage.php?mode=all">
+						<a href="javascript:;" class="dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" data-close-others="true">
 							<i class="icon-bell"></i>
-							<span class="badge badge-default notification-count"> <?php echo $count = $db->rp_getTotalRecord("notification", "isDelete=0 AND isActive=1"); ?></span>
+							<span class="badge badge-default notification-count"><?php echo $count = $db->rp_getTotalRecord("notification", "isDelete=0 AND isActive=1"); ?></span>
 						</a>
-						<ul class="dropdown-menu">
+						<ul class="dropdown-menu admin-notif-dropdown">
 							<li class="external">
 								<h3>
-									<span class="bold notification-status"> <?php echo $count; ?> pending</span>notifications
+									<span class="bold notification-status"><?php echo $count; ?> pending</span> notifications
 								</h3>
 								<a href="notification_manage.php?mode=all">view all</a>
 							</li>
 							<li>
-								<div class="slimScrollDiv" style="position: relative; overflow: hidden; width: auto; height: 250px;">
-									<ul class="dropdown-menu-list scroller notification-container" style="height: 250px; overflow: hidden; width: auto;" data-handle-color="#637283" data-initialized="1">
-
-									</ul>
-									<div class="slimScrollBar" style="background: rgb(99, 114, 131) none repeat scroll 0% 0%; width: 7px; position: absolute; top: 116px; opacity: 0.4; display: none; border-radius: 7px; z-index: 99; right: 1px; height: 112.41px;"></div>
-									<div class="slimScrollRail" style="width: 7px; height: 100%; position: absolute; top: 0px; display: none; border-radius: 7px; background: rgb(234, 234, 234) none repeat scroll 0% 0%; opacity: 0.2; z-index: 90; right: 1px;"></div>
-								</div>
+								<ul class="dropdown-menu-list scroller notification-container" style="height: 280px; overflow-y: auto;" data-handle-color="#637283">
+								</ul>
 							</li>
 						</ul>
 					</li>

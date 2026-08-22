@@ -2242,9 +2242,20 @@ class Functions extends Database
 			while ($followusp = mysqli_fetch_assoc($followusps)) {
 				// print_r($followusp);exit;
 				///// send notification And Add notification
-				$status = array("1" => "Call", "2" => "SMS", "3" => "Email");
-				$visitor_name = $this->rp_getValue("visitor", "name", "id='" . $followusp['visitor_id'] . "'");
-				$notification_title = "Followup required for " . $visitor_name . " by " . $status[$followusp['through']] . " on " . date("H:i", strtotime($followusp['followup_date']));
+				$status = array("1" => "Call", "2" => "SMS", "3" => "Email", "5" => "Visit");
+				$visitor_name = $this->rp_getValue("executive", "company_name", "id='" . $followusp['visitor_id'] . "'");
+				if ($visitor_name == "") {
+					$visitor_name = $this->rp_getValue("visitor", "name", "id='" . $followusp['visitor_id'] . "'");
+				}
+				$sales_name = $this->rp_getValue("sales_executive", "name", "id='" . $followusp['user_id'] . "' AND isDelete=0", 0);
+				if ($sales_name == "") {
+					$sales_name = "Team Member";
+				}
+				if ($visitor_name == "") {
+					$visitor_name = "Customer";
+				}
+				$through_label = isset($status[$followusp['through']]) ? $status[$followusp['through']] : "Followup";
+				$notification_title = "Followup required for " . $visitor_name . " by " . $through_label . " on " . date("H:i", strtotime($followusp['followup_date']));
 				$notification_description = $followusp['description'];
 				$notification_type = "1";
 				$type_slug = "";
@@ -2320,6 +2331,16 @@ class Functions extends Database
 
 					$result = $this->send_notificationApplication($msg, $tokens_app);
 				}
+
+				require_once("push_notification.class.php");
+				$objPushNotification = new PushNotification();
+				$admin_title = "Today's Followup - " . $visitor_name;
+				$admin_descr = $sales_name . " has a followup at " . date("h:i A", strtotime($followusp['followup_date'])) . " via " . $through_label;
+				if (trim($followusp['description']) != "") {
+					$admin_descr .= ". " . $followusp['description'];
+				}
+				$objPushNotification->commonNotification(0, $followusp['id'], "followup", $admin_title, $admin_descr, "admin", "followup");
+
 				$this->rp_update("followup", array("is_notification_send" => 1), "id='" . $followusp['id'] . "'");
 			}
 			$reply = array("ack" => 1, "developer_msg" => "Notification send successfully!", "ack_msg" => "Notification send successfully!");

@@ -65,6 +65,95 @@ $total_quotation = $db->rp_getTotalRecord("quotation_detail", "isDelete=0", 0);
 		.div-set-height {
 			height: 680px;
 		}
+
+		/* Admin dashboard list panels */
+		.admin-dash-panel .portlet-title {
+			background: #3598dc;
+			color: #fff;
+			padding: 10px 15px;
+			min-height: 42px;
+			border-radius: 4px 4px 0 0;
+		}
+		.admin-dash-panel .portlet-title .caption-subject,
+		.admin-dash-panel .portlet-title .caption {
+			color: #fff !important;
+		}
+		.admin-dash-panel .portlet-title .badge {
+			background: #fff;
+			color: #3598dc;
+			font-weight: 700;
+		}
+		.admin-dash-panel .portlet-title .actions .btn {
+			color: #3598dc;
+			background: #fff;
+			border: none;
+		}
+		.admin-dash-panel.portlet {
+			border: 1px solid #e7ecf1;
+			box-shadow: 0 1px 3px rgba(0,0,0,.08);
+			margin-bottom: 20px;
+		}
+		.admin-dash-panel .dash-table-wrap {
+			max-height: 420px;
+			overflow: auto;
+			border: 1px solid #e7ecf1;
+		}
+		.admin-dash-panel .dash-table {
+			margin-bottom: 0;
+			color: #333;
+			font-size: 13px;
+		}
+		.admin-dash-panel .dash-table thead th {
+			background: #f5f5f5 !important;
+			color: #333 !important;
+			font-weight: 600;
+			border-bottom: 2px solid #ddd !important;
+			white-space: nowrap;
+			position: sticky;
+			top: 0;
+			z-index: 2;
+		}
+		.admin-dash-panel .dash-table tbody td {
+			color: #333 !important;
+			vertical-align: middle !important;
+		}
+		.admin-dash-panel .dash-table tbody tr:hover {
+			background: #f9f9f9;
+		}
+		.admin-dash-panel .dash-table .label-pending {
+			background: #f1c40f;
+			color: #333;
+			padding: 3px 8px;
+			border-radius: 3px;
+			font-size: 11px;
+		}
+		.admin-dash-panel .dash-table .label-call {
+			background: #26a69a;
+			color: #fff;
+			padding: 3px 8px;
+			border-radius: 3px;
+			font-size: 11px;
+			text-transform: capitalize;
+		}
+		.admin-dash-panel .no-records {
+			padding: 30px;
+			text-align: center;
+			color: #666;
+		}
+		.admin-dash-row {
+			margin-top: 15px;
+		}
+		.admin-followup-notif-row .col-md-8,
+		.admin-followup-notif-row .col-md-4 {
+			padding-left: 10px;
+			padding-right: 10px;
+		}
+		@media (max-width: 991px) {
+			.admin-followup-notif-row .col-md-8,
+			.admin-followup-notif-row .col-md-4 {
+				margin-bottom: 15px;
+			}
+		}
 	</style>
 
 	<style type="text/css">
@@ -337,18 +426,34 @@ $total_quotation = $db->rp_getTotalRecord("quotation_detail", "isDelete=0", 0);
 								}
 				?>
 					</div>
-					<div class="row">
+					<div class="row admin-dash-row admin-followup-notif-row">
 						<?php
-						if ($_SESSION[SITE_SESS . '_ADMIN_TYPE'] != 0) {
+						if ($_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0) {
 						?>
-							<div class="col-md-12 col-sm-12 co-xs-12 col-lg-12">
-								<?php include("pending_data_ajax.php"); ?>
+							<div class="col-md-8 col-sm-12 col-xs-12 col-lg-8" id="today-followup-data">
+								<div class="text-center" style="padding:40px;color:#999;">
+									<i class="fa fa-spinner fa-spin fa-2x"></i>
+									<p>Loading Today's Followup...</p>
+								</div>
 							</div>
-
+							<div class="col-md-4 col-sm-12 col-xs-12 col-lg-4" id="dashboard-notification-data">
+								<div class="text-center" style="padding:40px;color:#999;">
+									<i class="fa fa-spinner fa-spin fa-2x"></i>
+									<p>Loading Notifications...</p>
+								</div>
+							</div>
 						<?php
 						}
 						?>
-
+					</div>
+					<div class="row admin-dash-row">
+						<?php
+						if ($_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0) {
+						?>
+							<?php include("pending_data_ajax.php"); ?>
+						<?php
+						}
+						?>
 					</div>
 					<div class="row">
 
@@ -401,6 +506,10 @@ $total_quotation = $db->rp_getTotalRecord("quotation_detail", "isDelete=0", 0);
 		$("#leave-data").load("leave_data_get_ajax.php");
 		$("#followup-data").load("followup_data_get_ajax.php");
 		$("#attendance-data").load("attendance_data_get_ajax.php");
+		<?php if ($_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0) { ?>
+		$("#today-followup-data").load("today_followup_dashboard_ajax.php");
+		$("#dashboard-notification-data").load("dashboard_notifications_ajax.php");
+		<?php } ?>
 		//$( "#sales_person_target" ).load("sales_person_target.php");
 		//$( "#outstanding_data" ).load("outstanding_data_get_ajax.php");
 		// $( "#deep_freezer" ).load("deep_freezer_data_get_ajax.php");

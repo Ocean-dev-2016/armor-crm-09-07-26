@@ -36,4 +36,61 @@ div.xdsoft_datetimepicker{
    background-position: center;
    background-size: 100px !important;
 }
+/* Admin notification bell dropdown popup */
+.admin-notif-dropdown {
+	min-width: 320px !important;
+	max-width: 380px;
+	padding: 0;
+	border: 1px solid #e7ecf1;
+	box-shadow: 0 5px 20px rgba(0,0,0,.15);
+}
+.admin-notif-dropdown .external {
+	background: #3598dc;
+	padding: 12px 15px;
+}
+.admin-notif-dropdown .external h3 {
+	color: #fff !important;
+	margin: 0;
+	font-size: 14px;
+}
+.admin-notif-dropdown .external a {
+	color: #fff !important;
+	opacity: 0.9;
+}
+.admin-notif-dropdown .notification-container {
+	padding: 0;
+	margin: 0;
+	list-style: none;
+}
+.admin-notif-dropdown .notification-container > li {
+	border-bottom: 1px solid #f0f0f0;
+	padding: 10px 12px;
+}
+.admin-notif-dropdown .notification-container > li:hover {
+	background: #f9f9f9;
+}
+.admin-notif-dropdown .notif-item-title {
+	color: #333;
+	font-weight: 600;
+	font-size: 13px;
+	margin-bottom: 4px;
+}
+.admin-notif-dropdown .notif-item-desc {
+	color: #666;
+	font-size: 12px;
+	line-height: 1.4;
+	margin-bottom: 6px;
+}
+.admin-notif-dropdown .notif-item-time {
+	color: #999;
+	font-size: 11px;
+}
+.admin-notif-dropdown .notif-item-actions {
+	margin-top: 6px;
+}
+.admin-notif-dropdown .notif-empty {
+	padding: 30px 15px;
+	text-align: center;
+	color: #999;
+}
 </style>
