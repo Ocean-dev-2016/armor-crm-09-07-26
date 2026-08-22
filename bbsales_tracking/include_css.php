@@ -88,6 +88,24 @@ div.xdsoft_datetimepicker{
 .admin-notif-dropdown .notif-item-actions {
 	margin-top: 6px;
 }
+.admin-notif-dropdown .notif-followup-meta {
+	margin: 6px 0 4px;
+}
+.admin-notif-dropdown .notif-meta-item {
+	display: block;
+	font-size: 12px;
+	color: #444;
+	line-height: 1.5;
+}
+.admin-notif-dropdown .notif-meta-item i {
+	color: #3598dc;
+	width: 14px;
+}
+.admin-notif-dropdown .notif-followup-time {
+	font-size: 11px;
+	color: #666;
+	margin-bottom: 4px;
+}
 .admin-notif-dropdown .notif-empty {
 	padding: 30px 15px;
 	text-align: center;

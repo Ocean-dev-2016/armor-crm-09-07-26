@@ -59,7 +59,30 @@
 			}
 		}
 
-		private function sendTodayFollowupAdminNotification($followup_id, $user_id, $visitor_id, $description, $through, $followup_date)
+		private function resolveFollowupCustomerName($reference_table, $reference_id, $visitor_id)
+		{
+			$customer_name = "";
+			if ($reference_table == "sales_executive" || $reference_table == "executive") {
+				$customer_id_val = ($reference_table == "executive") ? $reference_id : $visitor_id;
+				$customer_name = $this->db->rp_getValue("executive", "company_name", "id='" . $customer_id_val . "'", 0);
+			} else if ($reference_table == "no_order_inquiry") {
+				$customer_name = $this->db->rp_getValue("no_order_inquiry", "company_name", "id='" . $reference_id . "'", 0);
+			} else if ($reference_table == "quotation_detail") {
+				$customer_name = $this->db->rp_getValue("quotation_detail", "company_name", "id='" . $reference_id . "'", 0);
+			} else if ($reference_table == "customer_inquiry") {
+				$customer_name = $this->db->rp_getValue("customer_inquiry", "company_name", "id='" . $reference_id . "'", 0);
+			} else if ($reference_table == "manual_invoice_import") {
+				$customer_name = $this->db->rp_getValue("manually_invoice_outstanding_import", "bill_no", "id='" . $reference_id . "'", 0);
+			} else if ($visitor_id != "" && $visitor_id > 0) {
+				$customer_name = $this->db->rp_getValue("executive", "company_name", "id='" . $visitor_id . "'", 0);
+			}
+			if ($customer_name == "") {
+				$customer_name = "Customer";
+			}
+			return $customer_name;
+		}
+
+		private function sendTodayFollowupAdminNotification($followup_id, $user_id, $visitor_id, $description, $through, $followup_date, $reference_table = "", $reference_id = 0)
 		{
 			if (date('Y-m-d', strtotime($followup_date)) != date('Y-m-d')) {
 				return;
@@ -68,7 +91,7 @@
 			require_once("push_notification.class.php");
 			$objPushNotification = new PushNotification();
 
-			$status = array("1" => "Call", "2" => "SMS", "3" => "Email", "5" => "Visit");
+			$status = array("1" => "Call", "2" => "SMS", "3" => "Email", "4" => "Whatsapp", "5" => "Visit");
 			$through_label = isset($status[$through]) ? $status[$through] : "Followup";
 
 			$sales_name = $this->db->rp_getValue("sales_executive", "name", "id='" . $user_id . "' AND isDelete=0", 0);
@@ -76,18 +99,13 @@
 				$sales_name = "Team Member";
 			}
 
-			$customer_name = "";
-			if ($visitor_id != "" && $visitor_id > 0) {
-				$customer_name = $this->db->rp_getValue("executive", "company_name", "id='" . $visitor_id . "'", 0);
-			}
-			if ($customer_name == "") {
-				$customer_name = "Customer";
-			}
+			$customer_name = $this->resolveFollowupCustomerName($reference_table, $reference_id, $visitor_id);
+			$followup_time = date("d-m-Y h:i A", strtotime($followup_date));
 
-			$notification_title = "Today's Followup - " . $customer_name;
-			$notification_description = $sales_name . " has a followup today at " . date("h:i A", strtotime($followup_date)) . " via " . $through_label;
+			$notification_title = "Today's Followup — " . $customer_name;
+			$notification_description = "Employee: " . $sales_name . " | Customer: " . $customer_name . " | " . $followup_time . " via " . $through_label;
 			if (trim($description) != "") {
-				$notification_description .= ". " . $description;
+				$notification_description .= " | " . $description;
 			}
 
 			$objPushNotification->commonNotification(0, $followup_id, "followup", $notification_title, $notification_description, "admin", "followup");
@@ -170,7 +188,7 @@
 			$ContentID = $this->db->rp_insert($this->ctable, $Values, $Columns, 0);
 
 			if ($ContentID) {
-				$this->sendTodayFollowupAdminNotification($ContentID, $user_id, $visitor_id, $description, $through, $followup_date);
+				$this->sendTodayFollowupAdminNotification($ContentID, $user_id, $visitor_id, $description, $through, $followup_date, $reference_table, $reference_id);
 				if (/*$count==0 &&*/$reference_table != "sales_executive" && $reference_table != "quotation_detail") {
 					//echo "string";exit;
 					$Update = $this->db->rp_update($reference_table, array("status" => $followup_status), "id='" . $reference_id . "'", 0);

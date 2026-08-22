@@ -4,6 +4,49 @@ include("connect.php");
 require_once("../include/class.log.php");
 include("translations/timeago.inc.php");
 $timeZone = "ASIA/KOLKATA";
+
+function buildAdminNotificationHtml($system, $notification, $timeZone)
+{
+	$time = timeAgoInWords($notification['created_date'], $timeZone, 'en');
+	$title = htmlspecialchars(stripslashes($notification['notification_title']), ENT_QUOTES, 'UTF-8');
+	$desc = htmlspecialchars(stripslashes($notification['notification_description']), ENT_QUOTES, 'UTF-8');
+	$notif_type = isset($notification['notification_type']) ? $notification['notification_type'] : '';
+	$ref_type = isset($notification['referance_type']) ? $notification['referance_type'] : '';
+	$ref_id = isset($notification['referance_id']) ? (int)$notification['referance_id'] : 0;
+	$view_link = '';
+	$followup_meta = '';
+
+	if ($notif_type == 'followup' || $ref_type == 'followup') {
+		$view_link = '<a href="followuplist_manage.php?followup_type=today" class="btn btn-xs btn-info" style="margin-right:4px;"><i class="fa fa-eye"></i> View</a>';
+		$details = $system->resolveFollowupPartyNames($ref_id);
+		$followup_meta = '
+			<div class="notif-followup-meta">
+				<span class="notif-meta-item"><i class="fa fa-user"></i> <strong>Employee:</strong> ' . htmlspecialchars(stripslashes($details['sales_name'])) . '</span>
+				<span class="notif-meta-item"><i class="fa fa-building"></i> <strong>Customer:</strong> ' . htmlspecialchars(stripslashes($details['customer_name'])) . '</span>
+			</div>';
+		if ($details['followup_time'] != "") {
+			$followup_meta .= '<div class="notif-followup-time"><i class="fa fa-clock-o"></i> ' . $details['followup_time'];
+			if ($details['through_label'] != "") {
+				$followup_meta .= ' &nbsp;|&nbsp; <i class="fa fa-phone"></i> ' . $details['through_label'];
+			}
+			$followup_meta .= '</div>';
+		}
+	}
+
+	return '<li>
+		<div class="notif-item-title">'.$title.'</div>
+		'.$followup_meta.'
+		'.($desc != '' ? '<div class="notif-item-desc">'.$desc.'</div>' : '').'
+		<div class="notif-item-time"><i class="fa fa-history"></i> '.$time.'</div>
+		<div class="notif-item-actions">
+			'.$view_link.'
+			<a class="btn btn-xs btn-success" onClick="aj.delete_notification(this,'.$notification['id'].')">
+				<i class="fa fa-check"></i> Done
+			</a>
+		</div>
+	</li>';
+}
+
 if(isset($_REQUEST['mode']) && $_REQUEST['mode']!="")
 {
 		$service=$_REQUEST['mode'];
@@ -11,7 +54,7 @@ if(isset($_REQUEST['mode']) && $_REQUEST['mode']!="")
 		{
 			$html=(isset($_REQUEST['html']) && ($_REQUEST['html']==true || $_REQUEST['html']=='true'))?true:false;
 			$user_id="";
-			$notifications=$system->getQuickNotifications();
+			$notifications=$system->getQuickNotifications(50);
 			$result="";
 			if($notifications)
 			{
@@ -21,27 +64,7 @@ if(isset($_REQUEST['mode']) && $_REQUEST['mode']!="")
 					$time=timeAgoInWords($notification['created_date'], $timeZone, 'en');
 					$notification['created_date']=$time;
 					$notifications_result[]=$notification;
-
-					$title = htmlspecialchars(stripslashes($notification['notification_title']), ENT_QUOTES, 'UTF-8');
-					$desc = htmlspecialchars(stripslashes($notification['notification_description']), ENT_QUOTES, 'UTF-8');
-					$notif_type = isset($notification['notification_type']) ? $notification['notification_type'] : '';
-					$ref_id = isset($notification['referance_id']) ? (int)$notification['referance_id'] : 0;
-					$view_link = '';
-					if ($notif_type == 'followup' || (isset($notification['referance_type']) && $notification['referance_type'] == 'followup')) {
-						$view_link = '<a href="followuplist_manage.php?followup_type=today" class="btn btn-xs btn-info" style="margin-right:4px;"><i class="fa fa-eye"></i> View</a>';
-					}
-
-					$result.='<li>
-						<div class="notif-item-title">'.$title.'</div>
-						'.($desc != '' ? '<div class="notif-item-desc">'.$desc.'</div>' : '').'
-						<div class="notif-item-time"><i class="fa fa-clock-o"></i> '.$time.'</div>
-						<div class="notif-item-actions">
-							'.$view_link.'
-							<a class="btn btn-xs btn-success" onClick="aj.delete_notification(this,'.$notification['id'].')">
-								<i class="fa fa-check"></i> Done
-							</a>
-						</div>
-					</li>';
+					$result .= buildAdminNotificationHtml($system, $notification, $timeZone);
 				}
 				if($html==true)
 				{
@@ -67,59 +90,18 @@ if(isset($_REQUEST['mode']) && $_REQUEST['mode']!="")
 				}
 			}
 		}
-		/*if($service=="get_notifications")
+		else if($service=="check_followup_toasts")
 		{
-			$html=(isset($_REQUEST['html']) && $_REQUEST['html']==true)?true:false;
-			$notifications=$system->getNotifications();
-			//print_r($notifications);exit;
-			$result="";
-			if($notifications)
-			{
-				$notifications_result=array();
-				foreach($notifications as $key=>$notification)
-				{
-					$time=timeAgoInWords($notification['created_date'], $timeZone, 'en');
-					$notification['created_date']=$time;
-					$notifications_result[]=$notification;
-					
-					$result.='<li><div class="col1"><div class="cont"><div class="cont-col1"><div class="label label-sm label-info"><i class="'.$notification['notification_icon'].'"></i></div></div><div class="cont-col2"><div class="desc">'.$notification['notification_description'].'<a class="btn btn-sm btn-primary " onClick="aj.delete_notification(this,'.$notification['id'].')"><i class="fa fa-check"></i> Done</a></div></div></div></div><div class="col2"><div class="date">'.$time.'</div></div></li>';
-				}
-				if($html==true)
-				{
-					echo $result;
-				}
-				else
-				{
-					$response=array('ack'=>1,'ack_msg'=>'Notifications Fetched!!!',"notification_json"=>$notifications_result);
-					echo json_encode($response);
-				}
-				
-			}
-			else
-			{
-				$result.='<li class="text-center">
-								<div class="col1">
-									<h1> No Notifications</h1>
-								</div>
-								<div class="col2">
-									
-								</div>
-							</li>
-						';
-				if($html==true)
-				{
-					echo $result;
-				}
-				else
-				{
-				$response=array('ack'=>0,'ack_msg'=>'No New Notifications!!!',"result"=>$result);
-				echo json_encode($response);
-				}
-				
-			}
-			
-			
-		}	*/		
+			$last_id = isset($_REQUEST['last_id']) ? (int) $_REQUEST['last_id'] : 0;
+			$init_only = (isset($_REQUEST['init_only']) && ($_REQUEST['init_only'] == '1' || $_REQUEST['init_only'] == 1));
+			$toast_data = $system->getNewFollowupToastNotifications($last_id, $init_only);
+			echo json_encode(array(
+				'ack' => 1,
+				'toasts' => $toast_data['toasts'],
+				'max_id' => $toast_data['max_id'],
+				'count' => $toast_data['count']
+			));
+		}
 		else if($service=='set_notification')
 		{	
 			if(isset($_REQUEST['notification_id']) && $_REQUEST['notification_id']!=""&& isset($_REQUEST['notification_icon']) && $_REQUEST['notification_icon']!=""&& isset($_REQUEST['notification_msg']) && $_REQUEST['notification_msg']!="")
@@ -149,23 +131,6 @@ if(isset($_REQUEST['mode']) && $_REQUEST['mode']!="")
 				echo json_encode($result);				
 			}
 		}
-		/*else if($service=='delete_notification')
-		{
-			$notification_id=$_REQUEST['notification_id'];
-			$isDeleted=$this->db->rp_delete("notification","id='".$id."'",1);
-			if($isDeleted!=0)
-			{
-				$reply=array("ack"=>1,"developer_msg"=>"notification deleted!!","ack_msg"=>"Success! Delete notification Successfully.");
-				return $reply;
-			}
-			else
-			{
-				$reply=array("ack"=>0,"developer_msg"=>"Database error!!","ack_msg"=>"Failed! Delete Unit Failed.");
-				return $reply;
-			}
-		
-		}
-	*/
 	else if($service=='fetch_state')
 	{
 		if(isset($_REQUEST['country_id']) && $_REQUEST['country_id']!="")
@@ -191,4 +156,3 @@ else
 
 ?>
 <?php require_once 'disconnect.php';  ?>
-

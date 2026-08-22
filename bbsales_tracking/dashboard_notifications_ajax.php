@@ -10,7 +10,7 @@ if (!isset($_SESSION[SITE_SESS . '_ADMIN_TYPE']) || $_SESSION[SITE_SESS . '_ADMI
 	exit;
 }
 
-$notifications = $system->getQuickNotifications();
+$notifications = $system->getQuickNotifications(50);
 $total_count = $notifications ? count($notifications) : 0;
 ?>
 <div class="portlet light bordered admin-dash-panel admin-notif-panel">
@@ -38,13 +38,30 @@ $total_count = $notifications ? count($notifications) : 0;
 					$title = htmlspecialchars(stripslashes($notification['notification_title']), ENT_QUOTES, 'UTF-8');
 					$desc = htmlspecialchars(stripslashes($notification['notification_description']), ENT_QUOTES, 'UTF-8');
 					$notif_type = isset($notification['notification_type']) ? $notification['notification_type'] : '';
+					$ref_type = isset($notification['referance_type']) ? $notification['referance_type'] : '';
+					$ref_id = isset($notification['referance_id']) ? (int) $notification['referance_id'] : 0;
 					$view_link = '';
-					if ($notif_type == 'followup' || (isset($notification['referance_type']) && $notification['referance_type'] == 'followup')) {
+					$followup_meta = '';
+					if ($notif_type == 'followup' || $ref_type == 'followup') {
 						$view_link = '<a href="followuplist_manage.php?followup_type=today" class="btn btn-xs btn-info" style="margin-right:4px;"><i class="fa fa-eye"></i> View</a>';
+						$details = $system->resolveFollowupPartyNames($ref_id);
+						$followup_meta = '
+							<div class="notif-followup-meta">
+								<span class="notif-meta-item"><i class="fa fa-user"></i> <strong>Employee:</strong> ' . htmlspecialchars(stripslashes($details['sales_name'])) . '</span>
+								<span class="notif-meta-item"><i class="fa fa-building"></i> <strong>Customer:</strong> ' . htmlspecialchars(stripslashes($details['customer_name'])) . '</span>
+							</div>';
+						if ($details['followup_time'] != "") {
+							$followup_meta .= '<div class="notif-followup-time"><i class="fa fa-clock-o"></i> ' . $details['followup_time'];
+							if ($details['through_label'] != "") {
+								$followup_meta .= ' &nbsp;|&nbsp; ' . $details['through_label'];
+							}
+							$followup_meta .= '</div>';
+						}
 					}
 					?>
 					<li class="dashboard-notif-item">
 						<div class="notif-item-title"><?php echo $title; ?></div>
+						<?php echo $followup_meta; ?>
 						<?php if ($desc != '') { ?>
 							<div class="notif-item-desc"><?php echo $desc; ?></div>
 						<?php } ?>

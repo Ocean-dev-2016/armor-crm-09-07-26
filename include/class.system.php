@@ -63,11 +63,15 @@ class System extends Functions
 		}
 	}
 
-	public function getQuickNotifications()
+	public function getQuickNotifications($limit = 50)
 	{
 
 		$where = "isDelete=0  AND isActive=1";
-		$ctable_r = $this->db->rp_getData("notification","*",$where,"",0);
+		$limit = (int) $limit;
+		if ($limit <= 0) {
+			$limit = 50;
+		}
+		$ctable_r = $this->db->rp_getData("notification","*",$where,"id DESC",0,$limit);
 		$result=array();
 		if($ctable_r){
 			while($ctable_d = mysqli_fetch_assoc($ctable_r)){
@@ -82,6 +86,101 @@ class System extends Functions
 		{
 			return false;
 		}
+	}
+
+	public function isFollowupNotification($notification)
+	{
+		$notif_type = isset($notification['notification_type']) ? $notification['notification_type'] : '';
+		$ref_type = isset($notification['referance_type']) ? $notification['referance_type'] : '';
+		return ($notif_type == 'followup' || $ref_type == 'followup');
+	}
+
+	public function resolveFollowupPartyNames($followup_id)
+	{
+		$result = array(
+			'sales_name' => '',
+			'customer_name' => '',
+			'followup_time' => '',
+			'through_label' => '',
+			'description' => ''
+		);
+		$followup_id = (int) $followup_id;
+		if ($followup_id <= 0) {
+			return $result;
+		}
+
+		$row_r = $this->db->rp_getData("followup", "*", "id='" . $followup_id . "'", "", 0);
+		if (!$row_r || !($row = mysqli_fetch_assoc($row_r))) {
+			return $result;
+		}
+
+		$through_map = array("1" => "Call", "2" => "SMS", "3" => "Email", "4" => "Whatsapp", "5" => "Visit");
+		$result['sales_name'] = $this->db->rp_getValue("sales_executive", "name", "id='" . $row['user_id'] . "' AND isDelete=0", 0);
+		$result['through_label'] = isset($through_map[$row['through']]) ? $through_map[$row['through']] : "Followup";
+		$result['description'] = $row['description'];
+		if ($row['followup_date'] != "0000-00-00 00:00:00") {
+			$result['followup_time'] = date('d-m-Y h:i A', strtotime($row['followup_date']));
+		}
+
+		if ($row['reference_table'] == "sales_executive" || $row['reference_table'] == "executive") {
+			$customer_id_val = ($row['reference_table'] == "executive") ? $row['reference_id'] : $row['visitor_id'];
+			$result['customer_name'] = $this->db->rp_getValue("executive", "company_name", "id='" . $customer_id_val . "'", 0);
+		} else if ($row['reference_table'] == "no_order_inquiry") {
+			$result['customer_name'] = $this->db->rp_getValue("no_order_inquiry", "company_name", "id='" . $row['reference_id'] . "'", 0);
+		} else if ($row['reference_table'] == "quotation_detail") {
+			$result['customer_name'] = $this->db->rp_getValue("quotation_detail", "company_name", "id='" . $row['reference_id'] . "'", 0);
+		} else if ($row['reference_table'] == "customer_inquiry") {
+			$result['customer_name'] = $this->db->rp_getValue("customer_inquiry", "company_name", "id='" . $row['reference_id'] . "'", 0);
+		} else if ($row['reference_table'] == "manual_invoice_import") {
+			$result['customer_name'] = $this->db->rp_getValue("manually_invoice_outstanding_import", "bill_no", "id='" . $row['reference_id'] . "'", 0);
+		}
+
+		if ($result['sales_name'] == "") {
+			$result['sales_name'] = "Team Member";
+		}
+		if ($result['customer_name'] == "") {
+			$result['customer_name'] = "Customer";
+		}
+
+		return $result;
+	}
+
+	public function getNewFollowupToastNotifications($last_id = 0, $init_only = false)
+	{
+		$last_id = (int) $last_id;
+		$where = "isDelete=0 AND isActive=1 AND (notification_type='followup' OR referance_type='followup')";
+		if ($last_id > 0) {
+			$where .= " AND id > '" . $last_id . "'";
+		}
+		$ctable_r = $this->db->rp_getData("notification", "*", $where, "id ASC", 0, 20);
+		$toasts = array();
+		$max_id = $last_id;
+
+		if ($ctable_r) {
+			while ($notification = mysqli_fetch_assoc($ctable_r)) {
+				$max_id = max($max_id, (int) $notification['id']);
+				if ($init_only) {
+					continue;
+				}
+				$details = $this->resolveFollowupPartyNames((int) $notification['referance_id']);
+				$toasts[] = array(
+					'id' => (int) $notification['id'],
+					'title' => "Today's Followup — " . $details['customer_name'],
+					'sales_name' => $details['sales_name'],
+					'customer_name' => $details['customer_name'],
+					'followup_time' => $details['followup_time'],
+					'through_label' => $details['through_label'],
+					'description' => $details['description'],
+					'created_date' => $notification['created_date']
+				);
+			}
+		}
+
+		return array(
+			'toasts' => $toasts,
+			'max_id' => $max_id,
+			'count' => count($toasts)
+		);
 	}
 
 	public function getNotifications($user_id="",$user_type='')

@@ -2334,10 +2334,10 @@ class Functions extends Database
 
 				require_once("push_notification.class.php");
 				$objPushNotification = new PushNotification();
-				$admin_title = "Today's Followup - " . $visitor_name;
-				$admin_descr = $sales_name . " has a followup at " . date("h:i A", strtotime($followusp['followup_date'])) . " via " . $through_label;
+				$admin_title = "Today's Followup — " . $visitor_name;
+				$admin_descr = "Employee: " . $sales_name . " | Customer: " . $visitor_name . " | " . date("d-m-Y h:i A", strtotime($followusp['followup_date'])) . " via " . $through_label;
 				if (trim($followusp['description']) != "") {
-					$admin_descr .= ". " . $followusp['description'];
+					$admin_descr .= " | " . $followusp['description'];
 				}
 				$objPushNotification->commonNotification(0, $followusp['id'], "followup", $admin_title, $admin_descr, "admin", "followup");
 

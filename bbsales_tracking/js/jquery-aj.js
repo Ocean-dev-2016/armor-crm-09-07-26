@@ -31,6 +31,7 @@
 				callAJAX: callAJAX,  
 				getNotifications:getNotifications,
 				refreshAdminNotifications:refreshAdminNotifications,
+				pollFollowupToasts:pollFollowupToasts,
 				redirect:redirect,					
 				getLoadingBlock:getLoadingBlock,
 				getErrorBlock:getErrorBlock,                         
@@ -497,9 +498,20 @@
 				$.ajax({
 					url: "ajax_function_system.php",
 					data: { mode: "get_notifications", html: "true" },
+					dataType: "html",
+					timeout: 20000,
 					success: function(result){
+						if (!result || result.trim() === "") {
+							result = '<li class="notif-empty"><i class="fa fa-bell-slash fa-2x"></i><br/>No Notifications</li>';
+						}
 						$(".notification-container").html(result);
 						updateNotificationCount();
+					},
+					error: function(){
+						$(".notification-container").html('<li class="notif-empty"><i class="fa fa-exclamation-triangle"></i><br/>Failed to load</li>');
+					},
+					complete: function(){
+						$(".notification-container .notif-loading").remove();
 					}
 				});
 				if ($("#dashboard-notification-data").length) {
@@ -507,17 +519,100 @@
 				}
 			}
 
+			function showFollowupToast(item){
+				if (typeof toastr === "undefined" || !item) {
+					return;
+				}
+				var body = "<strong>Employee:</strong> " + (item.sales_name || "-") +
+					"<br><strong>Customer:</strong> " + (item.customer_name || "-");
+				if (item.followup_time) {
+					body += "<br><strong>Time:</strong> " + item.followup_time;
+				}
+				if (item.through_label) {
+					body += " &nbsp;|&nbsp; <strong>Via:</strong> " + item.through_label;
+				}
+				if (item.description && $.trim(item.description) !== "") {
+					body += "<br><em>" + item.description + "</em>";
+				}
+				toastr.options = {
+					closeButton: true,
+					progressBar: true,
+					positionClass: "toast-top-right",
+					timeOut: 10000,
+					extendedTimeOut: 4000,
+					enableHtml: true,
+					onclick: function(){
+						window.location.href = "followuplist_manage.php?followup_type=today";
+					}
+				};
+				toastr.info(body, item.title || "Today's Followup");
+			}
+
+			function pollFollowupToasts(){
+				var storageKey = "admin_followup_last_notif_id";
+				var lastId = parseInt(sessionStorage.getItem(storageKey) || "0", 10);
+
+				function checkToasts(initOnly){
+					$.ajax({
+						url: "ajax_function_system.php",
+						data: {
+							mode: "check_followup_toasts",
+							last_id: initOnly ? 0 : lastId,
+							init_only: initOnly ? "1" : "0"
+						},
+						dataType: "json",
+						timeout: 15000,
+						success: function(res){
+							if (!res || res.ack != 1) {
+								return;
+							}
+							if (initOnly) {
+								sessionStorage.setItem(storageKey, res.max_id || 0);
+								lastId = parseInt(res.max_id || 0, 10);
+								return;
+							}
+							if (res.toasts && res.toasts.length) {
+								for (var i = 0; i < res.toasts.length; i++) {
+									showFollowupToast(res.toasts[i]);
+								}
+								sessionStorage.setItem(storageKey, res.max_id);
+								lastId = parseInt(res.max_id || lastId, 10);
+								refreshAdminNotifications();
+							}
+						}
+					});
+				}
+
+				if (!sessionStorage.getItem(storageKey)) {
+					checkToasts(true);
+				} else {
+					checkToasts(false);
+				}
+				setInterval(function(){
+					checkToasts(false);
+				}, 30000);
+			}
+
 			function getNotifications(container){
 				function loadNotificationList(){
 					$.ajax({
 						url:"ajax_function_system.php",
 						data:{mode:"get_notifications",html:"true"},
+						type:"GET",
+						dataType:"html",
+						timeout:20000,
 						error:function(){
-							if(container){ $(container).html('<li class="notif-empty">Failed to load</li>'); }
+							$(".notification-container").html('<li class="notif-empty"><i class="fa fa-exclamation-triangle"></i><br/>Failed to load notifications</li>');
 						},
 						success:function(result){
+							if (!result || result.trim() === "") {
+								result = '<li class="notif-empty"><i class="fa fa-bell-slash fa-2x"></i><br/>No Notifications</li>';
+							}
 							$(".notification-container").html(result);
 							updateNotificationCount();
+						},
+						complete:function(){
+							$(".notification-container .notif-loading").remove();
 						}
 					});
 					if ($("#dashboard-notification-data").length) {
