@@ -15,8 +15,22 @@ $db = new Admin();
 $db->connect();
 $expense = new Expense();
 
+// One-time revert: ?revert=4719,4720,4721
+if (isset($_REQUEST['revert']) && $_REQUEST['revert'] != '') {
+	$tripIds = explode(',', $_REQUEST['revert']);
+	$result = $expense->revertAutoClosedTrips($tripIds);
+	header('Content-Type: application/json');
+	echo json_encode($result);
+	exit;
+}
+
 $targetDate = isset($_REQUEST['date']) ? $_REQUEST['date'] : '';
-$result = $expense->autoCloseForgottenTrips($targetDate);
+$options = array();
+// Past date in URL = manual catch-up for that day only (not today's trips during daytime)
+if ($targetDate != "" && date('Y-m-d', strtotime($targetDate)) < date('Y-m-d')) {
+	$options['allow_early'] = true;
+}
+$result = $expense->autoCloseForgottenTrips($targetDate, $options);
 
 header('Content-Type: application/json');
 echo json_encode($result);

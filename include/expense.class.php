@@ -951,9 +951,12 @@ class Expense extends Functions
 
 	/**
 	 * Auto-close open vehicle trips at day end (11:30 PM).
-	 * Keeps record in expense_tmp only — no expense table entry.
+	 * Only trips STARTED on the same target date. Keeps record in expense_tmp only — no expense table entry.
+	 *
+	 * @param string $targetDate  Y-m-d (default today)
+	 * @param array  $options     allow_early=true skips 11:30 PM guard (past-date catch-up only)
 	 */
-	public function autoCloseForgottenTrips($targetDate = "")
+	public function autoCloseForgottenTrips($targetDate = "", $options = array())
 	{
 		$this->ensureAutoCloseTripColumns();
 
@@ -963,10 +966,30 @@ class Expense extends Functions
 			$targetDate = date('Y-m-d', strtotime($targetDate));
 		}
 
+		$today = date('Y-m-d');
+		$nowTime = date('H:i:s');
+		$cutoffTime = '23:30:00';
+		$allowEarly = !empty($options['allow_early']);
+
+		// Today's trips: close only after 11:30 PM (cron time). Not during the day.
+		if ($targetDate == $today && !$allowEarly && $nowTime < $cutoffTime) {
+			return array(
+				"ack" => 1,
+				"developer_msg" => "Skipped - before 11:30 PM for today (" . $nowTime . ")",
+				"ack_msg" => "Today's open trips will auto-close at 11:30 PM only. Current time: " . date('h:i A') . ".",
+				"closed_count" => 0,
+				"closed_ids" => array(),
+				"target_date" => $targetDate,
+				"skipped" => true,
+				"errors" => array(),
+			);
+		}
+
 		$endDateTime = $targetDate . ' 23:30:00';
 		$remark = 'Auto closed at 11:30 PM - End KM not entered by employee';
 
-		$where = "isDelete=0 AND isActive=1 AND (end_date_time IS NULL OR end_date_time='' OR end_date_time='0000-00-00 00:00:00') AND DATE(start_date_time)<='" . $targetDate . "' AND auto_closed=0";
+		// Same-day only: trip must have started on target date (not old backlog trips)
+		$where = "isDelete=0 AND isActive=1 AND (end_date_time IS NULL OR end_date_time='' OR end_date_time='0000-00-00 00:00:00') AND DATE(start_date_time)='" . $targetDate . "' AND auto_closed=0";
 		$data = $this->db->rp_getData("expense_tmp", "*", $where, "id ASC", 0);
 
 		$closed = 0;
@@ -997,12 +1020,59 @@ class Expense extends Functions
 
 		return array(
 			"ack" => 1,
-			"developer_msg" => "Auto closed " . $closed . " trip(s) for date " . $targetDate,
-			"ack_msg" => $closed . " open trip(s) auto-closed for " . date('d-m-Y', strtotime($targetDate)) . ".",
+			"developer_msg" => "Auto closed " . $closed . " trip(s) started on " . $targetDate,
+			"ack_msg" => $closed . " trip(s) auto-closed for " . date('d-m-Y', strtotime($targetDate)) . " (same-day only).",
 			"closed_count" => $closed,
 			"closed_ids" => $closedIds,
 			"target_date" => $targetDate,
+			"skipped" => false,
 			"errors" => $errors,
+		);
+	}
+
+	/** Re-open wrongly auto-closed trips (admin fix). */
+	public function revertAutoClosedTrips($tripIds = array())
+	{
+		if (!is_array($tripIds) || empty($tripIds)) {
+			return array("ack" => 0, "ack_msg" => "No trip IDs provided.", "reverted_count" => 0);
+		}
+		$ids = array();
+		foreach ($tripIds as $id) {
+			$id = intval($id);
+			if ($id > 0) {
+				$ids[] = $id;
+			}
+		}
+		if (empty($ids)) {
+			return array("ack" => 0, "ack_msg" => "Invalid trip IDs.", "reverted_count" => 0);
+		}
+		$idList = implode(",", $ids);
+		$where = "id IN (" . $idList . ") AND auto_closed=1 AND isDelete=0";
+		$data = $this->db->rp_getData("expense_tmp", "id", $where, "", 0);
+		$reverted = 0;
+		$revertedIds = array();
+		if ($data) {
+			while ($row = mysqli_fetch_assoc($data)) {
+				$upd = array(
+					"end_km" => "",
+					"end_date_time" => "",
+					"isActive" => 1,
+					"auto_closed" => 0,
+					"auto_closed_remark" => "",
+					"auto_closed_at" => "",
+				);
+				$ok = $this->db->rp_update("expense_tmp", $upd, "id='" . $row['id'] . "'", 0);
+				if ($ok) {
+					$reverted++;
+					$revertedIds[] = $row['id'];
+				}
+			}
+		}
+		return array(
+			"ack" => 1,
+			"ack_msg" => $reverted . " trip(s) re-opened.",
+			"reverted_count" => $reverted,
+			"reverted_ids" => $revertedIds,
 		);
 	}
 
