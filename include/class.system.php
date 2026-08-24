@@ -183,6 +183,105 @@ class System extends Functions
 		);
 	}
 
+	/**
+	 * Employee-wise Today's Followup summary for Admin toaster (every 10 min).
+	 */
+	public function getEmployeeWiseTodayFollowupToasts($limit_employees = 12)
+	{
+		$today = date('Y-m-d');
+		$limit_employees = (int) $limit_employees;
+		if ($limit_employees <= 0) {
+			$limit_employees = 12;
+		}
+
+		$where = "DATE(followup_date) = '" . $today . "' AND isDelete=0 AND isActive=1";
+
+		$SEID = array();
+		$sales_type_r = $this->db->rp_getData("sales_executive", "id", "type='service_executive'", "", 0);
+		if ($sales_type_r) {
+			while ($sales_type_d = mysqli_fetch_array($sales_type_r)) {
+				$SEID[] = $sales_type_d['id'];
+			}
+		}
+		if (!empty($SEID)) {
+			$where .= " AND user_id NOT IN (" . implode(",", $SEID) . ")";
+		}
+
+		$total_today = (int) $this->db->rp_getTotalRecord("followup", $where, 0);
+		$pending_today = (int) $this->db->rp_getTotalRecord("followup", $where . " AND (response='' OR response IS NULL) AND status!=1", 0);
+
+		$employee_map = array();
+		$ctable_r = $this->db->rp_getData("followup", "*", $where, "followup_date ASC", 0, 500);
+		if ($ctable_r) {
+			while ($row = mysqli_fetch_assoc($ctable_r)) {
+				$user_id = (int) $row['user_id'];
+				if ($user_id <= 0) {
+					continue;
+				}
+				if (!isset($employee_map[$user_id])) {
+					$sales_name = $this->db->rp_getValue("sales_executive", "name", "id='" . $user_id . "' AND isDelete=0", 0);
+					$employee_map[$user_id] = array(
+						'user_id' => $user_id,
+						'sales_name' => ($sales_name != "") ? $sales_name : "Team Member",
+						'total' => 0,
+						'pending' => 0,
+						'responded' => 0,
+						'customers' => array()
+					);
+				}
+				$employee_map[$user_id]['total']++;
+				$is_responded = (trim($row['response']) != "" || (int) $row['status'] == 1);
+				if ($is_responded) {
+					$employee_map[$user_id]['responded']++;
+				} else {
+					$employee_map[$user_id]['pending']++;
+				}
+
+				if (count($employee_map[$user_id]['customers']) < 3) {
+					$cname = "";
+					if ($row['reference_table'] == "sales_executive" || $row['reference_table'] == "executive") {
+						$customer_id_val = ($row['reference_table'] == "executive") ? $row['reference_id'] : $row['visitor_id'];
+						$cname = $this->db->rp_getValue("executive", "company_name", "id='" . $customer_id_val . "'", 0);
+					} else if ($row['reference_table'] == "no_order_inquiry") {
+						$cname = $this->db->rp_getValue("no_order_inquiry", "company_name", "id='" . $row['reference_id'] . "'", 0);
+					} else if ($row['reference_table'] == "quotation_detail") {
+						$cname = $this->db->rp_getValue("quotation_detail", "company_name", "id='" . $row['reference_id'] . "'", 0);
+					} else if ($row['visitor_id'] != "" && $row['visitor_id'] > 0) {
+						$cname = $this->db->rp_getValue("executive", "company_name", "id='" . $row['visitor_id'] . "'", 0);
+					}
+					$cname = trim($cname);
+					if ($cname != "" && !in_array($cname, $employee_map[$user_id]['customers'])) {
+						$employee_map[$user_id]['customers'][] = $cname;
+					}
+				}
+			}
+		}
+
+		usort($employee_map, function ($a, $b) {
+			if ($a['pending'] == $b['pending']) {
+				return $b['total'] - $a['total'];
+			}
+			return $b['pending'] - $a['pending'];
+		});
+
+		$employees = array_slice(array_values($employee_map), 0, $limit_employees);
+		foreach ($employees as &$emp) {
+			$emp['customers_label'] = !empty($emp['customers']) ? implode(", ", $emp['customers']) : "-";
+			unset($emp['customers']);
+		}
+		unset($emp);
+
+		return array(
+			'today' => date('d-m-Y'),
+			'today_label' => date('d M Y, l'),
+			'total' => $total_today,
+			'pending' => $pending_today,
+			'responded' => max(0, $total_today - $pending_today),
+			'employee_count' => count($employee_map),
+			'employees' => $employees
+		);
+	}
+
 	public function getNotifications($user_id="",$user_type='')
 	{
 		$limit=$this->getLimit();

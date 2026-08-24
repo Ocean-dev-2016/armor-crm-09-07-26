@@ -45,6 +45,9 @@ function rp_removeImage(c,f,i,l,d=''){
 <script>
 <?php if (isset($_SESSION[SITE_SESS . '_ADMIN_TYPE']) && $_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0) { ?>
 aj.getNotifications(".notification-container");
+if (typeof aj.pollFollowupToasts === "function") {
+	aj.pollFollowupToasts();
+}
 <?php } ?>
 jQuery(document).ready(function() {   
 $("ul.dropdown-menu").each(function(){

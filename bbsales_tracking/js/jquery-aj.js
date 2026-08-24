@@ -548,9 +548,104 @@
 				toastr.info(body, item.title || "Today's Followup");
 			}
 
+			function showEmployeeWiseFollowupToasts(summary){
+				if (typeof toastr === "undefined" || !summary) {
+					return;
+				}
+				var openFollowup = function(){
+					window.location.href = "followuplist_manage.php?followup_type=today";
+				};
+				toastr.options = {
+					closeButton: true,
+					progressBar: true,
+					positionClass: "toast-top-right",
+					timeOut: 12000,
+					extendedTimeOut: 5000,
+					enableHtml: true,
+					newestOnTop: true,
+					onclick: openFollowup
+				};
+
+				var summaryBody =
+					"<strong>Date:</strong> " + (summary.today_label || summary.today || "-") +
+					"<br><strong>Total:</strong> " + (summary.total || 0) +
+					" &nbsp;|&nbsp; <strong>Pending:</strong> " + (summary.pending || 0) +
+					" &nbsp;|&nbsp; <strong>Responded:</strong> " + (summary.responded || 0) +
+					"<br><strong>Employees:</strong> " + (summary.employee_count || 0);
+
+				if (!summary.total || summary.total <= 0) {
+					toastr.info(summaryBody + "<br><em>No Today's Followup found.</em>", "Today's Followup — Employee Wise");
+					return;
+				}
+
+				toastr.warning(summaryBody, "Today's Followup — Employee Wise");
+
+				var employees = summary.employees || [];
+				var maxShow = Math.min(employees.length, 8);
+				for (var i = 0; i < maxShow; i++) {
+					(function(emp, delay){
+						setTimeout(function(){
+							var body =
+								"<strong>Employee:</strong> " + (emp.sales_name || "-") +
+								"<br><strong>Total:</strong> " + (emp.total || 0) +
+								" &nbsp;|&nbsp; <strong>Pending:</strong> " + (emp.pending || 0) +
+								" &nbsp;|&nbsp; <strong>Done:</strong> " + (emp.responded || 0);
+							if (emp.customers_label && emp.customers_label !== "-") {
+								body += "<br><strong>Customers:</strong> " + emp.customers_label;
+							}
+							toastr.options = {
+								closeButton: true,
+								progressBar: true,
+								positionClass: "toast-top-right",
+								timeOut: 10000,
+								extendedTimeOut: 4000,
+								enableHtml: true,
+								newestOnTop: true,
+								onclick: openFollowup
+							};
+							if ((emp.pending || 0) > 0) {
+								toastr.error(body, "Followup — " + (emp.sales_name || "Employee"));
+							} else {
+								toastr.success(body, "Followup — " + (emp.sales_name || "Employee"));
+							}
+						}, delay);
+					})(employees[i], (i + 1) * 700);
+				}
+
+				if (employees.length > maxShow) {
+					setTimeout(function(){
+						toastr.info(
+							"+" + (employees.length - maxShow) + " more employees have Today's Followup. Click to view all.",
+							"Today's Followup"
+						);
+					}, (maxShow + 1) * 700);
+				}
+			}
+
+			function loadEmployeeWiseFollowupToasts(){
+				$.ajax({
+					url: "ajax_function_system.php",
+					data: { mode: "employee_wise_today_followup_toast" },
+					dataType: "json",
+					timeout: 20000,
+					success: function(res){
+						if (!res || res.ack != 1 || !res.summary) {
+							return;
+						}
+						showEmployeeWiseFollowupToasts(res.summary);
+					}
+				});
+			}
+
 			function pollFollowupToasts(){
+				if (window.__adminFollowupToastStarted) {
+					return;
+				}
+				window.__adminFollowupToastStarted = true;
+
 				var storageKey = "admin_followup_last_notif_id";
 				var lastId = parseInt(sessionStorage.getItem(storageKey) || "0", 10);
+				var TEN_MIN = 10 * 60 * 1000;
 
 				function checkToasts(initOnly){
 					$.ajax({
@@ -590,7 +685,11 @@
 				}
 				setInterval(function(){
 					checkToasts(false);
-				}, 30000);
+				}, 60000);
+
+				/* Employee-wise Today's Followup toaster — every 10 minutes */
+				loadEmployeeWiseFollowupToasts();
+				setInterval(loadEmployeeWiseFollowupToasts, TEN_MIN);
 			}
 
 			function getNotifications(container){

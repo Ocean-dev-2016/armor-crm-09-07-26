@@ -750,9 +750,6 @@ $total_quotation = $db->rp_getTotalRecord("quotation_detail", "isDelete=0", 0);
 		$("#all_sales_executive").on("change", function() {
 			loadTodayFollowupDashboard();
 		});
-		if (typeof aj.pollFollowupToasts === "function") {
-			aj.pollFollowupToasts();
-		}
 		<?php } ?>
 		//$( "#sales_person_target" ).load("sales_person_target.php");
 		//$( "#outstanding_data" ).load("outstanding_data_get_ajax.php");

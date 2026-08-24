@@ -108,6 +108,18 @@ if(isset($_REQUEST['mode']) && $_REQUEST['mode']!="")
 				'count' => $toast_data['count']
 			));
 		}
+		else if($service=="employee_wise_today_followup_toast")
+		{
+			if (!isset($_SESSION[SITE_SESS . '_ADMIN_TYPE']) || $_SESSION[SITE_SESS . '_ADMIN_TYPE'] != 0) {
+				echo json_encode(array('ack' => 0, 'ack_msg' => 'Unauthorized'));
+				exit;
+			}
+			$summary = $system->getEmployeeWiseTodayFollowupToasts(12);
+			echo json_encode(array(
+				'ack' => 1,
+				'summary' => $summary
+			));
+		}
 		else if($service=='set_notification')
 		{	
 			if(isset($_REQUEST['notification_id']) && $_REQUEST['notification_id']!=""&& isset($_REQUEST['notification_icon']) && $_REQUEST['notification_icon']!=""&& isset($_REQUEST['notification_msg']) && $_REQUEST['notification_msg']!="")
