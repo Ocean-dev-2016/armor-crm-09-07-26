@@ -927,6 +927,85 @@ class Expense extends Functions
 		return array("ack" => 0, "developer_msg" => "Database error!!", "ack_msg" => "Failed! Advance Expense Insert Failed.");
 	}
 
+	public function ensureAutoCloseTripColumns()
+	{
+		$colCheck = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `expense_tmp` LIKE 'auto_closed'");
+		if (!$colCheck || mysqli_num_rows($colCheck) == 0) {
+			@mysqli_query($this->db->myconn, "ALTER TABLE `expense_tmp` ADD `auto_closed` TINYINT(1) NOT NULL DEFAULT 0");
+		}
+		$colCheck2 = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `expense_tmp` LIKE 'auto_closed_remark'");
+		if (!$colCheck2 || mysqli_num_rows($colCheck2) == 0) {
+			@mysqli_query($this->db->myconn, "ALTER TABLE `expense_tmp` ADD `auto_closed_remark` VARCHAR(255) NULL DEFAULT NULL");
+		}
+		$colCheck3 = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `expense_tmp` LIKE 'auto_closed_at'");
+		if (!$colCheck3 || mysqli_num_rows($colCheck3) == 0) {
+			@mysqli_query($this->db->myconn, "ALTER TABLE `expense_tmp` ADD `auto_closed_at` DATETIME NULL DEFAULT NULL");
+		}
+	}
+
+	public function hasAutoClosedColumn()
+	{
+		$colCheck = @mysqli_query($this->db->myconn, "SHOW COLUMNS FROM `expense_tmp` LIKE 'auto_closed'");
+		return ($colCheck && mysqli_num_rows($colCheck) > 0);
+	}
+
+	/**
+	 * Auto-close open vehicle trips at day end (11:30 PM).
+	 * Keeps record in expense_tmp only — no expense table entry.
+	 */
+	public function autoCloseForgottenTrips($targetDate = "")
+	{
+		$this->ensureAutoCloseTripColumns();
+
+		if ($targetDate == "") {
+			$targetDate = date('Y-m-d');
+		} else {
+			$targetDate = date('Y-m-d', strtotime($targetDate));
+		}
+
+		$endDateTime = $targetDate . ' 23:30:00';
+		$remark = 'Auto closed at 11:30 PM - End KM not entered by employee';
+
+		$where = "isDelete=0 AND isActive=1 AND (end_date_time IS NULL OR end_date_time='' OR end_date_time='0000-00-00 00:00:00') AND DATE(start_date_time)<='" . $targetDate . "' AND auto_closed=0";
+		$data = $this->db->rp_getData("expense_tmp", "*", $where, "id ASC", 0);
+
+		$closed = 0;
+		$closedIds = array();
+		$errors = array();
+
+		if ($data) {
+			while ($row = mysqli_fetch_assoc($data)) {
+				$tmpId = $row['id'];
+				$startKm = isset($row['start_km']) ? $row['start_km'] : 0;
+				$upd = array(
+					"end_km" => $startKm,
+					"end_date_time" => $endDateTime,
+					"isActive" => 0,
+					"auto_closed" => 1,
+					"auto_closed_remark" => $remark,
+					"auto_closed_at" => date('Y-m-d H:i:s'),
+				);
+				$ok = $this->db->rp_update("expense_tmp", $upd, "id='" . $tmpId . "'", 0);
+				if ($ok) {
+					$closed++;
+					$closedIds[] = $tmpId;
+				} else {
+					$errors[] = $tmpId;
+				}
+			}
+		}
+
+		return array(
+			"ack" => 1,
+			"developer_msg" => "Auto closed " . $closed . " trip(s) for date " . $targetDate,
+			"ack_msg" => $closed . " open trip(s) auto-closed for " . date('d-m-Y', strtotime($targetDate)) . ".",
+			"closed_count" => $closed,
+			"closed_ids" => $closedIds,
+			"target_date" => $targetDate,
+			"errors" => $errors,
+		);
+	}
+
 }
 
 ?>

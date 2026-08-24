@@ -80,6 +80,14 @@ else
 										<div class="col-md-2 col-xs-2 col-sm-2" style="margin-top:10px">
 										 	<?php echo $db->getAddButton($ctable);?>	
 										</div>
+										<?php if($_SESSION[SITE_SESS.'_ADMIN_TYPE']==0) { ?>
+										<div class="col-md-2 col-xs-2 col-sm-2" style="margin-top:10px">
+											<label>&nbsp;</label><br/>
+											<a href="auto_closed_trip_manage.php" class="btn btn-warning btn-sm" title="View auto-closed trips (End KM forgotten)">
+												<i class="fa fa-car"></i> Auto Closed Trips
+											</a>
+										</div>
+										<?php } ?>
 										<div class="col-md-2 col-xs-2 col-sm-2" style="margin-top:10px">
 										   	<div class="form-group" role="form">
 												<div class="form-group">

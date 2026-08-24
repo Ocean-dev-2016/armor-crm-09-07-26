@@ -112,7 +112,7 @@ define("SS_PHONE","9979763629/7359911111");
 define("SS_EMAIL","Craftbox@gmail.com");
 define("SS_ADDRESS","Satya Sai Road ,Near Casa Coper, Royal Complex");
 define("CTABLE_INFORMATION_SCHEMA","table_information_schema");
-static $comman_pages=array('400','401','402','403');
+static $comman_pages=array('400','401','402','403','404');
 /*----------------------------- CLIENT INFORMATION!! -----------------*/
 define("CLIENT_BANNER",SITEURL."assets/client/client_banner.png");
 define("CLIENT_LOGO_1",SITEURL."assets/client/logo_panel_front.png");
