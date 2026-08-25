@@ -155,6 +155,76 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 			object-fit: contain;
 		}
 
+		.summary-outer {
+			table-layout: fixed !important;
+			width: 100% !important;
+			border-collapse: collapse;
+		}
+
+		.summary-outer > tbody > tr > td {
+			border: 1px solid #595959;
+			vertical-align: top;
+		}
+
+		.terms-cell {
+			width: 58%;
+			padding: 6px 8px !important;
+		}
+
+		.totals-cell {
+			width: 42%;
+			padding: 0 !important;
+		}
+
+		.totals-inner {
+			width: 100% !important;
+			border: none !important;
+			border-collapse: collapse;
+			table-layout: fixed !important;
+			margin: 0 !important;
+		}
+
+		.totals-inner td {
+			border: 1px solid #595959;
+			padding: 5px 6px !important;
+			font-size: 12px;
+			height: auto !important;
+		}
+
+		.totals-inner tr:first-child td {
+			border-top: none;
+		}
+
+		.totals-inner tr td:first-child {
+			border-left: none;
+		}
+
+		.totals-inner tr td:last-child {
+			border-right: none;
+		}
+
+		.totals-inner tr:last-child td {
+			border-bottom: none;
+		}
+
+		.tot-label {
+			width: 45%;
+			text-align: left;
+			font-weight: bold;
+		}
+
+		.tot-pct {
+			width: 20%;
+			text-align: center;
+			font-weight: bold;
+		}
+
+		.tot-amt {
+			width: 35%;
+			text-align: right;
+			font-weight: bold;
+		}
+
 		.text-center {
 			text-align: center !important;
 		}
@@ -526,6 +596,9 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 	<?php
 	// Resolve Grand Total for print (fallback when DB grand_total_rounded is 0)
 	if (!isset($totalprice1)) { $totalprice1 = 0; }
+	if (!isset($total_item_discount)) { $total_item_discount = 0; }
+	if (!isset($total_mrp_amount)) { $total_mrp_amount = 0; }
+	if (!isset($currency)) { $currency = CURR; }
 	$total_tax_amt = floatval($totalprice1) - floatval($cart_detail_d['cash_discount_amount']) - floatval($cart_detail_d['additional_discount_amount']) + floatval($cart_detail_d['transport_charge']) + floatval($cart_detail_d['packing_charge']);
 	$calc_before_round = $total_tax_amt + floatval($cart_detail_d['igst_amount']) + floatval($cart_detail_d['tcs_amount']);
 	$display_grand_total = floatval($cart_detail_d['grand_total_rounded']);
@@ -539,19 +612,13 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 	if ((string)$display_roundoff === '' || $display_roundoff === null) {
 		$display_roundoff = round($calc_before_round) - $calc_before_round;
 	}
-	// Dynamic rowspan for terms column (avoid blank spacer rows)
-	$terms_rowspan = 5; // Discount, Sub Total, Taxable, Round Off, Grand Total
-	if ($cart_detail_d['cash_discount_amount'] != "" && $cart_detail_d['cash_discount_amount'] != "0") { $terms_rowspan++; }
-	if ($cart_detail_d['additional_discount_amount'] != "" && $cart_detail_d['additional_discount_amount'] != "0") { $terms_rowspan++; }
-	if ($cart_detail_d['igst_amount'] != "" && $cart_detail_d['igst_amount'] != "0") {
-		$terms_rowspan += (strtolower(CLIENT_STATE) == strtolower($cart_detail_d['state'])) ? 2 : 1;
-	}
-	if ($cart_detail_d['tcs_amount'] != "" && $cart_detail_d['tcs_amount'] != "0") { $terms_rowspan++; }
+	$overall_discount_per = ($total_mrp_amount > 0) ? round(($total_item_discount / $total_mrp_amount) * 100, 2) : 0;
+	$overall_discount_per_txt = rtrim(rtrim(number_format($overall_discount_per, 2, '.', ''), '0'), '.') . '%';
 	?>
-	<table>
-		<tbody class="<?= $cl; ?>">
-			<tr class="font-size">
-				<td colspan="8" class="" rowspan="<?= $terms_rowspan ?>" style="vertical-align: top;">
+	<table class="summary-outer">
+		<tbody>
+			<tr>
+				<td class="terms-cell">
 					<span class="font-13"><b>Terms & Condition : </b></span><br>
 					<span class="font-13"><?= $cart_detail_d['terms_comdition'] ?></span><br>
 					<span class="font-13" style="color: red;"><b>This quotation is valid for 7 days.</b></span><br>
@@ -584,119 +651,71 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 					?>
 					<br /><span style="color: red;">Edited By : <?= $modified_by_name ?> &nbsp; </span>
 				</td>
-				<td colspan="2" class="text-left font-13"><strong>Discount</strong></td>
-				<td colspan="2" class="text-center font-13"><strong><?php
-					$overall_discount_per = ($total_mrp_amount > 0) ? round(($total_item_discount / $total_mrp_amount) * 100, 2) : 0;
-					echo rtrim(rtrim(number_format($overall_discount_per, 2, '.', ''), '0'), '.') . '%';
-				?></strong></td>
-				<td colspan="4" class="text-right font-13"><strong><?php echo $currency . ' ' . $db->rp_number_format($total_item_discount, 2); ?></strong></td>
-
-			</tr>
-			<tr>
-				<td colspan="4" class="text-left font-13"><strong>Sub Total</strong></td>
-				<td colspan="4" class="text-right font-13"><strong><?php echo $currency . ' ' . $db->rp_number_format($totalprice1, 2); ?></strong></td>
-			</tr>
-
-			<?php if ($cart_detail_d['cash_discount_amount'] != "" && $cart_detail_d['cash_discount_amount'] != "0") { ?>
-				<tr>
-					<td colspan="4" class="text-left font-13"><strong>Cash Discount</strong></td>
-					<td colspan="4" class="text-right font-13"><strong><?php echo $currency . ' ' . $db->rp_number_format($cart_detail_d['cash_discount_amount'], 2); ?></strong></td>
-				</tr>
-			<?php } ?>
-
-			<?php if ($cart_detail_d['additional_discount_amount'] != "" && $cart_detail_d['additional_discount_amount'] != "0") { ?>
-				<tr>
-					<td colspan="4" class="text-left font-13"><strong>Additional Discount</strong></td>
-					<td colspan="4" class="text-right font-13"><strong><?php echo $currency . ' ' . $db->rp_number_format($cart_detail_d['additional_discount_amount'], 2); ?></strong></td>
-				</tr>
-			<?php } ?>
-			<!-- <tr>
-					<td colspan="4" class="text-left font-13"><strong>Transport Charge</strong></td>
-					<td colspan="4" class="text-right font-13"><strong><?php echo $currency . ' ' . $db->rp_number_format($cart_detail_d['transport_charge'], 2); ?></strong></td>
-				</tr>
-				<tr>
-					<td colspan="4" class="text-left font-13"><strong>Packing & Forwarding Charge</strong></td>
-					<td colspan="4" class="text-right font-13"><strong><?php echo $currency . ' ' . $db->rp_number_format($cart_detail_d['packing_charge'], 2); ?></strong></td>
-				</tr> -->
-			<?php /* $total_tax_amt already calculated above for grand total */ ?>
-			<tr>
-				<td colspan="4" class="text-left font-13"><strong>Total Taxable Amount</strong></td>
-				<td colspan="4" class="text-right font-13"><strong><?php echo $currency . ' ' . $db->rp_number_format($total_tax_amt, 2); ?></strong></td>
-			</tr>
-			<?php
-			if ($cart_detail_d['igst_amount'] != "0") {
-				if ($cart_detail_d['type_of_executive'] == 7) {
-					if (strtolower(CLIENT_STATE) == strtolower($cart_detail_d['state'])) {
-			?>
+				<td class="totals-cell">
+					<table class="totals-inner">
 						<tr>
-							<td colspan="4" class="text-left"><strong>C GST</strong></td>
-							<td colspan="4" class="text-right "><strong><?= ($currency . $db->rp_number_format(($cart_detail_d['igst_amount']) / 2, 2)) ?></strong> </td>
+							<td class="tot-label">Discount</td>
+							<td class="tot-pct"><?php echo $overall_discount_per_txt; ?></td>
+							<td class="tot-amt"><?php echo $currency . ' ' . $db->rp_number_format($total_item_discount, 2); ?></td>
 						</tr>
 						<tr>
-							<td colspan="4" class="text-left"><strong>S GST</strong></td>
-							<td colspan="4" class="text-right "><strong><?= ($currency . $db->rp_number_format($cart_detail_d['igst_amount'] / 2, 2)) ?></strong></td>
+							<td class="tot-label" colspan="2">Sub Total</td>
+							<td class="tot-amt"><?php echo $currency . ' ' . $db->rp_number_format($totalprice1, 2); ?></td>
 						</tr>
-					<?php
-					} else {
-					?>
+						<?php if ($cart_detail_d['cash_discount_amount'] != "" && $cart_detail_d['cash_discount_amount'] != "0") { ?>
 						<tr>
-							<td colspan="4" class="text-left"><strong>IGST</strong></td>
-							<td colspan="4" class="text-right "><strong><?= ($currency . $db->rp_number_format($cart_detail_d['igst_amount'], 2)) ?></strong></td>
+							<td class="tot-label" colspan="2">Cash Discount</td>
+							<td class="tot-amt"><?php echo $currency . ' ' . $db->rp_number_format($cart_detail_d['cash_discount_amount'], 2); ?></td>
 						</tr>
-					<?php
-					}
-				} else {
-					if (strtolower(CLIENT_STATE) == strtolower($cart_detail_d['state'])) {
-					?>
+						<?php } ?>
+						<?php if ($cart_detail_d['additional_discount_amount'] != "" && $cart_detail_d['additional_discount_amount'] != "0") { ?>
 						<tr>
-							<td colspan="4" class="text-left"><strong>C GST</strong></td>
-							<td colspan="4" class="text-right "><strong><?= ($currency . $db->rp_number_format($cart_detail_d['igst_amount'] / 2, 2)) ?></strong> </td>
+							<td class="tot-label" colspan="2">Additional Discount</td>
+							<td class="tot-amt"><?php echo $currency . ' ' . $db->rp_number_format($cart_detail_d['additional_discount_amount'], 2); ?></td>
 						</tr>
+						<?php } ?>
 						<tr>
-							<td colspan="4" class="text-left"><strong>S GST</strong></td>
-							<td colspan="4" class="text-right "><strong><?= ($currency . $db->rp_number_format($cart_detail_d['igst_amount'] / 2, 2)) ?></strong></td>
+							<td class="tot-label" colspan="2">Total Taxable Amount</td>
+							<td class="tot-amt"><?php echo $currency . ' ' . $db->rp_number_format($total_tax_amt, 2); ?></td>
 						</tr>
-					<?php
-					} else {
-					?>
-						<tr>
-							<td colspan="4" class="text-left"><strong>IGST</strong></td>
-							<td colspan="4" class="text-right "><strong><?= ($currency . $db->rp_number_format($cart_detail_d['igst_amount'], 2)) ?></strong></td>
-						</tr>
-				<?php
-					}
-				}
-			}
-			?>
-			<?php
-			if ($cart_detail_d['tcs_amount'] != "" && $cart_detail_d['tcs_amount'] != "0") {
-			?>
-				<tr>
-					<td colspan="4">
-						<strong>TCS (<?= TCS_CHARGE_IN_PER ?>%)</strong>
-					</td>
-					<td colspan="4" class="text-right"><strong><?= $currency . number_format($cart_detail_d['tcs_amount'], 2) ?></strong></td>
-				</tr>
-			<?php
-			}
-			?>
-			<tr>
-				<td colspan="4">
-					<strong>Round Off</strong>
-				</td>
-				<td colspan="4" class="text-right"><strong>
-						<?php echo $currency . $display_roundoff; ?>
-					</strong></td>
-			</tr>
-			<tr style="background-color:  <?= GRAND_TOTAL_COLOR ?>;font-size: 16px;">
-				<td colspan="4">
-					<strong>Grand Total</strong>
-				</td>
-				<td colspan="4" class="text-right" style="background-color: <?= GRAND_TOTAL_COLOR ?>;font-size: 16px;"><strong>
 						<?php
-						echo $currency . ' ' . $db->rp_number_format($display_grand_total, 2);
+						if ($cart_detail_d['igst_amount'] != "0") {
+							if (strtolower(CLIENT_STATE) == strtolower($cart_detail_d['state'])) {
 						?>
-					</strong>
+						<tr>
+							<td class="tot-label" colspan="2">C GST</td>
+							<td class="tot-amt"><?= ($currency . $db->rp_number_format(($cart_detail_d['igst_amount']) / 2, 2)) ?></td>
+						</tr>
+						<tr>
+							<td class="tot-label" colspan="2">S GST</td>
+							<td class="tot-amt"><?= ($currency . $db->rp_number_format($cart_detail_d['igst_amount'] / 2, 2)) ?></td>
+						</tr>
+						<?php
+							} else {
+						?>
+						<tr>
+							<td class="tot-label" colspan="2">IGST</td>
+							<td class="tot-amt"><?= ($currency . $db->rp_number_format($cart_detail_d['igst_amount'], 2)) ?></td>
+						</tr>
+						<?php
+							}
+						}
+						if ($cart_detail_d['tcs_amount'] != "" && $cart_detail_d['tcs_amount'] != "0") {
+						?>
+						<tr>
+							<td class="tot-label" colspan="2">TCS (<?= TCS_CHARGE_IN_PER ?>%)</td>
+							<td class="tot-amt"><?= $currency . number_format($cart_detail_d['tcs_amount'], 2) ?></td>
+						</tr>
+						<?php } ?>
+						<tr>
+							<td class="tot-label" colspan="2">Round Off</td>
+							<td class="tot-amt"><?php echo $currency . $display_roundoff; ?></td>
+						</tr>
+						<tr style="background-color: <?= GRAND_TOTAL_COLOR ?>; font-size: 14px;">
+							<td class="tot-label" colspan="2" style="background-color: <?= GRAND_TOTAL_COLOR ?>;">Grand Total</td>
+							<td class="tot-amt" style="background-color: <?= GRAND_TOTAL_COLOR ?>;"><?php echo $currency . ' ' . $db->rp_number_format($display_grand_total, 2); ?></td>
+						</tr>
+					</table>
 				</td>
 			</tr>
 		</tbody>
