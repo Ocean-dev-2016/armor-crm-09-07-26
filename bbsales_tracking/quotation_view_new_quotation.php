@@ -117,11 +117,33 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 			display: block;
 		}
 
+		.header-cell {
+			padding: 0 !important;
+			margin: 0 !important;
+			line-height: 0;
+			font-size: 0;
+			overflow: hidden;
+		}
+
 		.header-img {
-			width: 100%;
-			max-height: 110px;
-			object-fit: contain;
-			object-position: left center;
+			width: 100% !important;
+			max-width: 100% !important;
+			height: auto !important;
+			max-height: none !important;
+			object-fit: fill;
+			display: block !important;
+			padding: 0 !important;
+			margin: 0 !important;
+			border: 0;
+		}
+
+		.footer-img {
+			width: 100% !important;
+			max-width: 100% !important;
+			height: auto !important;
+			max-height: 90px;
+			object-fit: fill;
+			display: block !important;
 			padding: 0 !important;
 			margin: 0 !important;
 		}
@@ -130,6 +152,7 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 			width: 45px;
 			height: auto;
 			margin: 0 auto;
+			object-fit: contain;
 		}
 
 		.text-center {
@@ -251,7 +274,16 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 			}
 
 			img.header-img {
-				max-height: 100px !important;
+				width: 100% !important;
+				max-width: 100% !important;
+				height: auto !important;
+				max-height: none !important;
+				object-fit: fill !important;
+			}
+
+			img.footer-img {
+				width: 100% !important;
+				max-height: 80px !important;
 			}
 		}
 	</style>
@@ -262,7 +294,7 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 	<table>
 		<tbody class="<?= $cl; ?>">
 			<tr>
-				<td colspan="16" style="padding: 0 !important; border: 1px solid #595959;">
+				<td colspan="16" class="header-cell">
 					<?php
 					if (isset($company_detail_d) && $company_detail_d != "" && $company_detail_d != 0 && !empty($company_detail_d['image_path'])) {
 						$headerSrc = SITEURL . "images/header/" . $company_detail_d['image_path'];
@@ -829,15 +861,15 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 	<table style="border: 1px solid #595959;border-collapse: collapse;">
 		<tbody>
 			<tr>
-				<td style="padding: 0 !important;">
+				<td class="header-cell">
 					<?php
 					if (isset($company_detail_d['footer_image_path']) && $company_detail_d['footer_image_path'] != "") {
 					?>
-						<img class="header-img" style="max-height: 80px;" src="<?= SITEURL ?>images/header/<?= $company_detail_d['footer_image_path'] ?>" alt="Footer">
+						<img class="footer-img" src="<?= SITEURL ?>images/header/<?= $company_detail_d['footer_image_path'] ?>" alt="Footer">
 					<?php
 					} else {
 					?>
-						<img class="header-img" style="max-height: 40px;" src="<?= SITEURL ?>images/white_footer.jpg" alt="Footer">
+						<img class="footer-img" style="max-height: 40px;" src="<?= SITEURL ?>images/white_footer.jpg" alt="Footer">
 					<?php
 					}
 					?>
