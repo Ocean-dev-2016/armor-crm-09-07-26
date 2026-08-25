@@ -52,16 +52,48 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 <html>
 
 <head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Quotation Print</title>
 	<style>
+		@page {
+			size: A4 portrait;
+			margin: 8mm 8mm 8mm 8mm;
+		}
+
+		* {
+			box-sizing: border-box;
+		}
+
+		html,
+		body {
+			margin: 0;
+			padding: 0;
+			background: #fff;
+			font-family: Arial, Helvetica, sans-serif;
+			color: #000;
+			-webkit-print-color-adjust: exact;
+			print-color-adjust: exact;
+		}
+
+		.quote-wrap {
+			width: 100%;
+			max-width: 194mm;
+			margin: 0 auto;
+			padding: 0;
+			background: #fff;
+		}
+
 		.mainDiv,
 		table {
 			border: 1px solid #595959;
 			border-collapse: collapse;
-			font-size: 13px;
-			width: 250mm !important;
+			font-size: 12px;
+			width: 100% !important;
+			max-width: 100%;
 			background-color: #FFF;
-			margin: auto;
-			padding: auto;
+			margin: 0;
+			table-layout: fixed;
 		}
 
 		table,
@@ -72,8 +104,32 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 
 		td,
 		th {
-			padding: 5px;
-			height: 30px;
+			padding: 4px 5px;
+			height: auto;
+			vertical-align: top;
+			word-wrap: break-word;
+			overflow-wrap: break-word;
+		}
+
+		img {
+			max-width: 100%;
+			height: auto;
+			display: block;
+		}
+
+		.header-img {
+			width: 100%;
+			max-height: 110px;
+			object-fit: contain;
+			object-position: left center;
+			padding: 0 !important;
+			margin: 0 !important;
+		}
+
+		.product-img {
+			width: 45px;
+			height: auto;
+			margin: 0 auto;
 		}
 
 		.text-center {
@@ -82,6 +138,10 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 
 		.text-right {
 			text-align: right !important;
+		}
+
+		.text-left {
+			text-align: left !important;
 		}
 
 		.no-border-left {
@@ -108,18 +168,12 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 			background: #D3D3D3;
 		}
 
-		tbody {
-			/*text-transform: uppercase;*/
-		}
-
 		.font-size td {
-			font-size: 15px !important;
+			font-size: 13px !important;
 		}
 
 		.image-width {
-			width: 10% !important;
-			min-width: 10% !important;
-			max-width: 10% !important;
+			width: 8% !important;
 		}
 
 		.border-r-width {
@@ -147,7 +201,7 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 		}
 
 		.font-13 {
-			font-size: 13px !important;
+			font-size: 12px !important;
 		}
 
 		.headerBorder {
@@ -156,62 +210,78 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 			border-right: none;
 			border-left: none;
 		}
+
+		h5 {
+			margin: 4px 0;
+		}
+
+		p {
+			margin: 2px 0;
+		}
+
+		@media print {
+			html,
+			body {
+				margin: 0 !important;
+				padding: 0 !important;
+				width: 100% !important;
+			}
+
+			.quote-wrap {
+				max-width: 100% !important;
+				width: 100% !important;
+				margin: 0 !important;
+			}
+
+			table {
+				page-break-inside: auto;
+			}
+
+			tr {
+				page-break-inside: avoid;
+				page-break-after: auto;
+			}
+
+			thead {
+				display: table-header-group;
+			}
+
+			.no-print-empty {
+				display: none !important;
+			}
+
+			img.header-img {
+				max-height: 100px !important;
+			}
+		}
 	</style>
 </head>
 
 <body>
+	<div class="quote-wrap">
 	<table>
 		<tbody class="<?= $cl; ?>">
-			<!-- <tr class="headerBorder">
-					<td colspan="6" class="no-border-right" style="background: #f1f1f1;padding: 0px !important;">
-						<img style="width: 100%;padding: 0px !important;margin: 2px 0 2px 2px;"  src="<?= $header_image; ?>">
-					</td>
-					<td colspan="6" class="" style="font-size: 27px;background: #f1f1f1;">
-						<?php
-						if ($customer_address) {
-						?>
-								<h2><strong><?= $customer_address_d['company_name']; ?></strong></h2>
-								<p class="font-13">
-									<i class="fa fa-location-arrow"></i> <?= $customer_address_d['address'] ?>
-								</p>	
-								<?php
-							}
-								?> -->
-
-			<!-- <strong style="color: #eb268f;"><?php echo CLIENT_BRAND_NAME ?></strong> -->
-			<!-- <br>
-						<p class="font-13">
-							<i class="fa fa-location-arrow"></i> <?= FACTORY_ADDRESS ?>
-							<br>
-							<i class="fa fa-envelope"></i> info@sheetalicecream.com <i class="fa fa-globe"></i> www.scplco.com
-						<br>
-						<strong>CIN: L15205GJ2013PLC077205</strong> -->
-			<!-- <i class="fa fa-location-arrow"></i><strong> Office Address : </strong><?= CLIENT_ADDRESS ?>
-							<br> -->
-			<!-- <i class="fa fa-phone"></i> <?= OFFICE_PHONE ?><br> <?= OFFICE_EMAIL ?>  -->
-			<!-- </p>
-					</td>
-				</tr> -->
-			<td colspan="16">
-				<!-- <center><img style="width: 150px; padding: 0px !important; height: 50px;"  src="<?= VIEW_LOGO_All ?>"></center> -->
-
-				<?php
-				if (isset($company_detail_d) && $company_detail_d != "" && $company_detail_d != 0) {
-				?>
-					<img style="width: 100%;padding: 0px !important;height: 125px;" src="<?= HEADER_A . $company_detail_d['image_path'] ?>">
-				<?php
-				} else {
-				?>
-					<img style="width: 100%;padding: 0px !important;" src="../images/craftbox_header.jpg">
-				<?php
-				}
-				?>
-			</td>
+			<tr>
+				<td colspan="16" style="padding: 0 !important; border: 1px solid #595959;">
+					<?php
+					if (isset($company_detail_d) && $company_detail_d != "" && $company_detail_d != 0 && !empty($company_detail_d['image_path'])) {
+						$headerSrc = SITEURL . "images/header/" . $company_detail_d['image_path'];
+					?>
+						<img class="header-img" src="<?= $headerSrc ?>" alt="Header">
+					<?php
+					} else {
+					?>
+						<img class="header-img" src="<?= SITEURL ?>images/craftbox_header.jpg" alt="Header">
+					<?php
+					}
+					?>
+				</td>
+			</tr>
 			<tr style="background-color: <?= VIEW_COLOR ?>; color: #000;">
-				<td colspan="16" align="center" style="color: #000;"><b>Rate Confirmation Quotation</b></td>
+				<td colspan="16" align="center" style="color: #000; padding: 6px;"><b>Rate Confirmation Quotation</b></td>
 			</tr>
 			<tr>
-				<td colspan="8" rowspan="4">
+				<td colspan="8" style="vertical-align: top;">
 					Buyer
 					<h5 style="font-weight: 600;text-transform: uppercase;"><strong><?php echo $cart_detail_d['company_name']; ?></strong></h5>
 					<p style="margin:0"><?php echo wordwrap($cart_detail_d['address'], 40, "<br>\n") . "  <br/>" . $cart_detail_d['city'] . " , " . $cart_detail_d['state'] . " , " . $cart_detail_d['country'] ?></p>
@@ -343,11 +413,11 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 						<?php
 						if ($item['image_path'] != "") {
 						?>
-							<td colspan="1" class="image-width text-center"><img style="width: 50px;" src="<?php echo SITEURL . PRODUCT . $item['image_path'] ?>"></td>
+							<td colspan="1" class="image-width text-center"><img class="product-img" src="<?php echo SITEURL . PRODUCT . $item['image_path'] ?>"></td>
 						<?php
 						} else {
 						?>
-							<td colspan="1" class="image-width text-center"><img style="width: 50px;" src="<?php echo SITEURL . PRODUCT . 'default.png' ?>"></td>
+							<td colspan="1" class="image-width text-center"><img class="product-img" src="<?php echo SITEURL . PRODUCT . 'default.png' ?>"></td>
 						<?php
 						}
 						?>
@@ -378,7 +448,7 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 				if ($count < 5) {
 					for ($i = 0; $i < 5 - $count; $i++) {
 					?>
-						<tr class="border">
+						<tr class="border no-print-empty">
 							<td colspan="1"></td>
 							<td colspan="1"></td>
 							<td colspan="4"></td>
@@ -395,7 +465,7 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 				}
 			}
 			?>
-			<tr class="">
+			<tr class="no-print-empty">
 				<td colspan="1"></td>
 				<td colspan="1"></td>
 				<td colspan="4"></td>
@@ -451,19 +521,14 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 			<tr class="font-size">
 				<td colspan="8" class="" rowspan="<?= $terms_rowspan ?>" style="vertical-align: top;">
 					<span class="font-13"><b>Terms & Condition : </b></span><br>
-					<div class="row">
-						<div class="col-md-12">
-							<span class="font-13"><?= $cart_detail_d['terms_comdition'] ?></span><br>
-							<span class="font-13" style="color: red;"><b>This quotation is valid for 7 days.</b></span><br>
-						</div>
-					</div>
-
+					<span class="font-13"><?= $cart_detail_d['terms_comdition'] ?></span><br>
+					<span class="font-13" style="color: red;"><b>This quotation is valid for 7 days.</b></span><br>
+					<br>
 					<span class="font-13"><b>Grand Total In Words</b> :
 						<?php
 						$grand_total_words = $ntw->rp_convertNumToWord($display_grand_total);
 						echo ucwords(strtolower($grand_total_words)); ?>
-					</span>
-					<span></span><br>
+					</span><br>
 					<span class="font-13">
 						<b>Bank Details : </b>
 						<?php
@@ -764,15 +829,15 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 	<table style="border: 1px solid #595959;border-collapse: collapse;">
 		<tbody>
 			<tr>
-				<td>
+				<td style="padding: 0 !important;">
 					<?php
 					if (isset($company_detail_d['footer_image_path']) && $company_detail_d['footer_image_path'] != "") {
 					?>
-						<img style="width: 100%;padding: 0px !important;" src="<?= FOOTER_A . $company_detail_d['footer_image_path'] ?>">
+						<img class="header-img" style="max-height: 80px;" src="<?= SITEURL ?>images/header/<?= $company_detail_d['footer_image_path'] ?>" alt="Footer">
 					<?php
 					} else {
 					?>
-						<img style="width: 100%;padding: 0px !important;" src="../images/white_footer.jpg">
+						<img class="header-img" style="max-height: 40px;" src="<?= SITEURL ?>images/white_footer.jpg" alt="Footer">
 					<?php
 					}
 					?>
@@ -780,6 +845,7 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 			</tr>
 		</tbody>
 	</table>
+	</div>
 </body>
 
 </html>

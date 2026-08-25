@@ -45,10 +45,18 @@ function rp_removeImage(c,f,i,l,d=''){
 <script>
 <?php if (isset($_SESSION[SITE_SESS . '_ADMIN_TYPE']) && $_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0) { ?>
 aj.getNotifications(".notification-container");
+<?php
+	$__current_page = basename(isset($_SERVER['PHP_SELF']) ? $_SERVER['PHP_SELF'] : '');
+	$__dashboard_pages = array('main_dashboard.php', 'dashboard.php', 'customer_dashboard.php', 'dashbordd_sheetal.php');
+	if (in_array($__current_page, $__dashboard_pages)) {
+?>
 if (typeof aj.pollFollowupToasts === "function") {
 	aj.pollFollowupToasts();
 }
-<?php } ?>
+<?php
+	}
+}
+?>
 jQuery(document).ready(function() {   
 $("ul.dropdown-menu").each(function(){
 	if($(this).html().trim()=="")

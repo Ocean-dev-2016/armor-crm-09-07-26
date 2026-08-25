@@ -255,18 +255,25 @@ $flag_d = mysqli_fetch_array($flag_r);
 		}
 
 		function printReport(id) {
-			var myWindow = window.open('quotation_view_new_quotation.php?quotation_id=' + id + "&p=1", '', 'width=500,height=800');
-			// var myWindow = window.open('quotation_view_new_quotation_new_1.php?quotation_id=' + id + "&p=1", '', 'width=500,height=800');
-			myWindow.print();
-			// setTimeout(function () 
-			// {
-			// 	myWindow.print();
-			// 	var ival = setInterval(function() 
-			// 	{
-			// 	    myWindow.close();
-			// 	    clearInterval(ival);
-			// 	}, 200);
-			// }, 500);
+			var myWindow = window.open('quotation_view_new_quotation.php?quotation_id=' + id + "&p=1", '', 'width=900,height=1000');
+			if (!myWindow) {
+				alert('Please allow popups to print quotation.');
+				return;
+			}
+			myWindow.focus();
+			var printed = false;
+			function doPrint() {
+				if (printed) { return; }
+				printed = true;
+				try {
+					myWindow.print();
+				} catch (e) {}
+			}
+			myWindow.onload = function() {
+				setTimeout(doPrint, 600);
+			};
+			// Fallback if onload already fired
+			setTimeout(doPrint, 1500);
 		}
 
 		// for mail send
