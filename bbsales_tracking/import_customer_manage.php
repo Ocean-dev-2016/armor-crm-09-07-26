@@ -35,27 +35,50 @@ function removeBlankArrays($array)
 
 // echo "hello";exit;
 if (isset($_POST['submit'])) {
-	if (isset($_FILES['excel_upload'])) {
+	if (isset($_FILES['excel_upload']) && is_uploaded_file($_FILES['excel_upload']['tmp_name'])) {
 		$Fail = false;
 		$file = $_FILES['excel_upload'];
 
 		$TempFile = $file['tmp_name'];
 		$FileName = $file['name'];
-		$FileType = $file['type'];
+		$FileType = isset($file['type']) ? $file['type'] : '';
 		$FileError = $file['error'];
 		$FileSize = $file['size'];
+		$FileExt = strtolower(pathinfo($FileName, PATHINFO_EXTENSION));
+		$allowedExt = array('xls', 'xlsx');
+		$allowedMime = array(
+			'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+			'application/vnd.ms-excel',
+			'application/excel',
+			'application/x-excel',
+			'application/x-msexcel',
+			'application/octet-stream',
+			'application/zip',
+			'application/x-zip-compressed',
+			''
+		);
+
 		if ($FileError == 0) {
-			if ($FileType == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || $FileType == 'application/vnd.ms-excel') {
-				if ($FileSize <= 1024 * 1024 * 4) // 2MB
+			if (in_array($FileExt, $allowedExt) && (in_array($FileType, $allowedMime) || $FileType == '')) {
+				if ($FileSize <= 1024 * 1024 * 4) // 4MB
 				{
-					$UploadName1 = "customer-upload-" . date("d-m-Y-h-i-s") . "-" . $FileName;
-					$UploadURL1 = "sheet_import/uploads/customer/" . $UploadName1;
-					move_uploaded_file($TempFile, $UploadURL1);
+					$UploadDir = "sheet_import/uploads/customer/";
+					if (!is_dir($UploadDir)) {
+						@mkdir($UploadDir, 0777, true);
+					}
+					$UploadName1 = "customer-upload-" . date("d-m-Y-h-i-s") . "-" . preg_replace('/[^A-Za-z0-9._-]/', '_', $FileName);
+					$UploadURL1 = $UploadDir . $UploadName1;
+					if (!move_uploaded_file($TempFile, $UploadURL1)) {
+						$Fail = true;
+						$db->addErrorMessage("Failed to save uploaded file. Please check folder permissions.");
+					} else {
 					include "PHPExcel/IOFactory.php";
 					try {
 						$objPHPExcel = PHPExcel_IOFactory::load($UploadURL1);
 						$allDataInSheet = $objPHPExcel->getActiveSheet()->toArray(null, true, true, true);
-						ob_end_clean();
+						if (ob_get_level() > 0) {
+							@ob_end_clean();
+						}
 						// Remove blank arrays
 						$resultArray = removeBlankArrays($allDataInSheet);
 						$arrayCount 	= count($resultArray);  // Here get total count of row in that Excel sheet
@@ -448,15 +471,19 @@ if (isset($_POST['submit'])) {
 						if ($Skipped > 0) {
 							$db->addErrorMessage($SkipMessage);
 						} else {
-							$db->addSuccessMessage("Inquiry Upload Successfully");
+							$db->addSuccessMessage("Customer Upload Successfully");
 						}
 					} catch (Exception $e) {
 						$Fail = true;
-						$db->addErrorMessage("File not supported to upload.");
+						$db->addErrorMessage("File not supported to upload. " . $e->getMessage());
+					} catch (Error $e) {
+						$Fail = true;
+						$db->addErrorMessage("Excel read failed. Please use Download Sample Excel format (.xlsx).");
 					}
+					} // move_uploaded_file else end
 				} else {
 					$Fail = true;
-					$db->addErrorMessage("Filesize must be less than 2 MB.");
+					$db->addErrorMessage("Filesize must be less than 4 MB.");
 				}
 			} else {
 				$Fail = true;
@@ -467,7 +494,7 @@ if (isset($_POST['submit'])) {
 			$db->addErrorMessage("File corrupted or not uploaded try again.");
 		}
 
-		if ($Fail) {
+		if ($Fail && isset($GroupID) && $GroupID != "") {
 			$db->rp_delete($ctable, "id='" . $GroupID . "'");
 		}
 	} else {

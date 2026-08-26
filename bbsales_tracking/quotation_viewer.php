@@ -270,10 +270,9 @@ $flag_d = mysqli_fetch_array($flag_r);
 				} catch (e) {}
 			}
 			myWindow.onload = function() {
-				setTimeout(doPrint, 600);
+				setTimeout(doPrint, 800);
 			};
-			// Fallback if onload already fired
-			setTimeout(doPrint, 1500);
+			setTimeout(doPrint, 1800);
 		}
 
 		// for mail send

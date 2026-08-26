@@ -49,8 +49,7 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 
 
 ?>
-<html>
-
+$html>
 <head>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -58,57 +57,51 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 	<style>
 		@page {
 			size: A4 portrait;
-			margin: 8mm 8mm 8mm 8mm;
+			margin: 5mm;
 		}
 
-		* {
-			box-sizing: border-box;
-		}
+		* { box-sizing: border-box; }
 
-		html,
-		body {
+		html, body {
 			margin: 0;
 			padding: 0;
 			background: #fff;
 			font-family: Arial, Helvetica, sans-serif;
 			color: #000;
+			font-size: 10px;
+			line-height: 1.25;
 			-webkit-print-color-adjust: exact;
 			print-color-adjust: exact;
 		}
 
 		.quote-wrap {
 			width: 100%;
-			max-width: 194mm;
+			max-width: 200mm;
 			margin: 0 auto;
 			padding: 0;
 			background: #fff;
 		}
 
-		.mainDiv,
 		table {
 			border: 1px solid #595959;
 			border-collapse: collapse;
-			font-size: 12px;
+			font-size: 10px;
 			width: 100% !important;
 			max-width: 100%;
-			background-color: #FFF;
+			background: #fff;
 			margin: 0;
 			table-layout: fixed;
 		}
 
-		table,
-		td,
-		th {
-			border: 1px solid #595959;
-		}
+		table, td, th { border: 1px solid #595959; }
 
-		td,
-		th {
-			padding: 4px 5px;
-			height: auto;
+		td, th {
+			padding: 2px 3px !important;
+			height: auto !important;
 			vertical-align: top;
 			word-wrap: break-word;
 			overflow-wrap: break-word;
+			line-height: 1.2;
 		}
 
 		img {
@@ -120,17 +113,18 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 		.header-cell {
 			padding: 0 !important;
 			margin: 0 !important;
-			line-height: 0;
-			font-size: 0;
+			line-height: 0 !important;
+			font-size: 0 !important;
 			overflow: hidden;
+			height: auto !important;
 		}
 
 		.header-img {
 			width: 100% !important;
 			max-width: 100% !important;
-			height: auto !important;
-			max-height: none !important;
-			object-fit: fill;
+			height: 52px !important;
+			max-height: 52px !important;
+			object-fit: fill !important;
 			display: block !important;
 			padding: 0 !important;
 			margin: 0 !important;
@@ -140,41 +134,32 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 		.footer-img {
 			width: 100% !important;
 			max-width: 100% !important;
-			height: auto !important;
-			max-height: 90px;
-			object-fit: fill;
+			height: 42px !important;
+			max-height: 42px !important;
+			object-fit: fill !important;
 			display: block !important;
 			padding: 0 !important;
 			margin: 0 !important;
 		}
 
 		.product-img {
-			width: 45px;
-			height: auto;
-			margin: 0 auto;
+			width: 28px !important;
+			height: 28px !important;
 			object-fit: contain;
+			margin: 0 auto;
 		}
 
-		.summary-outer {
-			table-layout: fixed !important;
-			width: 100% !important;
-			border-collapse: collapse;
-		}
-
-		.summary-outer > tbody > tr > td {
-			border: 1px solid #595959;
-			vertical-align: top;
-		}
+		.summary-outer { table-layout: fixed !important; width: 100% !important; border-collapse: collapse; }
+		.summary-outer > tbody > tr > td { border: 1px solid #595959; vertical-align: top; }
 
 		.terms-cell {
 			width: 58%;
-			padding: 6px 8px !important;
+			padding: 3px 5px !important;
+			font-size: 9px !important;
+			line-height: 1.2 !important;
 		}
 
-		.totals-cell {
-			width: 42%;
-			padding: 0 !important;
-		}
+		.totals-cell { width: 42%; padding: 0 !important; }
 
 		.totals-inner {
 			width: 100% !important;
@@ -186,138 +171,51 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 
 		.totals-inner td {
 			border: 1px solid #595959;
-			padding: 5px 6px !important;
-			font-size: 12px;
+			padding: 2px 4px !important;
+			font-size: 10px !important;
 			height: auto !important;
 		}
 
-		.totals-inner tr:first-child td {
-			border-top: none;
+		.totals-inner tr:first-child td { border-top: none; }
+		.totals-inner tr td:first-child { border-left: none; }
+		.totals-inner tr td:last-child { border-right: none; }
+		.totals-inner tr:last-child td { border-bottom: none; }
+
+		.tot-label { width: 45%; text-align: left; font-weight: bold; }
+		.tot-pct { width: 18%; text-align: center; font-weight: bold; }
+		.tot-amt { width: 37%; text-align: right; font-weight: bold; }
+
+		.text-center { text-align: center !important; }
+		.text-right { text-align: right !important; }
+		.text-left { text-align: left !important; }
+
+		.no-border-left { border-left: hidden; }
+		.no-border-right { border-right: hidden; }
+		.no-border-bottom { border-bottom: hidden !important; }
+		.no-border-top { border-top: hidden !important; }
+		.border td { border-bottom: hidden !important; }
+		.color { background: #D3D3D3; }
+		.font-size td { font-size: 10px !important; }
+		.image-width { width: 6% !important; }
+		.bg-gray { background-color: #E5E5E5 !important; }
+		.font-13 { font-size: 9px !important; line-height: 1.2 !important; }
+
+		h5 { margin: 1px 0 !important; font-size: 11px !important; }
+		p { margin: 0 0 1px 0 !important; font-size: 9px !important; line-height: 1.2 !important; }
+
+		.title-bar td {
+			padding: 3px !important;
+			font-size: 11px !important;
 		}
 
-		.totals-inner tr td:first-child {
-			border-left: none;
-		}
-
-		.totals-inner tr td:last-child {
-			border-right: none;
-		}
-
-		.totals-inner tr:last-child td {
-			border-bottom: none;
-		}
-
-		.tot-label {
-			width: 45%;
-			text-align: left;
-			font-weight: bold;
-		}
-
-		.tot-pct {
-			width: 20%;
-			text-align: center;
-			font-weight: bold;
-		}
-
-		.tot-amt {
-			width: 35%;
-			text-align: right;
-			font-weight: bold;
-		}
-
-		.text-center {
-			text-align: center !important;
-		}
-
-		.text-right {
-			text-align: right !important;
-		}
-
-		.text-left {
-			text-align: left !important;
-		}
-
-		.no-border-left {
-			border-left: hidden;
-		}
-
-		.no-border-right {
-			border-right: hidden;
-		}
-
-		.no-border-bottom {
-			border-bottom: hidden !important;
-		}
-
-		.no-border-top {
-			border-top: hidden !important;
-		}
-
-		.border td {
-			border-bottom: hidden !important;
-		}
-
-		.color {
-			background: #D3D3D3;
-		}
-
-		.font-size td {
-			font-size: 13px !important;
-		}
-
-		.image-width {
-			width: 8% !important;
-		}
-
-		.border-r-width {
-			border-right-width: 5px;
-		}
-
-		.border-gray {
-			border-right-color: #E5E5E5;
-		}
-
-		.border-blue {
-			border-right-color: <?= VIEW_COLOR ?>;
-		}
-
-		.vertical-top {
-			vertical-align: top;
-		}
-
-		.height-5 {
-			height: 5px;
-		}
-
-		.bg-gray {
-			background-color: #E5E5E5 !important;
-		}
-
-		.font-13 {
-			font-size: 12px !important;
-		}
-
-		.headerBorder {
-			border: 22px solid #eb268f;
-			border-bottom: none;
-			border-right: none;
-			border-left: none;
-		}
-
-		h5 {
-			margin: 4px 0;
-		}
-
-		p {
-			margin: 2px 0;
-		}
+		.no-print-empty { display: none !important; }
 
 		@media print {
-			html,
-			body {
+			html, body {
 				margin: 0 !important;
 				padding: 0 !important;
 				width: 100% !important;
+				height: auto !important;
 			}
 
 			.quote-wrap {
@@ -326,43 +224,38 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 				margin: 0 !important;
 			}
 
-			table {
-				page-break-inside: auto;
+			table, tr, td, th {
+				page-break-inside: avoid !important;
 			}
 
-			tr {
-				page-break-inside: avoid;
-				page-break-after: auto;
-			}
+			.no-print-empty { display: none !important; }
 
-			thead {
-				display: table-header-group;
-			}
-
-			.no-print-empty {
-				display: none !important;
-			}
-
-			img.header-img {
+			.header-img {
+				height: 48px !important;
+				max-height: 48px !important;
 				width: 100% !important;
-				max-width: 100% !important;
-				height: auto !important;
-				max-height: none !important;
 				object-fit: fill !important;
 			}
 
-			img.footer-img {
+			.footer-img {
+				height: 38px !important;
+				max-height: 38px !important;
 				width: 100% !important;
-				max-height: 80px !important;
+				object-fit: fill !important;
+			}
+
+			.product-img {
+				width: 24px !important;
+				height: 24px !important;
 			}
 		}
 	</style>
 </head>
 
-<body>
+<body class="print-a4">
 	<div class="quote-wrap">
 	<table>
-		<tbody class="<?= $cl; ?>">
+		<tbody class="<?= isset($cl) ? $cl : ''; ?>">
 			<tr>
 				<td colspan="16" class="header-cell">
 					<?php
@@ -379,44 +272,26 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 					?>
 				</td>
 			</tr>
-			<tr style="background-color: <?= VIEW_COLOR ?>; color: #000;">
-				<td colspan="16" align="center" style="color: #000; padding: 6px;"><b>Rate Confirmation Quotation</b></td>
+			<tr class="title-bar" style="background-color: <?= VIEW_COLOR ?>; color: #000;">
+				<td colspan="16" align="center" style="color: #000;"><b>Rate Confirmation Quotation</b></td>
 			</tr>
 			<tr>
 				<td colspan="8" style="vertical-align: top;">
-					Buyer
+					<strong>Buyer</strong>
 					<h5 style="font-weight: 600;text-transform: uppercase;"><strong><?php echo $cart_detail_d['company_name']; ?></strong></h5>
-					<p style="margin:0"><?php echo wordwrap($cart_detail_d['address'], 40, "<br>\n") . "  <br/>" . $cart_detail_d['city'] . " , " . $cart_detail_d['state'] . " , " . $cart_detail_d['country'] ?></p>
-					<?php
-					if (!empty($customer_address_d['zip'])) {
-					?>
-						<p style="margin:0"><strong>Pincode :</strong> <?= $customer_address_d['zip']; ?></p>
-
-					<?php
-					}
-					?>
-					<?php
-					if (!empty($cart_detail_d['contact_number'])) {
-					?>
-						<p style="margin:0"><strong>Mobile No. : </strong><?= $cart_detail_d['contact_number'] ?></p>
-					<?php
-					}
-					?>
-
-					<?php
-					if (!empty($cart_detail_d['email'])) {
-					?>
-						<p style="margin:0"><strong>Email : </strong><?= $cart_detail_d['email'] ?></p>
-					<?php
-					}
-					?>
-					<?php
-					if (!empty($cart_detail_d['gst'])) {
-					?>
-						<p style="margin:0"><strong>GSTIN / UIN : </strong><?= $cart_detail_d['gst'] ?></p>
-					<?php
-					}
-					?>
+					<p><?php echo wordwrap($cart_detail_d['address'], 50, "<br>\n") . "  <br/>" . $cart_detail_d['city'] . " , " . $cart_detail_d['state'] . " , " . $cart_detail_d['country'] ?></p>
+					<?php if (!empty($customer_address_d['zip'])) { ?>
+						<p><strong>Pincode :</strong> <?= $customer_address_d['zip']; ?></p>
+					<?php } ?>
+					<?php if (!empty($cart_detail_d['contact_number'])) { ?>
+						<p><strong>Mobile No. : </strong><?= $cart_detail_d['contact_number'] ?></p>
+					<?php } ?>
+					<?php if (!empty($cart_detail_d['email'])) { ?>
+						<p><strong>Email : </strong><?= $cart_detail_d['email'] ?></p>
+					<?php } ?>
+					<?php if (!empty($cart_detail_d['gst'])) { ?>
+						<p><strong>GSTIN / UIN : </strong><?= $cart_detail_d['gst'] ?></p>
+					<?php } ?>
 				</td>
 				<td colspan="8" style="text-align: left;vertical-align: top;">
 					<p><b>Quotation No. : </b><?= $cart_detail_d['quotation_no'] ?></p>
@@ -425,8 +300,6 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 						<?php
 						if ($cart_detail_d['quotation_date'] != "0000-00-00") {
 							echo date('d-M-Y', strtotime($cart_detail_d['quotation_date']));
-						} else {
-							echo "";
 						}
 						?>
 					</p>
@@ -436,11 +309,11 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 		</tbody>
 	</table>
 	<table>
-		<tbody class="<?= $cl; ?>">
+		<tbody class="<?= isset($cl) ? $cl : ''; ?>">
 			<tr class="text-center" style="background-color: <?= VIEW_COLOR ?>; color: #000;">
 				<th colspan="1" class="text-center" style="width:4%; color: #000;">SR</th>
-				<th colspan="1" class="image-width text-center" style="width:8%; color: #000;">Image</th>
-				<th colspan="4" class="text-center" style="width:28%; color: #000;">Description of Goods</th>
+				<th colspan="1" class="image-width text-center" style="width:6%; color: #000;">Image</th>
+				<th colspan="4" class="text-center" style="width:30%; color: #000;">Description of Goods</th>
 				<th colspan="1" class="text-center" style="width:8%; color: #000;">Brand<br />Name </th>
 				<th colspan="1" class="text-center" style="width:8%; color: #000;">Weight<br />(in kg)</th>
 				<th colspan="1" class="text-center" style="width:6%; color: #000;">Qty</th>
@@ -547,50 +420,9 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 					<?php
 				}
 
-				if ($count < 5) {
-					for ($i = 0; $i < 5 - $count; $i++) {
-					?>
-						<tr class="border no-print-empty">
-							<td colspan="1"></td>
-							<td colspan="1"></td>
-							<td colspan="4"></td>
-							<td colspan="1"></td>
-							<td colspan="1"></td>
-							<td colspan="1"></td>
-							<td colspan="1"></td>
-							<td colspan="1"></td>
-							<td colspan="1"></td>
-							<td colspan="1"></td>
-						</tr>
-			<?php
-					}
-				}
+				/* Empty filler rows removed — keeps print on one A4 page */
 			}
 			?>
-			<tr class="no-print-empty">
-				<td colspan="1"></td>
-				<td colspan="1"></td>
-				<td colspan="4"></td>
-				<td colspan="1"></td>
-				<td colspan="1"></td>
-				<td colspan="1"></td>
-				<td colspan="1"></td>
-				<td colspan="1"></td>
-				<td colspan="1"></td>
-				<td colspan="1"></td>
-			</tr>
-
-
-			<!-- <tr>
-					<td colspan="1"></td>
-					<td colspan="5" class="text-center"><b></b></td>
-					<td colspan="2" class="text-center"><b><?php echo $totalproqty; ?></b></td>
-					<td colspan="3" class="text-center"></td>
-					<td colspan="3" class="rate text-center"></td>
-					<td colspan="3"></td>
-					<td colspan="3"></td>
-					<td colspan=""></td>
-				</tr> -->
 		</tbody>
 	</table>
 	<?php
@@ -619,10 +451,9 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 		<tbody>
 			<tr>
 				<td class="terms-cell">
-					<span class="font-13"><b>Terms & Condition : </b></span><br>
-					<span class="font-13"><?= $cart_detail_d['terms_comdition'] ?></span><br>
-					<span class="font-13" style="color: red;"><b>This quotation is valid for 7 days.</b></span><br>
-					<br>
+					<span class="font-13"><b>Terms & Condition : </b></span>
+					<span class="font-13"><?= $cart_detail_d['terms_comdition'] ?></span>
+					<span class="font-13" style="color: red;"><b> This quotation is valid for 7 days.</b></span><br>
 					<span class="font-13"><b>Grand Total In Words</b> :
 						<?php
 						$grand_total_words = $ntw->rp_convertNumToWord($display_grand_total);
@@ -635,21 +466,20 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 							echo html_entity_decode($company_detail_d['bank_details']);
 						} else {
 						?>
-							Bank Name : <?= COMPANY_BANK ?>, Bank Branch : <?= COMPANY_BANK_BRANCH ?><br>
-							Bank Account No : <?= COMPANY_BANK_ACC_NO ?>, Bank IFSC Code : <?= COMPANY_BANK_IFSC ?>
+							Bank Name : <?= COMPANY_BANK ?>, Bank Branch : <?= COMPANY_BANK_BRANCH ?>,
+							A/c : <?= COMPANY_BANK_ACC_NO ?>, IFSC : <?= COMPANY_BANK_IFSC ?>
 						<?php
 						}
 						?>
 					</span><br>
-					<span class="font-13"><b>Remarks</b></span><br>
-					<span class="font-13"><?php echo $cart_detail_d['remarks'] ?></span><br>
-					<span style="color: red;">Contact Sales Person : <?= strip_tags($cart_detail_d['faithfully']) ?> &nbsp; </span>
+					<span class="font-13"><b>Remarks :</b> <?php echo $cart_detail_d['remarks'] ?></span><br>
+					<span class="font-13" style="color: red;">Contact Sales Person : <?= strip_tags($cart_detail_d['faithfully']) ?></span>
 					<?php
 					$modified_name = explode(",", $cart_detail_d['modified_by']);
 					$last_modified_id = array_slice($modified_name, -1)[0];
 					$modified_by_name = $db->rp_getValue("dealer_distributor_network", "name", "id='" . $last_modified_id . "'");
 					?>
-					<br /><span style="color: red;">Edited By : <?= $modified_by_name ?> &nbsp; </span>
+					<span class="font-13" style="color: red;"> | Edited By : <?= $modified_by_name ?></span>
 				</td>
 				<td class="totals-cell">
 					<table class="totals-inner">
@@ -897,6 +727,29 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 		</tbody>
 	</table>
 	</div>
+	<script>
+	(function() {
+		function fitToA4() {
+			var wrap = document.querySelector('.quote-wrap');
+			if (!wrap) return;
+			/* A4 printable height ~ 287mm at 96dpi ≈ 1084px with 5mm margins */
+			var maxH = 1050;
+			var h = wrap.scrollHeight;
+			if (h > maxH) {
+				var scale = maxH / h;
+				if (scale < 0.72) scale = 0.72;
+				wrap.style.transformOrigin = 'top left';
+				wrap.style.transform = 'scale(' + scale.toFixed(3) + ')';
+				wrap.style.width = (100 / scale).toFixed(2) + '%';
+			}
+		}
+		if (document.readyState === 'complete') {
+			setTimeout(fitToA4, 200);
+		} else {
+			window.addEventListener('load', function() { setTimeout(fitToA4, 200); });
+		}
+	})();
+	</script>
 </body>
 
 </html>
