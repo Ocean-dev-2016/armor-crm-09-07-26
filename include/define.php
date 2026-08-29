@@ -123,7 +123,7 @@ define("CLIENT_TWITTER_ID","http://www.twitter.com/test/");
 define("CLIENT_GOOGLE_ID","http://www.google.com/test/");
 define("CLIENT_LINKED_IN_ID","http://www.linkedin.com/test/");
 
-define("CLIENT_NAME","MAHADEV CASTING");
+define("CLIENT_NAME","Armor Steel Industries Pvt. Ltd");
 define("CLIENT_ADDRESS","Plot. No. 43/44/45, JK Diamond IND. Area, B/h Madhuvan Restaurant, Village Lothda,
 Rajkot-Kotdasangani Highway - 360022. (Gujarat)");
 define("FACTORY_ADDRESS","Plot. No. 43/44/45, JK Diamond IND. Area, B/h Madhuvan Restaurant, Village Lothda,
@@ -139,7 +139,7 @@ define("CLIENT_PINCODE","360022");
 define("CLIENT_EMAIL","mahadevcasting@gmail.com");
 define("CLIENT_HELP_DESK","+91-281-xxxxxx ");
 define("CLIENT_WEBSITE","");
-define("CLIENT_BRAND_NAME","MAHADEV CASTING");
+define("CLIENT_BRAND_NAME","Armor Steel Industries Pvt. Ltd");
 define("CLIENT_GST","24ABCFM8445Q2ZN");
 define("CLIENT_PANNO","XXXXXXXXXXXX");
 
@@ -232,7 +232,7 @@ define("NEWS_T","../images/news/tempImg/");
 define("PROMOTIONAL_SMS_COUNT","0");
 define("TRANSACTIONAL_SMS_COUNT","20000");
 
-define("COMPANY_NAME","MAHADEV CASTING");
+define("COMPANY_NAME","Armor Steel Industries Pvt. Ltd");
 define("COMPANY_ADDRESS","Plot. No. 43/44/45, JK Diamond IND. Area, B/h Madhuvan Restaurant, Village Lothda,
 Rajkot-Kotdasangani Highway - 360022. (Gujarat)");
 define("COMPANY_GST","24ABCFM8445Q2ZN");
@@ -240,7 +240,7 @@ define("COMPANY_PAN","");
 define("COMPANY_PHONE","");
 define("COMPANY_EMAIL","mahadevcasting@gmail.com");
 
-define("COMPANY_BANIFICIARY_NAME","MAHADEV CASTING");
+define("COMPANY_BANIFICIARY_NAME","Armor Steel Industries Pvt. Ltd");
 define("COMPANY_BANK","HDFC BANK");
 define("COMPANY_BANK_ACC_NO","50200076687350");
 define("COMPANY_BANK_IFSC","HDFC0000379");
