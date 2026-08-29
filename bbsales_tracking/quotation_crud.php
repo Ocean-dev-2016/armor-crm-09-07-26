@@ -1192,6 +1192,9 @@ if (isset($_REQUEST['id']) && $_REQUEST['id'] > 0 && $_REQUEST['mode'] == "isAct
                                                             <div class="portlet light bordered">
                                                                <div class="portlet-title">
                                                                   <div class="caption"><i class="fa fa-th"></i> Suggested Product Range <small>(Photo + Rate — click to add; already added items hidden)</small></div>
+                                                                  <div class="actions">
+                                                                     <a href="quotation_pi_suggest_product_manage.php" class="btn btn-xs blue" target="_blank" title="Admin: select which products show in Quotation / PI"><i class="fa fa-cog"></i> Manage List</a>
+                                                                  </div>
                                                                </div>
                                                                <div class="portlet-body" id="qp_suggest_products_wrap">
                                                                   <div class="text-muted">Loading suggested products...</div>

@@ -10,9 +10,23 @@
 
 
 
-if (!function_exists('armor_quotation_pi_suggest_catnos')) {
+if (!function_exists('armor_quotation_pi_suggest_table')) {
 
-	function armor_quotation_pi_suggest_catnos()
+	function armor_quotation_pi_suggest_table()
+
+	{
+
+		return 'quotation_pi_suggest_product';
+
+	}
+
+}
+
+
+
+if (!function_exists('armor_quotation_pi_suggest_default_catnos')) {
+
+	function armor_quotation_pi_suggest_default_catnos()
 
 	{
 
@@ -29,6 +43,424 @@ if (!function_exists('armor_quotation_pi_suggest_catnos')) {
 			'2719', '2711', '2576', '2034', '2754', '2906', '3077',
 
 		);
+
+	}
+
+}
+
+
+
+if (!function_exists('armor_quotation_pi_suggest_ensure_table')) {
+
+	function armor_quotation_pi_suggest_ensure_table($db)
+
+	{
+
+		$table = armor_quotation_pi_suggest_table();
+
+		if ($db->tableExists($table)) {
+
+			return true;
+
+		}
+
+		$sql = "CREATE TABLE IF NOT EXISTS `" . $table . "` (
+
+			`id` int(11) NOT NULL AUTO_INCREMENT,
+
+			`catno` varchar(50) NOT NULL DEFAULT '',
+
+			`display_order` int(11) NOT NULL DEFAULT 0,
+
+			`isActive` tinyint(1) NOT NULL DEFAULT 1,
+
+			`isDelete` tinyint(1) NOT NULL DEFAULT 0,
+
+			`created_date` datetime DEFAULT NULL,
+
+			`modified_date` datetime DEFAULT NULL,
+
+			PRIMARY KEY (`id`),
+
+			KEY `idx_catno` (`catno`),
+
+			KEY `idx_active` (`isActive`,`isDelete`)
+
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8";
+
+		$ok = @mysqli_query($db->myconn, $sql);
+
+		if (!$ok) {
+
+			return false;
+
+		}
+
+		armor_quotation_pi_suggest_seed_defaults($db);
+
+		return true;
+
+	}
+
+}
+
+
+
+if (!function_exists('armor_quotation_pi_suggest_seed_defaults')) {
+
+	function armor_quotation_pi_suggest_seed_defaults($db)
+
+	{
+
+		$table = armor_quotation_pi_suggest_table();
+
+		if (!$db->tableExists($table)) {
+
+			return;
+
+		}
+
+		$count = (int) $db->rp_getTotalRecord($table, 'isDelete=0');
+
+		if ($count > 0) {
+
+			return;
+
+		}
+
+		$now = date('Y-m-d H:i:s');
+
+		$order = 0;
+
+		foreach (armor_quotation_pi_suggest_default_catnos() as $catno) {
+
+			$order++;
+
+			$db->rp_insert($table, array(
+
+				'catno' => $catno,
+
+				'display_order' => $order,
+
+				'isActive' => 1,
+
+				'isDelete' => 0,
+
+				'created_date' => $now,
+
+				'modified_date' => $now,
+
+			), 0);
+
+		}
+
+	}
+
+}
+
+
+
+if (!function_exists('armor_quotation_pi_suggest_catnos')) {
+
+	function armor_quotation_pi_suggest_catnos($db = null)
+
+	{
+
+		if ($db !== null) {
+
+			armor_quotation_pi_suggest_ensure_table($db);
+
+			$table = armor_quotation_pi_suggest_table();
+
+			if ($db->tableExists($table)) {
+
+				$res = $db->rp_getData($table, 'catno', 'isDelete=0 AND isActive=1', 'display_order ASC, id ASC', 0);
+
+				if ($res && mysqli_num_rows($res) > 0) {
+
+					$catnos = array();
+
+					while ($row = mysqli_fetch_assoc($res)) {
+
+						$catno = trim((string) $row['catno']);
+
+						if ($catno !== '') {
+
+							$catnos[] = $catno;
+
+						}
+
+					}
+
+					if (!empty($catnos)) {
+
+						return $catnos;
+
+					}
+
+				}
+
+			}
+
+		}
+
+		return armor_quotation_pi_suggest_default_catnos();
+
+	}
+
+}
+
+
+
+if (!function_exists('armor_quotation_pi_lookup_product_by_catno')) {
+
+	function armor_quotation_pi_lookup_product_by_catno($db, $catno)
+
+	{
+
+		$catno = trim((string) $catno);
+
+		if ($catno === '') {
+
+			return null;
+
+		}
+
+		$catnoEsc = $db->clean($catno);
+
+		$pwpRes = $db->rp_getData(
+
+			'product_weight_price',
+
+			'*',
+
+			"isDelete=0 AND catno='" . $catnoEsc . "'",
+
+			'id ASC',
+
+			0
+
+		);
+
+		if (!$pwpRes) {
+
+			return null;
+
+		}
+
+		$pwp = mysqli_fetch_assoc($pwpRes);
+
+		if (!$pwp) {
+
+			return null;
+
+		}
+
+		$proId = (int) $pwp['product_id'];
+
+		$name = $db->rp_getValue('product', 'name1', "id='" . $proId . "' AND isDelete=0", 0);
+
+		$imagePath = $db->rp_getValue('product', 'image_path', "id='" . $proId . "' AND isDelete=0", 0);
+
+		return array(
+
+			'catno' => $catno,
+
+			'product_id' => $proId,
+
+			'name' => $name ? html_entity_decode(strip_tags($name), ENT_QUOTES, 'UTF-8') : $catno,
+
+			'image' => armor_quotation_pi_product_image_url($imagePath ? $imagePath : ''),
+
+		);
+
+	}
+
+}
+
+
+
+if (!function_exists('armor_quotation_pi_get_admin_suggest_rows')) {
+
+	function armor_quotation_pi_get_admin_suggest_rows($db)
+
+	{
+
+		armor_quotation_pi_suggest_ensure_table($db);
+
+		$table = armor_quotation_pi_suggest_table();
+
+		$selectedMap = array();
+
+		$selectedOrder = array();
+
+		$res = $db->rp_getData($table, '*', 'isDelete=0', 'display_order ASC, id ASC', 0);
+
+		if ($res) {
+
+			while ($row = mysqli_fetch_assoc($res)) {
+
+				$catno = trim((string) $row['catno']);
+
+				if ($catno === '') {
+
+					continue;
+
+				}
+
+				$selectedMap[$catno] = array(
+
+					'isActive' => (int) $row['isActive'],
+
+					'display_order' => (int) $row['display_order'],
+
+				);
+
+				$selectedOrder[] = $catno;
+
+			}
+
+		}
+
+		$pool = array();
+
+		foreach (armor_quotation_pi_suggest_default_catnos() as $catno) {
+
+			$pool[$catno] = 1;
+
+		}
+
+		foreach ($selectedOrder as $catno) {
+
+			$pool[$catno] = 1;
+
+		}
+
+		$rows = array();
+
+		$orderIndex = 0;
+
+		foreach ($pool as $catno => $_) {
+
+			$orderIndex++;
+
+			$info = armor_quotation_pi_lookup_product_by_catno($db, $catno);
+
+			$isSelected = isset($selectedMap[$catno]) && (int) $selectedMap[$catno]['isActive'] === 1;
+
+			$displayOrder = isset($selectedMap[$catno]) ? (int) $selectedMap[$catno]['display_order'] : 9999 + $orderIndex;
+
+			$rows[] = array(
+
+				'catno' => $catno,
+
+				'name' => $info ? $info['name'] : '',
+
+				'image' => $info ? $info['image'] : armor_quotation_pi_product_image_url(''),
+
+				'product_id' => $info ? (int) $info['product_id'] : 0,
+
+				'is_selected' => $isSelected ? 1 : 0,
+
+				'display_order' => $displayOrder,
+
+				'found' => $info ? 1 : 0,
+
+			);
+
+		}
+
+		usort($rows, function ($a, $b) {
+
+			if ((int) $a['display_order'] === (int) $b['display_order']) {
+
+				return strcmp($a['catno'], $b['catno']);
+
+			}
+
+			return ((int) $a['display_order'] < (int) $b['display_order']) ? -1 : 1;
+
+		});
+
+		return $rows;
+
+	}
+
+}
+
+
+
+if (!function_exists('armor_quotation_pi_save_suggest_products')) {
+
+	function armor_quotation_pi_save_suggest_products($db, $selectedCatnos)
+
+	{
+
+		armor_quotation_pi_suggest_ensure_table($db);
+
+		$table = armor_quotation_pi_suggest_table();
+
+		if (!is_array($selectedCatnos)) {
+
+			return array('ack' => 0, 'ack_msg' => 'Invalid product list.');
+
+		}
+
+		$now = date('Y-m-d H:i:s');
+
+		$db->rp_update($table, array('isDelete' => 1, 'isActive' => 0, 'modified_date' => $now), '1=1', 0);
+
+		$order = 0;
+
+		$saved = 0;
+
+		foreach ($selectedCatnos as $catno) {
+
+			$catno = trim((string) $catno);
+
+			if ($catno === '') {
+
+				continue;
+
+			}
+
+			$order++;
+
+			$catnoEsc = $db->clean($catno);
+
+			$existingId = (int) $db->rp_getValue($table, 'id', "catno='" . $catnoEsc . "'", 0);
+
+			$row = array(
+
+				'catno' => $catno,
+
+				'display_order' => $order,
+
+				'isActive' => 1,
+
+				'isDelete' => 0,
+
+				'modified_date' => $now,
+
+			);
+
+			if ($existingId > 0) {
+
+				$db->rp_update($table, $row, "id='" . $existingId . "'", 0);
+
+			} else {
+
+				$row['created_date'] = $now;
+
+				$db->rp_insert($table, $row, 0);
+
+			}
+
+			$saved++;
+
+		}
+
+		return array('ack' => 1, 'ack_msg' => 'Suggested products saved (' . $saved . ' selected).', 'count' => $saved);
 
 	}
 
@@ -521,7 +953,7 @@ if (!function_exists('armor_quotation_pi_get_suggest_products')) {
 
 		$order_unit_arr = array('-1' => 'Box', '-2' => 'Strip', '-3' => 'Pallet', '1' => 'Caret', '2' => 'Big Box', '100' => 'Nos');
 
-		$catnos = armor_quotation_pi_suggest_catnos();
+		$catnos = armor_quotation_pi_suggest_catnos($db);
 
 		$items = array();
 

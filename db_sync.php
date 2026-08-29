@@ -1354,6 +1354,73 @@ if ($adminTypesResAssignKra) {
 	}
 }
 
+// page_table id=673 — Quotation / PI Suggested Products
+$qpSuggestPageCheck = mysqli_query($conn, "SELECT id FROM page_table WHERE id=673 LIMIT 1");
+if ($qpSuggestPageCheck && mysqli_num_rows($qpSuggestPageCheck) > 0) {
+	db_sync_append_page_urls($conn, 673, array(
+		'quotation_pi_suggest_product_manage.php',
+		'quotation_pi_suggest_product_list_ajax.php',
+		'quotation_pi_suggest_product_save_ajax.php',
+	));
+	db_sync_run_query($conn, "UPDATE page_table SET page_title='Quotation/PI Suggested Products', page_slug='quotation_pi_suggest_product', isDelete=0, isActive=1 WHERE id=673", 'Update page_table id=673 Quotation/PI Suggested Products');
+} else {
+	$now = date('Y-m-d H:i:s');
+	$urls = 'quotation_pi_suggest_product_manage.php,quotation_pi_suggest_product_list_ajax.php,quotation_pi_suggest_product_save_ajax.php';
+	db_sync_run_query($conn, "INSERT INTO page_table (id, page_title, page_slug, page_count, page_urls, isActive, isDelete, adate, created_date)
+		VALUES (673, 'Quotation/PI Suggested Products', 'quotation_pi_suggest_product', 0, '{$urls}', 1, 0, '{$now}', '{$now}')", 'Insert page_table id=673 Quotation/PI Suggested Products');
+}
+
+$adminTypesResQpSuggest = mysqli_query($conn, "SELECT id FROM admin_type WHERE isDelete=0");
+if ($adminTypesResQpSuggest) {
+	while ($at = mysqli_fetch_assoc($adminTypesResQpSuggest)) {
+		$aid = (int) $at['id'];
+		if ($aid === 0) {
+			continue;
+		}
+		$chk = mysqli_query($conn, "SELECT id FROM page_admin_right WHERE admin_id='{$aid}' AND page_id=673 AND isDelete=0 LIMIT 1");
+		if ($chk && mysqli_num_rows($chk) > 0) {
+			$rid = (int) mysqli_fetch_assoc($chk)['id'];
+			db_sync_run_query($conn, "UPDATE page_admin_right SET view_flag=1, insert_flag=1, update_flag=1, delete_flag=0, all_data_flag=1 WHERE id='{$rid}'", "Quotation/PI Suggest rights update admin_type {$aid}");
+		} else {
+			$now = date('Y-m-d H:i:s');
+			db_sync_run_query($conn, "INSERT INTO page_admin_right (page_id, admin_id, view_flag, insert_flag, update_flag, delete_flag, all_data_flag, personal_flag, chain_vise_flag, isDelete, created_by, created_by_type, created_date)
+				VALUES (673, {$aid}, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, '{$now}')", "Quotation/PI Suggest rights insert admin_type {$aid}");
+		}
+	}
+}
+
+db_sync_run_query($conn, "CREATE TABLE IF NOT EXISTS `quotation_pi_suggest_product` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`catno` varchar(50) NOT NULL DEFAULT '',
+	`display_order` int(11) NOT NULL DEFAULT 0,
+	`isActive` tinyint(1) NOT NULL DEFAULT 1,
+	`isDelete` tinyint(1) NOT NULL DEFAULT 0,
+	`created_date` datetime DEFAULT NULL,
+	`modified_date` datetime DEFAULT NULL,
+	PRIMARY KEY (`id`),
+	KEY `idx_catno` (`catno`),
+	KEY `idx_active` (`isActive`,`isDelete`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8", 'Create table quotation_pi_suggest_product');
+
+if (db_sync_table_exists($conn, 'quotation_pi_suggest_product')) {
+	$seedCount = 0;
+	$seedRes = mysqli_query($conn, "SELECT COUNT(*) AS c FROM quotation_pi_suggest_product WHERE isDelete=0");
+	if ($seedRes && ($seedRow = mysqli_fetch_assoc($seedRes))) {
+		$seedCount = (int) $seedRow['c'];
+	}
+	if ($seedCount === 0) {
+		$defaultCatnos = array('2327','2344','3073','2706','2494','2860','2863','2915','2037','2184','2803','2384','2359','2352','2794','2659','2158','2149','2424','2612','2446','2678','2010','2024','2071','2700','2668','2487','2646','3004','2980','2692','2691','2730','2746','2595','2787','2710','2967','2650','2719','2711','2576','2034','2754','2906','3077');
+		$now = date('Y-m-d H:i:s');
+		$ord = 0;
+		foreach ($defaultCatnos as $catno) {
+			$ord++;
+			$catEsc = mysqli_real_escape_string($conn, $catno);
+			db_sync_run_query($conn, "INSERT INTO quotation_pi_suggest_product (catno, display_order, isActive, isDelete, created_date, modified_date)
+				VALUES ('{$catEsc}', {$ord}, 1, 0, '{$now}', '{$now}')", 'Seed quotation_pi_suggest_product ' . $catno);
+		}
+	}
+}
+
 if (db_sync_table_exists($conn, 'employee_chat_thread') && db_sync_table_exists($conn, 'employee_chat_message')) {
 	db_sync_log('CHECK', 'READY: employee_chat_thread + employee_chat_message');
 } else {

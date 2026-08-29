@@ -78,6 +78,8 @@ $left_sub_pages_array38 = array("1"=>array("Purpose Master","Purpose Master","pu
 
 $left_sub_pages_array39 = array("1"=>array("Terms & Condition","terms_condition","terms_condition_manage.php",664),);
 
+$left_sub_pages_array40 = array("1"=>array("Quotation/PI Suggested Products","quotation_pi_suggest_product","quotation_pi_suggest_product_manage.php",673),);
+
 /*$left_pages_array13 = array("1"=>array("Manage Orders","manage_orders","orders_manage.php",560),);
 
 /*$left_pages_array14 = array("1"=>array("Manage Product Stock","manage_products","product_final_manage.php",566),);						
@@ -609,6 +611,7 @@ $left_head_array_sub = array(
 	24=>array("Visit Purpose Master","Visit Purpose Master",$left_sub_pages_array38,657),
 	5=>array("Tax","Manage Tax",$left_pages_array5,640),
 	26=>array("Terms & Condition","Terms & Condition",$left_sub_pages_array39,664),
+	27=>array("Quotation/PI Suggested Products","Quotation/PI Suggested Products",$left_sub_pages_array40,673),
 	/*6=>array("Sales Officer","Manage Sales Officer",$left_pages_array6,503),
 	  9=>array("News","Manage News",$left_pages_array9,579),
 	  10=>array("Price List Master","Manage Price List",$left_pages_array10,580),*/
@@ -938,6 +941,7 @@ $left_main_array_sub=array(
 				// 16=>$left_head_array_sub[23],
 				14=>$left_head_array_sub[24],
 				16=>$left_head_array_sub[26],
+				17=>$left_head_array_sub[27],
 				
 );
 
