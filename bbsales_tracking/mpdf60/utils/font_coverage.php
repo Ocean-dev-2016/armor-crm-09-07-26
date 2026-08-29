@@ -51,7 +51,7 @@ foreach($unifile AS $line) {
 	  $rangename = '';
 	  continue;
 	}
-	else if (preg_match('/^([12]{0,1}[0-9A-Za-z]{4});<(.*?), Last>/',$line,$m)) { 
+	else if (preg_match('/^([12]{0,1}[0-9A-Za-z][4]);<(.*?), Last>/',$line,$m)) { 
 	  if ($rangename && $rangename == $m[2]) {
 		$endrange = hexdec($m[1]);
 		for ($i=$startrange;$i<=$endrange; $i++) {
@@ -60,11 +60,11 @@ foreach($unifile AS $line) {
 	  }
 	  $rangename = '';
 	}
-	else if (preg_match('/^([12]{0,1}[0-9A-Za-z]{4});<(.*?), First>/',$line,$m)) { 
+	else if (preg_match('/^([12]{0,1}[0-9A-Za-z][4]);<(.*?), First>/',$line,$m)) { 
 	  $startrange = hexdec($m[1]);
 	  $rangename = $m[2];
 	}
-	else if (preg_match('/^([12]{0,1}[0-9A-Za-z]{4});/',$line,$m)) { 
+	else if (preg_match('/^([12]{0,1}[0-9A-Za-z][4]);/',$line,$m)) { 
 	  $unichars[hexdec($m[1])] = hexdec($m[1]);
 	  $rangename = '';
 	}

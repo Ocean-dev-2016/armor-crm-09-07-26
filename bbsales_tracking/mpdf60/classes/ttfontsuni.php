@@ -2007,8 +2007,8 @@ if (!isset($Lookup[$i]['Subtable'][$c]['Sequences'][$g]['SubstituteGlyphID']) ||
 								if (isset($v['context']) && $v['context']) {
 									foreach($v['rules'] AS $vs) {
 										for($i=0;$i<count($vs['match']);$i++) {
-											if (isset($vs['replace'][$i]) && preg_match('/^0[A-F0-9]{4}$/', $vs['match'][$i])) { 
-												if (preg_match('/^0[EF][A-F0-9]{3}$/', $vs['replace'][$i])) { 
+											if (isset($vs['replace'][$i]) && preg_match('/^0[A-F0-9][4]$/', $vs['match'][$i])) { 
+												if (preg_match('/^0[EF][A-F0-9][3]$/', $vs['replace'][$i])) { 
 													$rtlpua[] = $vs['replace'][$i];
 												}
 											}
@@ -2016,11 +2016,11 @@ if (!isset($Lookup[$i]['Subtable'][$c]['Sequences'][$g]['SubstituteGlyphID']) ||
 									}
 								}
 								else {
-									preg_match_all('/\((0[A-F0-9]{4})\)/', $v['match'], $m);
+									preg_match_all('/\((0[A-F0-9][4])\)/', $v['match'], $m);
 									for($i=0;$i<count($m[0]);$i++) { 
 										$sb = explode(' ',$v['replace']);
 										foreach($sb AS $sbg) { 
-											if (preg_match('/(0[EF][A-F0-9]{3})/', $sbg, $mr)) { 
+											if (preg_match('/(0[EF][A-F0-9][3])/', $sbg, $mr)) { 
 												$rtlpua[] = $mr[1]; 
 											}
 										}

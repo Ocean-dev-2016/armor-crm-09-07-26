@@ -4,178 +4,16 @@
  */
  $page_id=559;$page_slug='page_product';
 include("connect.php");
+require_once("../include/product_list_where.php");
 // print_r($_REQUEST);exit;
 $ctable = "product";
 $ctable1 = "Product";
 
-$ctable_where = "";
-// Get the total number of rows in the table
+$top_category_id = (isset($_REQUEST['top_category_id']) && $_REQUEST['top_category_id'] != "undefined") ? $_REQUEST['top_category_id'] : "";
+$product_type = (isset($_REQUEST['product_type']) && $_REQUEST['product_type'] != "undefined") ? $_REQUEST['product_type'] : "";
+$category_id = (isset($_REQUEST['category_id']) && $_REQUEST['category_id'] != "undefined") ? $_REQUEST['category_id'] : "";
 
-if(isset($_REQUEST['searchName']) && $_REQUEST['searchName']!="")
-{
-	$where11="";
-	$pro_r1=$db->rp_getData("product_weight_price","product_id","catno LIKE '%".$_REQUEST['searchName']."%' AND isDelete=0","",0);
-	$PROIDS1=array();
-	if($pro_r1)
-	{
-		while($pro_d1=mysqli_fetch_assoc($pro_r1))
-		{
-			$PROIDS1[]=$pro_d1['product_id'];
-		}
-	}
-	if(!empty($PROIDS1))
-	{
-		$PROIDS1=implode(",", $PROIDS1);
-		$where11=" OR id IN (".$PROIDS1.")";
-	}
-	$ctable_where .= " (LOWER(name) like '%".strtolower(trim($_REQUEST['searchName']))."%' ".$where11.") AND ";
-}
-
-$ctable_where .= " 1=1 AND isDelete='0' AND id!='0'";
-
-if($_SESSION[SITE_SESS.'_ADMIN_TYPE']!=0)
-{
-
-	 if($rights['personal_flag']==1)
-	 {
-
-	 	$ctable_where .= " AND created_by='".$_SESSION[SITE_SESS.'_ADMIN_SESS_ID']."'";
-
-	 }
-	 else
-	 {
-
-
-	 	if($rights['chain_vise_flag'] == 1)
-	 	{
-				
-
-				$check_id = $_SESSION[SITE_SESS.'REFERANCE_ID'];
-
-			    $get_sales_type=$db->rp_getValue("sales_executive","type","isDelete=0 AND id='". $check_id."'",0);
-			    if ($get_sales_type== "sales_manager") 
-			    {
-			        $sales_executive_type = "Regional Sales Manager";
-			        $key="sm_id";
-			        $WhereCondition.=' ' .$key.'='.$check_id;
-			    }
-
-			    else if ($get_sales_type == "area_sales_manager") 
-			    {
-			        $sales_executive_type = "National Sales Manager";//Business Development Manager
-			        $key="asm_id";
-			        $WhereCondition.=' ' .$key.'='.$check_id;
-			    }
-
-			    else if ($get_sales_type == "sales_officer") 
-			    {
-			        $sales_executive_type = "Area Sales Manager";//Area Sales Manager
-			        $key="so_id";
-			        $WhereCondition.=' ' .$key.'='.$check_id;
-			    }
-			    else if ($get_sales_type == "sales_executive") 
-			    {
-			        $sales_executive_type = "Sales Officer";
-			        $key="se_id";
-			        $WhereCondition.=' ' .$key.'='.$check_id;
-			    }
-			    else
-			    {
-			    	$WhereCondition.=' type = "service_engineer"';
-			    }
-
-			    $data = $db->rp_getData("sales_executive","id",$WhereCondition,"",0);
-
-			    $SALEID1=array();
-				if($data)
-				{
-					while($data_d=mysqli_fetch_assoc($data))
-					{
-						$SALEID1[]=$data_d['id'];
-					}
-				}
-				if(!empty($SALEID1))
-				{
-					$SALEID1=implode(",", $SALEID1);
-					
-						$ctable_where .= " AND created_by IN (".$SALEID1.','.$_SESSION[SITE_SESS.'_ADMIN_SESS_ID'].")";	
-					
-					
-				}
-				else
-				{
-						$ctable_where .= " AND  created_by IN (".$_SESSION[SITE_SESS.'_ADMIN_SESS_ID'].")";		
-				}
-		}
-		else
-		{
-			$ctable_where .= " ";
-		}
-	}
-  
-}
-else
-{
-
-	$ctable_where .= " ";
-
-}
-// if($_REQUEST['top_category_id']==0){
-
-// }
-if(isset($_REQUEST['top_category_id']) && $_REQUEST['top_category_id']!="" && $_REQUEST['top_category_id']!=NULL && $_REQUEST['top_category_id']!=undefined)
-{
-	
-
-	if ($_REQUEST['top_category_id'] != '-1') 
-	{
-	 	$ctable_where .= " AND tcid = '".$_REQUEST['top_category_id']."' ";
-	 	$top_category_id = $_REQUEST['top_category_id'];
-	}
-	else
-	{
-		$top_category_id = $_REQUEST['top_category_id'];
-	}
-
-}
-if(isset($_REQUEST['product_type']) && $_REQUEST['product_type']!="" && $_REQUEST['product_type']!=NULL && $_REQUEST['product_type']!=undefined)
-{
- 	$ctable_where .= " AND product_type = '".$_REQUEST['product_type']."' ";
- 	$product_type = $_REQUEST['product_type'];
-}
-
-if(isset($_REQUEST['unit_id']) && $_REQUEST['unit_id']!="" && $_REQUEST['unit_id']!=NULL && $_REQUEST['unit_id']!=undefined)
-{
-	$product_weight_data_r = $db->rp_getData("product_weight_price","product_id","isDelete=0 AND inner_unit='".$_REQUEST['unit_id']."' OR outer_unit='".$_REQUEST['unit_id']."'","",0);
-
-	while($product_weight_data_d = mysqli_fetch_array($product_weight_data_r))
-	{
-		$product_weight_data_arr[] = $product_weight_data_d['product_id'];
-	}
-
-	$product_weight_data_str = implode(",",$product_weight_data_arr);
-	// echo $product_weight_data_str;exit;
-
- 	$ctable_where .= " AND id IN(".$product_weight_data_str.") ";
-}
-
-if(isset($_REQUEST['sales_order_unit_filter']) && $_REQUEST['sales_order_unit_filter']!="" && $_REQUEST['sales_order_unit_filter']!=NULL && $_REQUEST['sales_order_unit_filter']!=undefined)
-{
- 	$ctable_where .= " AND unit_id = '".$_REQUEST['sales_order_unit_filter']."' OR customer_unit_id='".$_REQUEST['sales_order_unit_filter']."' ";
- 	// $sales_order_unit_filter = $_REQUEST['sales_order_unit_filter'];
-}
-
-if(isset($_REQUEST['category_id']) && $_REQUEST['category_id']!="" && $_REQUEST['category_id']!=NULL && $_REQUEST['category_id']!=undefined)
-{
- 	$ctable_where .= " AND cid = '".$_REQUEST['category_id']."' ";
- 	$category_id = $_REQUEST['category_id'];
-}
-
-/*if(isset($_REQUEST['brand_id']) && $_REQUEST['brand_id']!="" && $_REQUEST['brand_id']!=NULL)
-{
- 	$ctable_where .= " AND brand_id = '".$_REQUEST['brand_id']."' ";
- 	$brand_id = $_REQUEST['brand_id'];
-}*/
+$ctable_where = productListBuildWhere($db, $_REQUEST);
 
 $item_per_page =  ($_REQUEST["show"] <> "" && is_numeric($_REQUEST["show"]) ) ? intval($_REQUEST["show"]) : 10;
 
@@ -192,11 +30,7 @@ $total_pages = ceil($get_total_rows/$item_per_page);
 
 //get starting position to fetch the records
 $page_position = (($page_number-1) * $item_per_page);
-// print_r($ctable_where);exit;
-if($top_category_id!="")
-{
-  $ctable_r = $db->rp_getData($ctable,"*",$ctable_where,"id DESC limit $page_position, $item_per_page",0);
-}
+$ctable_r = $db->rp_getData($ctable,"*",$ctable_where,"display_order ASC, name ASC limit $page_position, $item_per_page",0);
 ?>
 <style>
 	.table-scrollable {
@@ -230,16 +64,16 @@ if($top_category_id!="")
 		<tr>
 			<th></th>
 			<th>
-				<select class="form-control status" name="product_type" id="product_type">
+				<select class="form-control status" name="product_type" id="product_type" onchange="displayRecords(500,1);">
 					<option value="">Select Type</option>
-					<option value="1" <?php echo ($product_type==1)?"selected":"" ; ?> >With Variant</option>
-					<option value="2" <?php echo ($product_type==2)?"selected":"" ; ?> >Without Variant</option>
+					<option value="1" <?php echo ($product_type=='1')?"selected":"" ; ?> >With Variant</option>
+					<option value="2" <?php echo ($product_type=='2')?"selected":"" ; ?> >Without Variant</option>
 	            </select>
 	        </th>
 			<th></th>
 			<th></th>
 			<th>
-				<select class="form-control status" name="top_category_id" id="top_category_id" onchange="getCategory(this.value);">
+				<select class="form-control status" name="top_category_id" id="top_category_id" onchange="getCategory(this.value); displayRecords(500,1);">
 					<option value="">Select Category</option>
 					<option value="-1">All</option>
 	                 
@@ -257,7 +91,7 @@ if($top_category_id!="")
 	            </select>
 			</th>
 			<th>
-				<select class="form-control status" name="category_id" id="category_id">
+				<select class="form-control status" name="category_id" id="category_id" onchange="displayRecords(500,1);">
 				<option value="">Select Sub Category</option>  
 					<option value="0">All</option>
 				 <!-- <?php 
@@ -280,7 +114,7 @@ if($top_category_id!="")
 			</select>
 			</th>
 			<th>
-				<select class="form-control unit" name="sales_order_unit_filter" id="sales_order_unit_filter">
+				<select class="form-control unit" name="sales_order_unit_filter" id="sales_order_unit_filter" onchange="displayRecords(500,1);">
 				<option value="">Select Unit</option>  
 			 	<option <?=($_REQUEST['sales_order_unit_filter']==-1)?"selected":""; ?> value="-1">Box</option>
 				<option <?=($_REQUEST['sales_order_unit_filter']==-2)?"selected":""; ?> value="-2">Strip</option>
@@ -291,7 +125,7 @@ if($top_category_id!="")
 			</select>
 			</th>
 			<th>
-				<select class="form-control unit" name="unit_id" id="unit_id">
+				<select class="form-control unit" name="unit_id" id="unit_id" onchange="displayRecords(500,1);">
 				<option value="">Select inner/outer Unit</option>  
 				 <option <?=($_REQUEST['unit_id']==-1)?"selected":""; ?> value="-1">Box</option>
 				<option <?=($_REQUEST['unit_id']==-2)?"selected":""; ?> value="-2">Strip</option>
@@ -323,9 +157,7 @@ if($top_category_id!="")
 	</thead>
 	<tbody>
 	<?php
-	if($ctable_r)
-	{
-	if(mysqli_num_rows($ctable_r)>0)
+	if($ctable_r && mysqli_num_rows($ctable_r) > 0)
 	{
 		$count = 0;
 		
@@ -448,12 +280,11 @@ if($top_category_id!="")
 	<?php
 		}
 	}
-	}
 	else
 	{
 		?>
 		<tr>
-		<td colspan="11"><b><h4 style="text-align:center;">Please Select Category And Sub Category</h4></b></td>
+		<td colspan="11"><b><h4 style="text-align:center;">No Data Found!!</h4></b></td>
 		</tr>
 		<?php
 	}

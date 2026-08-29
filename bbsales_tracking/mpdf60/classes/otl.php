@@ -1127,7 +1127,7 @@ function _applyTagSettings($tags, $Features, $omittags='', $onlytags=false) {
 
 		// Font features to enable - set by font-variant-xx
 		if (isset($this->mpdf->OTLtags['Plus'])) $fp = $this->mpdf->OTLtags['Plus'];
-		preg_match_all('/([a-zA-Z0-9]{4})/',$fp,$m);
+		preg_match_all('/([a-zA-Z0-9][4])/',$fp,$m);
 		for($i=0;$i<count($m[0]);$i++) {
 			$t = $m[1][$i];
 			// Is it a valid tag?
@@ -1138,7 +1138,7 @@ function _applyTagSettings($tags, $Features, $omittags='', $onlytags=false) {
 
 		// Font features to disable - set by font-variant-xx
 		if (isset($this->mpdf->OTLtags['Minus'])) $fm = $this->mpdf->OTLtags['Minus'];
-		preg_match_all('/([a-zA-Z0-9]{4})/',$fm,$m);
+		preg_match_all('/([a-zA-Z0-9][4])/',$fm,$m);
 		for($i=0;$i<count($m[0]);$i++) {
 			$t = $m[1][$i];
 			// Is it a valid tag?
@@ -1149,7 +1149,7 @@ function _applyTagSettings($tags, $Features, $omittags='', $onlytags=false) {
 
 		// Font features to enable - set by font-feature-settings
 		if (isset($this->mpdf->OTLtags['FFPlus'])) $ffp = $this->mpdf->OTLtags['FFPlus'];	// Font Features - may include integer: salt4
-		preg_match_all('/([a-zA-Z0-9]{4})([\d+]*)/',$ffp,$m);
+		preg_match_all('/([a-zA-Z0-9][4])([\d+]*)/',$ffp,$m);
 		for($i=0;$i<count($m[0]);$i++) {
 			$t = $m[1][$i];
 			// Is it a valid tag?
@@ -1160,7 +1160,7 @@ function _applyTagSettings($tags, $Features, $omittags='', $onlytags=false) {
 
 		// Font features to disable - set by font-feature-settings
 		if (isset($this->mpdf->OTLtags['FFMinus'])) $ffm = $this->mpdf->OTLtags['FFMinus'];
-		preg_match_all('/([a-zA-Z0-9]{4})/',$ffm,$m);
+		preg_match_all('/([a-zA-Z0-9][4])/',$ffm,$m);
 		for($i=0;$i<count($m[0]);$i++) {
 			$t = $m[1][$i];
 			// Is it a valid tag?

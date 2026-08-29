@@ -57,10 +57,10 @@ $unifile = file('UnicodeData.txt');
 $unichars = array();
 
 foreach($unifile AS $line) {
-	if ($smp && preg_match('/^(1[0-9A-Za-z]{4});/',$line,$m)) { 
+	if ($smp && preg_match('/^(1[0-9A-Za-z][4]);/',$line,$m)) { 
 	  $unichars[hexdec($m[1])] = hexdec($m[1]);
 	}
-	else if (preg_match('/^([0-9A-Za-z]{4});/',$line,$m)) { 
+	else if (preg_match('/^([0-9A-Za-z][4]);/',$line,$m)) { 
 	  $unichars[hexdec($m[1])] = hexdec($m[1]);
 	}
 }

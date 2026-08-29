@@ -369,7 +369,7 @@ echo 'Full File URL: ' .$file . '<br />';
 
 
 				else if($type=='IEND') { break; }
-				else if (preg_match('/[a-zA-Z]{4}/',$type)) { $p += $n+4; }
+				else if (preg_match('/[a-zA-Z][4]/',$type)) { $p += $n+4; }
 				else { echo 'Error parsing PNG image data<br />'; }
 			}
 			while($n);

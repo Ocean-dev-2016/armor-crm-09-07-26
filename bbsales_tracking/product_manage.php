@@ -128,6 +128,11 @@ include("connect.php");
                                        	</div>
 
                                       	<div class="form-group">
+											<label class="checkbox-inline" style="font-weight:600;margin-right:10px;">
+												<input type="checkbox" id="print_with_price" value="1"> Print with Price
+											</label>
+										</div>
+                                      	<div class="form-group">
 			                                    <div class="btn-group">
 
 													<button aria-expanded="false" data-toggle="dropdown" type="button" class="btn btn-sm blue dropdown-toggle">
@@ -141,6 +146,9 @@ include("connect.php");
 														{ ?>
 															<li>
 																<a name="print" onClick="genproductPrint()" title="Print Report"><i class="fa fa-print"></i>Print</a>
+															</li>
+															<li>
+																<a name="product_pdf" onClick="genProductPdf()" title="Download Product PDF"><i class="fa fa-file-pdf-o"></i> Product PDF</a>
 															</li>
 															<?php
 														}
@@ -390,6 +398,28 @@ var brand_id="";
 var sales_order_unit_filter="";
 var data_url = "<?php echo $ctable ?>_get_ajax.php";
 
+function getProductFilterParams()
+{
+	return {
+		searchName: encodeURIComponent(($("#searchName").val() || "").trim()),
+		top_category_id: ($("#top_category_id").length ? ($("#top_category_id").val() || "") : ""),
+		category_id: ($("#category_id").length ? ($("#category_id").val() || "") : ""),
+		unit_id: ($("#unit_id").length ? ($("#unit_id").val() || "") : ""),
+		product_type: ($("#product_type").length ? ($("#product_type").val() || "") : ""),
+		sales_order_unit_filter: ($("#sales_order_unit_filter").length ? ($("#sales_order_unit_filter").val() || "") : "")
+	};
+}
+
+function buildProductFilterQuery(params)
+{
+	return "searchName=" + params.searchName
+		+ "&top_category_id=" + params.top_category_id
+		+ "&unit_id=" + params.unit_id
+		+ "&product_type=" + params.product_type
+		+ "&category_id=" + params.category_id
+		+ "&sales_order_unit_filter=" + params.sales_order_unit_filter;
+}
+
 /*dispay order function*/
 function CheckDispalyOrder(id)
 {
@@ -417,31 +447,17 @@ function CheckDispalyOrder(id)
 /*dispay order function*/
 	
 function searchByName(){
-	searchName = $("#searchName").val();
-	top_category_id = $("#top_category_id").val();
-	unit_id = $("#unit_id").val();
-	sales_order_unit_filter = $("#sales_order_unit_filter").val();
-	product_type = $("#product_type").val();
-	category_id = $("#category_id").val();
-	/*brand_id = $("#brand_id").val();*/
 	displayRecords(500,1);
 	return false;
 }
 function clearSearchByName(){
-	searchName = "";
-	category_id = "";
-	top_category_id = "";
-	unit_id = "";
-	sales_order_unit_filter = "";
-	product_type = "";
-	brand_id = "";
 	$("#searchName").val("");
-	$("#category_id").select2("val","");
-	$("#top_category_id").select2("val","");
-	$("#unit_id").select2("val","");
-	$("#product_type").select2("val","");
-	$("#brand_id").select2("val","");
-	$("#sales_order_unit_filter").select2("val","");
+	if($("#category_id").length){ $("#category_id").select2("val",""); }
+	if($("#top_category_id").length){ $("#top_category_id").select2("val",""); }
+	if($("#unit_id").length){ $("#unit_id").select2("val",""); }
+	if($("#product_type").length){ $("#product_type").select2("val",""); }
+	if($("#brand_id").length){ $("#brand_id").select2("val",""); }
+	if($("#sales_order_unit_filter").length){ $("#sales_order_unit_filter").select2("val",""); }
 	displayRecords(500,1);
 }
 $("#searchName").keyup(function(event){
@@ -451,21 +467,17 @@ $("#searchName").keyup(function(event){
 });
 
 function getTopCat(tcid){
-		top_category_id=tcid;
-		displayRecords(500,1);
-		
-		$.ajax({
+	$.ajax({
 		type: "POST",
 		url: "ajax_getCategory.php",
 		data:'tcid='+tcid,
 		success: function(data){
-		$("#category_id").html(data);
+			$("#category_id").html(data);
 		}
-		});
+	});
 }
 function getSubCat(cid){
-		category_id=cid;
-		displayRecords(500,1);
+	displayRecords(500,1);
 }
 function loadDataTable(){
 	$('#datatable_1').dataTable({
@@ -487,42 +499,35 @@ function loadDataTable(){
 	});
 }
 function displayRecords(numRecords) {
-	var searchName 	= $("#searchName").val();
-	searchName 	    = encodeURIComponent(searchName.trim());
-	/*top_category_id = encodeURIComponent(top_category_id.trim());
-	category_id 	= encodeURIComponent(category_id.trim());
-	brand_id 		= encodeURIComponent(brand_id.trim());*/
+	var params = getProductFilterParams();
+	var filterQuery = buildProductFilterQuery(params);
+	top_category_id = params.top_category_id;
+	category_id = params.category_id;
+	unit_id = params.unit_id;
+	product_type = params.product_type;
+	sales_order_unit_filter = params.sales_order_unit_filter;
+	searchName = params.searchName;
+
 	$('.preloader').fadeIn('slow');
 	$("#results" ).html("");
-	$("#results" ).load( data_url+"?show=" + numRecords + "&searchName=" + searchName + "&top_category_id=" + top_category_id + "&unit_id=" + unit_id + "&product_type=" + product_type + "&category_id=" + category_id + "&sales_order_unit_filter=" + sales_order_unit_filter,function(){
+	$("#results" ).load( data_url+"?show=" + numRecords + "&" + filterQuery, function(){
 		$('.preloader').fadeOut('slow');
 		loadDataTable();
-		getCategory(top_category_id,category_id);
-	}); //load initial records
+		if(top_category_id != ""){
+			getCategory(top_category_id, category_id);
+		}
+	});
 	
-	//executes code below when user click on pagination links
-	$("#results").on( "click", ".paging_simple_numbers a", function (e){
+	$("#results").off("click.productPager").on( "click.productPager", ".paging_simple_numbers a", function (e){
 		e.preventDefault();
 		var numRecords  = $("#numRecords").val();
-		$(".loading-div").show(); //show loading element
-		var page = $(this).attr("data-page"); //get page number from link
-		$("#results").load(data_url+"?show=" + numRecords + "&searchName=" + searchName + "&top_category_id=" + top_category_id  + "&unit_id=" + unit_id  + "&product_type=" + product_type + "&category_id=" + category_id + "&sales_order_unit_filter=" + sales_order_unit_filter,{"page":page}, function(){ //get content from PHP page
-			$(".loading-div").hide(); //once done, hide loading element
+		$(".loading-div").show();
+		var page = $(this).attr("data-page");
+		$("#results").load(data_url+"?show=" + numRecords + "&" + filterQuery, {"page":page}, function(){
+			$(".loading-div").hide();
 			loadDataTable();
 		});
-		
 	});
-	// $("#results").on( "change", "#numRecords", function (e){
-	// 	e.preventDefault();
-	// 	var numRecords  = $("#numRecords").val();
-	// 	$(".loading-div").show(); //show loading element
-	// 	var page = $(this).attr("data-page"); //get page number from link
-	// 	$("#results").load(data_url+"?show=" + numRecords + "&searchName=" + searchName + "&top_category_id=" + top_category_id + "&category_id=" + category_id,{"page":page}, function(){ //get content from PHP page
-	// 		$(".loading-div").hide(); //once done, hide loading element
-	// 		loadDataTable();
-	// 	});
-		
-	// });
 }
 
 // used when user change row limit
@@ -550,47 +555,32 @@ function del_conf(id){
 <script type="text/javascript">
 	function genproductPrint()
 	{
-		var searchName     = $("#searchName").val();
-      	searchName     = encodeURIComponent(searchName.trim());
-      	category_id = $("#category_id").val();
-		top_category_id = $("#top_category_id").val();
-		unit_id = $("#unit_id").val();
-		sales_order_unit_filter = $("#sales_order_unit_filter").val();
-		product_type = $("#product_type").val();
-     	var myWindow = window.open('print_product_ajax.php?searchName='+searchName+ "&top_category_id=" + top_category_id +  "&unit_id=" + unit_id +  "&product_type=" + product_type + "&category_id=" + category_id + "&sales_order_unit_filter=" + sales_order_unit_filter,'','width=700,height=800');
+		var params = getProductFilterParams();
+		var myWindow = window.open('print_product_ajax.php?' + buildProductFilterQuery(params),'','width=700,height=800');
      	myWindow.print();
-  //    	setTimeout(function () 
-		// {
-		// 	myWindow.print();
-		// 	var ival = setInterval(function() 
-		// 	{
-		// 	    myWindow.close();
-		// 	    clearInterval(ival);
-		// 	}, 200);
-		// }, 500);
     }
+
+	function genProductPdf()
+	{
+		var params = getProductFilterParams();
+		var withPrice = $("#print_with_price").is(":checked") ? "1" : "0";
+		var url = 'product_list_pdf.php?' + buildProductFilterQuery(params) + '&with_price=' + withPrice;
+		window.open(url, '_blank');
+	}
 
     function genReport()
 	{
-		var searchName     = $("#searchName").val();
-      	searchName     = encodeURIComponent(searchName.trim());
-		category_id = $("#category_id").val();
-		top_category_id = $("#top_category_id").val();
-		unit_id = $("#unit_id").val();
-		sales_order_unit_filter = $("#sales_order_unit_filter").val();
-		product_type = $("#product_type").val();
-
-
+		var params = getProductFilterParams();
       	$.ajax({
 			method: "POST",
 			url: "product_genReport_ajax.php",
 			data:{
-        		searchName:searchName,
-        		category_id:category_id,
-        		top_category_id:top_category_id,
-        		unit_id:unit_id,
-        		product_type:product_type,
-        		sales_order_unit_filter:sales_order_unit_filter,
+        		searchName: decodeURIComponent(params.searchName.replace(/\+/g, ' ')),
+        		category_id: params.category_id,
+        		top_category_id: params.top_category_id,
+        		unit_id: params.unit_id,
+        		product_type: params.product_type,
+        		sales_order_unit_filter: params.sales_order_unit_filter,
 			},
 			dataType : 'json',
 			beforeSend: function() {
