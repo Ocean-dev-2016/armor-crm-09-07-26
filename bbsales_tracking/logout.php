@@ -20,6 +20,7 @@ $sessionKeys = array(
 	SITE_SESS . 'SESS_NAME',
 	SITE_SESS . 'REFERANCE_TYPE',
 	SITE_SESS . 'REFERANCE_ID',
+	SITE_SESS . '_MASTER_ACTIVITY_VIEW',
 	'rights',
 	'SESS_NAME',
 );

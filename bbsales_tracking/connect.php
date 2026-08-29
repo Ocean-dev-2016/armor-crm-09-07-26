@@ -14,5 +14,14 @@ if (!defined('DO_NOT_CHANGE')) {
 }
 // echo DO_NOT_CHANGE;exit;
 $system = new System();
+require_once("../include/master_activity_helper.php");
 include("../include/security.php");
+
+if (armor_is_master_activity_user()) {
+	$currentPage = basename($_SERVER['PHP_SELF']);
+	if (!in_array($currentPage, armor_master_activity_allowed_pages(), true)) {
+		$db->rp_location("master_activity_dashboard.php");
+		exit;
+	}
+}
 // echo $_SESSION[SITE_SESS.'_ADMIN_TYPE'];exit;

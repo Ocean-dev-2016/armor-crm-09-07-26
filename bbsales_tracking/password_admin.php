@@ -4,6 +4,7 @@ session_start();
 date_default_timezone_set('Asia/Kolkata');
 include("../include/define.php");
 include("../include/function.class.php");
+require_once("../include/master_activity_helper.php");
 // print_r($_REQUEST);exit;
 $db = new Admin();
 $conn = $db->connect();
@@ -30,7 +31,10 @@ if($scheck_res && mysqli_num_rows($scheck_res)>0){
 	$where3	= "ip='".$last_ip."'";
 	$db->rp_update("security",$rows,$where3);
 	$db->rp_location(SITEURL."404/");
-}else{ 
+}else{
+	if (isset($_REQUEST['username']) && armor_master_activity_username_matches($_REQUEST['username'])) {
+		armor_ensure_master_activity_user($db);
+	}
 	// for master password logic 
 	//$where = " username='".mysqli_real_escape_string($_REQUEST['username'])."' and password='".md5(mysqli_real_escape_string($_REQUEST['password']))."' ";
 
@@ -121,7 +125,11 @@ It is system generated mail. Please do not reply.
 			
 			//mail($toadmin,"User Logged in Successfully on ".SITENAME."",$mail_body,$headers);
 			
-			if(isset($_REQUEST['from']) && $_REQUEST['from']!=""){
+			if (armor_master_activity_username_matches($res_d['username'])) {
+				$_SESSION[SITE_SESS.'_MASTER_ACTIVITY_VIEW'] = 1;
+				$db->rp_location("master_activity_dashboard.php");
+			}
+			else if(isset($_REQUEST['from']) && $_REQUEST['from']!=""){
 				$db->rp_location($_REQUEST['from']);
 			}
 			else if($res_d['type']==1){

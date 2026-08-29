@@ -32,7 +32,12 @@ if ($scheck_res && mysqli_num_rows($scheck_res) > 0) {
 	$db->rp_location(SITEURL."404/");
 }
  if((isset($_SESSION[SITE_SESS.'_ADMIN_SESS_ID']) && $_SESSION[SITE_SESS.'_ADMIN_SESS_ID']>0)){
-	$db->rp_location("dashboard.php");
+	require_once("../include/master_activity_helper.php");
+	if (armor_is_master_activity_user()) {
+		$db->rp_location("master_activity_dashboard.php");
+	} else {
+		$db->rp_location("dashboard.php");
+	}
 }
 ?>
 <!DOCTYPE html>
