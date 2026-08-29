@@ -360,6 +360,10 @@ if (isset($_REQUEST['id']) && $_REQUEST['id'] > 0 && $_REQUEST['mode'] == "isAct
          font-size: 13px;
       }
    </style>
+   <?php
+   require_once('../include/quotation_pi_suggest_products_helper.php');
+   echo armor_quotation_pi_suggest_styles();
+   ?>
 </head>
 
 <body class="page-md">
@@ -1183,6 +1187,18 @@ if (isset($_REQUEST['id']) && $_REQUEST['id'] > 0 && $_REQUEST['mode'] == "isAct
                                                             </table>
                                                          </div>
                                                       </div>
+                                                      <div class="row" style="margin-top:15px;">
+                                                         <div class="col-md-12">
+                                                            <div class="portlet light bordered">
+                                                               <div class="portlet-title">
+                                                                  <div class="caption"><i class="fa fa-th"></i> Suggested Product Range <small>(Photo + Rate — click to add; already added items hidden)</small></div>
+                                                               </div>
+                                                               <div class="portlet-body" id="qp_suggest_products_wrap">
+                                                                  <div class="text-muted">Loading suggested products...</div>
+                                                               </div>
+                                                            </div>
+                                                         </div>
+                                                      </div>
                                                    </div>
                                                 </div>
                                              </div>
@@ -1273,6 +1289,7 @@ if (isset($_REQUEST['id']) && $_REQUEST['id'] > 0 && $_REQUEST['mode'] == "isAct
 
    <?php include("footer.php"); ?>
    <?php include("include_js.php"); ?>
+   <script type="text/javascript" src="js/quotation_pi_suggest_products.js"></script>
    <script type="text/javascript" src="assets/global/plugins/datatables/media/js/jquery.dataTables.min.js"></script>
    <script type="text/javascript" src="assets/global/plugins/datatables/plugins/bootstrap/dataTables.bootstrap.js"></script>
    <script type="text/javascript" src="assets/global/plugins/bootstrap-datepicker/js/bootstrap-datepicker.min.js"></script>

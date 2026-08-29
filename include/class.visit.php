@@ -375,7 +375,9 @@ class Visit extends Functions
 
 		);
 		if (isset($followup_date) && $followup_date != "") {
-			$rows["followup_date"] = $followup_date;
+			$rows["followup_date"] = $this->resolveVisitStopFollowupDate($stop_date_time, $followup_date);
+		} else {
+			$rows["followup_date"] = $this->resolveVisitStopFollowupDate($stop_date_time, "");
 		}
 
 		$Where = "id='" . $id . "'";
@@ -593,7 +595,7 @@ class Visit extends Functions
 						}
 					}
 
-					$followupDateValue = (isset($followup_date) && $followup_date != "") ? $followup_date : $stop_date_time;
+					$followupDateValue = $this->resolveVisitStopFollowupDate($stop_date_time, (isset($followup_date) && $followup_date != "") ? $followup_date : "");
 					$followupValues = array(
 						$followupReferenceTable,
 						$user_id,
@@ -1654,5 +1656,20 @@ class Visit extends Functions
 			$reply = array("ack" => 0, "developer_msg" => "Visit Id Require!!", "ack_msg" => "Visit Id Require!!");
 			return $reply;
 		}
+	}
+
+	/**
+	 * Visit stop follow-up: default 15 days after stop (not same day).
+	 */
+	public function resolveVisitStopFollowupDate($stop_date_time, $followup_date = '')
+	{
+		$defaultDate = date('Y-m-d H:i:s', strtotime($stop_date_time . ' +15 days'));
+		if ($followup_date == '' || $followup_date == '0000-00-00 00:00:00') {
+			return $defaultDate;
+		}
+		if (date('Y-m-d', strtotime($followup_date)) == date('Y-m-d', strtotime($stop_date_time))) {
+			return $defaultDate;
+		}
+		return $followup_date;
 	}
 }

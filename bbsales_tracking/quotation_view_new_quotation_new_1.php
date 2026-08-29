@@ -27,6 +27,7 @@ $company_detail_r = $db->rp_getData("company_master", "*", "id='" . $cart_detail
 
 $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 
+$isPrintMode = (isset($_REQUEST['print']) && $_REQUEST['print'] == '1') || (isset($_REQUEST['p']) && $_REQUEST['p'] == '1');
 ?>
 <html>
 
@@ -34,10 +35,8 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 	<style>
 		.mainDiv,
 		table {
-			border: 1px solid #595959;
 			border-collapse: collapse;
 			font-size: 13px;
-			/*			width:250mm!important;*/
 			background-color: #FFF;
 			margin: auto;
 			padding: auto;
@@ -47,6 +46,35 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 		td,
 		th {
 			border: 1px solid #595959;
+		}
+
+		.quote-main-body {
+			box-sizing: border-box;
+			background: #fff;
+			border: 1px solid #595959;
+		}
+
+		.quote-main-body table {
+			margin: 0 !important;
+			width: 100% !important;
+			max-width: 100% !important;
+			border: none !important;
+			border-collapse: collapse !important;
+		}
+
+		.quote-main-body .product-items-table {
+			table-layout: fixed;
+		}
+
+		.quote-main-body > table + table,
+		.quote-main-body .product-items-table,
+		.quote-main-body .quote-footer-wrap {
+			margin-top: 0 !important;
+		}
+
+		.quote-footer-wrap {
+			margin: 0;
+			padding: 0;
 		}
 
 		td,
@@ -133,30 +161,241 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 		}
 
 		.main-container {
-			/*border: 1px solid #595959;*/
-			padding: 40px;
-			/* Add space around the content */
+			padding: 20px;
 			width: 100% !important;
+			max-width: 980px;
 			background-color: #FFF;
 			margin: auto;
+			box-sizing: border-box;
 		}
+
+		.quote-wrap,
+		.quote-main-body,
+		.quote-suggest-body {
+			width: 100%;
+		}
+
+		.quote-main-body > table,
+		.quote-main-body .quote-footer-table,
+		.quote-suggest-body .qp-suggest-wrap-table,
+		.main-container .qp-suggest-wrap-table {
+			width: 100% !important;
+			max-width: 100%;
+			box-sizing: border-box;
+		}
+
+		.quote-table {
+			width: 100% !important;
+			max-width: 100%;
+			border-collapse: collapse;
+			box-sizing: border-box;
+		}
+
+		.quote-header-cell,
+		.quote-footer-cell {
+			padding: 0 !important;
+			margin: 0 !important;
+			line-height: 0 !important;
+			font-size: 0 !important;
+			text-align: center;
+			vertical-align: top;
+			width: 100%;
+			border-left: none !important;
+			border-right: none !important;
+			background: #fff;
+		}
+
+		.quote-header-cell {
+			border-top: none !important;
+			border-bottom: 1px solid #595959 !important;
+		}
+
+		.quote-footer-cell {
+			border-top: 1px solid #595959 !important;
+			border-bottom: none !important;
+		}
+
+		.quote-header-img,
+		.quote-footer-img {
+			width: 100% !important;
+			max-width: 100% !important;
+			height: auto !important;
+			max-height: <?= defined('HEADER_IMAGE_HEIGHT') ? (int) HEADER_IMAGE_HEIGHT : 184 ?>px;
+			object-fit: contain;
+			object-position: center center;
+			display: block;
+			padding: 0 !important;
+			margin: 0 auto;
+			border: 0;
+		}
+
+		.product-items-table td,
+		.product-items-table th {
+			vertical-align: middle !important;
+		}
+
+		.product-items-table .model {
+			text-align: left !important;
+		}
+
+		.product-items-table .product-item-row td,
+		.product-items-table .product-filler-row td {
+			height: 30px;
+			vertical-align: middle !important;
+		}
+
+		.quote-footer-table {
+			margin-top: 0 !important;
+			border: none !important;
+		}
+
+		@media print {
+			@page {
+				size: A4 portrait;
+				margin: 5mm;
+			}
+
+			html, body {
+				margin: 0;
+				padding: 0;
+				background: #fff !important;
+				-webkit-print-color-adjust: exact;
+				print-color-adjust: exact;
+			}
+
+			.main-container {
+				padding: 10px !important;
+				max-width: 100% !important;
+				width: 100% !important;
+				margin: 0 auto !important;
+			}
+
+			.quote-wrap {
+				width: 100%;
+				max-width: 100%;
+				margin: 0;
+			}
+
+			.quote-suggest-body {
+				page-break-before: always !important;
+				break-before: page;
+			}
+
+			.quote-footer-wrap,
+			.quote-footer-table {
+				page-break-inside: avoid;
+				break-inside: avoid;
+			}
+
+			.quote-main-body {
+				border: 1px solid #595959 !important;
+			}
+
+			.quote-main-body table {
+				margin: 0 !important;
+				width: 100% !important;
+				max-width: 100% !important;
+				border: none !important;
+			}
+
+			.quote-header-cell,
+			.quote-footer-cell {
+				padding: 0 !important;
+				border-left: none !important;
+				border-right: none !important;
+			}
+
+			.quote-header-cell {
+				border-top: none !important;
+			}
+
+			.quote-footer-cell {
+				border-bottom: none !important;
+			}
+
+			.quote-header-img,
+			.quote-footer-img {
+				width: 100% !important;
+				max-width: 100% !important;
+				height: auto !important;
+				object-fit: contain !important;
+				object-position: center center !important;
+				max-height: <?= defined('HEADER_IMAGE_HEIGHT') ? (int) HEADER_IMAGE_HEIGHT : 184 ?>px !important;
+			}
+
+			.quote-main-body > table,
+			.quote-main-body .quote-footer-table,
+			.quote-suggest-body .qp-suggest-wrap-table {
+				width: 100% !important;
+			}
+
+			.product-filler-row {
+				display: none !important;
+			}
+
+			td, th {
+				padding: 3px 4px !important;
+			}
+
+			.qp-suggest-print-card {
+				min-height: 118px !important;
+			}
+
+			.qp-suggest-print-img-wrap {
+				height: 62px !important;
+			}
+
+			.qp-suggest-print-img {
+				max-height: 58px !important;
+			}
+
+			.qp-suggest-print-name {
+				font-size: 10px !important;
+				line-height: 1.2 !important;
+			}
+
+			.qp-suggest-print-grid td.qp-suggest-print-cell {
+				padding: 4px !important;
+			}
+		}
+
+		<?php if ($isPrintMode) { ?>
+		html, body {
+			margin: 0;
+			padding: 0;
+			background: #fff;
+		}
+
+		.main-container {
+			padding: 20px !important;
+			max-width: 980px !important;
+			width: 100% !important;
+			margin: 0 auto !important;
+		}
+		<?php } ?>
 	</style>
+	<?php
+	require_once('../include/quotation_pi_suggest_products_helper.php');
+	echo armor_quotation_pi_suggest_styles();
+	?>
 </head>
 
-<body>
+<body<?= $isPrintMode ? ' class="print-a4"' : '' ?>>
 	<div class="main-container">
-		<table style="border: 1px solid #595959;border-collapse: collapse;">
+	<div class="quote-wrap">
+	<div class="quote-main-body">
+		<table class="quote-table">
 			<tbody>
 				<tr>
-					<td>
+					<td class="quote-header-cell" colspan="16">
 						<?php
 						if (isset($company_detail_d['image_path']) && $company_detail_d['image_path'] != "") {
 						?>
-							<img style="width: 933px;height: 184px;padding: 0px !important;" src="<?= HEADER_A . $company_detail_d['image_path'] ?>">
+							<img class="quote-header-img" src="<?= SITEURL . HEADER . $company_detail_d['image_path'] ?>" alt="Header">
 						<?php
 						} else {
 						?>
-							<img style="width: 933px;height: 184px;padding: 0px !important;" src="../images/craftbox_header.jpg">
+							<img class="quote-header-img" src="<?= SITEURL ?>images/craftbox_header.jpg" alt="Header">
 						<?php
 						}
 						?>
@@ -167,7 +406,7 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 				</tr>
 			</tbody>
 		</table>
-		<table style="width:250mm!important;">
+		<table class="quote-table">
 			<tbody class="<?= $cl; ?>">
 				<tr>
 					<td colspan="8" rowspan="4">
@@ -223,7 +462,7 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 
 			</tbody>
 		</table>
-		<table style="width:250mm!important;">
+		<table class="product-items-table quote-table">
 			<tbody>
 				<tr class="text-center" style="background-color: <?= VIEW_COLOR ?>; color: #000;">
 					<th colspan="1" class="text-center" style="width:4%; color: #000;">SR</th>
@@ -298,7 +537,7 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 						$total_item_discount += $item_discount_total;
 						$total_mrp_amount += ($item_original_price > 0 ? $item_original_price : floatval($item['unitprice'])) * floatval($item['pro_qty']);
 				?>
-						<tr>
+						<tr class="product-item-row">
 							<td colspan="1" class="text-center srno"><strong><?php echo $count; ?></strong></td>
 							<?php
 							if ($item['image_path'] != "") {
@@ -337,50 +576,8 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 						<?php
 					}
 
-					if ($count < 5) {
-						for ($i = 0; $i < 12 - $count; $i++) {
-						?>
-							<tr class="border">
-								<td colspan="1"></td>
-								<td colspan="1"></td>
-								<td colspan="4"></td>
-								<td colspan="1"></td>
-								<td colspan="1"></td>
-								<td colspan="1"></td>
-								<td colspan="1"></td>
-								<td colspan="1"></td>
-								<td colspan="1"></td>
-								<td colspan="1"></td>
-							</tr>
-				<?php
-						}
-					}
 				}
 				?>
-				<tr class="">
-					<td colspan="1"></td>
-					<td colspan="1"></td>
-					<td colspan="4"></td>
-					<td colspan="1"></td>
-					<td colspan="1"></td>
-					<td colspan="1"></td>
-					<td colspan="1"></td>
-					<td colspan="1"></td>
-					<td colspan="1"></td>
-					<td colspan="1"></td>
-				</tr>
-
-
-				<!-- <tr>
-						<td colspan="1"></td>
-						<td colspan="5" class="text-center"><b></b></td>
-						<td colspan="2" class="text-center"><b><?php echo $totalproqty; ?></b></td>
-						<td colspan="3" class="text-center"></td>
-						<td colspan="3" class="rate" class="text-center"></td>
-						<td colspan="3"></td>
-						<td colspan="3"></td>
-						<td colspan=""></td>
-					</tr> -->
 			</tbody>
 		</table>
 		<?php
@@ -408,7 +605,7 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 		}
 		if ($cart_detail_d['tcs_amount'] != "" && $cart_detail_d['tcs_amount'] != "0") { $terms_rowspan++; }
 		?>
-		<table style="width:250mm!important;">
+		<table class="quote-table">
 			<tbody class="<?= $cl; ?>">
 				<tr class="font-size">
 					<td colspan="8" class="" rowspan="<?= $terms_rowspan ?>" style="vertical-align: top;">
@@ -590,7 +787,7 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 		?>
 
 			<!-- hsn summary -->
-			<table style="width:250mm!important;">
+			<table class="quote-table">
 				<?php
 				if (strtolower(CLIENT_STATE) == strtolower($cart_detail_d['state'])) {
 					$gst_or_igst = "Total GST Rate";
@@ -742,18 +939,19 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 					</tr>
 				</tbody> 
 			</table> -->
-		<table style="border: 1px solid #595959;border-collapse: collapse;">
+		<div class="quote-footer-wrap">
+		<table class="quote-footer-table quote-table">
 			<tbody>
 				<tr>
-					<td>
+					<td class="quote-footer-cell" colspan="16">
 						<?php
 						if (isset($company_detail_d['footer_image_path']) && $company_detail_d['footer_image_path'] != "") {
 						?>
-							<img style="width: 933px;height: 184px;padding: 0px !important;" src="<?= FOOTER_A . $company_detail_d['footer_image_path'] ?>">
+							<img class="quote-footer-img" src="<?= SITEURL . FOOTER . $company_detail_d['footer_image_path'] ?>" alt="Footer">
 						<?php
 						} else {
 						?>
-							<img style="width: 933px;height: 184px;padding: 0px !important;" src="../images/craftbox_header.jpg">
+							<img class="quote-footer-img" src="<?= SITEURL ?>images/craftbox_header.jpg" alt="Footer">
 						<?php
 						}
 						?>
@@ -761,7 +959,49 @@ $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 				</tr>
 			</tbody>
 		</table>
+		</div>
+	</div><!-- /.quote-main-body -->
+		<div class="quote-suggest-body">
+		<?php armor_quotation_pi_echo_suggest_block_for_quotation($db, $quotation_id, false); ?>
+		</div>
+	</div><!-- /.quote-wrap -->
 	</div>
+<?php if ($isPrintMode) { ?>
+<style>
+	.quote-print-toolbar {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		z-index: 9999;
+		background: #2b3643;
+		color: #fff;
+		padding: 10px 16px;
+		text-align: center;
+		font-family: Arial, sans-serif;
+		font-size: 14px;
+	}
+	.quote-print-toolbar button {
+		background: #36c6d3;
+		border: none;
+		color: #fff;
+		padding: 8px 18px;
+		margin-left: 10px;
+		cursor: pointer;
+		font-size: 14px;
+		border-radius: 3px;
+	}
+	@media print {
+		.quote-print-toolbar {
+			display: none !important;
+		}
+	}
+</style>
+<div class="quote-print-toolbar">
+	Quotation ready — Page 1: Quote | Page 2+: Suggested Products
+	<button type="button" onclick="window.print();">Print Quotation</button>
+</div>
+<?php } ?>
 </body>
 
 </html>

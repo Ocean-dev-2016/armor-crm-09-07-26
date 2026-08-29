@@ -47,9 +47,9 @@ $company_detail_r = $db->rp_getData("company_master", "*", "id='" . $cart_detail
 
 $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 
-
-?>
-$html>
+$headerImgHeight = defined('HEADER_IMAGE_HEIGHT') ? (int) HEADER_IMAGE_HEIGHT : 184;
+?><!DOCTYPE html>
+<html lang="en">
 <head>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -110,36 +110,37 @@ $html>
 			display: block;
 		}
 
-		.header-cell {
+		.header-cell,
+		.footer-cell {
 			padding: 0 !important;
 			margin: 0 !important;
 			line-height: 0 !important;
 			font-size: 0 !important;
-			overflow: hidden;
+			text-align: center;
+			vertical-align: middle;
 			height: auto !important;
+			border: 1px solid #595959 !important;
 		}
 
-		.header-img {
-			width: 100% !important;
-			max-width: 100% !important;
-			height: 52px !important;
-			max-height: 52px !important;
-			object-fit: fill !important;
-			display: block !important;
-			padding: 0 !important;
-			margin: 0 !important;
-			border: 0;
+		.header-cell {
+			border-bottom: 1px solid #595959 !important;
 		}
 
+		.footer-cell {
+			border-top: 1px solid #595959 !important;
+		}
+
+		.header-img,
 		.footer-img {
 			width: 100% !important;
-			max-width: 100% !important;
-			height: 42px !important;
-			max-height: 42px !important;
-			object-fit: fill !important;
+			height: auto !important;
+			max-height: <?= $headerImgHeight ?>px !important;
+			object-fit: contain !important;
+			object-position: center center;
 			display: block !important;
 			padding: 0 !important;
-			margin: 0 !important;
+			margin: 0 auto !important;
+			border: 0;
 		}
 
 		.product-img {
@@ -147,6 +148,59 @@ $html>
 			height: 28px !important;
 			object-fit: contain;
 			margin: 0 auto;
+		}
+
+		.product-filler-row td {
+			height: 28px !important;
+			padding: 4px 3px !important;
+		}
+
+		.product-items-table td,
+		.product-items-table th {
+			vertical-align: middle !important;
+		}
+
+		.product-items-table .model {
+			text-align: left !important;
+			vertical-align: middle !important;
+		}
+
+		.product-items-table .product-item-row td,
+		.product-items-table .product-filler-row td {
+			height: 30px !important;
+			vertical-align: middle !important;
+		}
+
+		.product-items-table .image-width {
+			vertical-align: middle !important;
+			text-align: center !important;
+		}
+
+		.product-items-table .product-img {
+			margin: 0 auto;
+		}
+
+		.quote-main-body > table,
+		.quote-main-body .product-items-table,
+		.quote-main-body .summary-outer,
+		.quote-main-body .quote-footer-table {
+			border-left: 1px solid #595959 !important;
+			border-right: 1px solid #595959 !important;
+		}
+
+		.quote-footer-table {
+			margin-top: 0 !important;
+			border: 1px solid #595959 !important;
+			border-top: none !important;
+			width: 100% !important;
+			border-collapse: collapse !important;
+		}
+
+		.quote-footer-table td.footer-cell {
+			border-left: 1px solid #595959 !important;
+			border-right: 1px solid #595959 !important;
+			border-bottom: 1px solid #595959 !important;
+			border-top: none !important;
 		}
 
 		.summary-outer { table-layout: fixed !important; width: 100% !important; border-collapse: collapse; }
@@ -222,45 +276,100 @@ $html>
 				max-width: 100% !important;
 				width: 100% !important;
 				margin: 0 !important;
+				transform: none !important;
 			}
 
-			table, tr, td, th {
+			.quote-main-body {
+				page-break-after: always;
+			}
+
+			.quote-suggest-body {
+				page-break-before: always !important;
+				break-before: page;
+			}
+
+			.quote-main-body .summary-outer {
+				page-break-inside: avoid !important;
+			}
+
+			.qp-suggest-print-section {
+				page-break-inside: auto;
+			}
+
+			.qp-suggest-print-grid tr {
+				page-break-inside: auto !important;
+			}
+
+			.qp-suggest-print-cell {
 				page-break-inside: avoid !important;
 			}
 
 			.no-print-empty { display: none !important; }
 
-			.header-img {
-				height: 48px !important;
-				max-height: 48px !important;
-				width: 100% !important;
-				object-fit: fill !important;
-			}
-
+			.header-img,
 			.footer-img {
-				height: 38px !important;
-				max-height: 38px !important;
+				height: auto !important;
+				max-height: <?= $headerImgHeight ?>px !important;
 				width: 100% !important;
-				object-fit: fill !important;
+				object-fit: contain !important;
 			}
 
 			.product-img {
 				width: 24px !important;
 				height: 24px !important;
 			}
+
+			.product-filler-row td,
+			.product-items-table .product-item-row td {
+				height: 28px !important;
+				vertical-align: middle !important;
+			}
+
+			.header-cell,
+			.footer-cell {
+				border-left: 1px solid #595959 !important;
+				border-right: 1px solid #595959 !important;
+				-webkit-print-color-adjust: exact;
+				print-color-adjust: exact;
+			}
+
+			.header-cell {
+				border-top: 1px solid #595959 !important;
+			}
+
+			.footer-cell {
+				border-bottom: 1px solid #595959 !important;
+			}
+
+			.quote-main-body > table,
+			.quote-main-body .product-items-table,
+			.quote-main-body .summary-outer,
+			.quote-main-body .quote-footer-table {
+				border-left: 1px solid #595959 !important;
+				border-right: 1px solid #595959 !important;
+			}
+
+			.quote-footer-wrap {
+				page-break-inside: avoid;
+			}
 		}
 	</style>
+	<?php
+	require_once('../include/quotation_pi_suggest_products_helper.php');
+	echo armor_quotation_pi_suggest_styles();
+	?>
 </head>
 
 <body class="print-a4">
 	<div class="quote-wrap">
+	<div class="quote-main-body">
 	<table>
 		<tbody class="<?= isset($cl) ? $cl : ''; ?>">
 			<tr>
 				<td colspan="16" class="header-cell">
 					<?php
 					if (isset($company_detail_d) && $company_detail_d != "" && $company_detail_d != 0 && !empty($company_detail_d['image_path'])) {
-						$headerSrc = SITEURL . "images/header/" . $company_detail_d['image_path'];
+						$headerSrc = SITEURL . HEADER . $company_detail_d['image_path'];
 					?>
 						<img class="header-img" src="<?= $headerSrc ?>" alt="Header">
 					<?php
@@ -308,7 +417,7 @@ $html>
 			</tr>
 		</tbody>
 	</table>
-	<table>
+	<table class="product-items-table">
 		<tbody class="<?= isset($cl) ? $cl : ''; ?>">
 			<tr class="text-center" style="background-color: <?= VIEW_COLOR ?>; color: #000;">
 				<th colspan="1" class="text-center" style="width:4%; color: #000;">SR</th>
@@ -383,7 +492,7 @@ $html>
 					$total_item_discount += $item_discount_total;
 					$total_mrp_amount += ($item_original_price > 0 ? $item_original_price : floatval($item['unitprice'])) * floatval($item['pro_qty']);
 			?>
-					<tr>
+					<tr class="product-item-row">
 						<td colspan="1" class="text-center srno"><strong><?php echo $count; ?></strong></td>
 						<?php
 						if ($item['image_path'] != "") {
@@ -420,7 +529,28 @@ $html>
 					<?php
 				}
 
-				/* Empty filler rows removed — keeps print on one A4 page */
+				$printMinProductRows = 13;
+				if (!isset($count)) {
+					$count = 0;
+				}
+				if ($count < $printMinProductRows) {
+					for ($fi = 0; $fi < ($printMinProductRows - $count); $fi++) {
+				?>
+					<tr class="product-filler-row">
+						<td colspan="1">&nbsp;</td>
+						<td colspan="1">&nbsp;</td>
+						<td colspan="4">&nbsp;</td>
+						<td colspan="1">&nbsp;</td>
+						<td colspan="1">&nbsp;</td>
+						<td colspan="1">&nbsp;</td>
+						<td colspan="1">&nbsp;</td>
+						<td colspan="1">&nbsp;</td>
+						<td colspan="1">&nbsp;</td>
+						<td colspan="1">&nbsp;</td>
+					</tr>
+				<?php
+					}
+				}
 			}
 			?>
 		</tbody>
@@ -707,18 +837,19 @@ $html>
 			</tbody> 
 		</table> -->
 
-	<table style="border: 1px solid #595959;border-collapse: collapse;">
+	<div class="quote-footer-wrap">
+	<table class="quote-footer-table" style="border: 1px solid #595959;border-collapse: collapse;width:100%;">
 		<tbody>
 			<tr>
-				<td class="header-cell">
+				<td class="footer-cell">
 					<?php
 					if (isset($company_detail_d['footer_image_path']) && $company_detail_d['footer_image_path'] != "") {
 					?>
-						<img class="footer-img" src="<?= SITEURL ?>images/header/<?= $company_detail_d['footer_image_path'] ?>" alt="Footer">
+						<img class="footer-img" src="<?= SITEURL . FOOTER . $company_detail_d['footer_image_path'] ?>" alt="Footer">
 					<?php
 					} else {
 					?>
-						<img class="footer-img" style="max-height: 40px;" src="<?= SITEURL ?>images/white_footer.jpg" alt="Footer">
+						<img class="footer-img" src="<?= SITEURL ?>images/white_footer.jpg" alt="Footer">
 					<?php
 					}
 					?>
@@ -726,30 +857,13 @@ $html>
 			</tr>
 		</tbody>
 	</table>
+	</div><!-- /.quote-footer-wrap -->
+
+	</div><!-- /.quote-main-body -->
+	<div class="quote-suggest-body">
+	<?php armor_quotation_pi_echo_suggest_block_for_quotation($db, $quotation_id, false); ?>
 	</div>
-	<script>
-	(function() {
-		function fitToA4() {
-			var wrap = document.querySelector('.quote-wrap');
-			if (!wrap) return;
-			/* A4 printable height ~ 287mm at 96dpi ≈ 1084px with 5mm margins */
-			var maxH = 1050;
-			var h = wrap.scrollHeight;
-			if (h > maxH) {
-				var scale = maxH / h;
-				if (scale < 0.72) scale = 0.72;
-				wrap.style.transformOrigin = 'top left';
-				wrap.style.transform = 'scale(' + scale.toFixed(3) + ')';
-				wrap.style.width = (100 / scale).toFixed(2) + '%';
-			}
-		}
-		if (document.readyState === 'complete') {
-			setTimeout(fitToA4, 200);
-		} else {
-			window.addEventListener('load', function() { setTimeout(fitToA4, 200); });
-		}
-	})();
-	</script>
+	</div>
 </body>
 
 </html>

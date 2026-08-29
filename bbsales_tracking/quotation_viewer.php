@@ -43,6 +43,81 @@ $flag_d = mysqli_fetch_array($flag_r);
 		#wrapper {
 			width: auto !important;
 		}
+
+		#wrapper1 {
+			max-width: 980px;
+			margin: 0 auto;
+			background: #fff;
+		}
+
+		#wrapper1 .main-container {
+			padding: 20px;
+		}
+
+		@media print {
+			@page {
+				size: A4 portrait;
+				margin: 5mm;
+			}
+
+			body.page-md {
+				background: #fff !important;
+				margin: 0 !important;
+				padding: 0 !important;
+				-webkit-print-color-adjust: exact;
+				print-color-adjust: exact;
+			}
+
+			body.page-md * {
+				visibility: hidden;
+			}
+
+			#report_content,
+			#report_content * {
+				visibility: visible;
+			}
+
+			#report_content {
+				position: absolute;
+				left: 0;
+				top: 0;
+				width: 100%;
+			}
+
+			.transCover,
+			.page-header,
+			.page-head,
+			.page-toolbar,
+			.page-container > .page-head,
+			footer,
+			.modal,
+			.toast,
+			#lostModal {
+				display: none !important;
+			}
+
+			.page-container,
+			.page-content,
+			.page-content .container,
+			.page-content .row,
+			#report_content,
+			#wrapper1,
+			#wrapper1 .main-container {
+				width: 100% !important;
+				max-width: 100% !important;
+				margin: 0 !important;
+				padding: 0 !important;
+				background: #fff !important;
+				border: none !important;
+				box-shadow: none !important;
+			}
+
+			.col-md-12 {
+				width: 100% !important;
+				padding: 0 !important;
+				float: none !important;
+			}
+		}
 	</style>
 </head>
 
@@ -255,24 +330,10 @@ $flag_d = mysqli_fetch_array($flag_r);
 		}
 
 		function printReport(id) {
-			var myWindow = window.open('quotation_view_new_quotation.php?quotation_id=' + id + "&p=1", '', 'width=900,height=1000');
-			if (!myWindow) {
-				alert('Please allow popups to print quotation.');
-				return;
+			var printWin = window.open('quotation_view_new_quotation_new_1.php?quotation_id=' + id + '&print=1', '_blank');
+			if (!printWin) {
+				window.print();
 			}
-			myWindow.focus();
-			var printed = false;
-			function doPrint() {
-				if (printed) { return; }
-				printed = true;
-				try {
-					myWindow.print();
-				} catch (e) {}
-			}
-			myWindow.onload = function() {
-				setTimeout(doPrint, 800);
-			};
-			setTimeout(doPrint, 1800);
 		}
 
 		// for mail send
