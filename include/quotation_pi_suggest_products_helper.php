@@ -618,13 +618,45 @@ if (!function_exists('armor_quotation_pi_get_product_name')) {
 
 
 
+if (!function_exists('armor_quotation_pi_normalize_catno')) {
+
+	function armor_quotation_pi_normalize_catno($catno)
+
+	{
+
+		$catno = (string) $catno;
+
+		$catno = str_replace(array("\t", "\r", "\n", "\0", "\x0B"), '', $catno);
+
+		return trim($catno);
+
+	}
+
+}
+
+
+
+if (!function_exists('armor_quotation_pi_catno_sql_normalized')) {
+
+	function armor_quotation_pi_catno_sql_normalized($column = 'catno')
+
+	{
+
+		return "TRIM(REPLACE(REPLACE(REPLACE(" . $column . ", CHAR(9), ''), CHAR(10), ''), CHAR(13), ''))";
+
+	}
+
+}
+
+
+
 if (!function_exists('armor_quotation_pi_resolve_pwp_row')) {
 
 	function armor_quotation_pi_resolve_pwp_row($db, $catno)
 
 	{
 
-		$catno = trim((string) $catno);
+		$catno = armor_quotation_pi_normalize_catno($catno);
 
 		if ($catno === '') {
 
@@ -634,13 +666,17 @@ if (!function_exists('armor_quotation_pi_resolve_pwp_row')) {
 
 		$catnoEsc = $db->clean($catno);
 
+		$catnoSql = armor_quotation_pi_catno_sql_normalized('catno');
+
 		$whereList = array(
 
 			"isDelete=0 AND catno='" . $catnoEsc . "'",
 
-			"isDelete=0 AND TRIM(catno)='" . $catnoEsc . "'",
+			"isDelete=0 AND " . $catnoSql . "='" . $catnoEsc . "'",
 
 		);
+
+		$candidates = array();
 
 		foreach ($whereList as $where) {
 
@@ -654,7 +690,7 @@ if (!function_exists('armor_quotation_pi_resolve_pwp_row')) {
 
 			while ($pwp = mysqli_fetch_assoc($pwpRes)) {
 
-				if (isset($pwp['isActive']) && (string) $pwp['isActive'] === '0') {
+				if (armor_quotation_pi_normalize_catno($pwp['catno']) !== $catno) {
 
 					continue;
 
@@ -676,13 +712,37 @@ if (!function_exists('armor_quotation_pi_resolve_pwp_row')) {
 
 				}
 
-				return $pwp;
+				$isActive = isset($pwp['isActive']) ? (string) $pwp['isActive'] : '1';
+
+				$candidates[] = array(
+
+					'row' => $pwp,
+
+					'active' => ($isActive !== '0'),
+
+				);
 
 			}
 
 		}
 
-		return null;
+		if (empty($candidates)) {
+
+			return null;
+
+		}
+
+		foreach ($candidates as $candidate) {
+
+			if ($candidate['active']) {
+
+				return $candidate['row'];
+
+			}
+
+		}
+
+		return $candidates[0]['row'];
 
 	}
 
@@ -2063,7 +2123,7 @@ if (!function_exists('armor_quotation_pi_get_suggest_products')) {
 
 		foreach ($catnos as $catno) {
 
-			$catno = trim((string) $catno);
+			$catno = armor_quotation_pi_normalize_catno($catno);
 
 			if ($catno === '' || isset($seenCatno[$catno])) {
 
@@ -2101,7 +2161,7 @@ if (!function_exists('armor_quotation_pi_get_suggest_products')) {
 
 				foreach ($details as $detail) {
 
-					if (trim((string) $detail['catno']) !== $catno) {
+					if (armor_quotation_pi_normalize_catno($detail['catno']) !== $catno) {
 
 						continue;
 
