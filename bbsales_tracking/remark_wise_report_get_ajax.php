@@ -160,22 +160,22 @@ function rar_render_form_html($visit)
 		$isCredit = rar_payment_is_credit($payOption);
 
 		$html .= '<div class="rar-form-block rar-highrate-block" id="rar-highrate-print-' . (int) $visit['id'] . '">';
-		$html .= '<h4 style="margin-top:0;color:#c85a12;"><i class="fa fa-line-chart"></i> High Rate Analysis Form</h4>';
-		$html .= '<table class="table table-bordered table-condensed rar-hr-header-table" style="margin-bottom:10px;">';
-		$html .= '<tr>';
-		$html .= '<th style="width:120px;">Sales Person</th><td>' . rar_h($salesPerson) . '</td>';
-		$html .= '<th style="width:90px;">Visit Date</th><td>' . rar_h($visitDateLabel) . '</td>';
-		$html .= '<th style="width:70px;">Time</th><td>' . rar_h($visitTimeLabel) . '</td>';
-		$html .= '</tr>';
-		$html .= '<tr>';
-		$html .= '<th>Client Code</th><td>' . rar_h($clientCode) . '</td>';
-		$html .= '<th>Customer Name</th><td colspan="3">' . rar_h($custName) . '</td>';
-		$html .= '</tr>';
-		$html .= '<tr>';
-		$html .= '<th>Address</th><td colspan="3">' . nl2br(rar_h($custAddress)) . '</td>';
-		$html .= '<th>Turnover</th><td>' . rar_h($turnLabel) . '</td>';
-		$html .= '</tr>';
-		$html .= '</table>';
+
+		$html .= '<div class="rar-hr-info-panel">';
+		$html .= '<div class="rar-hr-info-grid">';
+		$html .= '<div class="rar-hr-info-item"><span class="rar-hr-label"><i class="fa fa-user"></i> Sales Person</span><span class="rar-hr-value">' . rar_h($salesPerson) . '</span></div>';
+		$html .= '<div class="rar-hr-info-item"><span class="rar-hr-label"><i class="fa fa-calendar"></i> Visit Date</span><span class="rar-hr-value">' . rar_h($visitDateLabel) . '</span></div>';
+		$html .= '<div class="rar-hr-info-item"><span class="rar-hr-label"><i class="fa fa-clock-o"></i> Time</span><span class="rar-hr-value">' . rar_h($visitTimeLabel) . '</span></div>';
+		$html .= '</div>';
+		$html .= '<div class="rar-hr-customer-row">';
+		$html .= '<span class="rar-hr-code">' . rar_h($clientCode) . '</span>';
+		$html .= '<span class="rar-hr-company">' . rar_h($custName) . '</span>';
+		$html .= '</div>';
+		$html .= '<div class="rar-hr-bottom-row">';
+		$html .= '<div class="rar-hr-addr-block"><span class="rar-hr-label"><i class="fa fa-map-marker"></i> Address</span><span class="rar-hr-value">' . nl2br(rar_h($custAddress)) . '</span></div>';
+		$html .= '<div class="rar-hr-turn-block"><span class="rar-hr-label"><i class="fa fa-line-chart"></i> Turnover</span><span class="rar-hr-value">' . rar_h($turnLabel) . '</span></div>';
+		$html .= '</div>';
+		$html .= '</div>';
 
 		if (!empty($visit['high_rate_items'])) {
 			$html .= '<table class="table table-bordered table-striped table-condensed rar-hr-product-table" style="margin-bottom:10px;">';
@@ -194,8 +194,8 @@ function rar_render_form_html($visit)
 			$html .= '<div class="text-muted" style="margin-bottom:10px;">No product rows found.</div>';
 		}
 
-		$html .= '<div class="rar-hr-payment-section" style="border:1px solid #ddd;border-radius:4px;padding:10px 12px;background:#fafafa;">';
-		$html .= '<div style="font-weight:bold;margin-bottom:8px;color:#333;">Payment Condition</div>';
+		$html .= '<div class="rar-hr-payment-section">';
+		$html .= '<div style="font-weight:bold;margin-bottom:8px;color:#2c5282;font-size:13px;"><i class="fa fa-credit-card"></i> Payment Condition</div>';
 		$html .= '<div class="rar-hr-payment-options">';
 		$html .= '<label class="rar-pay-opt' . ($isAdvance ? ' active' : '') . '" style="margin-right:24px;font-weight:normal;">';
 		$html .= '<i class="fa fa-' . ($isAdvance ? 'check-square' : 'square-o') . '" style="color:' . ($isAdvance ? '#1a7a3a' : '#999') . ';"></i> ';

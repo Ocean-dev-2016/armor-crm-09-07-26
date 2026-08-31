@@ -40,6 +40,133 @@ $defaultTo = date("Y-m-t");
 		.rar-hr-payment-section .rar-pay-opt.active { font-weight:700; color:#1a7a3a; }
 		#rarFormModalFooter .btn-print-hr { background:#3598dc; color:#fff; }
 		#rarFormModalFooter .btn-share-hr { background:#25d366; color:#fff; }
+		#rarFormModal .rar-form-modal-dialog {
+			width: 92%;
+			max-width: 1100px;
+			margin: 20px auto;
+		}
+		#rarFormModal .modal-content {
+			border-radius: 6px;
+			overflow: hidden;
+		}
+		#rarFormModal .modal-body {
+			max-height: none !important;
+			overflow: visible !important;
+			padding: 16px 20px;
+		}
+		.rar-hr-info-panel {
+			background: linear-gradient(135deg, #f8fbff 0%, #f4f8fc 100%);
+			border: 1px solid #c5d9ea;
+			border-left: 4px solid #3598dc;
+			border-radius: 6px;
+			padding: 14px 16px;
+			margin-bottom: 14px;
+		}
+		.rar-hr-info-grid {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 10px;
+			margin-bottom: 12px;
+		}
+		.rar-hr-info-item {
+			flex: 1 1 160px;
+			background: #fff;
+			border: 1px solid #dde8f2;
+			border-radius: 5px;
+			padding: 8px 12px;
+			min-width: 140px;
+		}
+		.rar-hr-info-item .rar-hr-label {
+			display: block;
+			font-size: 10px;
+			text-transform: uppercase;
+			letter-spacing: 0.4px;
+			color: #7a8a99;
+			font-weight: 600;
+			margin-bottom: 3px;
+		}
+		.rar-hr-info-item .rar-hr-value {
+			display: block;
+			font-size: 13px;
+			font-weight: 700;
+			color: #2c3e50;
+			line-height: 1.3;
+		}
+		.rar-hr-customer-row {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			gap: 10px;
+			margin-bottom: 10px;
+			padding-bottom: 10px;
+			border-bottom: 1px dashed #d0dde8;
+		}
+		.rar-hr-code {
+			display: inline-block;
+			background: #1a7a3a;
+			color: #fff;
+			font-size: 12px;
+			font-weight: 700;
+			padding: 4px 10px;
+			border-radius: 4px;
+			letter-spacing: 0.3px;
+		}
+		.rar-hr-company {
+			font-size: 16px;
+			font-weight: 700;
+			color: #1a3a5c;
+		}
+		.rar-hr-bottom-row {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 12px;
+		}
+		.rar-hr-addr-block {
+			flex: 1 1 60%;
+			min-width: 220px;
+		}
+		.rar-hr-addr-block .rar-hr-label,
+		.rar-hr-turn-block .rar-hr-label {
+			display: block;
+			font-size: 10px;
+			text-transform: uppercase;
+			color: #7a8a99;
+			font-weight: 600;
+			margin-bottom: 3px;
+		}
+		.rar-hr-addr-block .rar-hr-value {
+			font-size: 12px;
+			color: #444;
+			line-height: 1.45;
+		}
+		.rar-hr-turn-block {
+			flex: 1 1 200px;
+			background: #fff8e6;
+			border: 1px solid #f0d9a8;
+			border-radius: 5px;
+			padding: 8px 12px;
+		}
+		.rar-hr-turn-block .rar-hr-value {
+			font-size: 12px;
+			font-weight: 600;
+			color: #8a5a00;
+		}
+		.rar-highrate-block .rar-hr-product-table {
+			margin-bottom: 12px;
+		}
+		.rar-highrate-block .rar-hr-product-table thead th {
+			background: #eef4fa !important;
+			color: #2c5282;
+			font-size: 11px;
+			font-weight: 700;
+			border-color: #c5d5e5 !important;
+		}
+		.rar-hr-payment-section {
+			border: 1px solid #d5e3ef !important;
+			border-radius: 6px !important;
+			padding: 12px 14px !important;
+			background: #f9fcff !important;
+		}
 	</style>
 </head>
 <body class="page-md">
@@ -121,13 +248,13 @@ $defaultTo = date("Y-m-t");
 </div>
 
 <div class="modal fade" id="rarFormModal" tabindex="-1" role="dialog" aria-hidden="true">
-	<div class="modal-dialog modal-lg">
+	<div class="modal-dialog rar-form-modal-dialog">
 		<div class="modal-content">
 			<div class="modal-header" style="background:#3598dc;color:#fff;">
 				<button type="button" class="close" data-dismiss="modal" aria-hidden="true" style="color:#fff;opacity:1;">&times;</button>
 				<h4 class="modal-title" id="rarFormModalTitle">Form Detail</h4>
 			</div>
-			<div class="modal-body" id="rarFormModalBody" style="max-height:70vh;overflow:auto;">
+			<div class="modal-body" id="rarFormModalBody">
 				<div class="text-center text-muted">Loading...</div>
 			</div>
 			<div class="modal-footer" id="rarFormModalFooter">
@@ -307,19 +434,22 @@ $defaultTo = date("Y-m-t");
 	function rarBuildHighRateShareText($wrap) {
 		var lines = [];
 		lines.push("HIGH RATE ANALYSIS FORM");
-		$wrap.find(".rar-hr-header-table tr").each(function () {
-			var parts = [];
-			$(this).find("th").each(function (i) {
-				var label = $.trim($(this).text());
-				var val = $.trim($(this).next("td").text());
-				if (label && val) {
-					parts.push(label + ": " + val);
-				}
-			});
-			if (parts.length) {
-				lines.push(parts.join(" | "));
+		$wrap.find(".rar-hr-info-item").each(function () {
+			var label = $.trim($(this).find(".rar-hr-label").text());
+			var val = $.trim($(this).find(".rar-hr-value").text());
+			if (label && val) {
+				lines.push(label + ": " + val);
 			}
 		});
+		var code = $.trim($wrap.find(".rar-hr-code").text());
+		var company = $.trim($wrap.find(".rar-hr-company").text());
+		if (code || company) {
+			lines.push("Client: " + code + " | " + company);
+		}
+		var addr = $.trim($wrap.find(".rar-hr-addr-block .rar-hr-value").text());
+		var turn = $.trim($wrap.find(".rar-hr-turn-block .rar-hr-value").text());
+		if (addr) lines.push("Address: " + addr);
+		if (turn) lines.push("Turnover: " + turn);
 		lines.push("");
 		lines.push("Products:");
 		$wrap.find(".rar-hr-product-table tbody tr").each(function () {
