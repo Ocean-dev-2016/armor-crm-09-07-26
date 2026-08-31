@@ -160,6 +160,7 @@ function rar_render_form_html($visit)
 		$isCredit = rar_payment_is_credit($payOption);
 
 		$html .= '<div class="rar-form-block rar-highrate-block" id="rar-highrate-print-' . (int) $visit['id'] . '">';
+		$html .= '<div class="rar-hr-modal-fit">';
 
 		$html .= '<div class="rar-hr-info-panel">';
 		$html .= '<div class="rar-hr-info-grid">';
@@ -207,6 +208,7 @@ function rar_render_form_html($visit)
 		if ($payRemark != '') {
 			$html .= '<div style="margin-top:8px;font-size:12px;"><b>Payment Remark:</b> ' . rar_h($payRemark) . '</div>';
 		}
+		$html .= '</div>';
 		$html .= '</div>';
 		$html .= '</div>';
 	}

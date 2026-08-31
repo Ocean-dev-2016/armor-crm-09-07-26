@@ -40,19 +40,87 @@ $defaultTo = date("Y-m-t");
 		.rar-hr-payment-section .rar-pay-opt.active { font-weight:700; color:#1a7a3a; }
 		#rarFormModalFooter .btn-print-hr { background:#3598dc; color:#fff; }
 		#rarFormModalFooter .btn-share-hr { background:#25d366; color:#fff; }
+		body.rar-modal-open {
+			overflow: hidden !important;
+		}
+		#rarFormModal {
+			overflow: hidden !important;
+			padding-right: 0 !important;
+		}
 		#rarFormModal .rar-form-modal-dialog {
-			width: 92%;
-			max-width: 1100px;
-			margin: 20px auto;
+			width: 94%;
+			max-width: 1150px;
+			margin: 8px auto;
+			height: calc(100vh - 16px);
+			max-height: calc(100vh - 16px);
 		}
 		#rarFormModal .modal-content {
+			height: 100%;
+			max-height: calc(100vh - 16px);
+			display: flex;
+			flex-direction: column;
 			border-radius: 6px;
 			overflow: hidden;
+			box-shadow: 0 10px 40px rgba(0,0,0,0.28);
+		}
+		#rarFormModal .modal-header {
+			flex: 0 0 auto;
+			border-radius: 0;
+			padding: 12px 18px;
+		}
+		#rarFormModal .modal-footer {
+			flex: 0 0 auto;
+			border-radius: 0;
+			padding: 10px 18px;
 		}
 		#rarFormModal .modal-body {
-			max-height: none !important;
+			flex: 1 1 auto;
 			overflow: visible !important;
-			padding: 16px 20px;
+			max-height: none !important;
+			padding: 10px 16px 8px;
+			min-height: 0;
+		}
+		#rarFormModal .rar-highrate-block {
+			display: flex;
+			flex-direction: column;
+			height: 100%;
+		}
+		#rarFormModal .rar-hr-info-panel {
+			flex-shrink: 0;
+			padding: 10px 12px;
+			margin-bottom: 8px;
+		}
+		#rarFormModal .rar-hr-info-grid {
+			margin-bottom: 8px;
+			gap: 8px;
+		}
+		#rarFormModal .rar-hr-info-item {
+			padding: 6px 10px;
+		}
+		#rarFormModal .rar-hr-customer-row {
+			margin-bottom: 8px;
+			padding-bottom: 8px;
+		}
+		#rarFormModal .rar-hr-company {
+			font-size: 15px;
+		}
+		#rarFormModal .rar-hr-product-table {
+			margin-bottom: 8px !important;
+		}
+		#rarFormModal .rar-hr-product-table th,
+		#rarFormModal .rar-hr-product-table td {
+			font-size: 10px !important;
+			padding: 3px 5px !important;
+			line-height: 1.2;
+			vertical-align: middle;
+		}
+		#rarFormModal .rar-hr-payment-section {
+			flex-shrink: 0;
+			margin-bottom: 0 !important;
+			padding: 8px 12px !important;
+		}
+		#rarFormModal .rar-hr-modal-fit {
+			transform-origin: top center;
 		}
 		.rar-hr-info-panel {
 			background: linear-gradient(135deg, #f8fbff 0%, #f4f8fc 100%);
@@ -406,10 +474,58 @@ $defaultTo = date("Y-m-t");
 		$("#rarFormModalBody").html(content);
 		if (hasHighRate) {
 			$("#rarBtnPrintHr, #rarBtnShareHr").show();
+			$("#rarFormModal").addClass("rar-hr-full-modal");
 		} else {
 			$("#rarBtnPrintHr, #rarBtnShareHr").hide();
+			$("#rarFormModal").removeClass("rar-hr-full-modal");
 		}
 		$("#rarFormModal").modal("show");
+	});
+
+	$("#rarFormModal").on("show.bs.modal", function () {
+		$("body").addClass("rar-modal-open");
+	});
+	$("#rarFormModal").on("shown.bs.modal", function () {
+		rarFitHighRateModal();
+	});
+	$("#rarFormModal").on("hidden.bs.modal", function () {
+		$("body").removeClass("rar-modal-open");
+		$(this).removeClass("rar-hr-full-modal");
+		$(this).find(".rar-hr-modal-fit").css({ transform: "none", width: "100%", marginBottom: 0 });
+	});
+
+	function rarFitHighRateModal() {
+		var $modal = $("#rarFormModal");
+		if (!$modal.hasClass("rar-hr-full-modal")) {
+			return;
+		}
+		var $fit = $modal.find(".rar-hr-modal-fit");
+		if (!$fit.length) {
+			return;
+		}
+		$fit.css({ transform: "none", width: "100%", marginBottom: 0 });
+		var $content = $modal.find(".modal-content");
+		var available = $content.height()
+			- $modal.find(".modal-header").outerHeight(true)
+			- $modal.find(".modal-footer").outerHeight(true)
+			- parseInt($modal.find(".modal-body").css("padding-top"), 10)
+			- parseInt($modal.find(".modal-body").css("padding-bottom"), 10)
+			- 4;
+		var needed = $fit[0].scrollHeight;
+		if (needed > available && available > 80) {
+			var scale = Math.max(0.78, available / needed);
+			$fit.css({
+				transform: "scale(" + scale + ")",
+				width: (100 / scale) + "%",
+				marginBottom: "-" + Math.round((1 - scale) * needed * 0.35) + "px"
+			});
+		}
+	}
+
+	$(window).on("resize", function () {
+		if ($("#rarFormModal").hasClass("in")) {
+			rarFitHighRateModal();
+		}
 	});
 
 	$("#rarBtnPrintHr").on("click", function () {
