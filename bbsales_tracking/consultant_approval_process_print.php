@@ -263,6 +263,9 @@ if ($ctable_r) {
                             isset($d['process_three_project_name']) ? $d['process_three_project_name'] : '',
                             isset($d['process_three_project_location']) ? $d['process_three_project_location'] : ''
                         );
+                        $productHtml = consultant_approval_render_product_list_html(
+                            isset($d['process_four_product_name']) ? $d['process_four_product_name'] : ''
+                        );
                 ?>
                         <tr style="<?= $style ?>">
                             <td class="col-num"><?= $sr++ ?></td>
@@ -279,7 +282,7 @@ if ($ctable_r) {
                             <td class="consultant-project-cell"><?= $projectCells['name_html'] ?></td>
                             <td class="consultant-project-cell"><?= $projectCells['location_html'] ?></td>
 
-                            <td><?= $d['process_four_product_name'] ?: '' ?></td>
+                            <td class="consultant-product-cell"><?= $productHtml ?></td>
                             <td><?= $d['process_four_contractor_name'] ?: '' ?></td>
                             <td><?= $d['process_four_contractor_mobile'] ?: '' ?></td>
                             <td><?= $d['process_four_contractor_email'] ?: '' ?></td>
