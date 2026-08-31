@@ -532,6 +532,10 @@ class Visit extends Functions
 					!empty($highRateItems)
 				);
 				if ($hasHighRatePayload) {
+					$highRatePaymentResolved = $this->resolveHighRatePaymentFields(
+						isset($payment_option) ? $payment_option : (isset($high_rate_payment_option) ? $high_rate_payment_option : ''),
+						isset($payment_remark) ? $payment_remark : (isset($high_rate_payment_remark) ? $high_rate_payment_remark : '')
+					);
 					$highRateFormId = $this->saveVisitHighRateForm(array(
 						"visit_id" => $id,
 						"user_id" => $user_id,
@@ -540,8 +544,8 @@ class Visit extends Functions
 						"reason_code" => $reason_code,
 						"followup_id" => 0,
 						"customer_name" => isset($high_rate_customer_name) ? $high_rate_customer_name : "",
-						"payment_option" => isset($payment_option) ? $payment_option : (isset($high_rate_payment_option) ? $high_rate_payment_option : ""),
-						"payment_remark" => isset($payment_remark) ? $payment_remark : (isset($high_rate_payment_remark) ? $high_rate_payment_remark : ""),
+						"payment_option" => $highRatePaymentResolved['payment_option'],
+						"payment_remark" => $highRatePaymentResolved['payment_remark'],
 						"items" => $highRateItems,
 					));
 				} else {
@@ -773,7 +777,7 @@ class Visit extends Functions
 		);
 	}
 
-	/** payment_option: 0 = Advance, 1 = 30 Days (Android sends 0/1) */
+	/** payment_option: 0 = Advance, 1 = 30 Days (Android sends 0/1; legacy boolean true/false also supported) */
 	public function getHighRatePaymentOptions()
 	{
 		return array(
@@ -782,16 +786,65 @@ class Visit extends Functions
 		);
 	}
 
-	public function normalizeHighRatePaymentOption($value)
+	private function isHighRateBooleanString($value)
 	{
-		$value = trim((string) $value);
-		if ($value === "0" || strcasecmp($value, "Advance") === 0) {
-			return "0";
+		$value = strtolower(trim((string) $value));
+		return ($value === 'true' || $value === 'false');
+	}
+
+	/**
+	 * Android app may send payment_option / payment_remark as boolean query params.
+	 * Advance tick  -> payment_option=true  -> store "0"
+	 * 30 Days tick  -> payment_remark=true   -> store "1" (legacy Android mapping)
+	 */
+	public function resolveHighRatePaymentFields($paymentOption, $paymentRemark = '')
+	{
+		$opt = trim((string) $paymentOption);
+		$rem = trim((string) $paymentRemark);
+
+		if ($opt === '0' || strcasecmp($opt, 'Advance') === 0 || strcasecmp($opt, 'advance payment') === 0) {
+			return array(
+				'payment_option' => '0',
+				'payment_remark' => $this->isHighRateBooleanString($rem) ? '' : $rem,
+			);
 		}
-		if ($value === "1" || strcasecmp($value, "30 Days") === 0 || strcasecmp($value, "30 days") === 0) {
-			return "1";
+		if ($opt === '1' || strcasecmp($opt, '30 Days') === 0 || strcasecmp($opt, '30 days') === 0 || strcasecmp($opt, '30 day credit') === 0) {
+			return array(
+				'payment_option' => '1',
+				'payment_remark' => $this->isHighRateBooleanString($rem) ? '' : $rem,
+			);
 		}
-		return $value;
+
+		if (strcasecmp($opt, 'true') === 0) {
+			return array(
+				'payment_option' => '0',
+				'payment_remark' => $this->isHighRateBooleanString($rem) ? '' : $rem,
+			);
+		}
+		if (strcasecmp($rem, 'true') === 0) {
+			return array(
+				'payment_option' => '1',
+				'payment_remark' => '',
+			);
+		}
+
+		if ($opt === '' || strcasecmp($opt, 'false') === 0) {
+			return array(
+				'payment_option' => '',
+				'payment_remark' => $this->isHighRateBooleanString($rem) ? '' : $rem,
+			);
+		}
+
+		return array(
+			'payment_option' => $this->normalizeHighRatePaymentOption($opt),
+			'payment_remark' => $this->isHighRateBooleanString($rem) ? '' : $rem,
+		);
+	}
+
+	public function normalizeHighRatePaymentOption($value, $paymentRemark = '')
+	{
+		$resolved = $this->resolveHighRatePaymentFields($value, $paymentRemark);
+		return $resolved['payment_option'];
 	}
 
 	public function getHighRatePaymentOptionLabel($value)
@@ -1257,8 +1310,12 @@ class Visit extends Functions
 		}
 
 		$customerName = isset($data['customer_name']) ? $data['customer_name'] : "";
-		$paymentOption = isset($data['payment_option']) ? $this->normalizeHighRatePaymentOption($data['payment_option']) : "";
-		$paymentRemark = isset($data['payment_remark']) ? $data['payment_remark'] : "";
+		$paymentResolved = $this->resolveHighRatePaymentFields(
+			isset($data['payment_option']) ? $data['payment_option'] : '',
+			isset($data['payment_remark']) ? $data['payment_remark'] : ''
+		);
+		$paymentOption = $paymentResolved['payment_option'];
+		$paymentRemark = $paymentResolved['payment_remark'];
 		$followupId = isset($data['followup_id']) ? $data['followup_id'] : 0;
 		$items = isset($data['items']) && is_array($data['items']) ? $data['items'] : array();
 		if (!empty($items)) {
@@ -1473,8 +1530,12 @@ class Visit extends Functions
 			}
 		}
 
-		$paymentOption = isset($detail['payment_option']) ? $this->normalizeHighRatePaymentOption(trim($detail['payment_option'])) : "";
-		$paymentRemark = isset($detail['payment_remark']) ? trim($detail['payment_remark']) : "";
+		$paymentResolved = $this->resolveHighRatePaymentFields(
+			isset($detail['payment_option']) ? $detail['payment_option'] : '',
+			isset($detail['payment_remark']) ? $detail['payment_remark'] : ''
+		);
+		$paymentOption = $paymentResolved['payment_option'];
+		$paymentRemark = $paymentResolved['payment_remark'];
 
 		$formId = $this->saveVisitHighRateForm(array(
 			"visit_id" => $visitId,

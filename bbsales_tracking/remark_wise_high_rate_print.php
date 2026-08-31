@@ -95,18 +95,24 @@ function hr_p($v)
 }
 function hr_pay_advance($v)
 {
-	return ($v === '0' || $v === 0 || strcasecmp((string) $v, 'advance') === 0);
+	return ($v === '0' || $v === 0 || strcasecmp((string) $v, 'advance') === 0 || strcasecmp((string) $v, 'true') === 0);
 }
 function hr_pay_credit($v)
 {
-	return ($v === '1' || $v === 1 || strcasecmp((string) $v, '30 days') === 0 || strcasecmp((string) $v, '30 day credit') === 0);
+	return ($v === '1' || $v === 1 || strcasecmp((string) $v, '30 days') === 0);
 }
 
-$payOption = $hf ? (isset($hf['payment_option']) ? $hf['payment_option'] : '') : '';
-$payRemark = $hf && isset($hf['payment_remark']) ? trim((string) $hf['payment_remark']) : '';
-if ($payRemark === 'false') {
-	$payRemark = '';
+$payResolved = array('payment_option' => '', 'payment_remark' => '');
+if ($hf) {
+	require_once('../include/class.visit.php');
+	$visitObj = new Visit();
+	$payResolved = $visitObj->resolveHighRatePaymentFields(
+		isset($hf['payment_option']) ? $hf['payment_option'] : '',
+		isset($hf['payment_remark']) ? $hf['payment_remark'] : ''
+	);
 }
+$payOption = $payResolved['payment_option'];
+$payRemark = $payResolved['payment_remark'];
 $isAdvance = hr_pay_advance($payOption);
 $isCredit = hr_pay_credit($payOption);
 $autoPrint = isset($_REQUEST['print']) && $_REQUEST['print'] == '1';

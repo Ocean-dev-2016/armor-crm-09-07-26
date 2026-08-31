@@ -63,9 +63,34 @@ function rar_payment_label($value)
 	return (string) $value;
 }
 
+function rar_resolve_payment_option_from_form($hf)
+{
+	$opt = isset($hf['payment_option']) ? trim((string) $hf['payment_option']) : '';
+	$rem = isset($hf['payment_remark']) ? trim((string) $hf['payment_remark']) : '';
+	if ($opt === '0' || strcasecmp($opt, 'advance') === 0 || strcasecmp($opt, 'advance payment') === 0 || strcasecmp($opt, 'true') === 0) {
+		return '0';
+	}
+	if ($opt === '1' || strcasecmp($opt, '30 days') === 0 || strcasecmp($opt, '30 day credit') === 0) {
+		return '1';
+	}
+	if (strcasecmp($rem, 'true') === 0) {
+		return '1';
+	}
+	return '';
+}
+
+function rar_resolve_payment_remark_text($hf)
+{
+	$rem = isset($hf['payment_remark']) ? trim((string) $hf['payment_remark']) : '';
+	if ($rem === '' || strcasecmp($rem, 'true') === 0 || strcasecmp($rem, 'false') === 0) {
+		return '';
+	}
+	return $rem;
+}
+
 function rar_payment_is_advance($value)
 {
-	return ($value === '0' || $value === 0 || strcasecmp((string) $value, 'advance') === 0 || strcasecmp((string) $value, 'advance payment') === 0);
+	return ($value === '0' || $value === 0 || strcasecmp((string) $value, 'advance') === 0 || strcasecmp((string) $value, 'advance payment') === 0 || strcasecmp((string) $value, 'true') === 0);
 }
 
 function rar_payment_is_credit($value)
@@ -205,11 +230,8 @@ function rar_render_form_html($visit)
 
 	if ($hasHighRate) {
 		$hf = $visit['high_rate_form'];
-		$payOption = isset($hf['payment_option']) ? $hf['payment_option'] : '';
-		$payRemark = isset($hf['payment_remark']) ? trim((string) $hf['payment_remark']) : '';
-		if ($payRemark === 'false' || $payRemark === '0') {
-			$payRemark = '';
-		}
+		$payOption = rar_resolve_payment_option_from_form($hf);
+		$payRemark = rar_resolve_payment_remark_text($hf);
 		$isAdvance = rar_payment_is_advance($payOption);
 		$isCredit = rar_payment_is_credit($payOption);
 
