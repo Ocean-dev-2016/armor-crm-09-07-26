@@ -52,15 +52,15 @@ if (!function_exists('armor_quotation_pi_suggest_category_map')) {
 
 				'catnos' => array(
 
-					'2086', '2088', '2015', '2065', '2068', '2075', '2080', '2084', '2011', '2013', '2061', '2067', '2071', '2078',
+					'2086', '2088', '2095', '2065', '2068', '2075', '2080', '2084', '2091', '2093', '2061', '2067', '2071', '2078',
 
 					'2426', '2427', '2429',
 
 					'2442', '2447', '2443', '2444', '2446', '2445',
 
-					'2613', '2618', '2667', '2615', '2668', '2669', '2714',
+					'2433', '2670', '2667', '2435', '2668', '2669', '2774',
 
-					'2708', '3005', '2713', '3006', '2718', '2673', '3007', '2709', '2707',
+					'2708', '3005', '2713', '3006', '2718', '2693', '3007', '2700', '2707',
 
 					'2677', '2678', '2679', '2680', '2681',
 
@@ -464,6 +464,110 @@ if (!function_exists('armor_quotation_pi_suggest_seed_defaults')) {
 
 
 
+if (!function_exists('armor_quotation_pi_suggest_sync_from_map')) {
+
+	function armor_quotation_pi_suggest_sync_from_map($db)
+
+	{
+
+		armor_quotation_pi_suggest_ensure_table($db);
+
+		$table = armor_quotation_pi_suggest_table();
+
+		if (!$db->tableExists($table)) {
+
+			return;
+
+		}
+
+		$catnos = armor_quotation_pi_suggest_default_catnos();
+
+		$now = date('Y-m-d H:i:s');
+
+		$order = 0;
+
+		$mapSet = array();
+
+		foreach ($catnos as $catno) {
+
+			$catno = trim((string) $catno);
+
+			if ($catno === '') {
+
+				continue;
+
+			}
+
+			$order++;
+
+			$mapSet[$catno] = 1;
+
+			$catnoEsc = $db->clean($catno);
+
+			$existingId = (int) $db->rp_getValue($table, 'id', "catno='" . $catnoEsc . "'", 0);
+
+			$row = array(
+
+				'catno' => $catno,
+
+				'display_order' => $order,
+
+				'isActive' => 1,
+
+				'isDelete' => 0,
+
+				'modified_date' => $now,
+
+			);
+
+			if ($existingId > 0) {
+
+				$db->rp_update($table, $row, "id='" . $existingId . "'", 0);
+
+			} else {
+
+				$row['created_date'] = $now;
+
+				$db->rp_insert($table, $row, 0);
+
+			}
+
+		}
+
+		$res = $db->rp_getData($table, 'id,catno', 'isDelete=0', '', 0);
+
+		if ($res) {
+
+			while ($row = mysqli_fetch_assoc($res)) {
+
+				$catno = trim((string) $row['catno']);
+
+				if ($catno === '' || isset($mapSet[$catno])) {
+
+					continue;
+
+				}
+
+				$db->rp_update($table, array(
+
+					'isActive' => 0,
+
+					'isDelete' => 1,
+
+					'modified_date' => $now,
+
+				), "id='" . (int) $row['id'] . "'", 0);
+
+			}
+
+		}
+
+	}
+
+}
+
+
+
 if (!function_exists('armor_quotation_pi_suggest_catnos')) {
 
 	function armor_quotation_pi_suggest_catnos($db = null)
@@ -472,7 +576,7 @@ if (!function_exists('armor_quotation_pi_suggest_catnos')) {
 
 		if ($db !== null) {
 
-			armor_quotation_pi_suggest_ensure_table($db);
+			armor_quotation_pi_suggest_sync_from_map($db);
 
 			$table = armor_quotation_pi_suggest_table();
 
@@ -498,7 +602,7 @@ if (!function_exists('armor_quotation_pi_suggest_catnos')) {
 
 					if (!empty($catnos)) {
 
-						return $catnos;
+						return armor_quotation_pi_sort_catnos_by_sheet_order($catnos);
 
 					}
 
@@ -590,7 +694,7 @@ if (!function_exists('armor_quotation_pi_get_admin_suggest_rows')) {
 
 	{
 
-		armor_quotation_pi_suggest_ensure_table($db);
+		armor_quotation_pi_suggest_sync_from_map($db);
 
 		$table = armor_quotation_pi_suggest_table();
 
@@ -1779,6 +1883,102 @@ if (!function_exists('armor_quotation_pi_suggest_styles')) {
 
 
 
+if (!function_exists('armor_quotation_pi_build_suggest_item_from_pwp')) {
+
+	function armor_quotation_pi_build_suggest_item_from_pwp($db, $pwp, $catno, $customerId = 0)
+
+	{
+
+		$proId = (int) $pwp['product_id'];
+
+		if ($proId <= 0) {
+
+			return null;
+
+		}
+
+		$order_unit_arr = array('-1' => 'Box', '-2' => 'Strip', '-3' => 'Pallet', '1' => 'Caret', '2' => 'Big Box', '100' => 'Nos');
+
+		$name = $db->rp_getValue('product', 'name1', "id='" . $proId . "' AND isDelete=0", 0);
+
+		if (!$name) {
+
+			$name = $db->rp_getValue('product', 'name', "id='" . $proId . "' AND isDelete=0", 0);
+
+		}
+
+		$imagePath = $db->rp_getValue('product', 'image_path', "id='" . $proId . "' AND isDelete=0", 0);
+
+		$itemOrderUnit = $db->rp_getValue('product', 'unit_id', "id='" . $proId . "' AND isDelete=0", 0);
+
+		$unitName = isset($order_unit_arr[$itemOrderUnit]) ? $order_unit_arr[$itemOrderUnit] : 'Nos';
+
+		$rate = isset($pwp['price']) ? (float) $pwp['price'] : 0;
+
+		if ($customerId > 0) {
+
+			$priceListId = (int) $db->rp_getValue('executive', 'price_list_id', "id='" . (int) $customerId . "'", 0);
+
+			$weightId = (int) $pwp['weight_id'];
+
+			if ($priceListId > 0 && $weightId !== 0) {
+
+				$listPrice = $db->rp_getValue(
+
+					'product_price_list',
+
+					'discounted_price',
+
+					"pid='" . $proId . "' AND weight_id='" . $weightId . "' AND price_list_id='" . $priceListId . "' AND isDelete=0",
+
+					0
+
+				);
+
+				if ($listPrice !== '' && $listPrice !== null && (float) $listPrice > 0) {
+
+					$rate = (float) $listPrice;
+
+				}
+
+			}
+
+		}
+
+		return array(
+
+			'product_id' => $proId,
+
+			'weight_id' => (int) $pwp['weight_id'],
+
+			'option_value' => (int) $pwp['id'],
+
+			'catno' => (string) $catno,
+
+			'name' => html_entity_decode(strip_tags($name ? $name : $catno), ENT_QUOTES, 'UTF-8'),
+
+			'rate' => $rate,
+
+			'rate_label' => number_format($rate, 2),
+
+			'discount_per' => armor_quotation_pi_suggest_display_discount_percent(),
+
+			'image' => armor_quotation_pi_product_image_url($imagePath ? $imagePath : ''),
+
+			'pro_id' => $proId,
+
+			'item_order_unit' => $itemOrderUnit,
+
+			'unit_name' => $unitName,
+
+		);
+
+	}
+
+}
+
+
+
 if (!function_exists('armor_quotation_pi_get_suggest_products')) {
 
 	function armor_quotation_pi_get_suggest_products($db, $customerId, $excludeProductIds = array())
@@ -1859,93 +2059,111 @@ if (!function_exists('armor_quotation_pi_get_suggest_products')) {
 
 				$details = $productObj->aj_getProductDetail($proId, $customerId);
 
-				if (empty($details)) {
+				$added = false;
 
-					continue;
+				if (!empty($details)) {
+
+					foreach ($details as $detail) {
+
+						if ((string) $detail['catno'] !== (string) $catno) {
+
+							continue;
+
+						}
+
+						$seenProduct[$proId] = 1;
+
+						$rate = isset($detail['orignal_price']) ? (float) $detail['orignal_price'] : 0;
+
+						if (isset($detail['sell_price']) && (float) $detail['sell_price'] > 0) {
+
+							$rate = (float) $detail['sell_price'];
+
+						}
+
+						$originalPrice = isset($detail['orignal_price']) ? (float) $detail['orignal_price'] : $rate;
+
+						$discountPer = 0;
+
+						if (isset($detail['discountPer']) && $detail['discountPer'] !== '' && $detail['discountPer'] !== null) {
+
+							$discountPer = (float) $detail['discountPer'];
+
+						}
+
+						if ($discountPer <= 0 && $originalPrice > 0 && $rate > 0 && $rate < $originalPrice) {
+
+							$discountPer = round((($originalPrice - $rate) / $originalPrice) * 100);
+
+						}
+
+						$discountPer = max(0, (int) round($discountPer));
+
+						$itemOrderUnit = $db->rp_getValue('product', 'unit_id', "id='" . $proId . "' AND isDelete=0", 0);
+
+						$unitName = isset($order_unit_arr[$itemOrderUnit]) ? $order_unit_arr[$itemOrderUnit] : 'Nos';
+
+						$imagePath = isset($detail['image_path']) ? $detail['image_path'] : '';
+
+						if ($imagePath === '') {
+
+							$rawImg = $db->rp_getValue('product', 'image_path', "id='" . $proId . "' AND isDelete=0", 0);
+
+							$imagePath = $rawImg ? $rawImg : '';
+
+						}
+
+						$items[] = array(
+
+							'product_id' => $proId,
+
+							'weight_id' => (int) $detail['weight_id'],
+
+							'option_value' => isset($detail['id']) ? (int) $detail['id'] : (int) $pwp['id'],
+
+							'catno' => $catno,
+
+							'name' => html_entity_decode(strip_tags($detail['name1']), ENT_QUOTES, 'UTF-8'),
+
+							'rate' => $rate,
+
+							'rate_label' => number_format($rate, 2),
+
+							'discount_per' => $discountPer,
+
+							'image' => armor_quotation_pi_product_image_url($imagePath),
+
+							'pro_id' => $proId,
+
+							'item_order_unit' => $itemOrderUnit,
+
+							'unit_name' => $unitName,
+
+						);
+
+						$added = true;
+
+						break;
+
+					}
 
 				}
 
-				foreach ($details as $detail) {
+				if (!$added) {
 
-					if ((string) $detail['catno'] !== (string) $catno) {
+					$fallbackItem = armor_quotation_pi_build_suggest_item_from_pwp($db, $pwp, $catno, $customerId);
 
-						continue;
+					if ($fallbackItem !== null) {
 
-					}
+						$seenProduct[$proId] = 1;
 
-					$seenProduct[$proId] = 1;
-
-					$rate = isset($detail['orignal_price']) ? (float) $detail['orignal_price'] : 0;
-
-					if (isset($detail['sell_price']) && (float) $detail['sell_price'] > 0) {
-
-						$rate = (float) $detail['sell_price'];
+						$items[] = $fallbackItem;
 
 					}
-
-					$originalPrice = isset($detail['orignal_price']) ? (float) $detail['orignal_price'] : $rate;
-
-					$discountPer = 0;
-
-					if (isset($detail['discountPer']) && $detail['discountPer'] !== '' && $detail['discountPer'] !== null) {
-
-						$discountPer = (float) $detail['discountPer'];
-
-					}
-
-					if ($discountPer <= 0 && $originalPrice > 0 && $rate > 0 && $rate < $originalPrice) {
-
-						$discountPer = round((($originalPrice - $rate) / $originalPrice) * 100);
-
-					}
-
-					$discountPer = max(0, (int) round($discountPer));
-
-					$itemOrderUnit = $db->rp_getValue('product', 'unit_id', "id='" . $proId . "' AND isDelete=0", 0);
-
-					$unitName = isset($order_unit_arr[$itemOrderUnit]) ? $order_unit_arr[$itemOrderUnit] : 'Nos';
-
-					$imagePath = isset($detail['image_path']) ? $detail['image_path'] : '';
-
-					if ($imagePath === '') {
-
-						$rawImg = $db->rp_getValue('product', 'image_path', "id='" . $proId . "' AND isDelete=0", 0);
-
-						$imagePath = $rawImg ? $rawImg : '';
-
-					}
-
-					$items[] = array(
-
-						'product_id' => $proId,
-
-						'weight_id' => (int) $detail['weight_id'],
-
-						'option_value' => isset($detail['id']) ? (int) $detail['id'] : (int) $pwp['id'],
-
-						'catno' => $catno,
-
-						'name' => html_entity_decode(strip_tags($detail['name1']), ENT_QUOTES, 'UTF-8'),
-
-						'rate' => $rate,
-
-						'rate_label' => number_format($rate, 2),
-
-						'discount_per' => $discountPer,
-
-						'image' => armor_quotation_pi_product_image_url($imagePath),
-
-						'pro_id' => $proId,
-
-						'item_order_unit' => $itemOrderUnit,
-
-						'unit_name' => $unitName,
-
-					);
-
-					break;
 
 				}
+
+				break;
 
 			}
 
