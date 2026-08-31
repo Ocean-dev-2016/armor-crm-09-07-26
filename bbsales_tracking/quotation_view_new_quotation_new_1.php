@@ -27,11 +27,26 @@ $company_detail_r = $db->rp_getData("company_master", "*", "id='" . $cart_detail
 
 $company_detail_d = mysqli_fetch_assoc($company_detail_r);
 
+$quotationPrintTitle = 'Quotation';
+if (!empty($cart_detail_d['quotation_no'])) {
+	$quotationPrintTitle .= ' - ' . trim($cart_detail_d['quotation_no']);
+}
+if (!empty($cart_detail_d['company_name'])) {
+	$quotationPrintTitle .= ' - ' . trim($cart_detail_d['company_name']);
+}
+$quotationPrintTitle = preg_replace('/[\\\\\/:*?"<>|]+/', '-', $quotationPrintTitle);
+$quotationPrintTitle = preg_replace('/\s+/', ' ', $quotationPrintTitle);
+$quotationPrintTitle = trim($quotationPrintTitle);
+
 $isPrintMode = (isset($_REQUEST['print']) && $_REQUEST['print'] == '1') || (isset($_REQUEST['p']) && $_REQUEST['p'] == '1');
+$quotationViewEmbedded = (basename($_SERVER['SCRIPT_NAME']) !== 'quotation_view_new_quotation_new_1.php');
+$quotationViewStandalone = !$quotationViewEmbedded;
 ?>
-<html>
+<?php if ($quotationViewStandalone) { ?><html>
 
 <head>
+	<title><?= htmlspecialchars($quotationPrintTitle, ENT_QUOTES, 'UTF-8') ?></title>
+<?php } ?>
 	<style>
 		.mainDiv,
 		table {
@@ -48,10 +63,40 @@ $isPrintMode = (isset($_REQUEST['print']) && $_REQUEST['print'] == '1') || (isse
 			border: 1px solid #595959;
 		}
 
+		.quote-suggest-body table.qp-suggest-print-grid,
+		.quote-suggest-body .qp-prod-card,
+		.quote-suggest-body .qp-prod-card td,
+		.quote-suggest-body .qp-prod-foot-table td,
+		.quote-suggest-body .qp-suggest-wrap-table,
+		.quote-suggest-body .qp-suggest-wrap-table td {
+			border-color: transparent;
+		}
+
+		.quote-suggest-body table.qp-suggest-print-grid td.qp-suggest-print-cell,
+		.quote-suggest-body table.qp-suggest-print-grid td.qp-suggest-cat-header {
+			border: 1px solid #595959 !important;
+		}
+
+		.quote-suggest-body .qp-prod-img-cell {
+			border-bottom: 1px solid #e8e8e8 !important;
+		}
+
+		.qp-suggest-print-header {
+			border: none !important;
+			border-bottom: 1px solid #595959 !important;
+		}
+
+		.quote-wrap {
+			width: 100%;
+			border: 1px solid #595959;
+			box-sizing: border-box;
+			background: #fff;
+		}
+
 		.quote-main-body {
 			box-sizing: border-box;
 			background: #fff;
-			border: 1px solid #595959;
+			border: none;
 		}
 
 		.quote-main-body table {
@@ -75,6 +120,7 @@ $isPrintMode = (isset($_REQUEST['print']) && $_REQUEST['print'] == '1') || (isse
 		.quote-footer-wrap {
 			margin: 0;
 			padding: 0;
+			border-top: 1px solid #595959;
 		}
 
 		td,
@@ -171,12 +217,92 @@ $isPrintMode = (isset($_REQUEST['print']) && $_REQUEST['print'] == '1') || (isse
 
 		.quote-wrap,
 		.quote-main-body,
-		.quote-suggest-body {
+		.quote-suggest-body,
+		.quote-summary-body {
 			width: 100%;
+		}
+
+		.quote-summary-body {
+			box-sizing: border-box;
+			background: #fff;
+			border: none;
+			border-top: 1px solid #595959;
+		}
+
+		.quote-summary-terms-cell {
+			vertical-align: top;
+		}
+
+		.quote-summary-totals-block {
+			width: 100%;
+		}
+
+		.quote-summary-details-table,
+		.quote-summary-amounts-table {
+			width: 100% !important;
+			border-collapse: collapse !important;
+		}
+
+		.quote-summary-amounts-cell {
+			padding: 0 !important;
+			vertical-align: top;
+		}
+
+		.quote-summary-amounts-table td,
+		.quote-summary-amounts-table th {
+			border: 1px solid #595959;
+		}
+
+		.quote-summary-amounts-table td.text-right,
+		.quote-summary-amounts-table td.text-right strong {
+			white-space: nowrap !important;
+			vertical-align: middle !important;
+		}
+
+		.quote-summary-info-cell {
+			vertical-align: top;
+		}
+
+		.quote-summary-body table {
+			margin: 0 !important;
+			width: 100% !important;
+			max-width: 100% !important;
+			border: none !important;
+			border-collapse: collapse !important;
+		}
+
+		.quote-suggest-body {
+			box-sizing: border-box;
+			background: #fff;
+			border: none;
+			border-top: 1px solid #595959;
+			margin: 0;
+			padding: 0;
+		}
+
+		.quote-suggest-body .qp-suggest-wrap-table {
+			border: none !important;
+		}
+
+		.quote-suggest-body .qp-suggest-print-grid td.qp-suggest-print-cell {
+			min-height: 220px;
+			height: auto;
+			padding: 0 !important;
+			overflow: visible;
+		}
+
+		.quote-suggest-body .qp-prod-card,
+		.quote-suggest-body .qp-prod-card td {
+			border: none !important;
+		}
+
+		.quote-suggest-body .qp-prod-img-cell {
+			border-bottom: 1px solid #e8e8e8 !important;
 		}
 
 		.quote-main-body > table,
 		.quote-main-body .quote-footer-table,
+		.quote-summary-body > table,
 		.quote-suggest-body .qp-suggest-wrap-table,
 		.main-container .qp-suggest-wrap-table {
 			width: 100% !important;
@@ -277,8 +403,96 @@ $isPrintMode = (isset($_REQUEST['print']) && $_REQUEST['print'] == '1') || (isse
 			}
 
 			.quote-suggest-body {
-				page-break-before: always !important;
-				break-before: page;
+				page-break-before: auto !important;
+				break-before: auto !important;
+			}
+
+			.qp-suggest-print-header {
+				border: none !important;
+				border-bottom: 1px solid #595959 !important;
+				background: #4a4a4a !important;
+				-webkit-print-color-adjust: exact;
+				print-color-adjust: exact;
+			}
+
+			.qp-suggest-print-title {
+				color: #fff !important;
+			}
+
+			.qp-suggest-print-subtitle {
+				color: #e0e0e0 !important;
+			}
+
+			.qp-suggest-product-row {
+				page-break-inside: avoid !important;
+				break-inside: avoid-page !important;
+			}
+
+			.quote-suggest-body .qp-suggest-print-grid td.qp-suggest-print-cell,
+			.quote-suggest-body .qp-prod-card,
+			.quote-suggest-body .qp-suggest-print-box,
+			.quote-suggest-body .qp-suggest-cell-inner {
+				min-height: 220px !important;
+				height: auto !important;
+				overflow: visible !important;
+				page-break-inside: avoid !important;
+				break-inside: avoid-page !important;
+			}
+
+			.quote-suggest-body .qp-prod-price-line,
+			.quote-suggest-body .qp-prod-price {
+				color: #0a5c24 !important;
+				font-weight: bold !important;
+				-webkit-print-color-adjust: exact !important;
+				print-color-adjust: exact !important;
+			}
+
+			.quote-suggest-body .qp-prod-unit {
+				color: #333333 !important;
+				font-weight: 600 !important;
+				-webkit-print-color-adjust: exact !important;
+				print-color-adjust: exact !important;
+			}
+
+			.quote-suggest-body .qp-prod-code-cell {
+				color: #555555 !important;
+			}
+
+			.quote-suggest-body .qp-prod-name-cell {
+				color: #000000 !important;
+			}
+
+			.quote-suggest-body .qp-prod-price-cell {
+				overflow: visible !important;
+				padding-bottom: 8px !important;
+			}
+
+			.qp-suggest-print-cell-empty {
+				display: none !important;
+			}
+
+			.qp-suggest-cat-header {
+				page-break-after: avoid;
+				break-after: avoid-page;
+			}
+
+			.quote-summary-totals-block {
+				page-break-inside: avoid;
+				break-inside: avoid-page;
+			}
+
+			.quote-summary-body {
+				page-break-before: auto;
+				break-before: auto;
+				border: none !important;
+				border-top: 1px solid #595959 !important;
+			}
+
+			.quote-summary-body table {
+				margin: 0 !important;
+				width: 100% !important;
+				max-width: 100% !important;
+				border: none !important;
 			}
 
 			.quote-footer-wrap,
@@ -288,6 +502,10 @@ $isPrintMode = (isset($_REQUEST['print']) && $_REQUEST['print'] == '1') || (isse
 			}
 
 			.quote-main-body {
+				border: none !important;
+			}
+
+			.quote-wrap {
 				border: 1px solid #595959 !important;
 			}
 
@@ -325,6 +543,7 @@ $isPrintMode = (isset($_REQUEST['print']) && $_REQUEST['print'] == '1') || (isse
 
 			.quote-main-body > table,
 			.quote-main-body .quote-footer-table,
+			.quote-summary-body > table,
 			.quote-suggest-body .qp-suggest-wrap-table {
 				width: 100% !important;
 			}
@@ -333,29 +552,74 @@ $isPrintMode = (isset($_REQUEST['print']) && $_REQUEST['print'] == '1') || (isse
 				display: none !important;
 			}
 
-			td, th {
+			.quote-table td,
+			.quote-table th,
+			.product-items-table td,
+			.product-items-table th {
 				padding: 3px 4px !important;
 			}
 
-			.qp-suggest-print-card {
-				min-height: 118px !important;
-			}
-
-			.qp-suggest-print-img-wrap {
-				height: 62px !important;
-			}
-
-			.qp-suggest-print-img {
-				max-height: 58px !important;
-			}
-
-			.qp-suggest-print-name {
-				font-size: 10px !important;
-				line-height: 1.2 !important;
+			.quote-summary-amounts-table td.text-right,
+			.quote-summary-amounts-table td.text-right strong {
+				white-space: nowrap !important;
+				vertical-align: middle !important;
 			}
 
 			.qp-suggest-print-grid td.qp-suggest-print-cell {
+				padding: 0 !important;
+			}
+
+			.qp-suggest-print-grid {
+				border-collapse: separate !important;
+				border-spacing: 0 !important;
+			}
+
+			.qp-suggest-cell-inner {
+				padding-left: 12px !important;
+				padding-right: 12px !important;
+				box-sizing: border-box !important;
+			}
+
+			.qp-prod-badge-row {
+				padding: 4px 8px 0 !important;
+				text-align: right !important;
+			}
+
+			.qp-prod-badge-bar {
+				display: flex !important;
+				align-items: center !important;
+				justify-content: flex-end !important;
+				gap: 6px !important;
+			}
+
+			.qp-prod-disc-label {
+				border: 1px solid #d9534f !important;
+				color: #d9534f !important;
+				-webkit-print-color-adjust: exact !important;
+				print-color-adjust: exact !important;
+			}
+
+			.qp-prod-img-cell {
 				padding: 4px !important;
+			}
+
+			.qp-prod-code-cell {
+				padding: 4px 2px 0 !important;
+			}
+
+			.qp-prod-name-cell {
+				padding: 3px 2px 0 !important;
+			}
+
+			.qp-prod-price-cell {
+				padding: 0 2px 10px !important;
+			}
+
+			.qp-prod-disc,
+			.qp-suggest-cat-header,
+			.qp-suggest-print-header {
+				-webkit-print-color-adjust: exact;
+				print-color-adjust: exact;
 			}
 		}
 
@@ -376,11 +640,15 @@ $isPrintMode = (isset($_REQUEST['print']) && $_REQUEST['print'] == '1') || (isse
 	</style>
 	<?php
 	require_once('../include/quotation_pi_suggest_products_helper.php');
-	echo armor_quotation_pi_suggest_styles();
+	if ($quotationViewStandalone) {
+		echo armor_quotation_pi_suggest_styles();
+	}
 	?>
+<?php if ($quotationViewStandalone) { ?>
 </head>
 
 <body<?= $isPrintMode ? ' class="print-a4"' : '' ?>>
+<?php } ?>
 	<div class="main-container">
 	<div class="quote-wrap">
 	<div class="quote-main-body">
@@ -596,33 +864,40 @@ $isPrintMode = (isset($_REQUEST['print']) && $_REQUEST['print'] == '1') || (isse
 		if ((string)$display_roundoff === '' || $display_roundoff === null) {
 			$display_roundoff = round($calc_before_round) - $calc_before_round;
 		}
-		// Dynamic rowspan for terms column (avoid blank spacer rows)
-		$terms_rowspan = 5; // Discount, Sub Total, Taxable, Round Off, Grand Total
-		if ($cart_detail_d['cash_discount_amount'] != "" && $cart_detail_d['cash_discount_amount'] != "0") { $terms_rowspan++; }
-		if ($cart_detail_d['additional_discount_amount'] != "" && $cart_detail_d['additional_discount_amount'] != "0") { $terms_rowspan++; }
-		if ($cart_detail_d['igst_amount'] != "" && $cart_detail_d['igst_amount'] != "0") {
-			$terms_rowspan += (strtolower(CLIENT_STATE) == strtolower($cart_detail_d['state'])) ? 2 : 1;
-		}
-		if ($cart_detail_d['tcs_amount'] != "" && $cart_detail_d['tcs_amount'] != "0") { $terms_rowspan++; }
+		// Summary layout uses separate terms row + details block (no rowspan) for clean print breaks.
 		?>
-		<table class="quote-table">
-			<tbody class="<?= $cl; ?>">
+	</div><!-- /.quote-main-body -->
+	<div class="quote-suggest-body">
+	<?php armor_quotation_pi_echo_suggest_block_for_quotation($db, $quotation_id, $quotationViewEmbedded); ?>
+	</div>
+	<div class="quote-summary-body">
+		<table class="quote-table quote-summary-terms-table">
+			<tbody>
 				<tr class="font-size">
-					<td colspan="8" class="" rowspan="<?= $terms_rowspan ?>" style="vertical-align: top;">
+					<td colspan="16" class="quote-summary-terms-cell">
 						<span class="font-13"><b>Terms & Condition : </b></span><br>
 						<div class="row">
 							<div class="col-md-12">
 								<span class="font-13"><?php echo html_entity_decode($cart_detail_d['terms_comdition']); ?></span><br>
 							</div>
 						</div>
-						<span class="font-13" style="color: red;"><b>This quotation is valid for 7 days.</b></span><br>
+						<span class="font-13" style="color: red;"><b>This quotation is valid for 7 days.</b></span>
+					</td>
+				</tr>
+			</tbody>
+		</table>
 
+		<div class="quote-summary-totals-block">
+		<table class="quote-table quote-summary-details-table">
+			<tbody class="<?= $cl; ?>">
+				<tr class="font-size quote-summary-details-row">
+					<td colspan="8" class="quote-summary-info-cell" valign="top">
 						<span class="font-13"><b>Grand Total In Words</b> :
 							<?php
 							$grand_total_words = $ntw->rp_convertNumToWord($display_grand_total);
 							echo ucwords(strtolower($grand_total_words)); ?>
 						</span>
-						<span></span><br>
+						<br>
 						<span class="font-13">
 							<b>Bank Details : </b>
 							<?php
@@ -646,6 +921,10 @@ $isPrintMode = (isset($_REQUEST['print']) && $_REQUEST['print'] == '1') || (isse
 						?>
 						<br /><span style="color: red;">Edited By : <?= $modified_by_name ?> &nbsp; </span>
 					</td>
+					<td colspan="8" class="quote-summary-amounts-cell" valign="top">
+						<table class="quote-table quote-summary-amounts-table" width="100%">
+							<tbody>
+				<tr>
 					<td colspan="2" class="text-left font-13"><strong>Discount</strong></td>
 					<td colspan="2" class="text-center font-13"><strong><?php
 						$overall_discount_per = ($total_mrp_amount > 0) ? round(($total_item_discount / $total_mrp_amount) * 100, 2) : 0;
@@ -672,18 +951,8 @@ $isPrintMode = (isset($_REQUEST['print']) && $_REQUEST['print'] == '1') || (isse
 						<td colspan="4" class="text-right font-13"><strong><?php echo $currency . ' ' . $db->rp_number_format($cart_detail_d['additional_discount_amount'], 2); ?></strong></td>
 					</tr>
 				<?php } ?>
-				<!-- <tr>
-						<td colspan="4" class="text-left font-13"><strong>Transport Charge</strong></td>
-						<td colspan="4" class="text-right font-13"><strong><?php echo $currency . ' ' . $db->rp_number_format($cart_detail_d['transport_charge'], 2); ?></strong></td>
-					</tr> -->
-				<!-- <tr>
-						<td colspan="4" class="text-left font-13"><strong>Packing & Forwarding Charge</strong></td>
-						<td colspan="4" class="text-right font-13"><strong><?php echo $currency . ' ' . $db->rp_number_format($cart_detail_d['packing_charge'], 2); ?></strong></td>
-					</tr> -->
 				<tr>
 					<td colspan="4" class="text-left font-13"><strong>Total Taxable Amount</strong></td>
-
-					<!-- <td colspan="4" class="text-right font-13"><strong><?php echo $currency . ' ' . $db->rp_number_format($cart_detail_d['subtotal'], 2); ?></strong></td> -->
 
 					<?php
 					$Invoice = $db->rp_getData("quotation_product_item", "*", "isDelete=0 AND quotation_id='" . $quotation_id . "' AND hsn_code='" . $item['hsn_code'] . "'", "", 0);
@@ -693,9 +962,6 @@ $isPrintMode = (isset($_REQUEST['print']) && $_REQUEST['print'] == '1') || (isse
 					}
 					$InvoiceIds = implode(",", $InvoiceIds);
 					$total_pro_taxable = $db->rp_getValue("quotation_product_item", "SUM(taxable)", "id In (" . $InvoiceIds . ") AND isDelete=0", 0);
-
-					// added by shivani
-					// $total_tax_amt already calculated above for grand total
 					?>
 					<td colspan="4" class="text-right rate "><strong><?php echo CURR . ' ' . number_format($total_tax_amt, 2); ?></strong></td>
 
@@ -776,12 +1042,13 @@ $isPrintMode = (isset($_REQUEST['print']) && $_REQUEST['print'] == '1') || (isse
 						</strong>
 					</td>
 				</tr>
-
+							</tbody>
+						</table>
+					</td>
+				</tr>
 			</tbody>
-			<!-- <tr> -->
-
-			<!-- </tr> -->
 		</table>
+		</div>
 		<?php
 		if ($cart_detail_d['igst_amount'] != 0) {
 		?>
@@ -939,6 +1206,7 @@ $isPrintMode = (isset($_REQUEST['print']) && $_REQUEST['print'] == '1') || (isse
 					</tr>
 				</tbody> 
 			</table> -->
+	</div><!-- /.quote-summary-body -->
 		<div class="quote-footer-wrap">
 		<table class="quote-footer-table quote-table">
 			<tbody>
@@ -959,10 +1227,6 @@ $isPrintMode = (isset($_REQUEST['print']) && $_REQUEST['print'] == '1') || (isse
 				</tr>
 			</tbody>
 		</table>
-		</div>
-	</div><!-- /.quote-main-body -->
-		<div class="quote-suggest-body">
-		<?php armor_quotation_pi_echo_suggest_block_for_quotation($db, $quotation_id, false); ?>
 		</div>
 	</div><!-- /.quote-wrap -->
 	</div>
@@ -998,10 +1262,31 @@ $isPrintMode = (isset($_REQUEST['print']) && $_REQUEST['print'] == '1') || (isse
 	}
 </style>
 <div class="quote-print-toolbar">
-	Quotation ready — Page 1: Quote | Page 2+: Suggested Products
-	<button type="button" onclick="window.print();">Print Quotation</button>
+	Quotation ready — Quote items, Suggested Products, Terms & Footer
+	<button type="button" onclick="quotePrintNow();">Print Quotation</button>
 </div>
 <?php } ?>
+<?php if ($quotationViewStandalone) { ?>
+<script type="text/javascript">
+(function() {
+	var quotePrintTitle = <?= json_encode($quotationPrintTitle) ?>;
+
+	window.quotePrintNow = function() {
+		document.title = quotePrintTitle;
+		window.print();
+	};
+
+	<?php if ($isPrintMode) { ?>
+	window.addEventListener('load', function() {
+		document.title = quotePrintTitle;
+		setTimeout(function() {
+			window.print();
+		}, 500);
+	});
+	<?php } ?>
+})();
+</script>
 </body>
 
 </html>
+<?php } ?>

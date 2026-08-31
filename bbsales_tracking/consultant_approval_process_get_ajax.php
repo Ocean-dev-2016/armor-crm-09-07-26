@@ -5,6 +5,7 @@ $page_slug = 'consultant_apptoval_process_report';
  * @author Ravi Patel
  */
 include("connect.php");
+require_once("../include/consultant_approval_process_helper.php");
 $ctable     = "sales_vs_consultant_approval_process";
 $ctable1    = "sales_vs_consultant_approval_process";
 
@@ -191,6 +192,7 @@ if ($ctable_r) {
             font-size: 13px;
         }
     </style>
+    <?php echo consultant_approval_process_styles(); ?>
 
     <form action="" id="print_info" name="frm" method="post">
         <div class="consultant-report-wrap">
@@ -280,6 +282,10 @@ if ($ctable_r) {
                                 $total_visit = (int) $db->rp_getTotalRecord("visit", "isDelete=0 AND customer_id='" . $customer_id . "' AND user_id='" . $sales_id . "'", 0);
                             }
                         }
+                        $projectCells = consultant_approval_render_project_cells(
+                            isset($d['process_three_project_name']) ? $d['process_three_project_name'] : '',
+                            isset($d['process_three_project_location']) ? $d['process_three_project_location'] : ''
+                        );
                 ?>
                         <tr style="<?= $style ?>">
                             <td class="col-num"><?= $sr++ ?></td>
@@ -293,8 +299,8 @@ if ($ctable_r) {
                             <td><?= $d['process_two_consultant_mobile'] ?: '' ?></td>
                             <td><?= $d['process_two_consultant_email'] ?: '' ?></td>
 
-                            <td><?= $d['process_three_project_name'] ?: '' ?></td>
-                            <td><?= $d['process_three_project_location'] ?: '' ?></td>
+                            <td class="consultant-project-cell"><?= $projectCells['name_html'] ?></td>
+                            <td class="consultant-project-cell"><?= $projectCells['location_html'] ?></td>
 
                             <td><?= $d['process_four_product_name'] ?: '' ?></td>
                             <td><?= $d['process_four_contractor_name'] ?: '' ?></td>

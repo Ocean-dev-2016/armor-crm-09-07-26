@@ -40,7 +40,7 @@ $defaultTo = date("Y-m-t");
 		.rar-hr-payment-section .rar-pay-opt.active { font-weight:700; color:#1a7a3a; }
 		#rarFormModalFooter .btn-print-hr { background:#3598dc; color:#fff; }
 		#rarFormModalFooter .btn-share-hr { background:#25d366; color:#fff; }
-		body.rar-modal-open {
+		image.png		body.rar-modal-open {
 			overflow: hidden !important;
 		}
 		#rarFormModal {

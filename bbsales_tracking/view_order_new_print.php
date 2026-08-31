@@ -3,9 +3,11 @@ $page_id = 566;
 $page_slug = 'page_order_ajax';
 require_once("connect_in.php");
 include("../include/no_to_word.php");
+require_once(dirname(__FILE__) . '/../include/quotation_pi_suggest_products_helper.php');
 
 $ntw = new NumToWord_RP;
 $order_id	= $_REQUEST['order_id'];
+$orderViewEmbedded = (basename($_SERVER['SCRIPT_NAME']) !== 'view_order_new_print.php');
 $cart_detail_r 	= $db->rp_getData("orders", "*", "id='" . $order_id . "'", "", 0);
 $cart_detail_d 	= mysqli_fetch_assoc($cart_detail_r);
 $order_date = ($cart_detail_d['order_date'] != "0000-00-00 00:00:00") ? date("d-m-Y", strtotime($cart_detail_d['order_date'])) : "";
@@ -49,9 +51,10 @@ $order_unit_arr = array("-1" => "Box", "-2" => "Strip", "-3" => "Pallet", "1" =>
 <html>
 
 <head>
+	<?php echo armor_quotation_pi_suggest_pi_view_head_assets(); ?>
 	<style>
 		.mainDiv,
-		table {
+		body > table {
 			border: 1px solid #595959;
 			border-collapse: collapse;
 			font-size: 13px;
@@ -61,14 +64,14 @@ $order_unit_arr = array("-1" => "Box", "-2" => "Strip", "-3" => "Pallet", "1" =>
 			padding: auto;
 		}
 
-		table,
-		td,
-		th {
+		body > table,
+		body > table td,
+		body > table th {
 			border: 1px solid #595959;
 		}
 
-		td,
-		th {
+		body > table td,
+		body > table th {
 			padding: 5px;
 			height: 15px;
 		}
@@ -154,6 +157,33 @@ $order_unit_arr = array("-1" => "Box", "-2" => "Strip", "-3" => "Pallet", "1" =>
 		{
 			font-weight: bold;
 		}*/
+
+		@media print {
+			.quote-suggest-body .qp-suggest-print-grid td.qp-suggest-print-cell,
+			.quote-suggest-body .qp-prod-card,
+			.quote-suggest-body .qp-suggest-print-box,
+			.quote-suggest-body .qp-suggest-cell-inner {
+				min-height: 220px !important;
+				height: auto !important;
+				overflow: visible !important;
+				page-break-inside: avoid !important;
+				break-inside: avoid-page !important;
+			}
+
+			.quote-suggest-body .qp-prod-price-line,
+			.quote-suggest-body .qp-prod-price {
+				color: #0a5c24 !important;
+				-webkit-print-color-adjust: exact !important;
+				print-color-adjust: exact !important;
+			}
+
+			.quote-suggest-body .qp-prod-badge-bar {
+				display: flex !important;
+				align-items: center !important;
+				justify-content: flex-end !important;
+				gap: 6px !important;
+			}
+		}
 	</style>
 </head>
 
@@ -521,6 +551,9 @@ $order_unit_arr = array("-1" => "Box", "-2" => "Strip", "-3" => "Pallet", "1" =>
 		}
 		if ($cart_detail_d['tcs_amount'] != "" && $cart_detail_d['tcs_amount'] != "0") { $terms_rowspan++; }
 		?>
+		<div class="quote-suggest-body">
+		<?php armor_quotation_pi_echo_suggest_block_for_order($db, $order_id, false); ?>
+		</div>
 		<table>
 			<tbody class="<?= $cl; ?>">
 				<tr class="font-size">

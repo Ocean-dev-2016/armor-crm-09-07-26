@@ -24,25 +24,329 @@ if (!function_exists('armor_quotation_pi_suggest_table')) {
 
 
 
+if (!function_exists('armor_quotation_pi_suggest_category_map')) {
+
+	function armor_quotation_pi_suggest_category_map()
+
+	{
+
+		return array(
+
+			'hydrant' => array(
+
+				'title' => 'HYDRANT ACCESSORIES',
+
+				'catnos' => array(
+
+					'2327', '2294', '2344', '3073', '2706', '2494', '2860', '2863', '2915', '2037', '2217', '2184',
+
+					'2149', '2158', '2359', '2352', '2803', '2384', '2794', '2660', '2115', '2010', '2021', '2024',
+
+				),
+
+			),
+
+			'plumbing' => array(
+
+				'title' => 'PLUMBING ACCESSORIES',
+
+				'catnos' => array(
+
+					'2086', '2088', '2015', '2065', '2068', '2075', '2080', '2084', '2011', '2013', '2061', '2067', '2071', '2078',
+
+					'2426', '2427', '2429',
+
+					'2442', '2447', '2443', '2444', '2446', '2445',
+
+					'2613', '2618', '2667', '2615', '2668', '2669', '2714',
+
+					'2708', '3005', '2713', '3006', '2718', '2673', '3007', '2709', '2707',
+
+					'2677', '2678', '2679', '2680', '2681',
+
+					'2612',
+
+				),
+
+			),
+
+			'sprinkler' => array(
+
+				'title' => 'SPRINKLER ACCESSORIES',
+
+				'catnos' => array(
+
+					'2987', '2985', '2988',
+
+					'2716', '2691', '2694', '2697', '2701',
+
+					'2717', '2692', '2695', '2699', '2702',
+
+					'2595', '2967', '2710', '2980', '2646', '2650', '3009',
+
+					'2747', '2745', '2746',
+
+					'2731', '2729', '2730',
+
+					'2734', '2783', '2787',
+
+					'2034', '2740',
+
+					'2764', '2719', '3013',
+
+				),
+
+			),
+
+		);
+
+	}
+
+}
+
+
+
 if (!function_exists('armor_quotation_pi_suggest_default_catnos')) {
 
 	function armor_quotation_pi_suggest_default_catnos()
 
 	{
 
-		return array(
+		$catnos = array();
 
-			'2327', '2344', '3073', '2706', '2494', '2860', '2863', '2915', '2037', '2184',
+		foreach (armor_quotation_pi_suggest_category_map() as $group) {
 
-			'2803', '2384', '2359', '2352', '2794', '2659', '2158', '2149', '2424', '2612',
+			foreach ($group['catnos'] as $catno) {
 
-			'2446', '2678', '2010', '2024', '2071', '2700', '2668', '2487', '2646', '3004',
+				$catnos[] = $catno;
 
-			'2980', '2692', '2691', '2730', '2746', '2595', '2787', '2710', '2967', '2650',
+			}
 
-			'2719', '2711', '2576', '2034', '2754', '2906', '3077',
+		}
 
-		);
+		return $catnos;
+
+	}
+
+}
+
+
+
+if (!function_exists('armor_quotation_pi_suggest_catno_order_map')) {
+
+	function armor_quotation_pi_suggest_catno_order_map()
+
+	{
+
+		$order = array();
+
+		$pos = 0;
+
+		foreach (armor_quotation_pi_suggest_category_map() as $group) {
+
+			foreach ($group['catnos'] as $catno) {
+
+				$order[(string) $catno] = $pos++;
+
+			}
+
+		}
+
+		return $order;
+
+	}
+
+}
+
+
+
+if (!function_exists('armor_quotation_pi_sort_catnos_by_sheet_order')) {
+
+	function armor_quotation_pi_sort_catnos_by_sheet_order($catnos)
+
+	{
+
+		if (!is_array($catnos) || empty($catnos)) {
+
+			return array();
+
+		}
+
+		$orderMap = armor_quotation_pi_suggest_catno_order_map();
+
+		$rows = array();
+
+		foreach ($catnos as $catno) {
+
+			$catno = trim((string) $catno);
+
+			if ($catno === '') {
+
+				continue;
+
+			}
+
+			$rows[] = array(
+
+				'catno' => $catno,
+
+				'order' => isset($orderMap[$catno]) ? (int) $orderMap[$catno] : 999999,
+
+			);
+
+		}
+
+		usort($rows, function ($a, $b) {
+
+			if ($a['order'] === $b['order']) {
+
+				return strcmp($a['catno'], $b['catno']);
+
+			}
+
+			return ($a['order'] < $b['order']) ? -1 : 1;
+
+		});
+
+		$out = array();
+
+		foreach ($rows as $row) {
+
+			$out[] = $row['catno'];
+
+		}
+
+		return $out;
+
+	}
+
+}
+
+
+
+if (!function_exists('armor_quotation_pi_sort_items_by_category_order')) {
+
+	function armor_quotation_pi_sort_items_by_category_order($items, $categoryKey)
+
+	{
+
+		$map = armor_quotation_pi_suggest_category_map();
+
+		if (!isset($map[$categoryKey]['catnos'])) {
+
+			return $items;
+
+		}
+
+		$positions = array_flip(array_map('strval', $map[$categoryKey]['catnos']));
+
+		usort($items, function ($a, $b) use ($positions) {
+
+			$catA = isset($a['catno']) ? (string) $a['catno'] : '';
+
+			$catB = isset($b['catno']) ? (string) $b['catno'] : '';
+
+			$posA = isset($positions[$catA]) ? (int) $positions[$catA] : 999999;
+
+			$posB = isset($positions[$catB]) ? (int) $positions[$catB] : 999999;
+
+			if ($posA === $posB) {
+
+				return strcmp($catA, $catB);
+
+			}
+
+			return ($posA < $posB) ? -1 : 1;
+
+		});
+
+		return $items;
+
+	}
+
+}
+
+
+
+if (!function_exists('armor_quotation_pi_group_items_by_category')) {
+
+	function armor_quotation_pi_group_items_by_category($items)
+
+	{
+
+		$map = armor_quotation_pi_suggest_category_map();
+
+		$catnoToGroup = array();
+
+		foreach ($map as $key => $group) {
+
+			foreach ($group['catnos'] as $catno) {
+
+				$catnoToGroup[(string) $catno] = $key;
+
+			}
+
+		}
+
+		$grouped = array();
+
+		foreach ($map as $key => $group) {
+
+			$grouped[$key] = array(
+
+				'title' => $group['title'],
+
+				'items' => array(),
+
+			);
+
+		}
+
+		$other = array();
+
+		foreach ($items as $item) {
+
+			$catno = isset($item['catno']) ? (string) $item['catno'] : '';
+
+			if ($catno !== '' && isset($catnoToGroup[$catno])) {
+
+				$grouped[$catnoToGroup[$catno]]['items'][] = $item;
+
+			} else {
+
+				$other[] = $item;
+
+			}
+
+		}
+
+		$out = array();
+
+		foreach ($grouped as $key => $group) {
+
+			if (!empty($group['items'])) {
+
+				$group['items'] = armor_quotation_pi_sort_items_by_category_order($group['items'], $key);
+
+				$out[$key] = $group;
+
+			}
+
+		}
+
+		if (!empty($other)) {
+
+			$out['other'] = array(
+
+				'title' => 'OTHER PRODUCTS',
+
+				'items' => $other,
+
+			);
+
+		}
+
+		return $out;
 
 	}
 
@@ -514,6 +818,20 @@ if (!function_exists('armor_quotation_pi_product_image_url')) {
 
 
 
+if (!function_exists('armor_quotation_pi_suggest_display_discount_percent')) {
+
+	function armor_quotation_pi_suggest_display_discount_percent()
+
+	{
+
+		return 44;
+
+	}
+
+}
+
+
+
 if (!function_exists('armor_quotation_pi_suggest_styles')) {
 
 	function armor_quotation_pi_suggest_styles()
@@ -540,7 +858,7 @@ if (!function_exists('armor_quotation_pi_suggest_styles')) {
 
 	border-collapse: collapse;
 
-	border: 1px solid #595959 !important;
+	border: none !important;
 
 	margin: 0;
 
@@ -550,13 +868,7 @@ if (!function_exists('armor_quotation_pi_suggest_styles')) {
 
 	padding: 0 !important;
 
-	border-left: 1px solid #595959 !important;
-
-	border-right: 1px solid #595959 !important;
-
-	border-top: none !important;
-
-	border-bottom: none !important;
+	border: none !important;
 
 	vertical-align: top;
 
@@ -566,9 +878,7 @@ if (!function_exists('armor_quotation_pi_suggest_styles')) {
 
 .main-container .qp-suggest-print-section {
 
-	border-left: 1px solid #595959;
-
-	border-right: 1px solid #595959;
+	border: none;
 
 }
 
@@ -590,37 +900,39 @@ if (!function_exists('armor_quotation_pi_suggest_styles')) {
 
 	text-align: center;
 
-	margin-bottom: 10px;
+	margin: 0;
 
-	padding: 8px 6px;
+	padding: 10px 8px;
 
-	border: 1px solid #595959;
+	border: none !important;
 
-	background: #f5f5f5;
+	border-bottom: 1px solid #595959 !important;
+
+	background: #4a4a4a;
 
 }
 
 .qp-suggest-print-title {
 
-	font-size: 15px;
+	font-size: 14px;
 
 	font-weight: bold;
 
 	text-transform: uppercase;
 
-	letter-spacing: 0.5px;
+	letter-spacing: 1px;
 
-	color: #222;
+	color: #fff;
 
 }
 
 .qp-suggest-print-subtitle {
 
-	font-size: 11px;
+	font-size: 10px;
 
-	color: #555;
+	color: #e0e0e0;
 
-	margin-top: 4px;
+	margin-top: 3px;
 
 }
 
@@ -632,95 +944,403 @@ if (!function_exists('armor_quotation_pi_suggest_styles')) {
 
 	table-layout: fixed;
 
+	border: none;
+
 }
 
 .qp-suggest-print-grid td.qp-suggest-print-cell {
 
 	width: 25%;
 
+	min-height: 220px;
+
+	height: auto;
+
 	vertical-align: top;
 
 	border: 1px solid #595959;
 
-	padding: 6px;
+	padding: 0 !important;
+
+	box-sizing: border-box;
+
+	background: #fff;
+
+	overflow: visible;
+
+	page-break-inside: avoid;
+
+	break-inside: avoid-page;
 
 }
 
-.qp-suggest-print-card {
+.qp-suggest-print-box {
 
-	text-align: center;
+	display: block;
 
-	min-height: 155px;
+	width: 100%;
+
+	min-height: 220px;
+
+	height: auto;
+
+	box-sizing: border-box;
+
+	page-break-inside: avoid;
+
+	break-inside: avoid-page;
+
+	overflow: visible;
 
 }
 
-.qp-suggest-print-img-wrap {
+.qp-suggest-product-row {
 
-	height: 88px;
+	page-break-inside: avoid;
 
-	margin-bottom: 6px;
+	break-inside: avoid-page;
+
+}
+
+.qp-suggest-print-cell-empty {
+
+	border: none !important;
+
+	background: transparent !important;
+
+}
+
+.qp-suggest-cell-inner {
+
+	box-sizing: border-box;
+
+	padding: 0 12px 6px;
+
+	width: 100%;
+
+	height: auto;
+
+}
+
+.qp-prod-text-inner {
+
+	box-sizing: border-box;
+
+	padding: 0 2px;
+
+}
+
+.qp-prod-card {
+
+	width: 100%;
+
+	min-height: 220px;
+
+	height: auto;
+
+	border: none !important;
+
+	border-collapse: collapse;
+
+	table-layout: fixed;
+
+}
+
+.qp-prod-card td {
+
+	border: none !important;
+
+	vertical-align: top;
+
+}
+
+.qp-prod-badge-row {
+
+	height: 34px;
+
+	padding: 4px 8px 0 !important;
+
+	text-align: right !important;
+
+	vertical-align: top !important;
+
+}
+
+.qp-prod-badge-bar {
 
 	display: flex;
 
 	align-items: center;
 
-	justify-content: center;
+	justify-content: flex-end;
+
+	gap: 6px;
+
+	width: 100%;
+
+	min-height: 30px;
+
+	box-sizing: border-box;
+
+}
+
+.qp-prod-disc-label {
+
+	display: inline-block;
+
+	border: 1px solid #d9534f;
+
+	color: #d9534f;
+
+	font-size: 10px;
+
+	font-weight: bold;
+
+	line-height: 1.2;
+
+	padding: 2px 6px;
+
+	background: #fff;
+
+	white-space: nowrap;
+
+}
+
+.qp-prod-disc-wrap {
+
+	display: inline-block;
+
+	padding: 2px;
+
+	flex: 0 0 auto;
+
+}
+
+.qp-prod-img-cell {
+
+	height: 66px;
+
+	background: #f7f7f7;
+
+	border-bottom: 1px solid #e8e8e8 !important;
+
+	padding: 3px !important;
+
+	text-align: center;
+
+	vertical-align: middle !important;
+
+}
+
+.qp-prod-img-box {
+
+	width: 100%;
+
+	height: 58px;
+
+	line-height: 58px;
+
+	text-align: center;
 
 	overflow: hidden;
 
 }
 
-.qp-suggest-print-img {
+.qp-prod-img {
 
-	max-width: 100%;
+	max-width: 96%;
 
-	max-height: 84px;
+	max-height: 54px;
 
 	width: auto;
 
 	height: auto;
 
+	vertical-align: middle;
+
 	object-fit: contain;
 
-	object-position: center center;
+}
+
+.qp-prod-code-cell {
+
+	height: auto;
+
+	min-height: 16px;
+
+	font-size: 11px;
+
+	font-weight: 600;
+
+	color: #555555 !important;
+
+	letter-spacing: 0.3px;
+
+	padding: 3px 10px 0 !important;
+
+	line-height: 1.2;
 
 }
 
-.qp-suggest-print-code {
+.qp-prod-name-cell {
 
-	font-size: 13px;
+	height: auto;
 
-	font-weight: bold;
+	min-height: 36px;
 
-	color: #000;
-
-	margin-bottom: 4px;
-
-}
-
-.qp-suggest-print-name {
-
-	font-size: 10px;
-
-	line-height: 1.35;
-
-	color: #333;
-
-	min-height: 28px;
-
-	margin-bottom: 4px;
-
-	word-wrap: break-word;
-
-}
-
-.qp-suggest-print-rate {
+	max-height: 40px;
 
 	font-size: 11px;
 
 	font-weight: bold;
 
-	color: #1a7f37;
+	color: #000000 !important;
+
+	line-height: 1.25;
+
+	padding: 2px 10px 0 !important;
+
+	overflow: hidden;
+
+	text-transform: uppercase;
+
+	text-align: left;
+
+}
+
+.qp-prod-price-cell {
+
+	height: auto;
+
+	min-height: 34px;
+
+	padding: 2px 10px 8px !important;
+
+	text-align: center !important;
+
+	vertical-align: bottom !important;
+
+	overflow: visible !important;
+
+}
+
+.qp-prod-price-wrap {
+
+	text-align: center;
+
+	width: 100%;
+
+	padding: 0 4px;
+
+	box-sizing: border-box;
+
+}
+
+.qp-prod-price-line {
+
+	display: inline-block;
+
+	font-size: 11px;
+
+	font-weight: bold;
+
+	color: #0a5c24 !important;
+
+	line-height: 1.4;
+
+	text-align: center;
+
+	white-space: nowrap;
+
+	max-width: 100%;
+
+}
+
+.qp-prod-price {
+
+	font-size: 11px;
+
+	font-weight: bold;
+
+	color: #0a5c24 !important;
+
+	line-height: 1.4;
+
+	text-align: center;
+
+}
+
+.qp-prod-unit {
+
+	display: inline;
+
+	font-size: 10px;
+
+	font-weight: 600;
+
+	color: #333333 !important;
+
+	line-height: 1.4;
+
+	white-space: nowrap;
+
+}
+
+.qp-prod-disc {
+
+	display: inline-block;
+
+	width: 30px;
+
+	height: 30px;
+
+	line-height: 30px;
+
+	border-radius: 50%;
+
+	background: #e74c3c;
+
+	color: #fff;
+
+	font-size: 9px;
+
+	font-weight: bold;
+
+	text-align: center;
+
+	box-sizing: border-box;
+
+	margin: 0;
+
+}
+
+.qp-suggest-cat-header {
+
+	background: #ffeb3b !important;
+
+	color: #000 !important;
+
+	font-size: 11px !important;
+
+	font-weight: bold !important;
+
+	text-align: center !important;
+
+	text-transform: uppercase !important;
+
+	letter-spacing: 0.6px;
+
+	padding: 8px 6px !important;
+
+	border: 1px solid #595959 !important;
+
+	height: auto !important;
+
+}
+
+.qp-prod-card-empty td {
+
+	min-height: 220px;
 
 }
 
@@ -776,6 +1396,32 @@ if (!function_exists('armor_quotation_pi_suggest_styles')) {
 
 	transition: border-color 0.2s, box-shadow 0.2s;
 
+	position: relative;
+
+}
+
+.qp-suggest-card .qp-suggest-info {
+
+	position: relative;
+
+	text-align: left;
+
+}
+
+.qp-suggest-card .qp-suggest-code-side {
+
+	position: absolute;
+
+	top: 0;
+
+	right: 0;
+
+	font-size: 9px;
+
+	color: #777;
+
+	font-weight: normal;
+
 }
 
 .qp-suggest-card:hover {
@@ -812,27 +1458,27 @@ if (!function_exists('armor_quotation_pi_suggest_styles')) {
 
 	font-size: 11px;
 
-	font-weight: 600;
+	font-weight: bold;
 
 	min-height: 34px;
 
 	line-height: 1.3;
 
-	color: #333;
+	color: #111;
 
-	margin-bottom: 4px;
+	margin: 0 24px 6px 0;
 
 }
 
-.qp-suggest-card .qp-suggest-code {
+.qp-suggest-card .qp-suggest-price-row {
 
-	font-size: 12px;
+	display: flex;
 
-	font-weight: bold;
+	align-items: center;
 
-	color: #000;
+	gap: 6px;
 
-	margin-bottom: 2px;
+	flex-wrap: wrap;
 
 }
 
@@ -844,7 +1490,59 @@ if (!function_exists('armor_quotation_pi_suggest_styles')) {
 
 	font-weight: bold;
 
-	margin-top: 4px;
+}
+
+.qp-suggest-card .qp-suggest-disc-badge {
+
+	display: inline-flex;
+
+	align-items: center;
+
+	justify-content: center;
+
+	min-width: 30px;
+
+	height: 30px;
+
+	padding: 0 5px;
+
+	border-radius: 50%;
+
+	background: #e74c3c;
+
+	color: #fff;
+
+	font-size: 10px;
+
+	font-weight: bold;
+
+	line-height: 1;
+
+}
+
+.qp-suggest-cat-title {
+
+	background: #ffeb3b;
+
+	color: #000;
+
+	font-size: 13px;
+
+	font-weight: bold;
+
+	text-align: center;
+
+	text-transform: uppercase;
+
+	padding: 8px 10px;
+
+	margin: 12px 0 10px;
+
+	border: 1px solid #d4c400;
+
+	border-radius: 3px;
+
+	clear: both;
 
 }
 
@@ -858,9 +1556,9 @@ if (!function_exists('armor_quotation_pi_suggest_styles')) {
 
 	.quote-suggest-body {
 
-		page-break-before: always !important;
+		page-break-before: auto !important;
 
-		break-before: page;
+		break-before: auto;
 
 	}
 
@@ -874,39 +1572,201 @@ if (!function_exists('armor_quotation_pi_suggest_styles')) {
 
 		page-break-inside: auto;
 
-	}
+		-webkit-print-color-adjust: exact;
 
-	.qp-suggest-print-grid tr {
-
-		page-break-inside: auto !important;
+		print-color-adjust: exact;
 
 	}
 
-	.qp-suggest-print-grid td.qp-suggest-print-cell {
+	.qp-suggest-print-grid {
 
-		page-break-inside: avoid;
+		border: 1px solid #595959 !important;
 
 	}
 
-	.qp-suggest-print-card {
-		min-height: 118px !important;
-	}
+	.qp-suggest-product-row {
 
-	.qp-suggest-print-img-wrap {
-		height: 62px !important;
-	}
+		page-break-inside: avoid !important;
 
-	.qp-suggest-print-img {
-		max-height: 58px !important;
-	}
+		break-inside: avoid-page !important;
 
-	.qp-suggest-print-name {
-		font-size: 10px !important;
-		line-height: 1.2 !important;
+		display: table-row !important;
+
 	}
 
 	.qp-suggest-print-grid td.qp-suggest-print-cell {
-		padding: 4px !important;
+
+		min-height: 220px !important;
+
+		height: auto !important;
+
+		overflow: visible !important;
+
+		page-break-inside: avoid !important;
+
+		break-inside: avoid-page !important;
+
+	}
+
+	.qp-suggest-print-box,
+	.qp-suggest-cell-inner,
+	.qp-prod-card {
+
+		min-height: 220px !important;
+
+		height: auto !important;
+
+		overflow: visible !important;
+
+		page-break-inside: avoid !important;
+
+		break-inside: avoid-page !important;
+
+	}
+
+	.qp-prod-price-cell,
+	.qp-prod-price-wrap,
+	.qp-prod-price-line,
+	.qp-prod-price,
+	.qp-prod-unit,
+	.qp-prod-code-cell,
+	.qp-prod-name-cell {
+
+		overflow: visible !important;
+
+		-webkit-print-color-adjust: exact !important;
+
+		print-color-adjust: exact !important;
+
+	}
+
+	.qp-prod-price-line,
+	.qp-prod-price {
+
+		color: #0a5c24 !important;
+
+		font-weight: bold !important;
+
+	}
+
+	.qp-prod-unit {
+
+		color: #333333 !important;
+
+		font-weight: 600 !important;
+
+	}
+
+	.qp-prod-code-cell {
+
+		color: #555555 !important;
+
+	}
+
+	.qp-prod-name-cell {
+
+		color: #000000 !important;
+
+	}
+
+	.qp-suggest-print-cell-empty {
+
+		display: none !important;
+
+		height: 0 !important;
+
+		border: none !important;
+
+		padding: 0 !important;
+
+		line-height: 0 !important;
+
+	}
+
+	.qp-suggest-cat-header {
+
+		page-break-after: avoid;
+
+		break-after: avoid-page;
+
+	}
+
+	.qp-suggest-print-grid {
+
+		border-collapse: separate !important;
+
+		border-spacing: 0 !important;
+
+	}
+
+	.qp-suggest-cell-inner {
+
+		padding-left: 12px !important;
+
+		padding-right: 12px !important;
+
+		box-sizing: border-box !important;
+
+	}
+
+	.qp-prod-badge-row {
+
+		padding: 4px 8px 0 !important;
+
+		text-align: right !important;
+
+	}
+
+	.qp-prod-badge-bar {
+
+		display: flex !important;
+
+		align-items: center !important;
+
+		justify-content: flex-end !important;
+
+		gap: 6px !important;
+
+	}
+
+	.qp-prod-disc-label {
+
+		border: 1px solid #d9534f !important;
+
+		color: #d9534f !important;
+
+		-webkit-print-color-adjust: exact !important;
+
+		print-color-adjust: exact !important;
+
+	}
+
+	.qp-prod-code-cell {
+
+		padding: 4px 2px 0 !important;
+
+	}
+
+	.qp-prod-name-cell {
+
+		padding: 3px 2px 0 !important;
+
+	}
+
+	.qp-prod-price-cell {
+
+		padding: 0 2px 10px !important;
+
+	}
+
+		.qp-prod-disc,
+	.qp-suggest-cat-header,
+	.qp-suggest-print-header {
+
+		-webkit-print-color-adjust: exact;
+
+		print-color-adjust: exact;
+
 	}
 
 }
@@ -954,6 +1814,8 @@ if (!function_exists('armor_quotation_pi_get_suggest_products')) {
 		$order_unit_arr = array('-1' => 'Box', '-2' => 'Strip', '-3' => 'Pallet', '1' => 'Caret', '2' => 'Big Box', '100' => 'Nos');
 
 		$catnos = armor_quotation_pi_suggest_catnos($db);
+
+		$catnos = armor_quotation_pi_sort_catnos_by_sheet_order($catnos);
 
 		$items = array();
 
@@ -1021,6 +1883,24 @@ if (!function_exists('armor_quotation_pi_get_suggest_products')) {
 
 					}
 
+					$originalPrice = isset($detail['orignal_price']) ? (float) $detail['orignal_price'] : $rate;
+
+					$discountPer = 0;
+
+					if (isset($detail['discountPer']) && $detail['discountPer'] !== '' && $detail['discountPer'] !== null) {
+
+						$discountPer = (float) $detail['discountPer'];
+
+					}
+
+					if ($discountPer <= 0 && $originalPrice > 0 && $rate > 0 && $rate < $originalPrice) {
+
+						$discountPer = round((($originalPrice - $rate) / $originalPrice) * 100);
+
+					}
+
+					$discountPer = max(0, (int) round($discountPer));
+
 					$itemOrderUnit = $db->rp_getValue('product', 'unit_id', "id='" . $proId . "' AND isDelete=0", 0);
 
 					$unitName = isset($order_unit_arr[$itemOrderUnit]) ? $order_unit_arr[$itemOrderUnit] : 'Nos';
@@ -1050,6 +1930,8 @@ if (!function_exists('armor_quotation_pi_get_suggest_products')) {
 						'rate' => $rate,
 
 						'rate_label' => number_format($rate, 2),
+
+						'discount_per' => $discountPer,
 
 						'image' => armor_quotation_pi_product_image_url($imagePath),
 
@@ -1171,21 +2053,61 @@ if (!function_exists('armor_quotation_pi_render_print_item')) {
 
 		$defaultImg = htmlspecialchars(armor_quotation_pi_product_image_url(''), ENT_QUOTES);
 
+		$discountPer = armor_quotation_pi_suggest_display_discount_percent();
 
 
-		$html = '<div class="qp-suggest-print-card">';
 
-		$html .= '<div class="qp-suggest-print-img-wrap"><img src="' . $img . '" alt="" class="qp-suggest-print-img" onerror="this.onerror=null;this.src=\'' . $defaultImg . '\';"></div>';
+		$html = '<table class="qp-prod-card" cellpadding="0" cellspacing="0" width="100%">';
 
-		$html .= '<div class="qp-suggest-print-code">Code: ' . $catno . '</div>';
+		$html .= '<tr><td class="qp-prod-badge-row" valign="top" style="padding:4px 8px 0 !important;">';
 
-		$html .= '<div class="qp-suggest-print-name">' . $name . '</div>';
+		$html .= '<div class="qp-prod-badge-bar" style="display:flex;align-items:center;justify-content:flex-end;gap:6px;">';
 
-		$html .= '<div class="qp-suggest-print-rate">' . $curr . ' ' . $item['rate_label'] . ' / ' . $unit . '</div>';
+		$html .= '<span class="qp-prod-disc-label">Discount</span>';
+
+		$html .= '<span class="qp-prod-disc-wrap"><span class="qp-prod-disc">' . (int) $discountPer . '%</span></span>';
 
 		$html .= '</div>';
 
+		$html .= '</td></tr>';
+
+		$html .= '<tr><td class="qp-prod-img-cell" align="center" valign="middle" style="padding:4px !important;">';
+
+		$html .= '<div class="qp-prod-img-box"><img src="' . $img . '" alt="" class="qp-prod-img" onerror="this.onerror=null;this.src=\'' . $defaultImg . '\';"></div>';
+
+		$html .= '</td></tr>';
+
+		$html .= '<tr><td class="qp-prod-code-cell" valign="top" style="padding:3px 2px 0 !important;color:#555 !important;"><div class="qp-prod-text-inner">' . $catno . '</div></td></tr>';
+
+		$html .= '<tr><td class="qp-prod-name-cell" valign="top" style="padding:2px 2px 0 !important;color:#000 !important;"><div class="qp-prod-text-inner">' . $name . '</div></td></tr>';
+
+		$html .= '<tr><td class="qp-prod-price-cell" align="center" valign="bottom" style="padding:2px 2px 8px !important;overflow:visible !important;">';
+
+		$html .= '<div class="qp-prod-price-wrap">';
+
+		$html .= '<span class="qp-prod-price-line" style="color:#0a5c24 !important;font-size:11px;font-weight:bold;line-height:1.4;">' . $curr . ' ' . $item['rate_label'] . ' <span class="qp-prod-unit" style="color:#333 !important;font-size:10px;font-weight:600;">/ ' . $unit . '</span></span>';
+
+		$html .= '</div>';
+
+		$html .= '</td></tr>';
+
+		$html .= '</table>';
+
 		return $html;
+
+	}
+
+}
+
+
+
+if (!function_exists('armor_quotation_pi_render_print_empty_cell')) {
+
+	function armor_quotation_pi_render_print_empty_cell()
+
+	{
+
+		return '<table class="qp-prod-card qp-prod-card-empty" cellpadding="0" cellspacing="0" width="100%"><tr><td>&nbsp;</td></tr></table>';
 
 	}
 
@@ -1207,41 +2129,63 @@ if (!function_exists('armor_quotation_pi_render_suggest_grid')) {
 
 		$curr = defined('CURR') ? CURR : 'INR';
 
-		$html = '<div class="qp-suggest-grid clearfix">';
+		$groups = armor_quotation_pi_group_items_by_category($items);
 
-		foreach ($items as $item) {
+		$html = '<div class="qp-suggest-grid-wrap">';
 
-			$img = htmlspecialchars($item['image'], ENT_QUOTES);
+		foreach ($groups as $group) {
 
-			$name = htmlspecialchars($item['name'], ENT_QUOTES);
+			$html .= '<div class="qp-suggest-cat-title">' . htmlspecialchars($group['title'], ENT_QUOTES) . '</div>';
 
-			$unit = isset($item['unit_name']) ? htmlspecialchars($item['unit_name'], ENT_QUOTES) : 'Nos';
+			$html .= '<div class="qp-suggest-grid clearfix">';
 
-			$html .= '<div class="qp-suggest-col">';
+			foreach ($group['items'] as $item) {
 
-			$html .= '<div class="qp-suggest-card">';
+				$img = htmlspecialchars($item['image'], ENT_QUOTES);
 
-			if ($clickable) {
+				$name = htmlspecialchars($item['name'], ENT_QUOTES);
 
-				$html .= '<a href="javascript:void(0)" class="qp-suggest-add" data-product-id="' . (int) $item['product_id'] . '" data-weight-id="' . (int) $item['weight_id'] . '" data-catno="' . htmlspecialchars($item['catno'], ENT_QUOTES) . '" style="display:block;color:inherit;text-decoration:none;">';
+				$unit = isset($item['unit_name']) ? htmlspecialchars($item['unit_name'], ENT_QUOTES) : 'Nos';
+
+				$discountPer = armor_quotation_pi_suggest_display_discount_percent();
+
+				$html .= '<div class="qp-suggest-col">';
+
+				$html .= '<div class="qp-suggest-card">';
+
+				if ($clickable) {
+
+					$html .= '<a href="javascript:void(0)" class="qp-suggest-add" data-product-id="' . (int) $item['product_id'] . '" data-weight-id="' . (int) $item['weight_id'] . '" data-catno="' . htmlspecialchars($item['catno'], ENT_QUOTES) . '" style="display:block;color:inherit;text-decoration:none;">';
+
+				}
+
+				$html .= '<div class="qp-suggest-img-wrap"><img src="' . $img . '" alt="" onerror="this.onerror=null;this.src=\'' . htmlspecialchars(armor_quotation_pi_product_image_url(''), ENT_QUOTES) . '\';"></div>';
+
+				$html .= '<div class="qp-suggest-info">';
+
+				$html .= '<span class="qp-suggest-code-side">' . htmlspecialchars($item['catno'], ENT_QUOTES) . '</span>';
+
+				$html .= '<div class="qp-suggest-name">' . $name . '</div>';
+
+				$html .= '<div class="qp-suggest-price-row">';
+
+				$html .= '<span class="qp-suggest-rate">' . $curr . ' ' . $item['rate_label'] . ' / ' . $unit . '</span>';
+
+				$html .= '<span class="qp-suggest-disc-badge">' . (int) $discountPer . '%</span>';
+
+				$html .= '</div></div>';
+
+				if ($clickable) {
+
+					$html .= '<div class="qp-suggest-add-btn"><span class="label label-primary"><i class="fa fa-plus"></i> Add to Quote</span></div></a>';
+
+				}
+
+				$html .= '</div></div>';
 
 			}
 
-			$html .= '<div class="qp-suggest-img-wrap"><img src="' . $img . '" alt="" onerror="this.onerror=null;this.src=\'' . htmlspecialchars(armor_quotation_pi_product_image_url(''), ENT_QUOTES) . '\';"></div>';
-
-			$html .= '<div class="qp-suggest-code">Code: ' . htmlspecialchars($item['catno']) . '</div>';
-
-			$html .= '<div class="qp-suggest-name">' . $name . '</div>';
-
-			$html .= '<div class="qp-suggest-rate">' . $curr . ' ' . $item['rate_label'] . ' / ' . $unit . '</div>';
-
-			if ($clickable) {
-
-				$html .= '<div class="qp-suggest-add-btn"><span class="label label-primary"><i class="fa fa-plus"></i> Add to Quote</span></div></a>';
-
-			}
-
-			$html .= '</div></div>';
+			$html .= '</div>';
 
 		}
 
@@ -1273,6 +2217,8 @@ if (!function_exists('armor_quotation_pi_render_print_block')) {
 
 		$cols = 4;
 
+		$groups = armor_quotation_pi_group_items_by_category($items);
+
 		$html = '';
 
 		if ($includeStyles) {
@@ -1285,9 +2231,7 @@ if (!function_exists('armor_quotation_pi_render_print_block')) {
 
 		$html .= '<div class="qp-suggest-print-section">';
 
-		$viewColor = defined('VIEW_COLOR') ? VIEW_COLOR : '#E5E5E5';
-
-		$html .= '<div class="qp-suggest-print-header" style="background-color:' . htmlspecialchars($viewColor, ENT_QUOTES) . ';">';
+		$html .= '<div class="qp-suggest-print-header">';
 
 		$html .= '<div class="qp-suggest-print-title">Suggested Product Range</div>';
 
@@ -1299,27 +2243,45 @@ if (!function_exists('armor_quotation_pi_render_print_block')) {
 
 
 
-		$chunks = array_chunk($items, $cols);
+		foreach ($groups as $group) {
 
-		foreach ($chunks as $row) {
+			$html .= '<tr><td colspan="' . $cols . '" class="qp-suggest-cat-header">' . htmlspecialchars($group['title'], ENT_QUOTES) . '</td></tr>';
 
-			$html .= '<tr>';
+			$chunks = array_chunk($group['items'], $cols);
 
-			for ($i = 0; $i < $cols; $i++) {
+			foreach ($chunks as $row) {
 
-				$html .= '<td class="qp-suggest-print-cell">';
+				$html .= '<tr class="qp-suggest-product-row">';
 
-				if (isset($row[$i])) {
+				for ($i = 0; $i < $cols; $i++) {
+
+					if (!isset($row[$i])) {
+
+						$html .= '<td class="qp-suggest-print-cell qp-suggest-print-cell-empty"></td>';
+
+						continue;
+
+					}
+
+					$html .= '<td class="qp-suggest-print-cell">';
+
+					$html .= '<div class="qp-suggest-print-box">';
+
+					$html .= '<div class="qp-suggest-cell-inner" style="padding-left:12px;padding-right:12px;box-sizing:border-box;">';
 
 					$html .= armor_quotation_pi_render_print_item($row[$i]);
 
+					$html .= '</div>';
+
+					$html .= '</div>';
+
+					$html .= '</td>';
+
 				}
 
-				$html .= '</td>';
+				$html .= '</tr>';
 
 			}
-
-			$html .= '</tr>';
 
 		}
 
@@ -1368,6 +2330,216 @@ if (!function_exists('armor_quotation_pi_echo_suggest_block_for_quotation')) {
 		}
 
 		echo armor_quotation_pi_render_print_block($db, $customerId, $excludeProIds, $includeStyles);
+
+	}
+
+}
+
+
+
+if (!function_exists('armor_quotation_pi_echo_suggest_block_for_order')) {
+
+	function armor_quotation_pi_echo_suggest_block_for_order($db, $orderId, $includeStyles = true)
+
+	{
+
+		$orderId = (int) $orderId;
+
+		if ($orderId <= 0) {
+
+			return;
+
+		}
+
+		$customerId = (int) $db->rp_getValue('orders', 'customer_id', "id='" . $orderId . "' AND isDelete=0", 0);
+
+		$excludeProIds = array();
+
+		$oItemsRes = $db->rp_getData('order_product_item', 'pro_id', "order_id='" . $orderId . "' AND isDelete=0", '', 0);
+
+		if ($oItemsRes) {
+
+			while ($oi = mysqli_fetch_assoc($oItemsRes)) {
+
+				$excludeProIds[] = (int) $oi['pro_id'];
+
+			}
+
+		}
+
+		echo armor_quotation_pi_render_print_block($db, $customerId, $excludeProIds, $includeStyles);
+
+	}
+
+}
+
+
+
+if (!function_exists('armor_quotation_pi_suggest_pi_view_overrides')) {
+
+	function armor_quotation_pi_suggest_pi_view_overrides()
+
+	{
+
+		return '<style type="text/css">
+
+.quote-suggest-body {
+
+	width: 250mm !important;
+
+	max-width: 100%;
+
+	margin: 0 auto;
+
+	box-sizing: border-box;
+
+	background: #fff;
+
+	border: none;
+
+	border-top: 1px solid #595959;
+
+}
+
+.quote-suggest-body table {
+
+	width: 100% !important;
+
+	max-width: 100% !important;
+
+	margin: 0 !important;
+
+	border-collapse: collapse;
+
+	table-layout: auto;
+
+}
+
+.quote-suggest-body .qp-suggest-print-grid {
+
+	table-layout: fixed !important;
+
+	width: 100% !important;
+
+}
+
+.quote-suggest-body .qp-suggest-print-grid td.qp-suggest-print-cell {
+
+	width: 25% !important;
+
+	min-height: 220px;
+
+	height: auto !important;
+
+	padding: 0 !important;
+
+	vertical-align: top;
+
+	overflow: visible;
+
+}
+
+.quote-suggest-body td,
+
+.quote-suggest-body th {
+
+	height: auto !important;
+
+	padding: 0 !important;
+
+}
+
+.quote-suggest-body .qp-suggest-wrap-table,
+
+.quote-suggest-body .qp-suggest-wrap-table td {
+
+	border: none !important;
+
+	padding: 0 !important;
+
+}
+
+.quote-suggest-body table.qp-suggest-print-grid td.qp-suggest-print-cell,
+
+.quote-suggest-body table.qp-suggest-print-grid td.qp-suggest-cat-header {
+
+	border: 1px solid #595959 !important;
+
+}
+
+.quote-suggest-body .qp-prod-card,
+
+.quote-suggest-body .qp-prod-card td {
+
+	border: none !important;
+
+	height: auto !important;
+
+}
+
+.quote-suggest-body .qp-prod-img-cell {
+
+	border-bottom: 1px solid #e8e8e8 !important;
+
+	height: 66px !important;
+
+	padding: 3px !important;
+
+}
+
+.quote-suggest-body .qp-prod-badge-row {
+
+	height: 34px !important;
+
+	padding: 4px 8px 0 !important;
+
+}
+
+.quote-suggest-body .qp-prod-code-cell,
+
+.quote-suggest-body .qp-prod-name-cell,
+
+.quote-suggest-body .qp-prod-price-cell {
+
+	padding: 2px 10px !important;
+
+	height: auto !important;
+
+}
+
+.quote-suggest-body .qp-prod-price-line,
+
+.quote-suggest-body .qp-prod-price {
+
+	color: #0a5c24 !important;
+
+	font-weight: bold;
+
+}
+
+.quote-suggest-body .qp-suggest-print-header {
+
+	border: none !important;
+
+	border-bottom: 1px solid #595959 !important;
+
+}
+
+</style>';
+
+	}
+
+}
+
+
+
+if (!function_exists('armor_quotation_pi_suggest_pi_view_head_assets')) {
+
+	function armor_quotation_pi_suggest_pi_view_head_assets()
+
+	{
+
+		return armor_quotation_pi_suggest_styles() . armor_quotation_pi_suggest_pi_view_overrides();
 
 	}
 

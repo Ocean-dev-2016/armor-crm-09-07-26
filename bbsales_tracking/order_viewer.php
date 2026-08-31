@@ -45,6 +45,221 @@ $is_cp_supply_order_v = ($cp_order_flag_v === 1 && $cp_order_mode_v !== 'custome
 	#wrapper {
    		 width: auto!important;
    	}
+
+	#wrapper1 {
+		max-width: 980px;
+		margin: 0 auto;
+		background: #fff;
+	}
+
+	#wrapper1 .quote-suggest-body {
+		width: 100%;
+		max-width: 250mm;
+		margin: 0 auto;
+		box-sizing: border-box;
+	}
+
+	#wrapper1 .quote-suggest-body table {
+		width: 100% !important;
+		max-width: 100% !important;
+		margin: 0 !important;
+	}
+
+	#wrapper1 .quote-suggest-body td,
+	#wrapper1 .quote-suggest-body th {
+		height: auto !important;
+		padding: 0 !important;
+	}
+
+	#wrapper1 .quote-suggest-body .qp-suggest-print-grid {
+		table-layout: fixed !important;
+		width: 100% !important;
+	}
+
+	#wrapper1 .quote-suggest-body .qp-suggest-print-grid td.qp-suggest-print-cell {
+		border: 1px solid #595959 !important;
+		min-height: 220px;
+		height: auto;
+		vertical-align: top;
+		padding: 0 !important;
+		box-sizing: border-box;
+		overflow: visible;
+	}
+
+	#wrapper1 .qp-suggest-cell-inner {
+		box-sizing: border-box;
+		padding: 0 12px 6px;
+		width: 100%;
+		height: auto;
+	}
+
+	#wrapper1 .qp-suggest-print-box {
+		display: block;
+		width: 100%;
+		min-height: 220px;
+		height: auto;
+		box-sizing: border-box;
+		page-break-inside: avoid;
+		break-inside: avoid-page;
+		overflow: visible;
+	}
+
+	#wrapper1 .qp-prod-card,
+	#wrapper1 .qp-prod-card td {
+		border: none !important;
+	}
+
+	#wrapper1 .qp-prod-badge-row {
+		height: 34px;
+		padding: 4px 8px 0 !important;
+		text-align: right !important;
+	}
+
+	#wrapper1 .qp-prod-badge-bar {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 6px;
+		width: 100%;
+		min-height: 30px;
+	}
+
+	#wrapper1 .qp-prod-disc-label {
+		display: inline-block;
+		border: 1px solid #d9534f;
+		color: #d9534f;
+		font-size: 10px;
+		font-weight: bold;
+		line-height: 1.2;
+		padding: 2px 6px;
+		background: #fff;
+		white-space: nowrap;
+	}
+
+	#wrapper1 .qp-prod-disc {
+		display: inline-block;
+		width: 30px;
+		height: 30px;
+		line-height: 30px;
+		border-radius: 50%;
+		background: #e74c3c;
+		color: #fff;
+		font-size: 9px;
+		font-weight: bold;
+		text-align: center;
+	}
+
+	#wrapper1 .qp-prod-img-cell {
+		background: #f7f7f7;
+		border-bottom: 1px solid #e8e8e8 !important;
+		height: 66px;
+		padding: 3px !important;
+		text-align: center;
+		vertical-align: middle !important;
+	}
+
+	#wrapper1 .qp-prod-img {
+		max-height: 54px;
+		max-width: 96%;
+		object-fit: contain;
+		vertical-align: middle;
+	}
+
+	#wrapper1 .qp-prod-code-cell {
+		font-size: 11px;
+		font-weight: 600;
+		color: #555555 !important;
+		padding: 3px 10px 0 !important;
+	}
+
+	#wrapper1 .qp-prod-name-cell {
+		font-size: 11px;
+		font-weight: bold;
+		color: #000000 !important;
+		text-transform: uppercase;
+		line-height: 1.25;
+		padding: 2px 10px 0 !important;
+		min-height: 36px;
+		max-height: 40px;
+		overflow: hidden;
+	}
+
+	#wrapper1 .qp-prod-price-cell {
+		padding: 2px 10px 8px !important;
+		text-align: center !important;
+		vertical-align: bottom !important;
+		overflow: visible !important;
+	}
+
+	#wrapper1 .qp-prod-price-line,
+	#wrapper1 .qp-prod-price {
+		font-size: 11px;
+		font-weight: bold;
+		color: #0a5c24 !important;
+		text-align: center;
+		line-height: 1.4;
+	}
+
+	#wrapper1 .qp-prod-unit {
+		display: inline;
+		font-size: 10px;
+		color: #333333 !important;
+		font-weight: 600;
+		white-space: nowrap;
+		line-height: 1.4;
+	}
+
+	#wrapper1 .qp-suggest-print-header {
+		background: #4a4a4a !important;
+	}
+
+	#wrapper1 .qp-suggest-print-title {
+		color: #fff !important;
+	}
+
+	#wrapper1 .qp-suggest-print-subtitle {
+		color: #e0e0e0 !important;
+	}
+
+	#wrapper1 .qp-suggest-cat-header {
+		background: #ffeb3b !important;
+		font-weight: bold;
+		text-align: center;
+		text-transform: uppercase;
+	}
+
+	@media print {
+		#wrapper1 .qp-prod-badge-bar {
+			display: flex !important;
+			align-items: center !important;
+			justify-content: flex-end !important;
+			gap: 6px !important;
+		}
+
+		#wrapper1 .quote-suggest-body .qp-suggest-print-grid td.qp-suggest-print-cell,
+		#wrapper1 .qp-prod-card,
+		#wrapper1 .qp-suggest-print-box,
+		#wrapper1 .qp-suggest-cell-inner {
+			min-height: 220px !important;
+			height: auto !important;
+			overflow: visible !important;
+			page-break-inside: avoid !important;
+			break-inside: avoid-page !important;
+		}
+
+		#wrapper1 .qp-prod-price-line,
+		#wrapper1 .qp-prod-price {
+			color: #0a5c24 !important;
+			-webkit-print-color-adjust: exact !important;
+			print-color-adjust: exact !important;
+		}
+
+		#wrapper1 .qp-suggest-cat-header,
+		#wrapper1 .qp-suggest-print-header {
+			-webkit-print-color-adjust: exact;
+			print-color-adjust: exact;
+		}
+	}
 </style>
 </head>
 <body class="page-md">
