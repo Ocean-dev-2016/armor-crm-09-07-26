@@ -329,6 +329,9 @@ class RemarkAnalysisReport
 			$visitDate = ($visitDateSource != "" && strtotime($visitDateSource) !== false)
 				? date("Y-m-d", strtotime($visitDateSource))
 				: "";
+			$visitTime = ($visitDateSource != "" && strtotime($visitDateSource) !== false)
+				? date("h:i A", strtotime($visitDateSource))
+				: "";
 
 			$customerName = "";
 			if ((int) $row['customer_id'] > 0) {
@@ -357,6 +360,7 @@ class RemarkAnalysisReport
 			$visitRows[] = array(
 				"id" => $visitId,
 				"visit_date" => $visitDate,
+				"visit_time" => $visitTime,
 				"sales_person" => $row['sales_person_name'],
 				"customer_name" => $customerName,
 				"customer_code" => $row['customer_code'],

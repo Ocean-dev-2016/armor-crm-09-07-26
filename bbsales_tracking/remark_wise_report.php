@@ -34,7 +34,12 @@ $defaultTo = date("Y-m-t");
 		.rar-parent-row td { font-weight:700; background:#eef6ff; }
 		.rar-child-row td:first-child { padding-left:28px; }
 		.rar-code { font-weight:700; color:#1a7a3a; }
-	</style>
+		.rar-hr-header-table th { background:#f8f8f8; font-size:12px; }
+		.rar-hr-header-table td { font-size:12px; }
+		.rar-hr-product-table th, .rar-hr-product-table td { font-size:11px; }
+		.rar-hr-payment-section .rar-pay-opt.active { font-weight:700; color:#1a7a3a; }
+		#rarFormModalFooter .btn-print-hr { background:#3598dc; color:#fff; }
+		#rarFormModalFooter .btn-share-hr { background:#25d366; color:#fff; }
 	</style>
 </head>
 <body class="page-md">
@@ -125,7 +130,9 @@ $defaultTo = date("Y-m-t");
 			<div class="modal-body" id="rarFormModalBody" style="max-height:70vh;overflow:auto;">
 				<div class="text-center text-muted">Loading...</div>
 			</div>
-			<div class="modal-footer">
+			<div class="modal-footer" id="rarFormModalFooter">
+				<button type="button" class="btn btn-print-hr" id="rarBtnPrintHr" style="display:none;"><i class="fa fa-print"></i> Print</button>
+				<button type="button" class="btn btn-share-hr" id="rarBtnShareHr" style="display:none;"><i class="fa fa-share-alt"></i> Share</button>
 				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
 			</div>
 		</div>
@@ -260,14 +267,77 @@ $defaultTo = date("Y-m-t");
 		loadReport(1);
 	});
 
+	var currentHrVisitId = 0;
+
 	$("#rar-results").on("click", ".rar-view-form-btn", function () {
 		var visitId = $(this).data("visit-id");
 		var title = $(this).data("title") || "Form Detail";
+		var hasHighRate = $(this).data("has-high-rate") == 1;
 		var content = $("#rar-form-" + visitId).html() || "<div class='alert alert-warning'>Form data not found.</div>";
+		currentHrVisitId = hasHighRate ? visitId : 0;
 		$("#rarFormModalTitle").text(title + " (Visit #" + visitId + ")");
 		$("#rarFormModalBody").html(content);
+		if (hasHighRate) {
+			$("#rarBtnPrintHr, #rarBtnShareHr").show();
+		} else {
+			$("#rarBtnPrintHr, #rarBtnShareHr").hide();
+		}
 		$("#rarFormModal").modal("show");
 	});
+
+	$("#rarBtnPrintHr").on("click", function () {
+		if (!currentHrVisitId) {
+			return;
+		}
+		window.open("remark_wise_high_rate_print.php?visit_id=" + currentHrVisitId, "_blank", "width=820,height=700");
+	});
+
+	$("#rarBtnShareHr").on("click", function () {
+		if (!currentHrVisitId) {
+			return;
+		}
+		var text = rarBuildHighRateShareText($("#rarFormModalBody"));
+		if (navigator.share) {
+			navigator.share({ title: "High Rate Analysis Form", text: text }).catch(function () {});
+			return;
+		}
+		window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
+	});
+
+	function rarBuildHighRateShareText($wrap) {
+		var lines = [];
+		lines.push("HIGH RATE ANALYSIS FORM");
+		$wrap.find(".rar-hr-header-table tr").each(function () {
+			var parts = [];
+			$(this).find("th").each(function (i) {
+				var label = $.trim($(this).text());
+				var val = $.trim($(this).next("td").text());
+				if (label && val) {
+					parts.push(label + ": " + val);
+				}
+			});
+			if (parts.length) {
+				lines.push(parts.join(" | "));
+			}
+		});
+		lines.push("");
+		lines.push("Products:");
+		$wrap.find(".rar-hr-product-table tbody tr").each(function () {
+			var tds = $(this).find("td");
+			if (tds.length >= 4) {
+				lines.push("- " + $.trim($(tds[0]).text()) + " | Given: " + $.trim($(tds[1]).text()) + " | Qty: " + $.trim($(tds[2]).text()) + " | Cust.Rate: " + $.trim($(tds[3]).text()));
+			}
+		});
+		var pay = [];
+		$wrap.find(".rar-hr-payment-options .rar-pay-opt.active").each(function () {
+			pay.push($.trim($(this).text()));
+		});
+		if (pay.length) {
+			lines.push("");
+			lines.push("Payment Condition: " + pay.join(", "));
+		}
+		return lines.join("\n");
+	}
 
 	loadReport(1);
 })();

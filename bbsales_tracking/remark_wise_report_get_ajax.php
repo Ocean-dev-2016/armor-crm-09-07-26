@@ -51,13 +51,39 @@ function rar_h($value)
 
 function rar_payment_label($value)
 {
-	if ($value === '0' || $value === 0) {
-		return 'Advance';
+	if ($value === '' || $value === null || $value === false || $value === 'false') {
+		return '-';
 	}
-	if ($value === '1' || $value === 1) {
-		return '30 Days';
+	if ($value === '0' || $value === 0 || strcasecmp((string) $value, 'advance') === 0) {
+		return 'Advance Payment';
+	}
+	if ($value === '1' || $value === 1 || strcasecmp((string) $value, '30 days') === 0 || strcasecmp((string) $value, '30 day credit') === 0) {
+		return '30 Day Credit';
 	}
 	return (string) $value;
+}
+
+function rar_payment_is_advance($value)
+{
+	return ($value === '0' || $value === 0 || strcasecmp((string) $value, 'advance') === 0 || strcasecmp((string) $value, 'advance payment') === 0);
+}
+
+function rar_payment_is_credit($value)
+{
+	return ($value === '1' || $value === 1 || strcasecmp((string) $value, '30 days') === 0 || strcasecmp((string) $value, '30 day credit') === 0);
+}
+
+function rar_turnover_label($visit)
+{
+	$turn = isset($visit['customer_turnover']) ? trim((string) $visit['customer_turnover']) : '';
+	$year = isset($visit['customer_turnover_year']) ? trim((string) $visit['customer_turnover_year']) : '';
+	if ($turn === '') {
+		return '-';
+	}
+	if ($year !== '' && $year !== '0') {
+		return $turn . ' (' . $year . ')';
+	}
+	return $turn;
 }
 
 function rar_format_duration($minutes)
@@ -112,17 +138,48 @@ function rar_render_form_html($visit)
 	}
 	if (!empty($visit['high_rate_form']) && is_array($visit['high_rate_form'])) {
 		$hf = $visit['high_rate_form'];
-		$payLabel = isset($hf['payment_option']) ? rar_payment_label($hf['payment_option']) : '';
-		$html .= '<div class="rar-form-block rar-highrate-block">';
+		$payOption = isset($hf['payment_option']) ? $hf['payment_option'] : '';
+		$payRemark = isset($hf['payment_remark']) ? trim((string) $hf['payment_remark']) : '';
+		if ($payRemark === 'false' || $payRemark === '0') {
+			$payRemark = '';
+		}
+		$visitDateLabel = ($visit['visit_date'] != "") ? date("d/m/Y", strtotime($visit['visit_date'])) : "-";
+		$visitTimeLabel = isset($visit['visit_time']) && $visit['visit_time'] != "" ? $visit['visit_time'] : "-";
+		$salesPerson = isset($visit['sales_person']) && $visit['sales_person'] != "" ? $visit['sales_person'] : "-";
+		$clientCode = isset($visit['customer_code']) && trim((string) $visit['customer_code']) != "" ? trim((string) $visit['customer_code']) : "-";
+		$custName = isset($hf['customer_name']) && trim((string) $hf['customer_name']) != "" ? trim((string) $hf['customer_name']) : (isset($visit['customer_name']) ? $visit['customer_name'] : "-");
+		$custAddress = isset($visit['customer_address']) && trim((string) $visit['customer_address']) != "" ? trim((string) $visit['customer_address']) : "-";
+		$custCity = isset($visit['customer_city']) && trim((string) $visit['customer_city']) != "" ? trim((string) $visit['customer_city']) : "";
+		if ($custCity != "" && $custAddress != "-") {
+			$custAddress .= ', ' . $custCity;
+		} else if ($custCity != "" && $custAddress == "-") {
+			$custAddress = $custCity;
+		}
+		$turnLabel = rar_turnover_label($visit);
+		$isAdvance = rar_payment_is_advance($payOption);
+		$isCredit = rar_payment_is_credit($payOption);
+
+		$html .= '<div class="rar-form-block rar-highrate-block" id="rar-highrate-print-' . (int) $visit['id'] . '">';
 		$html .= '<h4 style="margin-top:0;color:#c85a12;"><i class="fa fa-line-chart"></i> High Rate Analysis Form</h4>';
-		$html .= '<table class="table table-bordered table-condensed" style="margin-bottom:10px;">';
-		$html .= '<tr><th style="width:160px;">Customer Name</th><td>' . rar_h($hf['customer_name']) . '</td></tr>';
-		$html .= '<tr><th>Payment</th><td>' . rar_h($payLabel) . '</td></tr>';
-		$html .= '<tr><th>Payment Remark</th><td>' . rar_h(isset($hf['payment_remark']) ? $hf['payment_remark'] : '') . '</td></tr>';
+		$html .= '<table class="table table-bordered table-condensed rar-hr-header-table" style="margin-bottom:10px;">';
+		$html .= '<tr>';
+		$html .= '<th style="width:120px;">Sales Person</th><td>' . rar_h($salesPerson) . '</td>';
+		$html .= '<th style="width:90px;">Visit Date</th><td>' . rar_h($visitDateLabel) . '</td>';
+		$html .= '<th style="width:70px;">Time</th><td>' . rar_h($visitTimeLabel) . '</td>';
+		$html .= '</tr>';
+		$html .= '<tr>';
+		$html .= '<th>Client Code</th><td>' . rar_h($clientCode) . '</td>';
+		$html .= '<th>Customer Name</th><td colspan="3">' . rar_h($custName) . '</td>';
+		$html .= '</tr>';
+		$html .= '<tr>';
+		$html .= '<th>Address</th><td colspan="3">' . nl2br(rar_h($custAddress)) . '</td>';
+		$html .= '<th>Turnover</th><td>' . rar_h($turnLabel) . '</td>';
+		$html .= '</tr>';
 		$html .= '</table>';
+
 		if (!empty($visit['high_rate_items'])) {
-			$html .= '<table class="table table-bordered table-striped table-condensed" style="margin-bottom:0;">';
-			$html .= '<thead><tr style="background:#f5f5f5;"><th>Product</th><th>Given Rate</th><th>Qty</th><th>Customer Rate</th><th>Remark</th></tr></thead><tbody>';
+			$html .= '<table class="table table-bordered table-striped table-condensed rar-hr-product-table" style="margin-bottom:10px;">';
+			$html .= '<thead><tr style="background:#f5f5f5;"><th>Product</th><th style="width:90px;">Given Rate</th><th style="width:60px;">Qty</th><th style="width:100px;">Customer Rate</th><th>Remark</th></tr></thead><tbody>';
 			foreach ($visit['high_rate_items'] as $hi) {
 				$html .= '<tr>';
 				$html .= '<td>' . rar_h($hi['product_name']) . '</td>';
@@ -134,8 +191,23 @@ function rar_render_form_html($visit)
 			}
 			$html .= '</tbody></table>';
 		} else {
-			$html .= '<div class="text-muted">No product rows found.</div>';
+			$html .= '<div class="text-muted" style="margin-bottom:10px;">No product rows found.</div>';
 		}
+
+		$html .= '<div class="rar-hr-payment-section" style="border:1px solid #ddd;border-radius:4px;padding:10px 12px;background:#fafafa;">';
+		$html .= '<div style="font-weight:bold;margin-bottom:8px;color:#333;">Payment Condition</div>';
+		$html .= '<div class="rar-hr-payment-options">';
+		$html .= '<label class="rar-pay-opt' . ($isAdvance ? ' active' : '') . '" style="margin-right:24px;font-weight:normal;">';
+		$html .= '<i class="fa fa-' . ($isAdvance ? 'check-square' : 'square-o') . '" style="color:' . ($isAdvance ? '#1a7a3a' : '#999') . ';"></i> ';
+		$html .= '1) Advance Payment</label>';
+		$html .= '<label class="rar-pay-opt' . ($isCredit ? ' active' : '') . '" style="font-weight:normal;">';
+		$html .= '<i class="fa fa-' . ($isCredit ? 'check-square' : 'square-o') . '" style="color:' . ($isCredit ? '#1a7a3a' : '#999') . ';"></i> ';
+		$html .= '2) 30 Day Credit</label>';
+		$html .= '</div>';
+		if ($payRemark != '') {
+			$html .= '<div style="margin-top:8px;font-size:12px;"><b>Payment Remark:</b> ' . rar_h($payRemark) . '</div>';
+		}
+		$html .= '</div>';
 		$html .= '</div>';
 	}
 	return $html;
@@ -429,7 +501,8 @@ function rar_render_form_html($visit)
 									<button type="button"
 										class="btn btn-xs btn-primary rar-view-form-btn"
 										data-title="<?php echo rar_h($formTitle); ?>"
-										data-visit-id="<?php echo (int) $visit['id']; ?>">
+										data-visit-id="<?php echo (int) $visit['id']; ?>"
+										data-has-high-rate="<?php echo $hasHighRate ? 1 : 0; ?>">
 										<i class="fa fa-eye"></i> View
 									</button>
 									<div class="rar-form-content" id="rar-form-<?php echo (int) $visit['id']; ?>" style="display:none;">

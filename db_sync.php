@@ -1291,11 +1291,12 @@ if ($rarPageCheck && mysqli_num_rows($rarPageCheck) > 0) {
 		'remark_wise_report.php',
 		'remark_wise_report_get_ajax.php',
 		'remark_wise_report_excel.php',
+		'remark_wise_high_rate_print.php',
 	));
 	db_sync_run_query($conn, "UPDATE page_table SET page_title='Remark Wise Report', page_slug='remark_wise_report', isDelete=0, isActive=1 WHERE id=671", 'Update page_table id=671 Remark Wise Report');
 } else {
 	$now = date('Y-m-d H:i:s');
-	$urls = 'remark_wise_report.php,remark_wise_report_get_ajax.php,remark_wise_report_excel.php';
+	$urls = 'remark_wise_report.php,remark_wise_report_get_ajax.php,remark_wise_report_excel.php,remark_wise_high_rate_print.php';
 	db_sync_run_query($conn, "INSERT INTO page_table (id, page_title, page_slug, page_count, page_urls, isActive, isDelete, adate, created_date)
 		VALUES (671, 'Remark Wise Report', 'remark_wise_report', 0, '{$urls}', 1, 0, '{$now}', '{$now}')", 'Insert page_table id=671 Remark Wise Report');
 }
