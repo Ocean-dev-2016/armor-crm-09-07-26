@@ -1,5 +1,71 @@
 <?php
 
+if (!function_exists('consultant_approval_decode_json_array')) {
+	function consultant_approval_decode_json_array($raw)
+	{
+		$raw = trim((string) $raw);
+		if ($raw === '') {
+			return null;
+		}
+
+		$candidates = array($raw);
+		$decodedHtml = html_entity_decode($raw, ENT_QUOTES, 'UTF-8');
+		if ($decodedHtml !== $raw) {
+			$candidates[] = $decodedHtml;
+		}
+		$stripped = stripslashes($raw);
+		if ($stripped !== $raw) {
+			$candidates[] = $stripped;
+		}
+		if ($decodedHtml !== $raw) {
+			$candidates[] = stripslashes($decodedHtml);
+		}
+
+		foreach ($candidates as $candidate) {
+			$candidate = preg_replace('/^\xEF\xBB\xBF/', '', trim((string) $candidate));
+			if ($candidate === '') {
+				continue;
+			}
+			$decoded = json_decode($candidate, true);
+			if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+				return $decoded;
+			}
+		}
+
+		return null;
+	}
+}
+
+if (!function_exists('consultant_approval_regex_parse_product_groups')) {
+	function consultant_approval_regex_parse_product_groups($raw)
+	{
+		$groups = array();
+		if (!preg_match_all('/"([^"]+)"\s*:\s*\[(.*?)\]/s', (string) $raw, $matches, PREG_SET_ORDER)) {
+			return $groups;
+		}
+
+		foreach ($matches as $match) {
+			$items = array();
+			if (preg_match_all('/"((?:\\\\.|[^"\\\\])*)"/', $match[2], $productMatches)) {
+				foreach ($productMatches[1] as $product) {
+					$product = trim(stripslashes($product));
+					if ($product !== '') {
+						$items[] = $product;
+					}
+				}
+			}
+			if (!empty($items)) {
+				$groups[] = array(
+					'category' => stripslashes($match[1]),
+					'items' => $items,
+				);
+			}
+		}
+
+		return $groups;
+	}
+}
+
 if (!function_exists('consultant_approval_parse_list_field')) {
 	function consultant_approval_parse_list_field($raw)
 	{
@@ -8,8 +74,8 @@ if (!function_exists('consultant_approval_parse_list_field')) {
 			return array();
 		}
 
-		$decoded = json_decode($raw, true);
-		if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+		$decoded = consultant_approval_decode_json_array($raw);
+		if (is_array($decoded)) {
 			$items = array();
 			foreach ($decoded as $item) {
 				$item = trim((string) $item);
@@ -125,8 +191,8 @@ if (!function_exists('consultant_approval_parse_product_groups')) {
 			return array();
 		}
 
-		$decoded = json_decode($raw, true);
-		if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+		$decoded = consultant_approval_decode_json_array($raw);
+		if (is_array($decoded)) {
 			$isCategoryMap = false;
 			foreach ($decoded as $key => $value) {
 				if (is_string($key) && is_array($value)) {
@@ -172,6 +238,11 @@ if (!function_exists('consultant_approval_parse_product_groups')) {
 			if (!empty($items)) {
 				return array(array('category' => '', 'items' => $items));
 			}
+		}
+
+		$regexGroups = consultant_approval_regex_parse_product_groups($raw);
+		if (!empty($regexGroups)) {
+			return $regexGroups;
 		}
 
 		$items = consultant_approval_parse_list_field($raw);

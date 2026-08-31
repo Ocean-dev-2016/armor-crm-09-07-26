@@ -5,7 +5,7 @@ $page_slug = 'consultant_apptoval_process_report';
  * @author Ravi Patel
  */
 include("connect.php");
-require_once("../include/consultant_approval_process_helper.php");
+require_once dirname(__DIR__) . '/include/consultant_approval_process_helper.php';
 $ctable     = "sales_vs_consultant_approval_process";
 $ctable1    = "sales_vs_consultant_approval_process";
 
