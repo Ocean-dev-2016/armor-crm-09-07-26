@@ -668,7 +668,7 @@ if (!function_exists('armor_quotation_pi_resolve_pwp_row')) {
 
 				}
 
-				$isDeleted = (int) $db->rp_getValue('product', 'isDelete', "id='" . $proId . "'", 1);
+				$isDeleted = (int) $db->rp_getValue('product', 'isDelete', "id='" . $proId . "'", 0);
 
 				if ($isDeleted === 1) {
 
