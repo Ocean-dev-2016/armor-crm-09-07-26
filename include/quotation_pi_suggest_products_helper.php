@@ -578,41 +578,111 @@ if (!function_exists('armor_quotation_pi_suggest_catnos')) {
 
 			armor_quotation_pi_suggest_sync_from_map($db);
 
-			$table = armor_quotation_pi_suggest_table();
+		}
 
-			if ($db->tableExists($table)) {
+		return armor_quotation_pi_sort_catnos_by_sheet_order(armor_quotation_pi_suggest_default_catnos());
 
-				$res = $db->rp_getData($table, 'catno', 'isDelete=0 AND isActive=1', 'display_order ASC, id ASC', 0);
+	}
 
-				if ($res && mysqli_num_rows($res) > 0) {
+}
 
-					$catnos = array();
 
-					while ($row = mysqli_fetch_assoc($res)) {
 
-						$catno = trim((string) $row['catno']);
+if (!function_exists('armor_quotation_pi_get_product_name')) {
 
-						if ($catno !== '') {
+	function armor_quotation_pi_get_product_name($db, $productId)
 
-							$catnos[] = $catno;
+	{
 
-						}
+		$productId = (int) $productId;
 
-					}
+		if ($productId <= 0) {
 
-					if (!empty($catnos)) {
+			return '';
 
-						return armor_quotation_pi_sort_catnos_by_sheet_order($catnos);
+		}
 
-					}
+		$name = $db->rp_getValue('product', 'name', "id='" . $productId . "' AND isDelete=0", 0);
+
+		if ($name === '' || $name === null) {
+
+			$name = $db->rp_getValue('product', 'name1', "id='" . $productId . "' AND isDelete=0", 0);
+
+		}
+
+		return $name ? html_entity_decode(strip_tags($name), ENT_QUOTES, 'UTF-8') : '';
+
+	}
+
+}
+
+
+
+if (!function_exists('armor_quotation_pi_resolve_pwp_row')) {
+
+	function armor_quotation_pi_resolve_pwp_row($db, $catno)
+
+	{
+
+		$catno = trim((string) $catno);
+
+		if ($catno === '') {
+
+			return null;
+
+		}
+
+		$catnoEsc = $db->clean($catno);
+
+		$whereList = array(
+
+			"isDelete=0 AND catno='" . $catnoEsc . "'",
+
+			"isDelete=0 AND TRIM(catno)='" . $catnoEsc . "'",
+
+		);
+
+		foreach ($whereList as $where) {
+
+			$pwpRes = $db->rp_getData('product_weight_price', '*', $where, 'id ASC', 0);
+
+			if (!$pwpRes) {
+
+				continue;
+
+			}
+
+			while ($pwp = mysqli_fetch_assoc($pwpRes)) {
+
+				if (isset($pwp['isActive']) && (string) $pwp['isActive'] === '0') {
+
+					continue;
 
 				}
+
+				$proId = (int) $pwp['product_id'];
+
+				if ($proId <= 0) {
+
+					continue;
+
+				}
+
+				$isDeleted = (int) $db->rp_getValue('product', 'isDelete', "id='" . $proId . "'", 1);
+
+				if ($isDeleted === 1) {
+
+					continue;
+
+				}
+
+				return $pwp;
 
 			}
 
 		}
 
-		return armor_quotation_pi_suggest_default_catnos();
+		return null;
 
 	}
 
@@ -634,29 +704,7 @@ if (!function_exists('armor_quotation_pi_lookup_product_by_catno')) {
 
 		}
 
-		$catnoEsc = $db->clean($catno);
-
-		$pwpRes = $db->rp_getData(
-
-			'product_weight_price',
-
-			'*',
-
-			"isDelete=0 AND catno='" . $catnoEsc . "'",
-
-			'id ASC',
-
-			0
-
-		);
-
-		if (!$pwpRes) {
-
-			return null;
-
-		}
-
-		$pwp = mysqli_fetch_assoc($pwpRes);
+		$pwp = armor_quotation_pi_resolve_pwp_row($db, $catno);
 
 		if (!$pwp) {
 
@@ -666,7 +714,7 @@ if (!function_exists('armor_quotation_pi_lookup_product_by_catno')) {
 
 		$proId = (int) $pwp['product_id'];
 
-		$name = $db->rp_getValue('product', 'name1', "id='" . $proId . "' AND isDelete=0", 0);
+		$name = armor_quotation_pi_get_product_name($db, $proId);
 
 		$imagePath = $db->rp_getValue('product', 'image_path', "id='" . $proId . "' AND isDelete=0", 0);
 
@@ -676,7 +724,7 @@ if (!function_exists('armor_quotation_pi_lookup_product_by_catno')) {
 
 			'product_id' => $proId,
 
-			'name' => $name ? html_entity_decode(strip_tags($name), ENT_QUOTES, 'UTF-8') : $catno,
+			'name' => $name !== '' ? $name : $catno,
 
 			'image' => armor_quotation_pi_product_image_url($imagePath ? $imagePath : ''),
 
@@ -1899,13 +1947,7 @@ if (!function_exists('armor_quotation_pi_build_suggest_item_from_pwp')) {
 
 		$order_unit_arr = array('-1' => 'Box', '-2' => 'Strip', '-3' => 'Pallet', '1' => 'Caret', '2' => 'Big Box', '100' => 'Nos');
 
-		$name = $db->rp_getValue('product', 'name1', "id='" . $proId . "' AND isDelete=0", 0);
-
-		if (!$name) {
-
-			$name = $db->rp_getValue('product', 'name', "id='" . $proId . "' AND isDelete=0", 0);
-
-		}
+		$name = armor_quotation_pi_get_product_name($db, $proId);
 
 		$imagePath = $db->rp_getValue('product', 'image_path', "id='" . $proId . "' AND isDelete=0", 0);
 
@@ -2011,161 +2053,123 @@ if (!function_exists('armor_quotation_pi_get_suggest_products')) {
 
 
 
-		$order_unit_arr = array('-1' => 'Box', '-2' => 'Strip', '-3' => 'Pallet', '1' => 'Caret', '2' => 'Big Box', '100' => 'Nos');
-
 		$catnos = armor_quotation_pi_suggest_catnos($db);
-
-		$catnos = armor_quotation_pi_sort_catnos_by_sheet_order($catnos);
 
 		$items = array();
 
-		$seenProduct = array();
+		$seenCatno = array();
 
 
 
 		foreach ($catnos as $catno) {
 
-			$catnoEsc = $db->clean($catno);
+			$catno = trim((string) $catno);
 
-			$pwpRes = $db->rp_getData(
-
-				'product_weight_price',
-
-				'*',
-
-				"isDelete=0 AND catno='" . $catnoEsc . "'",
-
-				'id ASC',
-
-				0
-
-			);
-
-			if (!$pwpRes) {
+			if ($catno === '' || isset($seenCatno[$catno])) {
 
 				continue;
 
 			}
 
-			while ($pwp = mysqli_fetch_assoc($pwpRes)) {
+			$pwp = armor_quotation_pi_resolve_pwp_row($db, $catno);
 
-				$proId = (int) $pwp['product_id'];
+			if (!$pwp) {
 
-				if ($proId <= 0 || isset($exclude[$proId]) || isset($seenProduct[$proId])) {
-
-					continue;
-
-				}
-
-				$details = $productObj->aj_getProductDetail($proId, $customerId);
-
-				$added = false;
-
-				if (!empty($details)) {
-
-					foreach ($details as $detail) {
-
-						if ((string) $detail['catno'] !== (string) $catno) {
-
-							continue;
-
-						}
-
-						$seenProduct[$proId] = 1;
-
-						$rate = isset($detail['orignal_price']) ? (float) $detail['orignal_price'] : 0;
-
-						if (isset($detail['sell_price']) && (float) $detail['sell_price'] > 0) {
-
-							$rate = (float) $detail['sell_price'];
-
-						}
-
-						$originalPrice = isset($detail['orignal_price']) ? (float) $detail['orignal_price'] : $rate;
-
-						$discountPer = 0;
-
-						if (isset($detail['discountPer']) && $detail['discountPer'] !== '' && $detail['discountPer'] !== null) {
-
-							$discountPer = (float) $detail['discountPer'];
-
-						}
-
-						if ($discountPer <= 0 && $originalPrice > 0 && $rate > 0 && $rate < $originalPrice) {
-
-							$discountPer = round((($originalPrice - $rate) / $originalPrice) * 100);
-
-						}
-
-						$discountPer = max(0, (int) round($discountPer));
-
-						$itemOrderUnit = $db->rp_getValue('product', 'unit_id', "id='" . $proId . "' AND isDelete=0", 0);
-
-						$unitName = isset($order_unit_arr[$itemOrderUnit]) ? $order_unit_arr[$itemOrderUnit] : 'Nos';
-
-						$imagePath = isset($detail['image_path']) ? $detail['image_path'] : '';
-
-						if ($imagePath === '') {
-
-							$rawImg = $db->rp_getValue('product', 'image_path', "id='" . $proId . "' AND isDelete=0", 0);
-
-							$imagePath = $rawImg ? $rawImg : '';
-
-						}
-
-						$items[] = array(
-
-							'product_id' => $proId,
-
-							'weight_id' => (int) $detail['weight_id'],
-
-							'option_value' => isset($detail['id']) ? (int) $detail['id'] : (int) $pwp['id'],
-
-							'catno' => $catno,
-
-							'name' => html_entity_decode(strip_tags($detail['name1']), ENT_QUOTES, 'UTF-8'),
-
-							'rate' => $rate,
-
-							'rate_label' => number_format($rate, 2),
-
-							'discount_per' => $discountPer,
-
-							'image' => armor_quotation_pi_product_image_url($imagePath),
-
-							'pro_id' => $proId,
-
-							'item_order_unit' => $itemOrderUnit,
-
-							'unit_name' => $unitName,
-
-						);
-
-						$added = true;
-
-						break;
-
-					}
-
-				}
-
-				if (!$added) {
-
-					$fallbackItem = armor_quotation_pi_build_suggest_item_from_pwp($db, $pwp, $catno, $customerId);
-
-					if ($fallbackItem !== null) {
-
-						$seenProduct[$proId] = 1;
-
-						$items[] = $fallbackItem;
-
-					}
-
-				}
-
-				break;
+				continue;
 
 			}
+
+			$proId = (int) $pwp['product_id'];
+
+			if ($proId <= 0 || isset($exclude[$proId])) {
+
+				continue;
+
+			}
+
+			$item = armor_quotation_pi_build_suggest_item_from_pwp($db, $pwp, $catno, $customerId);
+
+			if ($item === null) {
+
+				continue;
+
+			}
+
+			$details = $productObj->aj_getProductDetail($proId, $customerId);
+
+			if (!empty($details)) {
+
+				foreach ($details as $detail) {
+
+					if (trim((string) $detail['catno']) !== $catno) {
+
+						continue;
+
+					}
+
+					$rate = isset($detail['orignal_price']) ? (float) $detail['orignal_price'] : (float) $item['rate'];
+
+					if (isset($detail['sell_price']) && (float) $detail['sell_price'] > 0) {
+
+						$rate = (float) $detail['sell_price'];
+
+					}
+
+					$originalPrice = isset($detail['orignal_price']) ? (float) $detail['orignal_price'] : $rate;
+
+					$discountPer = 0;
+
+					if (isset($detail['discountPer']) && $detail['discountPer'] !== '' && $detail['discountPer'] !== null) {
+
+						$discountPer = (float) $detail['discountPer'];
+
+					}
+
+					if ($discountPer <= 0 && $originalPrice > 0 && $rate > 0 && $rate < $originalPrice) {
+
+						$discountPer = round((($originalPrice - $rate) / $originalPrice) * 100);
+
+					}
+
+					$item['rate'] = $rate;
+
+					$item['rate_label'] = number_format($rate, 2);
+
+					$item['discount_per'] = max(0, (int) round($discountPer));
+
+					if (!empty($detail['name1'])) {
+
+						$item['name'] = html_entity_decode(strip_tags($detail['name1']), ENT_QUOTES, 'UTF-8');
+
+					}
+
+					if (!empty($detail['image_path'])) {
+
+						$item['image'] = armor_quotation_pi_product_image_url($detail['image_path']);
+
+					}
+
+					if (isset($detail['weight_id'])) {
+
+						$item['weight_id'] = (int) $detail['weight_id'];
+
+					}
+
+					if (isset($detail['id'])) {
+
+						$item['option_value'] = (int) $detail['id'];
+
+					}
+
+					break;
+
+				}
+
+			}
+
+			$items[] = $item;
+
+			$seenCatno[$catno] = 1;
 
 		}
 
