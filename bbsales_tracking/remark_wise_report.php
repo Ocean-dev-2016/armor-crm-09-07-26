@@ -40,7 +40,7 @@ $defaultTo = date("Y-m-t");
 		.rar-hr-payment-section .rar-pay-opt.active { font-weight:700; color:#1a7a3a; }
 		#rarFormModalFooter .btn-print-hr { background:#3598dc; color:#fff; }
 		#rarFormModalFooter .btn-share-hr { background:#25d366; color:#fff; }
-		image.png		body.rar-modal-open {
+		body.rar-modal-open {
 			overflow: hidden !important;
 		}
 		#rarFormModal {
@@ -489,18 +489,23 @@ $defaultTo = date("Y-m-t");
 		loadReport(1);
 	});
 
-	var currentHrVisitId = 0;
+	var currentFormVisitId = 0;
+	var currentHasConsultant = false;
+	var currentHasHighRate = false;
 
 	$("#rar-results").on("click", ".rar-view-form-btn", function () {
 		var visitId = $(this).data("visit-id");
 		var title = $(this).data("title") || "Form Detail";
+		var hasConsultant = $(this).data("has-consultant") == 1;
 		var hasHighRate = $(this).data("has-high-rate") == 1;
 		var hasFormModal = $(this).data("has-form-modal") == 1;
 		var content = $("#rar-form-" + visitId).html() || "<div class='alert alert-warning'>Form data not found.</div>";
-		currentHrVisitId = hasHighRate ? visitId : 0;
+		currentFormVisitId = visitId;
+		currentHasConsultant = hasConsultant;
+		currentHasHighRate = hasHighRate;
 		$("#rarFormModalTitle").text(title + " (Visit #" + visitId + ")");
 		$("#rarFormModalBody").html(content);
-		if (hasHighRate) {
+		if (hasConsultant || hasHighRate) {
 			$("#rarBtnPrintHr, #rarBtnShareHr").show();
 		} else {
 			$("#rarBtnPrintHr, #rarBtnShareHr").hide();
@@ -567,19 +572,24 @@ $defaultTo = date("Y-m-t");
 	});
 
 	$("#rarBtnPrintHr").on("click", function () {
-		if (!currentHrVisitId) {
+		if (!currentFormVisitId) {
 			return;
 		}
-		window.open("remark_wise_high_rate_print.php?visit_id=" + currentHrVisitId, "_blank", "width=820,height=700");
+		var printUrl = "remark_wise_high_rate_print.php?visit_id=" + currentFormVisitId;
+		if (currentHasConsultant) {
+			printUrl = "remark_wise_consultant_print.php?visit_id=" + currentFormVisitId;
+		}
+		window.open(printUrl, "_blank", "width=820,height=700");
 	});
 
 	$("#rarBtnShareHr").on("click", function () {
-		if (!currentHrVisitId) {
+		if (!currentFormVisitId) {
 			return;
 		}
+		var shareTitle = $.trim($("#rarFormModalTitle").text()) || "Visit Form";
 		var text = rarBuildHighRateShareText($("#rarFormModalBody"));
 		if (navigator.share) {
-			navigator.share({ title: "High Rate Analysis Form", text: text }).catch(function () {});
+			navigator.share({ title: shareTitle, text: text }).catch(function () {});
 			return;
 		}
 		window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");

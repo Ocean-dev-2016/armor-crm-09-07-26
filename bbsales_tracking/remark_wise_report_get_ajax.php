@@ -565,6 +565,7 @@ function rar_render_form_html($visit)
 										class="btn btn-xs btn-primary rar-view-form-btn"
 										data-title="<?php echo rar_h($formTitle); ?>"
 										data-visit-id="<?php echo (int) $visit['id']; ?>"
+										data-has-consultant="<?php echo $hasConsultant ? 1 : 0; ?>"
 										data-has-high-rate="<?php echo $hasHighRate ? 1 : 0; ?>"
 										data-has-form-modal="1">
 										<i class="fa fa-eye"></i> View
