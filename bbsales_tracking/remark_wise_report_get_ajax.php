@@ -86,6 +86,55 @@ function rar_turnover_label($visit)
 	return $turn;
 }
 
+function rar_get_visit_display_context($visit, $customerNameOverride = '')
+{
+	$visitDateLabel = ($visit['visit_date'] != "") ? date("d/m/Y", strtotime($visit['visit_date'])) : "-";
+	$visitTimeLabel = isset($visit['visit_time']) && $visit['visit_time'] != "" ? $visit['visit_time'] : "-";
+	$salesPerson = isset($visit['sales_person']) && $visit['sales_person'] != "" ? $visit['sales_person'] : "-";
+	$clientCode = isset($visit['customer_code']) && trim((string) $visit['customer_code']) != "" ? trim((string) $visit['customer_code']) : "-";
+	$custName = trim((string) $customerNameOverride);
+	if ($custName === '') {
+		$custName = isset($visit['customer_name']) && trim((string) $visit['customer_name']) != "" ? trim((string) $visit['customer_name']) : "-";
+	}
+	$custAddress = isset($visit['customer_address']) && trim((string) $visit['customer_address']) != "" ? trim((string) $visit['customer_address']) : "-";
+	$custCity = isset($visit['customer_city']) && trim((string) $visit['customer_city']) != "" ? trim((string) $visit['customer_city']) : "";
+	if ($custCity != "" && $custAddress != "-") {
+		$custAddress .= ', ' . $custCity;
+	} else if ($custCity != "" && $custAddress == "-") {
+		$custAddress = $custCity;
+	}
+	return array(
+		'visit_date' => $visitDateLabel,
+		'visit_time' => $visitTimeLabel,
+		'sales_person' => $salesPerson,
+		'client_code' => $clientCode,
+		'customer_name' => $custName,
+		'address' => $custAddress,
+		'turnover' => rar_turnover_label($visit),
+	);
+}
+
+function rar_render_visit_info_panel($visit, $customerNameOverride = '')
+{
+	$ctx = rar_get_visit_display_context($visit, $customerNameOverride);
+	$html = '<div class="rar-hr-info-panel">';
+	$html .= '<div class="rar-hr-info-grid">';
+	$html .= '<div class="rar-hr-info-item"><span class="rar-hr-label"><i class="fa fa-user"></i> Sales Person</span><span class="rar-hr-value">' . rar_h($ctx['sales_person']) . '</span></div>';
+	$html .= '<div class="rar-hr-info-item"><span class="rar-hr-label"><i class="fa fa-calendar"></i> Visit Date</span><span class="rar-hr-value">' . rar_h($ctx['visit_date']) . '</span></div>';
+	$html .= '<div class="rar-hr-info-item"><span class="rar-hr-label"><i class="fa fa-clock-o"></i> Time</span><span class="rar-hr-value">' . rar_h($ctx['visit_time']) . '</span></div>';
+	$html .= '</div>';
+	$html .= '<div class="rar-hr-customer-row">';
+	$html .= '<span class="rar-hr-code">' . rar_h($ctx['client_code']) . '</span>';
+	$html .= '<span class="rar-hr-company">' . rar_h($ctx['customer_name']) . '</span>';
+	$html .= '</div>';
+	$html .= '<div class="rar-hr-bottom-row">';
+	$html .= '<div class="rar-hr-addr-block"><span class="rar-hr-label"><i class="fa fa-map-marker"></i> Address</span><span class="rar-hr-value">' . nl2br(rar_h($ctx['address'])) . '</span></div>';
+	$html .= '<div class="rar-hr-turn-block"><span class="rar-hr-label"><i class="fa fa-line-chart"></i> Turnover</span><span class="rar-hr-value">' . rar_h($ctx['turnover']) . '</span></div>';
+	$html .= '</div>';
+	$html .= '</div>';
+	return $html;
+}
+
 function rar_format_duration($minutes)
 {
 	if ($minutes === null || $minutes === "") {
@@ -111,8 +160,25 @@ function rar_format_duration($minutes)
 
 function rar_render_form_html($visit)
 {
-	$html = '';
-	if (!empty($visit['consultant_form']) && is_array($visit['consultant_form'])) {
+	$hasConsultant = !empty($visit['consultant_form']) && is_array($visit['consultant_form']);
+	$hasHighRate = !empty($visit['high_rate_form']) && is_array($visit['high_rate_form']);
+	if (!$hasConsultant && !$hasHighRate) {
+		return '';
+	}
+
+	$custNameOverride = '';
+	if ($hasHighRate) {
+		$hfName = isset($visit['high_rate_form']['customer_name']) ? trim((string) $visit['high_rate_form']['customer_name']) : '';
+		if ($hfName !== '') {
+			$custNameOverride = $hfName;
+		}
+	}
+
+	$html = '<div class="rar-form-block rar-visit-form-block" id="rar-visit-form-' . (int) $visit['id'] . '">';
+	$html .= '<div class="rar-hr-modal-fit">';
+	$html .= rar_render_visit_info_panel($visit, $custNameOverride);
+
+	if ($hasConsultant) {
 		$vf = $visit['consultant_form'];
 		$typeLabel = (isset($vf['consultant_type']) && $vf['consultant_type'] == 'government')
 			? 'Government Consultant Approval'
@@ -122,9 +188,9 @@ function rar_render_form_html($visit)
 		} else if (isset($vf['reason_code']) && strtoupper($vf['reason_code']) == 'C1') {
 			$typeLabel = 'Private Consultant Approval';
 		}
-		$html .= '<div class="rar-form-block rar-consultant-block">';
-		$html .= '<h4 style="margin-top:0;color:#1a7a3a;"><i class="fa fa-user"></i> Need Approval / Consultant Form</h4>';
-		$html .= '<table class="table table-bordered table-condensed" style="margin-bottom:10px;">';
+		$html .= '<div class="rar-form-section rar-consultant-block">';
+		$html .= '<div class="rar-form-section-title rar-consultant-title"><i class="fa fa-user"></i> Need Approval / Consultant Form</div>';
+		$html .= '<table class="table table-bordered table-condensed rar-form-detail-table">';
 		$html .= '<tr><th style="width:160px;">Type</th><td>' . rar_h($typeLabel) . '</td></tr>';
 		$html .= '<tr><th>Firm Name</th><td>' . rar_h($vf['firm_name']) . '</td></tr>';
 		$html .= '<tr><th>Address</th><td>' . nl2br(rar_h($vf['address'])) . '</td></tr>';
@@ -136,47 +202,19 @@ function rar_render_form_html($visit)
 		$html .= '<tr><th>Email</th><td>' . rar_h(isset($vf['email']) ? $vf['email'] : '') . '</td></tr>';
 		$html .= '</table></div>';
 	}
-	if (!empty($visit['high_rate_form']) && is_array($visit['high_rate_form'])) {
+
+	if ($hasHighRate) {
 		$hf = $visit['high_rate_form'];
 		$payOption = isset($hf['payment_option']) ? $hf['payment_option'] : '';
 		$payRemark = isset($hf['payment_remark']) ? trim((string) $hf['payment_remark']) : '';
 		if ($payRemark === 'false' || $payRemark === '0') {
 			$payRemark = '';
 		}
-		$visitDateLabel = ($visit['visit_date'] != "") ? date("d/m/Y", strtotime($visit['visit_date'])) : "-";
-		$visitTimeLabel = isset($visit['visit_time']) && $visit['visit_time'] != "" ? $visit['visit_time'] : "-";
-		$salesPerson = isset($visit['sales_person']) && $visit['sales_person'] != "" ? $visit['sales_person'] : "-";
-		$clientCode = isset($visit['customer_code']) && trim((string) $visit['customer_code']) != "" ? trim((string) $visit['customer_code']) : "-";
-		$custName = isset($hf['customer_name']) && trim((string) $hf['customer_name']) != "" ? trim((string) $hf['customer_name']) : (isset($visit['customer_name']) ? $visit['customer_name'] : "-");
-		$custAddress = isset($visit['customer_address']) && trim((string) $visit['customer_address']) != "" ? trim((string) $visit['customer_address']) : "-";
-		$custCity = isset($visit['customer_city']) && trim((string) $visit['customer_city']) != "" ? trim((string) $visit['customer_city']) : "";
-		if ($custCity != "" && $custAddress != "-") {
-			$custAddress .= ', ' . $custCity;
-		} else if ($custCity != "" && $custAddress == "-") {
-			$custAddress = $custCity;
-		}
-		$turnLabel = rar_turnover_label($visit);
 		$isAdvance = rar_payment_is_advance($payOption);
 		$isCredit = rar_payment_is_credit($payOption);
 
-		$html .= '<div class="rar-form-block rar-highrate-block" id="rar-highrate-print-' . (int) $visit['id'] . '">';
-		$html .= '<div class="rar-hr-modal-fit">';
-
-		$html .= '<div class="rar-hr-info-panel">';
-		$html .= '<div class="rar-hr-info-grid">';
-		$html .= '<div class="rar-hr-info-item"><span class="rar-hr-label"><i class="fa fa-user"></i> Sales Person</span><span class="rar-hr-value">' . rar_h($salesPerson) . '</span></div>';
-		$html .= '<div class="rar-hr-info-item"><span class="rar-hr-label"><i class="fa fa-calendar"></i> Visit Date</span><span class="rar-hr-value">' . rar_h($visitDateLabel) . '</span></div>';
-		$html .= '<div class="rar-hr-info-item"><span class="rar-hr-label"><i class="fa fa-clock-o"></i> Time</span><span class="rar-hr-value">' . rar_h($visitTimeLabel) . '</span></div>';
-		$html .= '</div>';
-		$html .= '<div class="rar-hr-customer-row">';
-		$html .= '<span class="rar-hr-code">' . rar_h($clientCode) . '</span>';
-		$html .= '<span class="rar-hr-company">' . rar_h($custName) . '</span>';
-		$html .= '</div>';
-		$html .= '<div class="rar-hr-bottom-row">';
-		$html .= '<div class="rar-hr-addr-block"><span class="rar-hr-label"><i class="fa fa-map-marker"></i> Address</span><span class="rar-hr-value">' . nl2br(rar_h($custAddress)) . '</span></div>';
-		$html .= '<div class="rar-hr-turn-block"><span class="rar-hr-label"><i class="fa fa-line-chart"></i> Turnover</span><span class="rar-hr-value">' . rar_h($turnLabel) . '</span></div>';
-		$html .= '</div>';
-		$html .= '</div>';
+		$html .= '<div class="rar-form-section rar-highrate-block" id="rar-highrate-print-' . (int) $visit['id'] . '">';
+		$html .= '<div class="rar-form-section-title rar-highrate-title"><i class="fa fa-line-chart"></i> High Rate Analysis Form</div>';
 
 		if (!empty($visit['high_rate_items'])) {
 			$html .= '<table class="table table-bordered table-striped table-condensed rar-hr-product-table" style="margin-bottom:10px;">';
@@ -210,8 +248,9 @@ function rar_render_form_html($visit)
 		}
 		$html .= '</div>';
 		$html .= '</div>';
-		$html .= '</div>';
 	}
+
+	$html .= '</div></div>';
 	return $html;
 }
 ?>
@@ -504,7 +543,8 @@ function rar_render_form_html($visit)
 										class="btn btn-xs btn-primary rar-view-form-btn"
 										data-title="<?php echo rar_h($formTitle); ?>"
 										data-visit-id="<?php echo (int) $visit['id']; ?>"
-										data-has-high-rate="<?php echo $hasHighRate ? 1 : 0; ?>">
+										data-has-high-rate="<?php echo $hasHighRate ? 1 : 0; ?>"
+										data-has-form-modal="1">
 										<i class="fa fa-eye"></i> View
 									</button>
 									<div class="rar-form-content" id="rar-form-<?php echo (int) $visit['id']; ?>" style="display:none;">

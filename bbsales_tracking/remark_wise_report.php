@@ -235,6 +235,37 @@ $defaultTo = date("Y-m-t");
 			padding: 12px 14px !important;
 			background: #f9fcff !important;
 		}
+		.rar-form-section {
+			margin-bottom: 10px;
+		}
+		.rar-form-section-title {
+			font-size: 13px;
+			font-weight: 700;
+			margin-bottom: 8px;
+			padding-bottom: 6px;
+			border-bottom: 2px solid #ddd;
+		}
+		.rar-consultant-title {
+			color: #1a7a3a;
+			border-bottom-color: #1a7a3a;
+		}
+		.rar-highrate-title {
+			color: #c85a12;
+			border-bottom-color: #c85a12;
+		}
+		.rar-form-detail-table th {
+			background: #f8f8f8 !important;
+			font-size: 11px !important;
+			width: 140px;
+		}
+		.rar-form-detail-table td {
+			font-size: 11px !important;
+		}
+		#rarFormModal .rar-form-detail-table th,
+		#rarFormModal .rar-form-detail-table td {
+			padding: 4px 6px !important;
+			line-height: 1.25;
+		}
 	</style>
 </head>
 <body class="page-md">
@@ -468,15 +499,19 @@ $defaultTo = date("Y-m-t");
 		var visitId = $(this).data("visit-id");
 		var title = $(this).data("title") || "Form Detail";
 		var hasHighRate = $(this).data("has-high-rate") == 1;
+		var hasFormModal = $(this).data("has-form-modal") == 1;
 		var content = $("#rar-form-" + visitId).html() || "<div class='alert alert-warning'>Form data not found.</div>";
 		currentHrVisitId = hasHighRate ? visitId : 0;
 		$("#rarFormModalTitle").text(title + " (Visit #" + visitId + ")");
 		$("#rarFormModalBody").html(content);
 		if (hasHighRate) {
 			$("#rarBtnPrintHr, #rarBtnShareHr").show();
-			$("#rarFormModal").addClass("rar-hr-full-modal");
 		} else {
 			$("#rarBtnPrintHr, #rarBtnShareHr").hide();
+		}
+		if (hasFormModal) {
+			$("#rarFormModal").addClass("rar-hr-full-modal");
+		} else {
 			$("#rarFormModal").removeClass("rar-hr-full-modal");
 		}
 		$("#rarFormModal").modal("show");
@@ -549,7 +584,7 @@ $defaultTo = date("Y-m-t");
 
 	function rarBuildHighRateShareText($wrap) {
 		var lines = [];
-		lines.push("HIGH RATE ANALYSIS FORM");
+		lines.push("VISIT FORM DETAILS");
 		$wrap.find(".rar-hr-info-item").each(function () {
 			var label = $.trim($(this).find(".rar-hr-label").text());
 			var val = $.trim($(this).find(".rar-hr-value").text());
@@ -566,14 +601,29 @@ $defaultTo = date("Y-m-t");
 		var turn = $.trim($wrap.find(".rar-hr-turn-block .rar-hr-value").text());
 		if (addr) lines.push("Address: " + addr);
 		if (turn) lines.push("Turnover: " + turn);
-		lines.push("");
-		lines.push("Products:");
-		$wrap.find(".rar-hr-product-table tbody tr").each(function () {
-			var tds = $(this).find("td");
-			if (tds.length >= 4) {
-				lines.push("- " + $.trim($(tds[0]).text()) + " | Given: " + $.trim($(tds[1]).text()) + " | Qty: " + $.trim($(tds[2]).text()) + " | Cust.Rate: " + $.trim($(tds[3]).text()));
-			}
-		});
+
+		var $consultant = $wrap.find(".rar-consultant-block");
+		if ($consultant.length) {
+			lines.push("");
+			lines.push("CONSULTANT FORM:");
+			$consultant.find(".rar-form-detail-table tr").each(function () {
+				var label = $.trim($(this).find("th").text());
+				var val = $.trim($(this).find("td").text());
+				if (label && val) lines.push(label + ": " + val);
+			});
+		}
+
+		var $products = $wrap.find(".rar-hr-product-table tbody tr");
+		if ($products.length) {
+			lines.push("");
+			lines.push("HIGH RATE PRODUCTS:");
+			$products.each(function () {
+				var tds = $(this).find("td");
+				if (tds.length >= 4) {
+					lines.push("- " + $.trim($(tds[0]).text()) + " | Given: " + $.trim($(tds[1]).text()) + " | Qty: " + $.trim($(tds[2]).text()) + " | Cust.Rate: " + $.trim($(tds[3]).text()));
+				}
+			});
+		}
 		var pay = [];
 		$wrap.find(".rar-hr-payment-options .rar-pay-opt.active").each(function () {
 			pay.push($.trim($(this).text()));
