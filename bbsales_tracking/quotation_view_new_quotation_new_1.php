@@ -1,4 +1,5 @@
 <?php
+ob_start();
 $page_id = 566;
 $page_slug = 'page_order_ajax';
 require_once("connect_in.php");
@@ -39,6 +40,10 @@ $quotationPrintTitle = preg_replace('/\s+/', ' ', $quotationPrintTitle);
 $quotationPrintTitle = trim($quotationPrintTitle);
 
 $isPrintMode = (isset($_REQUEST['print']) && $_REQUEST['print'] == '1') || (isset($_REQUEST['p']) && $_REQUEST['p'] == '1');
+if ($isPrintMode) {
+	@ini_set('memory_limit', '512M');
+	@set_time_limit(180);
+}
 $quotationViewEmbedded = (basename($_SERVER['SCRIPT_NAME']) !== 'quotation_view_new_quotation_new_1.php');
 $quotationViewStandalone = !$quotationViewEmbedded;
 ?>
@@ -285,10 +290,10 @@ $quotationViewStandalone = !$quotationViewEmbedded;
 		}
 
 		.quote-suggest-body .qp-suggest-print-grid td.qp-suggest-print-cell {
-			min-height: 220px;
+			min-height: 0;
 			height: auto;
 			padding: 0 !important;
-			overflow: visible;
+			overflow: hidden;
 		}
 
 		.quote-suggest-body .qp-prod-card,
@@ -424,19 +429,38 @@ $quotationViewStandalone = !$quotationViewEmbedded;
 			}
 
 			.qp-suggest-product-row {
-				page-break-inside: avoid !important;
-				break-inside: avoid-page !important;
+				page-break-inside: auto !important;
+				break-inside: auto !important;
 			}
 
 			.quote-suggest-body .qp-suggest-print-grid td.qp-suggest-print-cell,
 			.quote-suggest-body .qp-prod-card,
 			.quote-suggest-body .qp-suggest-print-box,
 			.quote-suggest-body .qp-suggest-cell-inner {
-				min-height: 220px !important;
+				min-height: 0 !important;
 				height: auto !important;
-				overflow: visible !important;
+				overflow: hidden !important;
 				page-break-inside: avoid !important;
 				break-inside: avoid-page !important;
+			}
+
+			.quote-suggest-body .qp-prod-img-cell {
+				height: 44px !important;
+			}
+
+			.quote-suggest-body .qp-prod-img {
+				max-height: 36px !important;
+			}
+
+			.quote-suggest-body .qp-prod-name-cell {
+				min-height: 22px !important;
+				max-height: 28px !important;
+				font-size: 9.5px !important;
+			}
+
+			.qp-suggest-cat-header {
+				page-break-after: auto;
+				break-after: auto;
 			}
 
 			.quote-suggest-body .qp-prod-price-line,
@@ -454,26 +478,8 @@ $quotationViewStandalone = !$quotationViewEmbedded;
 				print-color-adjust: exact !important;
 			}
 
-			.quote-suggest-body .qp-prod-code-cell {
-				color: #555555 !important;
-			}
-
-			.quote-suggest-body .qp-prod-name-cell {
-				color: #000000 !important;
-			}
-
-			.quote-suggest-body .qp-prod-price-cell {
-				overflow: visible !important;
-				padding-bottom: 8px !important;
-			}
-
 			.qp-suggest-print-cell-empty {
 				display: none !important;
-			}
-
-			.qp-suggest-cat-header {
-				page-break-after: avoid;
-				break-after: avoid-page;
 			}
 
 			.quote-summary-totals-block {
@@ -1273,15 +1279,52 @@ $quotationViewStandalone = !$quotationViewEmbedded;
 
 	window.quotePrintNow = function() {
 		document.title = quotePrintTitle;
-		window.print();
+		quoteWaitForImages(function() {
+			setTimeout(function() {
+				window.print();
+			}, 300);
+		});
 	};
+
+	function quoteWaitForImages(callback) {
+		var imgs = document.images;
+		if (!imgs || !imgs.length) {
+			callback();
+			return;
+		}
+		var pending = 0;
+		var i;
+		for (i = 0; i < imgs.length; i++) {
+			if (!imgs[i].complete) {
+				pending++;
+			}
+		}
+		if (!pending) {
+			callback();
+			return;
+		}
+		function done() {
+			pending--;
+			if (pending <= 0) {
+				callback();
+			}
+		}
+		for (i = 0; i < imgs.length; i++) {
+			if (!imgs[i].complete) {
+				imgs[i].addEventListener('load', done);
+				imgs[i].addEventListener('error', done);
+			}
+		}
+	}
 
 	<?php if ($isPrintMode) { ?>
 	window.addEventListener('load', function() {
 		document.title = quotePrintTitle;
-		setTimeout(function() {
-			window.print();
-		}, 500);
+		quoteWaitForImages(function() {
+			setTimeout(function() {
+				window.print();
+			}, 1200);
+		});
 	});
 	<?php } ?>
 })();

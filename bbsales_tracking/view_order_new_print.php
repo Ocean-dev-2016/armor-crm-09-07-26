@@ -163,25 +163,19 @@ $order_unit_arr = array("-1" => "Box", "-2" => "Strip", "-3" => "Pallet", "1" =>
 			.quote-suggest-body .qp-prod-card,
 			.quote-suggest-body .qp-suggest-print-box,
 			.quote-suggest-body .qp-suggest-cell-inner {
-				min-height: 220px !important;
+				min-height: 0 !important;
 				height: auto !important;
-				overflow: visible !important;
+				overflow: hidden !important;
 				page-break-inside: avoid !important;
 				break-inside: avoid-page !important;
 			}
 
-			.quote-suggest-body .qp-prod-price-line,
-			.quote-suggest-body .qp-prod-price {
-				color: #0a5c24 !important;
-				-webkit-print-color-adjust: exact !important;
-				print-color-adjust: exact !important;
+			.quote-suggest-body .qp-prod-img-cell {
+				height: 44px !important;
 			}
 
-			.quote-suggest-body .qp-prod-badge-bar {
-				display: flex !important;
-				align-items: center !important;
-				justify-content: flex-end !important;
-				gap: 6px !important;
+			.quote-suggest-body .qp-prod-img {
+				max-height: 36px !important;
 			}
 		}
 	</style>

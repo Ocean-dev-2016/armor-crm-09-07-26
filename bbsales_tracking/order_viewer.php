@@ -78,17 +78,17 @@ $is_cp_supply_order_v = ($cp_order_flag_v === 1 && $cp_order_mode_v !== 'custome
 
 	#wrapper1 .quote-suggest-body .qp-suggest-print-grid td.qp-suggest-print-cell {
 		border: 1px solid #595959 !important;
-		min-height: 220px;
+		min-height: 0;
 		height: auto;
 		vertical-align: top;
 		padding: 0 !important;
 		box-sizing: border-box;
-		overflow: visible;
+		overflow: hidden;
 	}
 
 	#wrapper1 .qp-suggest-cell-inner {
 		box-sizing: border-box;
-		padding: 0 12px 6px;
+		padding: 0 8px 4px;
 		width: 100%;
 		height: auto;
 	}
@@ -96,12 +96,12 @@ $is_cp_supply_order_v = ($cp_order_flag_v === 1 && $cp_order_mode_v !== 'custome
 	#wrapper1 .qp-suggest-print-box {
 		display: block;
 		width: 100%;
-		min-height: 220px;
+		min-height: 0;
 		height: auto;
 		box-sizing: border-box;
 		page-break-inside: avoid;
 		break-inside: avoid-page;
-		overflow: visible;
+		overflow: hidden;
 	}
 
 	#wrapper1 .qp-prod-card,
@@ -152,40 +152,40 @@ $is_cp_supply_order_v = ($cp_order_flag_v === 1 && $cp_order_mode_v !== 'custome
 	#wrapper1 .qp-prod-img-cell {
 		background: #f7f7f7;
 		border-bottom: 1px solid #e8e8e8 !important;
-		height: 66px;
-		padding: 3px !important;
+		height: 46px;
+		padding: 2px !important;
 		text-align: center;
 		vertical-align: middle !important;
 	}
 
 	#wrapper1 .qp-prod-img {
-		max-height: 54px;
+		max-height: 38px;
 		max-width: 96%;
 		object-fit: contain;
 		vertical-align: middle;
 	}
 
 	#wrapper1 .qp-prod-code-cell {
-		font-size: 11px;
+		font-size: 10px;
 		font-weight: 600;
 		color: #555555 !important;
-		padding: 3px 10px 0 !important;
+		padding: 2px 8px 0 !important;
 	}
 
 	#wrapper1 .qp-prod-name-cell {
-		font-size: 11px;
+		font-size: 10px;
 		font-weight: bold;
 		color: #000000 !important;
 		text-transform: uppercase;
-		line-height: 1.25;
-		padding: 2px 10px 0 !important;
-		min-height: 36px;
-		max-height: 40px;
+		line-height: 1.2;
+		padding: 1px 8px 0 !important;
+		min-height: 24px;
+		max-height: 30px;
 		overflow: hidden;
 	}
 
 	#wrapper1 .qp-prod-price-cell {
-		padding: 2px 10px 8px !important;
+		padding: 0 8px 4px !important;
 		text-align: center !important;
 		vertical-align: bottom !important;
 		overflow: visible !important;
@@ -240,9 +240,9 @@ $is_cp_supply_order_v = ($cp_order_flag_v === 1 && $cp_order_mode_v !== 'custome
 		#wrapper1 .qp-prod-card,
 		#wrapper1 .qp-suggest-print-box,
 		#wrapper1 .qp-suggest-cell-inner {
-			min-height: 220px !important;
+			min-height: 0 !important;
 			height: auto !important;
-			overflow: visible !important;
+			overflow: hidden !important;
 			page-break-inside: avoid !important;
 			break-inside: avoid-page !important;
 		}

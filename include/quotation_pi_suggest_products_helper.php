@@ -464,6 +464,22 @@ if (!function_exists('armor_quotation_pi_suggest_seed_defaults')) {
 
 
 
+if (!function_exists('armor_quotation_pi_is_print_request')) {
+
+	function armor_quotation_pi_is_print_request()
+
+	{
+
+		return (isset($_REQUEST['print']) && (string) $_REQUEST['print'] === '1')
+
+			|| (isset($_REQUEST['p']) && (string) $_REQUEST['p'] === '1');
+
+	}
+
+}
+
+
+
 if (!function_exists('armor_quotation_pi_suggest_sync_from_map')) {
 
 	function armor_quotation_pi_suggest_sync_from_map($db)
@@ -574,7 +590,7 @@ if (!function_exists('armor_quotation_pi_suggest_catnos')) {
 
 	{
 
-		if ($db !== null) {
+		if ($db !== null && !armor_quotation_pi_is_print_request()) {
 
 			armor_quotation_pi_suggest_sync_from_map($db);
 
@@ -1164,7 +1180,7 @@ if (!function_exists('armor_quotation_pi_suggest_styles')) {
 
 	width: 25%;
 
-	min-height: 220px;
+	min-height: 0;
 
 	height: auto;
 
@@ -1178,7 +1194,7 @@ if (!function_exists('armor_quotation_pi_suggest_styles')) {
 
 	background: #fff;
 
-	overflow: visible;
+	overflow: hidden;
 
 	page-break-inside: avoid;
 
@@ -1192,7 +1208,7 @@ if (!function_exists('armor_quotation_pi_suggest_styles')) {
 
 	width: 100%;
 
-	min-height: 220px;
+	min-height: 0;
 
 	height: auto;
 
@@ -1202,15 +1218,15 @@ if (!function_exists('armor_quotation_pi_suggest_styles')) {
 
 	break-inside: avoid-page;
 
-	overflow: visible;
+	overflow: hidden;
 
 }
 
 .qp-suggest-product-row {
 
-	page-break-inside: avoid;
+	page-break-inside: auto;
 
-	break-inside: avoid-page;
+	break-inside: auto;
 
 }
 
@@ -1246,7 +1262,7 @@ if (!function_exists('armor_quotation_pi_suggest_styles')) {
 
 	width: 100%;
 
-	min-height: 220px;
+	min-height: 0;
 
 	height: auto;
 
@@ -1268,9 +1284,9 @@ if (!function_exists('armor_quotation_pi_suggest_styles')) {
 
 .qp-prod-badge-row {
 
-	height: 34px;
+	height: 24px;
 
-	padding: 4px 8px 0 !important;
+	padding: 2px 6px 0 !important;
 
 	text-align: right !important;
 
@@ -1330,13 +1346,13 @@ if (!function_exists('armor_quotation_pi_suggest_styles')) {
 
 .qp-prod-img-cell {
 
-	height: 66px;
+	height: 46px;
 
 	background: #f7f7f7;
 
 	border-bottom: 1px solid #e8e8e8 !important;
 
-	padding: 3px !important;
+	padding: 2px !important;
 
 	text-align: center;
 
@@ -1348,9 +1364,9 @@ if (!function_exists('armor_quotation_pi_suggest_styles')) {
 
 	width: 100%;
 
-	height: 58px;
+	height: 42px;
 
-	line-height: 58px;
+	line-height: 42px;
 
 	text-align: center;
 
@@ -1362,7 +1378,7 @@ if (!function_exists('armor_quotation_pi_suggest_styles')) {
 
 	max-width: 96%;
 
-	max-height: 54px;
+	max-height: 38px;
 
 	width: auto;
 
@@ -1398,19 +1414,19 @@ if (!function_exists('armor_quotation_pi_suggest_styles')) {
 
 	height: auto;
 
-	min-height: 36px;
+	min-height: 24px;
 
-	max-height: 40px;
+	max-height: 30px;
 
-	font-size: 11px;
+	font-size: 10px;
 
 	font-weight: bold;
 
 	color: #000000 !important;
 
-	line-height: 1.25;
+	line-height: 1.2;
 
-	padding: 2px 10px 0 !important;
+	padding: 1px 8px 0 !important;
 
 	overflow: hidden;
 
@@ -1552,7 +1568,7 @@ if (!function_exists('armor_quotation_pi_suggest_styles')) {
 
 .qp-prod-card-empty td {
 
-	min-height: 220px;
+	min-height: 0;
 
 }
 
@@ -1798,9 +1814,9 @@ if (!function_exists('armor_quotation_pi_suggest_styles')) {
 
 	.qp-suggest-product-row {
 
-		page-break-inside: avoid !important;
+		page-break-inside: auto !important;
 
-		break-inside: avoid-page !important;
+		break-inside: auto !important;
 
 		display: table-row !important;
 
@@ -1808,11 +1824,11 @@ if (!function_exists('armor_quotation_pi_suggest_styles')) {
 
 	.qp-suggest-print-grid td.qp-suggest-print-cell {
 
-		min-height: 220px !important;
+		min-height: 0 !important;
 
 		height: auto !important;
 
-		overflow: visible !important;
+		overflow: hidden !important;
 
 		page-break-inside: avoid !important;
 
@@ -1824,15 +1840,71 @@ if (!function_exists('armor_quotation_pi_suggest_styles')) {
 	.qp-suggest-cell-inner,
 	.qp-prod-card {
 
-		min-height: 220px !important;
+		min-height: 0 !important;
 
 		height: auto !important;
 
-		overflow: visible !important;
+		overflow: hidden !important;
 
 		page-break-inside: avoid !important;
 
 		break-inside: avoid-page !important;
+
+	}
+
+	.qp-prod-badge-row {
+
+		height: 22px !important;
+
+		padding: 2px 6px 0 !important;
+
+	}
+
+	.qp-prod-img-cell {
+
+		height: 44px !important;
+
+		padding: 2px !important;
+
+	}
+
+	.qp-prod-img-box {
+
+		height: 40px !important;
+
+		line-height: 40px !important;
+
+	}
+
+	.qp-prod-img {
+
+		max-height: 36px !important;
+
+	}
+
+	.qp-prod-name-cell {
+
+		min-height: 22px !important;
+
+		max-height: 28px !important;
+
+		font-size: 9.5px !important;
+
+		padding: 1px 6px 0 !important;
+
+	}
+
+	.qp-prod-price-cell {
+
+		padding: 0 6px 4px !important;
+
+	}
+
+	.qp-prod-code-cell {
+
+		padding: 2px 6px 0 !important;
+
+		font-size: 10px !important;
 
 	}
 
@@ -1897,9 +1969,19 @@ if (!function_exists('armor_quotation_pi_suggest_styles')) {
 
 	.qp-suggest-cat-header {
 
-		page-break-after: avoid;
+		page-break-after: auto;
 
-		break-after: avoid-page;
+		break-after: auto;
+
+		padding: 4px 6px !important;
+
+		line-height: 1.2 !important;
+
+	}
+
+	.qp-suggest-print-header {
+
+		padding: 6px 8px !important;
 
 	}
 
@@ -1913,9 +1995,11 @@ if (!function_exists('armor_quotation_pi_suggest_styles')) {
 
 	.qp-suggest-cell-inner {
 
-		padding-left: 12px !important;
+		padding-left: 8px !important;
 
-		padding-right: 12px !important;
+		padding-right: 8px !important;
+
+		padding-bottom: 4px !important;
 
 		box-sizing: border-box !important;
 
@@ -2087,9 +2171,15 @@ if (!function_exists('armor_quotation_pi_get_suggest_products')) {
 
 	{
 
-		require_once dirname(__FILE__) . '/product.class.php';
+		$productObj = null;
 
-		$productObj = new Product();
+		if (!armor_quotation_pi_is_print_request()) {
+
+			require_once dirname(__FILE__) . '/product.class.php';
+
+			$productObj = new Product();
+
+		}
 
 		$customerId = (int) $customerId;
 
@@ -2155,73 +2245,77 @@ if (!function_exists('armor_quotation_pi_get_suggest_products')) {
 
 			}
 
-			$details = $productObj->aj_getProductDetail($proId, $customerId);
+			if (!armor_quotation_pi_is_print_request()) {
 
-			if (!empty($details)) {
+				$details = $productObj->aj_getProductDetail($proId, $customerId);
 
-				foreach ($details as $detail) {
+				if (!empty($details)) {
 
-					if (armor_quotation_pi_normalize_catno($detail['catno']) !== $catno) {
+					foreach ($details as $detail) {
 
-						continue;
+						if (armor_quotation_pi_normalize_catno($detail['catno']) !== $catno) {
+
+							continue;
+
+						}
+
+						$rate = isset($detail['orignal_price']) ? (float) $detail['orignal_price'] : (float) $item['rate'];
+
+						if (isset($detail['sell_price']) && (float) $detail['sell_price'] > 0) {
+
+							$rate = (float) $detail['sell_price'];
+
+						}
+
+						$originalPrice = isset($detail['orignal_price']) ? (float) $detail['orignal_price'] : $rate;
+
+						$discountPer = 0;
+
+						if (isset($detail['discountPer']) && $detail['discountPer'] !== '' && $detail['discountPer'] !== null) {
+
+							$discountPer = (float) $detail['discountPer'];
+
+						}
+
+						if ($discountPer <= 0 && $originalPrice > 0 && $rate > 0 && $rate < $originalPrice) {
+
+							$discountPer = round((($originalPrice - $rate) / $originalPrice) * 100);
+
+						}
+
+						$item['rate'] = $rate;
+
+						$item['rate_label'] = number_format($rate, 2);
+
+						$item['discount_per'] = max(0, (int) round($discountPer));
+
+						if (!empty($detail['name1'])) {
+
+							$item['name'] = html_entity_decode(strip_tags($detail['name1']), ENT_QUOTES, 'UTF-8');
+
+						}
+
+						if (!empty($detail['image_path'])) {
+
+							$item['image'] = armor_quotation_pi_product_image_url($detail['image_path']);
+
+						}
+
+						if (isset($detail['weight_id'])) {
+
+							$item['weight_id'] = (int) $detail['weight_id'];
+
+						}
+
+						if (isset($detail['id'])) {
+
+							$item['option_value'] = (int) $detail['id'];
+
+						}
+
+						break;
 
 					}
-
-					$rate = isset($detail['orignal_price']) ? (float) $detail['orignal_price'] : (float) $item['rate'];
-
-					if (isset($detail['sell_price']) && (float) $detail['sell_price'] > 0) {
-
-						$rate = (float) $detail['sell_price'];
-
-					}
-
-					$originalPrice = isset($detail['orignal_price']) ? (float) $detail['orignal_price'] : $rate;
-
-					$discountPer = 0;
-
-					if (isset($detail['discountPer']) && $detail['discountPer'] !== '' && $detail['discountPer'] !== null) {
-
-						$discountPer = (float) $detail['discountPer'];
-
-					}
-
-					if ($discountPer <= 0 && $originalPrice > 0 && $rate > 0 && $rate < $originalPrice) {
-
-						$discountPer = round((($originalPrice - $rate) / $originalPrice) * 100);
-
-					}
-
-					$item['rate'] = $rate;
-
-					$item['rate_label'] = number_format($rate, 2);
-
-					$item['discount_per'] = max(0, (int) round($discountPer));
-
-					if (!empty($detail['name1'])) {
-
-						$item['name'] = html_entity_decode(strip_tags($detail['name1']), ENT_QUOTES, 'UTF-8');
-
-					}
-
-					if (!empty($detail['image_path'])) {
-
-						$item['image'] = armor_quotation_pi_product_image_url($detail['image_path']);
-
-					}
-
-					if (isset($detail['weight_id'])) {
-
-						$item['weight_id'] = (int) $detail['weight_id'];
-
-					}
-
-					if (isset($detail['id'])) {
-
-						$item['option_value'] = (int) $detail['id'];
-
-					}
-
-					break;
 
 				}
 
@@ -2709,7 +2803,7 @@ if (!function_exists('armor_quotation_pi_suggest_pi_view_overrides')) {
 
 	width: 25% !important;
 
-	min-height: 220px;
+	min-height: 0;
 
 	height: auto !important;
 
@@ -2717,7 +2811,7 @@ if (!function_exists('armor_quotation_pi_suggest_pi_view_overrides')) {
 
 	vertical-align: top;
 
-	overflow: visible;
+	overflow: hidden;
 
 }
 
