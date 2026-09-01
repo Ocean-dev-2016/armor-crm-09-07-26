@@ -3201,8 +3201,7 @@ class Quotation extends Functions
 				}
 				//$d=file_get_contents(ADMINSITEURL.'quotation_view_new_quotation.php?quotation_id='.$id.'');
 				// $d=file_get_contents(ADMINSITEURL.'quotation_view_new_quotation_new.php?quotation_id='.$id.'');
-				//$d.=$string;
-				//print_r($d); exit;
+				include_once dirname(__FILE__) . '/../bbsales_tracking/include/mbstring_polyfill.php';
 				require('../bbsales_tracking/mpdf60/mpdf.php');
 
 				$mpdf = new mPDF(

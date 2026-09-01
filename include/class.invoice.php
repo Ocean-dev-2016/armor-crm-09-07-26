@@ -260,6 +260,7 @@ class Invoice extends Functions
 				//print_r($d); exit;
 				//$d=file_get_contents(ADMINSITEURL.'order_view_new.php?order_id='.$order_id.'');
 				//$d.=$string;
+				include_once dirname(__FILE__) . '/../bbsales_tracking/include/mbstring_polyfill.php';
 				require('../bbsales_tracking/mpdf60/mpdf.php');
 				// echo $mpdf; exit();
 
@@ -366,6 +367,7 @@ class Invoice extends Functions
 				//$d.=$string;
 				$d=file_get_contents(ADMINSITEURL.'packing_slip_download.php?id='.$id.'');
 				//$d.=$string;
+				include_once dirname(__FILE__) . '/../bbsales_tracking/include/mbstring_polyfill.php';
 				require('../bbsales_tracking/mpdf60/mpdf.php');
 
 				$mpdf = new mPDF('',    // mode - default ''
@@ -464,6 +466,7 @@ class Invoice extends Functions
 				//$d.=$string;
 				$d=file_get_contents(ADMINSITEURL.'dispatch_format_download.php?id='.$id.'');
 //$d.=$string;
+				include_once dirname(__FILE__) . '/../bbsales_tracking/include/mbstring_polyfill.php';
 				require('../bbsales_tracking/mpdf60/mpdf.php');
 
 
