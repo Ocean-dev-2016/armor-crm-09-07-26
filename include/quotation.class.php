@@ -3235,7 +3235,6 @@ class Quotation extends Functions
 		$html = preg_replace('/<script\b[^>]*>[\s\S]*?<\/script>/i', '', $html);
 		$html = preg_replace('/<style\b[^>]*>[\s\S]*?<\/style>/i', '', $html);
 		$html = preg_replace('/<div[^>]*class="[^"]*quote-print-toolbar[^"]*"[^>]*>[\s\S]*?<\/div>/i', '', $html);
-		$html = preg_replace('/<img[^>]*>/i', '', $html);
 		$html = preg_replace('/background[^:]*:\s*[^;]*url\([^)]*\)[^;]*;?/i', '', $html);
 		$html = preg_replace('/\sclass="[^"]*addwatermark[^"]*"/i', '', $html);
 		$html = preg_replace('/(<\/tr>)\s*(?:<br\s*\/?>\s*)+/i', '$1', $html);
@@ -3247,6 +3246,10 @@ class Quotation extends Functions
 		$html = preg_replace('/position\s*:\s*absolute\s*;?/i', '', $html);
 		$html = preg_replace('/display\s*:\s*flex[^;]*;?/i', '', $html);
 		$html = preg_replace('/width:\s*250mm[^;]*;?/i', 'width:100%;', $html);
+
+		require_once dirname(__FILE__) . '/quotation_pdf_image_helper.php';
+		$html = armor_pdf_compress_images_in_html($html);
+
 		return $html;
 	}
 
@@ -3267,10 +3270,13 @@ class Quotation extends Functions
 		return '<style>
 			body { margin: 0; padding: 4px; font-family: sans-serif; font-size: 10px; }
 			table { border-collapse: collapse; width: 100%; }
-			td, th { border: 1px solid #595959; padding: 3px; font-size: 10px; }
+			td, th { border: 1px solid #595959; padding: 3px; font-size: 10px; vertical-align: top; }
+			img { max-width: 55px; max-height: 55px; }
 			.qp-suggest-print-header { text-align: center; padding: 6px; background: #4a4a4a; color: #fff; }
-			.qp-suggest-print-title { font-size: 12px; font-weight: bold; }
+			.qp-suggest-print-title { font-size: 12px; font-weight: bold; color: #fff; }
+			.qp-suggest-print-subtitle { font-size: 8px; color: #eee; }
 			.qp-suggest-cat-header { background: #e8e8e8; font-weight: bold; text-align: center; }
+			.qp-suggest-print-grid td { border: 1px solid #595959; width: 25%; }
 		</style>';
 	}
 
@@ -3352,6 +3358,9 @@ class Quotation extends Functions
 				if (property_exists($mpdf, 'img_dpi')) {
 					$mpdf->img_dpi = 72;
 				}
+				if (method_exists($mpdf, 'SetCompression')) {
+					$mpdf->SetCompression(true);
+				}
 				if (property_exists($mpdf, 'simpleTables')) {
 					$mpdf->simpleTables = true;
 				}
@@ -3404,7 +3413,7 @@ class Quotation extends Functions
 
 				$pdfBytes = filesize($pdf_file_path);
 				$pageCount = $this->countQuotationPdfPages($pdf_file_path);
-				if ($pageCount > 30) {
+				if ($pageCount > 40) {
 					@unlink($pdf_file_path);
 					return array(
 						"ack" => 0,

@@ -2507,6 +2507,8 @@ if (!function_exists('armor_quotation_pi_render_mpdf_item')) {
 
 		$html .= '<tr><td align="right" style="font-size:7px;">Discount <strong>' . $discountPer . '%</strong></td></tr>';
 
+		$html .= '<tr><td align="center"><img src="' . htmlspecialchars($item['image'], ENT_QUOTES) . '" style="width:42px;height:auto;max-height:42px;" alt=""></td></tr>';
+
 		$html .= '<tr><td align="center" style="font-size:8px;color:#555;"><strong>' . $catno . '</strong></td></tr>';
 
 		$html .= '<tr><td align="center" style="font-size:7px;line-height:1.2;">' . $name . '</td></tr>';
