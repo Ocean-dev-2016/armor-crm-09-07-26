@@ -708,7 +708,7 @@ $quotationViewStandalone = !$quotationViewEmbedded;
 			}
 		}
 
-		<?php if ($isPrintMode) { ?>
+		<?php if ($isPrintMode && !$isAppPdfMode) { ?>
 		html, body {
 			margin: 0;
 			padding: 0;
@@ -720,6 +720,40 @@ $quotationViewStandalone = !$quotationViewEmbedded;
 			max-width: 980px !important;
 			width: 100% !important;
 			margin: 0 auto !important;
+		}
+		<?php } ?>
+		<?php if ($isAppPdfMode) { ?>
+		html, body {
+			margin: 0;
+			padding: 0;
+			background: #fff;
+		}
+
+		.app-pdf-mode .main-container {
+			padding: 4px !important;
+			max-width: 100% !important;
+			width: 100% !important;
+			margin: 0 !important;
+		}
+
+		.app-pdf-mode .quote-print-toolbar,
+		.app-pdf-mode .quote-header-cell,
+		.app-pdf-mode .quote-footer-wrap,
+		.app-pdf-mode .product-items-table .image-width {
+			display: none !important;
+			height: 0 !important;
+			padding: 0 !important;
+			margin: 0 !important;
+			border: none !important;
+		}
+
+		.app-pdf-mode table,
+		.app-pdf-mode tr,
+		.app-pdf-mode td,
+		.app-pdf-mode div {
+			page-break-inside: auto !important;
+			page-break-before: auto !important;
+			page-break-after: auto !important;
 		}
 		<?php } ?>
 	</style>
@@ -734,7 +768,7 @@ $quotationViewStandalone = !$quotationViewEmbedded;
 <?php if ($quotationViewStandalone) { ?>
 </head>
 
-<body<?= $isPrintMode ? ' class="print-a4"' : '' ?>>
+<body<?= $isAppPdfMode ? ' class="app-pdf-mode"' : ($isPrintMode ? ' class="print-a4"' : '') ?>>
 <?php } ?>
 	<div class="main-container">
 	<div class="quote-wrap">
@@ -1319,7 +1353,7 @@ $quotationViewStandalone = !$quotationViewEmbedded;
 		</div>
 	</div><!-- /.quote-wrap -->
 	</div>
-<?php if ($isPrintMode) { ?>
+<?php if ($isPrintMode && !$isAppPdfMode) { ?>
 <style>
 	.quote-print-toolbar {
 		position: fixed;
@@ -1400,7 +1434,7 @@ $quotationViewStandalone = !$quotationViewEmbedded;
 		}
 	}
 
-	<?php if ($isPrintMode) { ?>
+<?php if ($isPrintMode && !$isAppPdfMode) { ?>
 	window.addEventListener('load', function() {
 		document.title = quotePrintTitle;
 		quoteWaitForImages(function() {

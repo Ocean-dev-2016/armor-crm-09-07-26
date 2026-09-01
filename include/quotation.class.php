@@ -3173,6 +3173,31 @@ class Quotation extends Functions
 	}
 	/*for api function*/
 
+	/**
+	 * App PDF: mPDF embeds full-size remote images and can produce 100MB+ files that won't open on mobile.
+	 */
+	private function sanitizeQuotationPdfHtml($html)
+	{
+		$html = (string) $html;
+		$html = preg_replace('/<script\b[^>]*>[\s\S]*?<\/script>/i', '', $html);
+		$html = preg_replace('/<img\b[^>]*>/i', '', $html);
+		$html = preg_replace('/<div class="quote-print-toolbar"[\s\S]*?<\/div>/i', '', $html);
+		$html = preg_replace('/page-break-(inside|before|after)\s*:\s*avoid[^;"}]*/i', 'page-break-$1: auto', $html);
+		$html = preg_replace('/<tr>\s*<td[^>]*class="[^"]*quote-header-cell[^"]*"[^>]*>[\s\S]*?<\/tr>/i', '', $html);
+		$html = preg_replace('/<div class="quote-footer-wrap"[\s\S]*?<\/div>\s*(?=<\/div><!-- \/\.quote-wrap -->)/i', '', $html);
+		return $html;
+	}
+
+	private function quotationPdfMpdfCss()
+	{
+		return '<style>
+			body { margin: 0; padding: 0; }
+			.main-container { padding: 4px !important; max-width: 100% !important; }
+			.quote-print-toolbar, .quote-header-cell, .quote-footer-wrap, .image-width { display: none !important; }
+			table, tr, td, div { page-break-inside: auto !important; page-break-before: auto !important; page-break-after: auto !important; }
+		</style>';
+	}
+
 	public function DownloadQuotation($id)
 	{
 		//$customer_id=$this->db->rp_getValue("invoice_new","id","id='".$id."'",0);
@@ -3183,8 +3208,8 @@ class Quotation extends Functions
 
 			if ($count > 0) {
 
-				// Same HTML as web Print button (quotation_viewer.php → printReport)
-				$body_url = ADMINSITEURL . 'quotation_view_new_quotation_new_1.php?quotation_id=' . urlencode($id) . '&print=1';
+				// App API PDF: skip suggest-products block; web print uses browser (quotation_viewer.php).
+				$body_url = ADMINSITEURL . 'quotation_view_new_quotation_new_1.php?quotation_id=' . urlencode($id) . '&p=1&app_pdf=1';
 				$d = @file_get_contents($body_url);
 				if (empty($d)) {
 					$ch = curl_init();
@@ -3196,6 +3221,8 @@ class Quotation extends Functions
 					$d = curl_exec($ch);
 					curl_close($ch);
 				}
+
+				$d = $this->sanitizeQuotationPdfHtml($d);
 
 				if (trim((string) $d) === '') {
 					return array(
@@ -3259,10 +3286,14 @@ class Quotation extends Functions
 				);  // L - landscape, P - portrait
 				$mpdf->simpleTables = true;
 				$mpdf->packTableData = true;
+				if (method_exists($mpdf, 'SetCompression')) {
+					$mpdf->SetCompression(true);
+				}
+				$mpdf->img_dpi = 72;
 				$mpdf->autoScriptToLang = true;
 				$mpdf->baseScript = 1; // Use Gujarati script
 				$mpdf->autoLangToFont = true;
-				$mpdf->WriteHTML($d);
+				$mpdf->WriteHTML($this->quotationPdfMpdfCss() . $d);
 
 				/*LOG eNTRY*/
 				$sales_id = $this->db->rp_getValue("quotation_detail", "sales_id", "id='" . $id . "'", 0);
@@ -3304,6 +3335,16 @@ class Quotation extends Functions
 					return array(
 						"ack" => 0,
 						"developer_msg" => "PDF file was not created. Check folder permissions.",
+						"ack_msg" => "Quotation PDF Not Generate!!"
+					);
+				}
+
+				$pdfBytes = filesize($pdf_file_path);
+				if ($pdfBytes > 15728640) {
+					@unlink($pdf_file_path);
+					return array(
+						"ack" => 0,
+						"developer_msg" => "PDF too large to download (" . round($pdfBytes / 1048576, 1) . " MB). Please contact support.",
 						"ack_msg" => "Quotation PDF Not Generate!!"
 					);
 				}
