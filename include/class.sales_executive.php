@@ -1598,9 +1598,7 @@ class SalesExecutive extends Functions
 			if ($count > 0) {
 
 
-				// $body_url = ADMINSITEURL_STATIC . "bbsales_tracking/order_view_download_1.php?order_id=" . $order_id;
-				// $d = file_get_contents($body_url);
-				$body_url = ADMINSITEURL . "order_view_download_1.php?order_id=" . $order_id;
+				$body_url = ADMINSITEURL . "view_order_new_1.php?order_id=" . urlencode($order_id) . "&app_pdf=1&mpdf=1";
 				$d = @file_get_contents($body_url);
 				if(empty($d)) {
 					$ch = curl_init();
@@ -1608,50 +1606,93 @@ class SalesExecutive extends Functions
 					curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 					curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
 					curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+					curl_setopt($ch, CURLOPT_TIMEOUT, 120);
 					$d = curl_exec($ch);
 					curl_close($ch);
 				}
-				//print_r($d); exit;
-				$d = html_entity_decode($d);
-				$relCertFileNames = array();
-				$merge_file = array();
-				$polyfill = dirname(__FILE__) . '/../bbsales_tracking/include/mbstring_polyfill.php';
-				if (file_exists($polyfill)) {
-					include_once $polyfill;
+
+				$d = (string) $d;
+				$d = preg_replace('/<script\b[^>]*>[\s\S]*?<\/script>/i', '', $d);
+				$d = preg_replace('/<style[^>]*>[\s\S]*?quote-print-toolbar[\s\S]*?<\/style>/i', '', $d);
+				$d = preg_replace('/<div[^>]*class="[^"]*quote-print-toolbar[^"]*"[^>]*>[\s\S]*?<\/div>/i', '', $d);
+				$d = preg_replace('/(<\/tr>)\s*(?:<br\s*\/?>\s*)+/i', '$1', $d);
+				$d = preg_replace('/(?:<br\s*\/?>\s*)+(<tr\b)/i', '$1', $d);
+				$d = preg_replace('/(<tbody[^>]*>)\s*(?:<br\s*\/?>\s*)+/i', '$1', $d);
+				$d = preg_replace('/(?:<br\s*\/?>\s*)+(<\/tbody>)/i', '$1', $d);
+				$d = preg_replace('/(<br\s*\/?>\s*){4,}/i', '<br />', $d);
+				$d = preg_replace('/\s+on\w+="[^"]*"/i', '', $d);
+				$d = preg_replace('/position\s*:\s*absolute\s*;?/i', '', $d);
+				$d = preg_replace('/display\s*:\s*flex[^;]*;?/i', '', $d);
+				$d = preg_replace_callback('/<img([^>]*?)>/i', function ($m) {
+					$tag = $m[0];
+					if (stripos($tag, 'max-width') === false && stripos($tag, 'max-height') === false) {
+						if (stripos($tag, 'quote-header-img') !== false || stripos($tag, 'quote-footer-img') !== false) {
+							$tag = preg_replace('/<img/i', '<img style="max-width:100%;max-height:90px;"', $tag, 1);
+						} else {
+							$tag = preg_replace('/<img/i', '<img style="max-width:50px;max-height:50px;"', $tag, 1);
+						}
+					}
+					return $tag;
+				}, $d);
+
+				if (trim((string) $d) === '') {
+					return array(
+						"ack" => 0,
+						"developer_msg" => "Order HTML could not be loaded for PDF.",
+						"ack_msg" => "Order PDF Not Generate!!"
+					);
 				}
-				require('../bbsales_tracking/mpdf60/mpdf.php');
+
+				@ini_set('memory_limit', '1024M');
+				@set_time_limit(300);
+
+				if (function_exists('armor_prepare_mpdf_environment')) {
+					armor_prepare_mpdf_environment('1024M', 300);
+				} else {
+					$polyfill = dirname(__FILE__) . '/../bbsales_tracking/include/mbstring_polyfill.php';
+					if (file_exists($polyfill)) {
+						include_once $polyfill;
+					}
+				}
+				require_once('../bbsales_tracking/mpdf60/mpdf.php');
 				$mpdf = new mPDF(
 					'', // mode - default ''
-
 					'A4', // format - A4, for example, default ''
-
 					10,     // font size - default 0
-
 					'sans-serif',  // default font family
-
 					1,    // margin_left
-
-					1,    // margin right
-
-					10,   // margin top
-
-					5,    // margin bottom
-
+					3,    // margin right
+					3,   // margin top
+					3,    // margin bottom
 					0,    // margin header
-
 					0,    // margin footer
-
 					'P'
 				); // L - landscape, P - portrait
 
-				/*$mpdf->use_kwt = true;*/
-
-				/*$mpdf->autoPageBreak = false;*/
 				$mpdf->autoScriptToLang = true;
 				$mpdf->baseScript = 1; // Use Gujarati script
 				$mpdf->autoLangToFont = true;
-				// $mpdf->showImageErrors = true;
-				$mpdf->WriteHTML($d);
+				if (property_exists($mpdf, 'img_dpi')) {
+					$mpdf->img_dpi = 72;
+				}
+				if (property_exists($mpdf, 'simpleTables')) {
+					$mpdf->simpleTables = true;
+				}
+				if (property_exists($mpdf, 'shrink_tables_to_fit')) {
+					$mpdf->shrink_tables_to_fit = 1;
+				}
+
+				$custom_mpdf_css = '<style>
+					body { margin: 0; padding: 0; font-family: sans-serif; font-size: 11px; }
+					table { border-collapse: collapse; }
+					.main-container { width: 100%; max-width: 100%; padding: 4px; }
+					.quote-wrap, .quote-main-body, .quote-suggest-body, .quote-summary-body { width: 100%; }
+					img { max-width: 50px; max-height: 50px; }
+					.quote-header-img, .quote-footer-img { max-width: 100% !important; max-height: 90px !important; width: auto !important; height: auto !important; }
+					.qp-suggest-print-grid img { max-width: 42px !important; max-height: 42px !important; }
+				</style>';
+
+				$mpdf->WriteHTML($custom_mpdf_css . $d);
 
 				/*log entry*/
 				/*$sales_id = $this->db->rp_getValue("orders","sales_id","id='".$order_id."'",0);

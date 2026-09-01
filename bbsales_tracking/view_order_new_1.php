@@ -59,8 +59,11 @@ $orderPrintTitle = preg_replace('/\s+/', ' ', $orderPrintTitle);
 $orderPrintTitle = trim($orderPrintTitle);
 
 $isPrintMode = (isset($_REQUEST['print']) && $_REQUEST['print'] == '1') || (isset($_REQUEST['p']) && $_REQUEST['p'] == '1');
-if ($isPrintMode) {
-	@ini_set('memory_limit', '512M');
+$isMpdfMode = isset($_REQUEST['mpdf']) && $_REQUEST['mpdf'] == '1';
+$isAppPdfMode = isset($_REQUEST['app_pdf']) && $_REQUEST['app_pdf'] == '1';
+$isPdfExportMode = ($isMpdfMode || $isAppPdfMode);
+if ($isPrintMode || $isAppPdfMode || $isMpdfMode) {
+	@ini_set('memory_limit', '1024M');
 	@set_time_limit(180);
 }
 ?>
@@ -1383,7 +1386,7 @@ if ($isPrintMode) {
 		</div>
 	</div><!-- /.quote-wrap -->
 	</div>
-<?php if ($isPrintMode) { ?>
+<?php if ($isPrintMode && !$isAppPdfMode && !$isMpdfMode) { ?>
 <style>
 	.quote-print-toolbar {
 		position: fixed;
@@ -1464,7 +1467,7 @@ if ($isPrintMode) {
 		}
 	}
 
-	<?php if ($isPrintMode) { ?>
+	<?php if ($isPrintMode && !$isAppPdfMode && !$isMpdfMode) { ?>
 	window.addEventListener('load', function() {
 		document.title = orderPrintTitle;
 		orderWaitForImages(function() {
