@@ -40,8 +40,9 @@ $quotationPrintTitle = preg_replace('/\s+/', ' ', $quotationPrintTitle);
 $quotationPrintTitle = trim($quotationPrintTitle);
 
 $isPrintMode = (isset($_REQUEST['print']) && $_REQUEST['print'] == '1') || (isset($_REQUEST['p']) && $_REQUEST['p'] == '1');
+$isMpdfMode = isset($_REQUEST['mpdf']) && $_REQUEST['mpdf'] == '1';
 $isAppPdfMode = isset($_REQUEST['app_pdf']) && $_REQUEST['app_pdf'] == '1';
-if ($isPrintMode || $isAppPdfMode) {
+if ($isPrintMode || $isAppPdfMode || $isMpdfMode) {
 	@ini_set('memory_limit', '1024M');
 	@set_time_limit(180);
 }
@@ -708,7 +709,7 @@ $quotationViewStandalone = !$quotationViewEmbedded;
 			}
 		}
 
-		<?php if ($isPrintMode && !$isAppPdfMode) { ?>
+		<?php if ($isPrintMode && !$isAppPdfMode && !$isMpdfMode) { ?>
 		html, body {
 			margin: 0;
 			padding: 0;
@@ -722,43 +723,39 @@ $quotationViewStandalone = !$quotationViewEmbedded;
 			margin: 0 auto !important;
 		}
 		<?php } ?>
-		<?php if ($isAppPdfMode) { ?>
+		<?php if ($isMpdfMode) { ?>
 		html, body {
 			margin: 0;
 			padding: 0;
 			background: #fff;
 		}
 
-		.app-pdf-mode .main-container {
-			padding: 4px !important;
+		.mpdf-export-mode .main-container {
+			padding: 6px !important;
 			max-width: 100% !important;
 			width: 100% !important;
 			margin: 0 !important;
 		}
 
-		.app-pdf-mode .quote-print-toolbar,
-		.app-pdf-mode .quote-header-cell,
-		.app-pdf-mode .quote-footer-wrap,
-		.app-pdf-mode .product-items-table .image-width {
-			display: none !important;
-			height: 0 !important;
-			padding: 0 !important;
-			margin: 0 !important;
-			border: none !important;
-		}
-
-		.app-pdf-mode table,
-		.app-pdf-mode tr,
-		.app-pdf-mode td,
-		.app-pdf-mode div {
+		.mpdf-export-mode table,
+		.mpdf-export-mode tr,
+		.mpdf-export-mode td,
+		.mpdf-export-mode div {
 			page-break-inside: auto !important;
 			page-break-before: auto !important;
 			page-break-after: auto !important;
 		}
+
+		.mpdf-export-mode .qp-prod-img-cell,
+		.mpdf-export-mode .product-items-table .image-width {
+			width: 6% !important;
+			min-width: 6% !important;
+			max-width: 6% !important;
+		}
 		<?php } ?>
 	</style>
 	<?php
-	if (!$isAppPdfMode) {
+	if ((!$isAppPdfMode || $isMpdfMode)) {
 		require_once('../include/quotation_pi_suggest_products_helper.php');
 		if ($quotationViewStandalone) {
 			echo armor_quotation_pi_suggest_styles();
@@ -768,7 +765,7 @@ $quotationViewStandalone = !$quotationViewEmbedded;
 <?php if ($quotationViewStandalone) { ?>
 </head>
 
-<body<?= $isAppPdfMode ? ' class="app-pdf-mode"' : ($isPrintMode ? ' class="print-a4"' : '') ?>>
+<body<?= $isMpdfMode ? ' class="mpdf-export-mode"' : ($isAppPdfMode ? ' class="app-pdf-mode"' : ($isPrintMode ? ' class="print-a4"' : '')) ?>>
 <?php } ?>
 	<div class="main-container">
 	<div class="quote-wrap">
@@ -777,7 +774,17 @@ $quotationViewStandalone = !$quotationViewEmbedded;
 			<tbody>
 				<tr>
 					<td class="quote-header-cell" colspan="16">
-						<?php
+						<?php if ($isMpdfMode) { ?>
+							<div style="text-align:center;font-weight:bold;font-size:15px;padding:6px 0;">
+								<?php
+								if (isset($company_detail_d['name']) && $company_detail_d['name'] != "") {
+									echo htmlspecialchars($company_detail_d['name'], ENT_QUOTES, 'UTF-8');
+								} else {
+									echo defined('CLIENT_BRAND_NAME') ? CLIENT_BRAND_NAME : SITENAME;
+								}
+								?>
+							</div>
+						<?php } else {
 						if (isset($company_detail_d['image_path']) && $company_detail_d['image_path'] != "") {
 						?>
 							<img class="quote-header-img" src="<?= SITEURL . HEADER . $company_detail_d['image_path'] ?>" alt="Header">
@@ -787,7 +794,7 @@ $quotationViewStandalone = !$quotationViewEmbedded;
 							<img class="quote-header-img" src="<?= SITEURL ?>images/craftbox_header.jpg" alt="Header">
 						<?php
 						}
-						?>
+						} ?>
 					</td>
 				</tr>
 				<tr style="background-color: <?= VIEW_COLOR ?>; color: #000;">
@@ -988,7 +995,7 @@ $quotationViewStandalone = !$quotationViewEmbedded;
 		// Summary layout uses separate terms row + details block (no rowspan) for clean print breaks.
 		?>
 	</div><!-- /.quote-main-body -->
-	<?php if (!$isAppPdfMode) { ?>
+	<?php if (!$isAppPdfMode || $isMpdfMode) { ?>
 	<div class="quote-suggest-body">
 	<?php armor_quotation_pi_echo_suggest_block_for_quotation($db, $quotation_id, $quotationViewEmbedded); ?>
 	</div>
@@ -1353,7 +1360,7 @@ $quotationViewStandalone = !$quotationViewEmbedded;
 		</div>
 	</div><!-- /.quote-wrap -->
 	</div>
-<?php if ($isPrintMode && !$isAppPdfMode) { ?>
+<?php if ($isPrintMode && !$isAppPdfMode && !$isMpdfMode) { ?>
 <style>
 	.quote-print-toolbar {
 		position: fixed;
@@ -1434,7 +1441,7 @@ $quotationViewStandalone = !$quotationViewEmbedded;
 		}
 	}
 
-<?php if ($isPrintMode && !$isAppPdfMode) { ?>
+<?php if ($isPrintMode && !$isAppPdfMode && !$isMpdfMode) { ?>
 	window.addEventListener('load', function() {
 		document.title = quotePrintTitle;
 		quoteWaitForImages(function() {

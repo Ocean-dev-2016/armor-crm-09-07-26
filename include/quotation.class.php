@@ -3183,18 +3183,17 @@ class Quotation extends Functions
 		$html = preg_replace('/<img\b[^>]*>/i', '', $html);
 		$html = preg_replace('/<div class="quote-print-toolbar"[\s\S]*?<\/div>/i', '', $html);
 		$html = preg_replace('/page-break-(inside|before|after)\s*:\s*avoid[^;"}]*/i', 'page-break-$1: auto', $html);
-		$html = preg_replace('/<tr>\s*<td[^>]*class="[^"]*quote-header-cell[^"]*"[^>]*>[\s\S]*?<\/tr>/i', '', $html);
-		$html = preg_replace('/<div class="quote-footer-wrap"[\s\S]*?<\/div>\s*(?=<\/div><!-- \/\.quote-wrap -->)/i', '', $html);
 		return $html;
 	}
 
 	private function quotationPdfMpdfCss()
 	{
 		return '<style>
-			body { margin: 0; padding: 0; }
-			.main-container { padding: 4px !important; max-width: 100% !important; }
-			.quote-print-toolbar, .quote-header-cell, .quote-footer-wrap, .image-width { display: none !important; }
+			body { margin: 0; padding: 0; font-family: sans-serif; font-size: 11px; }
+			.main-container { padding: 6px !important; max-width: 100% !important; }
+			.quote-print-toolbar { display: none !important; }
 			table, tr, td, div { page-break-inside: auto !important; page-break-before: auto !important; page-break-after: auto !important; }
+			.qp-prod-img-cell { height: 4px !important; padding: 0 !important; }
 		</style>';
 	}
 
@@ -3208,8 +3207,8 @@ class Quotation extends Functions
 
 			if ($count > 0) {
 
-				// App API PDF: skip suggest-products block; web print uses browser (quotation_viewer.php).
-				$body_url = ADMINSITEURL . 'quotation_view_new_quotation_new_1.php?quotation_id=' . urlencode($id) . '&p=1&app_pdf=1';
+				// App API PDF: same content as web print=1 (QT/2554, items, suggest, totals); images stripped in sanitize.
+				$body_url = ADMINSITEURL . 'quotation_view_new_quotation_new_1.php?quotation_id=' . urlencode($id) . '&print=1&mpdf=1';
 				$d = @file_get_contents($body_url);
 				if (empty($d)) {
 					$ch = curl_init();
@@ -3340,7 +3339,7 @@ class Quotation extends Functions
 				}
 
 				$pdfBytes = filesize($pdf_file_path);
-				if ($pdfBytes > 15728640) {
+				if ($pdfBytes > 31457280) {
 					@unlink($pdf_file_path);
 					return array(
 						"ack" => 0,
