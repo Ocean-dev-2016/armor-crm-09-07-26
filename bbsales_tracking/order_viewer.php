@@ -8,6 +8,7 @@ $page_title = "View ".$ctable1;
 require_once '../Numbers/Words.php';
 require_once 'Numbers_Words_Locale_en_IN.php';
 include("connect_in.php");
+require_once(dirname(__FILE__) . '/../include/quotation_pi_suggest_products_helper.php');
 $classname = "Numbers_Words_Locale_en_IN" ;
 $obj = new $classname; 
 $admin_type=$_SESSION[SITE_SESS.'_ADMIN_TYPE'];
@@ -34,6 +35,7 @@ $is_cp_supply_order_v = ($cp_order_flag_v === 1 && $cp_order_mode_v !== 'custome
 <meta charset="utf-8"/>
 <title><?php echo $page_title; ?> | <?php echo SITETITLE; ?></title>
 <?php include("include_css.php"); ?>
+<?php echo armor_quotation_pi_order_view_layout_styles(); ?>
 
 <link rel="stylesheet" type="text/css" href="assets/global/plugins/datatables/plugins/bootstrap/dataTables.bootstrap.css"/>
 <style type="text/css">
@@ -52,10 +54,26 @@ $is_cp_supply_order_v = ($cp_order_flag_v === 1 && $cp_order_mode_v !== 'custome
 		background: #fff;
 	}
 
+	#wrapper1 .main-container {
+		padding: 20px;
+	}
+
+	#wrapper1 .quote-wrap {
+		border: 1px solid #595959;
+		box-sizing: border-box;
+		background: #fff;
+	}
+
+	#wrapper1 .quote-main-body table,
+	#wrapper1 .quote-summary-body table {
+		width: 100% !important;
+		max-width: 100% !important;
+	}
+
 	#wrapper1 .quote-suggest-body {
 		width: 100%;
-		max-width: 250mm;
-		margin: 0 auto;
+		max-width: 100%;
+		margin: 0;
 		box-sizing: border-box;
 	}
 
@@ -88,7 +106,7 @@ $is_cp_supply_order_v = ($cp_order_flag_v === 1 && $cp_order_mode_v !== 'custome
 
 	#wrapper1 .qp-suggest-cell-inner {
 		box-sizing: border-box;
-		padding: 0 8px 4px;
+		padding: 0 4px 2px;
 		width: 100%;
 		height: auto;
 	}
@@ -110,8 +128,8 @@ $is_cp_supply_order_v = ($cp_order_flag_v === 1 && $cp_order_mode_v !== 'custome
 	}
 
 	#wrapper1 .qp-prod-badge-row {
-		height: 34px;
-		padding: 4px 8px 0 !important;
+		height: 18px;
+		padding: 1px 4px 0 !important;
 		text-align: right !important;
 	}
 
@@ -119,32 +137,32 @@ $is_cp_supply_order_v = ($cp_order_flag_v === 1 && $cp_order_mode_v !== 'custome
 		display: flex;
 		align-items: center;
 		justify-content: flex-end;
-		gap: 6px;
+		gap: 4px;
 		width: 100%;
-		min-height: 30px;
+		min-height: 16px;
 	}
 
 	#wrapper1 .qp-prod-disc-label {
 		display: inline-block;
 		border: 1px solid #d9534f;
 		color: #d9534f;
-		font-size: 10px;
+		font-size: 8.5px;
 		font-weight: bold;
-		line-height: 1.2;
-		padding: 2px 6px;
+		line-height: 1.1;
+		padding: 1px 4px;
 		background: #fff;
 		white-space: nowrap;
 	}
 
 	#wrapper1 .qp-prod-disc {
 		display: inline-block;
-		width: 30px;
-		height: 30px;
-		line-height: 30px;
+		width: 18px;
+		height: 18px;
+		line-height: 18px;
 		border-radius: 50%;
 		background: #e74c3c;
 		color: #fff;
-		font-size: 9px;
+		font-size: 8px;
 		font-weight: bold;
 		text-align: center;
 	}
@@ -152,40 +170,41 @@ $is_cp_supply_order_v = ($cp_order_flag_v === 1 && $cp_order_mode_v !== 'custome
 	#wrapper1 .qp-prod-img-cell {
 		background: #f7f7f7;
 		border-bottom: 1px solid #e8e8e8 !important;
-		height: 46px;
-		padding: 2px !important;
+		height: 36px;
+		padding: 1px !important;
 		text-align: center;
 		vertical-align: middle !important;
 	}
 
 	#wrapper1 .qp-prod-img {
-		max-height: 38px;
+		max-height: 32px;
 		max-width: 96%;
 		object-fit: contain;
 		vertical-align: middle;
 	}
 
 	#wrapper1 .qp-prod-code-cell {
-		font-size: 10px;
+		font-size: 9.5px;
 		font-weight: 600;
 		color: #555555 !important;
-		padding: 2px 8px 0 !important;
+		padding: 1px 4px 0 !important;
+		line-height: 1.1;
 	}
 
 	#wrapper1 .qp-prod-name-cell {
-		font-size: 10px;
+		font-size: 8.5px;
 		font-weight: bold;
 		color: #000000 !important;
 		text-transform: uppercase;
-		line-height: 1.2;
-		padding: 1px 8px 0 !important;
-		min-height: 24px;
-		max-height: 30px;
+		line-height: 1.1;
+		padding: 1px 4px 0 !important;
+		min-height: 18px;
+		max-height: 24px;
 		overflow: hidden;
 	}
 
 	#wrapper1 .qp-prod-price-cell {
-		padding: 0 8px 4px !important;
+		padding: 1px 4px 4px !important;
 		text-align: center !important;
 		vertical-align: bottom !important;
 		overflow: visible !important;
@@ -193,20 +212,20 @@ $is_cp_supply_order_v = ($cp_order_flag_v === 1 && $cp_order_mode_v !== 'custome
 
 	#wrapper1 .qp-prod-price-line,
 	#wrapper1 .qp-prod-price {
-		font-size: 11px;
+		font-size: 10px;
 		font-weight: bold;
 		color: #0a5c24 !important;
 		text-align: center;
-		line-height: 1.4;
+		line-height: 1.2;
 	}
 
 	#wrapper1 .qp-prod-unit {
 		display: inline;
-		font-size: 10px;
+		font-size: 9px;
 		color: #333333 !important;
 		font-weight: 600;
 		white-space: nowrap;
-		line-height: 1.4;
+		line-height: 1.2;
 	}
 
 	#wrapper1 .qp-suggest-print-header {
@@ -229,11 +248,102 @@ $is_cp_supply_order_v = ($cp_order_flag_v === 1 && $cp_order_mode_v !== 'custome
 	}
 
 	@media print {
+		@page {
+			size: A4 portrait;
+			margin: 5mm;
+		}
+
+		.page-container,
+		.page-content,
+		#report_content,
+		#wrapper1,
+		#wrapper1 .main-container {
+			display: block !important;
+			width: 100% !important;
+			max-width: 100% !important;
+			margin: 0 !important;
+			padding: 0 !important;
+			background: #fff !important;
+		}
+
+		#wrapper1 .quote-wrap {
+			border: 1px solid #595959 !important;
+		}
+
+		#wrapper1 .quote-table td,
+		#wrapper1 .quote-table th,
+		#wrapper1 .product-items-table td,
+		#wrapper1 .product-items-table th {
+			padding: 3px 4px !important;
+		}
+
 		#wrapper1 .qp-prod-badge-bar {
 			display: flex !important;
 			align-items: center !important;
 			justify-content: flex-end !important;
-			gap: 6px !important;
+			gap: 4px !important;
+		}
+
+		#wrapper1 .qp-suggest-cell-inner {
+			padding-left: 4px !important;
+			padding-right: 4px !important;
+			box-sizing: border-box !important;
+		}
+
+		#wrapper1 .qp-prod-badge-row {
+			height: 18px !important;
+			padding: 1px 4px 0 !important;
+			text-align: right !important;
+		}
+
+		#wrapper1 .qp-prod-disc-label {
+			border: 1px solid #d9534f !important;
+			color: #d9534f !important;
+			font-size: 8.5px !important;
+			padding: 1px 4px !important;
+			-webkit-print-color-adjust: exact !important;
+			print-color-adjust: exact !important;
+		}
+
+		#wrapper1 .qp-prod-disc {
+			width: 18px !important;
+			height: 18px !important;
+			line-height: 18px !important;
+			font-size: 8px !important;
+			-webkit-print-color-adjust: exact !important;
+			print-color-adjust: exact !important;
+		}
+
+		#wrapper1 .qp-prod-img-cell {
+			height: 36px !important;
+			padding: 1px !important;
+		}
+
+		#wrapper1 .qp-prod-img {
+			max-height: 32px !important;
+		}
+
+		#wrapper1 .qp-prod-code-cell {
+			padding: 1px 4px 0 !important;
+			font-size: 9.5px !important;
+			line-height: 1.1 !important;
+		}
+
+		#wrapper1 .qp-prod-name-cell {
+			padding: 1px 4px 0 !important;
+			font-size: 8.5px !important;
+			line-height: 1.1 !important;
+			min-height: 18px !important;
+			max-height: 24px !important;
+		}
+
+		#wrapper1 .qp-prod-price-cell {
+			padding: 1px 4px 4px !important;
+		}
+
+		#wrapper1 .qp-suggest-product-row {
+			page-break-inside: avoid !important;
+			break-inside: avoid-page !important;
 		}
 
 		#wrapper1 .quote-suggest-body .qp-suggest-print-grid td.qp-suggest-print-cell,
@@ -250,8 +360,15 @@ $is_cp_supply_order_v = ($cp_order_flag_v === 1 && $cp_order_mode_v !== 'custome
 		#wrapper1 .qp-prod-price-line,
 		#wrapper1 .qp-prod-price {
 			color: #0a5c24 !important;
+			font-size: 10px !important;
+			line-height: 1.2 !important;
 			-webkit-print-color-adjust: exact !important;
 			print-color-adjust: exact !important;
+		}
+
+		#wrapper1 .qp-prod-unit {
+			color: #333333 !important;
+			font-size: 9px !important;
 		}
 
 		#wrapper1 .qp-suggest-cat-header,
@@ -765,19 +882,11 @@ $('#lrattachment').on('show.bs.modal', function (event) {
 		});
 function printReport(id) 
 {	
-	// var myWindow =  window.open('view_order_new_1.php?order_id='+id+"&p=1",'','width=500,height=800');
-
-	var myWindow =  window.open('view_order_new_print.php?order_id='+id+"&p=1",'','width=500,height=800');
-
-	setTimeout(function () 
-	{
-		myWindow.print();
-		var ival = setInterval(function() 
-		{
-		    myWindow.close();
-		    clearInterval(ival);
-		}, 500);
-	}, 1500);
+	var printUrl = 'view_order_new_1.php?order_id=' + id + '&print=1';
+	var printWin = window.open(printUrl, '_blank');
+	if (!printWin) {
+		window.location.href = printUrl;
+	}
 }
 
 // for mail send

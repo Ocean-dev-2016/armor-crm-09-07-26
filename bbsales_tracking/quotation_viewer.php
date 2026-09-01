@@ -72,7 +72,7 @@ $flag_d = mysqli_fetch_array($flag_r);
 
 	#wrapper1 .qp-suggest-cell-inner {
 		box-sizing: border-box;
-		padding: 0 8px 4px;
+		padding: 0 4px 2px;
 		width: 100%;
 		height: auto;
 	}
@@ -94,8 +94,8 @@ $flag_d = mysqli_fetch_array($flag_r);
 		}
 
 		#wrapper1 .qp-prod-badge-row {
-			height: 34px;
-			padding: 4px 8px 0 !important;
+			height: 18px;
+			padding: 1px 4px 0 !important;
 			text-align: right !important;
 		}
 
@@ -103,78 +103,79 @@ $flag_d = mysqli_fetch_array($flag_r);
 			display: flex;
 			align-items: center;
 			justify-content: flex-end;
-			gap: 6px;
+			gap: 4px;
 			width: 100%;
-			min-height: 30px;
+			min-height: 16px;
 		}
 
 		#wrapper1 .qp-prod-disc-label {
 			display: inline-block;
 			border: 1px solid #d9534f;
 			color: #d9534f;
-			font-size: 10px;
+			font-size: 8.5px;
 			font-weight: bold;
-			line-height: 1.2;
-			padding: 2px 6px;
+			line-height: 1.1;
+			padding: 1px 4px;
 			background: #fff;
 			white-space: nowrap;
 		}
 
 		#wrapper1 .qp-prod-disc {
 			display: inline-block;
-			width: 30px;
-			height: 30px;
-			line-height: 30px;
+			width: 18px;
+			height: 18px;
+			line-height: 18px;
 			border-radius: 50%;
 			background: #e74c3c;
 			color: #fff;
-			font-size: 9px;
+			font-size: 8px;
 			font-weight: bold;
 			text-align: center;
 		}
 
 		#wrapper1 .qp-prod-disc-wrap {
 			display: inline-block;
-			padding: 2px;
+			padding: 1px;
 		}
 
 		#wrapper1 .qp-prod-img-cell {
 			background: #f7f7f7;
 			border-bottom: 1px solid #e8e8e8 !important;
-			height: 46px;
-			padding: 2px !important;
+			height: 36px;
+			padding: 1px !important;
 			text-align: center;
 			vertical-align: middle !important;
 		}
 
 		#wrapper1 .qp-prod-img {
-			max-height: 38px;
+			max-height: 32px;
 			max-width: 96%;
 			object-fit: contain;
 			vertical-align: middle;
 		}
 
 		#wrapper1 .qp-prod-code-cell {
-			font-size: 11px;
+			font-size: 9.5px;
 			font-weight: 600;
 			color: #555555 !important;
-			padding: 3px 10px 0 !important;
+			padding: 1px 4px 0 !important;
+			line-height: 1.1;
 		}
 
 		#wrapper1 .qp-prod-name-cell {
-			font-size: 10px;
+			font-size: 8.5px;
 			font-weight: bold;
 			color: #000000 !important;
 			text-transform: uppercase;
-			line-height: 1.2;
-			padding: 1px 8px 0 !important;
-			min-height: 24px;
-			max-height: 30px;
+			line-height: 1.1;
+			padding: 1px 4px 0 !important;
+			min-height: 18px;
+			max-height: 24px;
 			overflow: hidden;
 		}
 
 		#wrapper1 .qp-prod-price-cell {
-			padding: 2px 10px 8px !important;
+			padding: 1px 4px 4px !important;
 			text-align: center !important;
 			vertical-align: bottom !important;
 			overflow: visible !important;
@@ -182,34 +183,34 @@ $flag_d = mysqli_fetch_array($flag_r);
 
 		#wrapper1 .qp-prod-price-wrap {
 			text-align: center;
-			padding: 0 4px;
+			padding: 0 2px;
 		}
 
 		#wrapper1 .qp-prod-price-line {
 			display: inline-block;
-			font-size: 11px;
+			font-size: 10px;
 			font-weight: bold;
 			color: #0a5c24 !important;
 			white-space: nowrap;
 			text-align: center;
-			line-height: 1.4;
+			line-height: 1.2;
 		}
 
 		#wrapper1 .qp-prod-price {
-			font-size: 11px;
+			font-size: 10px;
 			font-weight: bold;
 			color: #0a5c24 !important;
 			text-align: center;
-			line-height: 1.4;
+			line-height: 1.2;
 		}
 
 		#wrapper1 .qp-prod-unit {
 			display: inline;
-			font-size: 10px;
+			font-size: 9px;
 			color: #333333 !important;
 			font-weight: 600;
 			white-space: nowrap;
-			line-height: 1.4;
+			line-height: 1.2;
 		}
 
 		#wrapper1 .qp-suggest-print-header {
@@ -317,13 +318,14 @@ $flag_d = mysqli_fetch_array($flag_r);
 			}
 
 			#wrapper1 .qp-suggest-cell-inner {
-				padding-left: 12px !important;
-				padding-right: 12px !important;
+				padding-left: 4px !important;
+				padding-right: 4px !important;
 				box-sizing: border-box !important;
 			}
 
 			#wrapper1 .qp-prod-badge-row {
-				padding: 4px 8px 0 !important;
+				height: 18px !important;
+				padding: 1px 4px 0 !important;
 				text-align: right !important;
 			}
 
@@ -331,30 +333,52 @@ $flag_d = mysqli_fetch_array($flag_r);
 				display: flex !important;
 				align-items: center !important;
 				justify-content: flex-end !important;
-				gap: 6px !important;
+				gap: 4px !important;
 			}
 
 			#wrapper1 .qp-prod-disc-label {
 				border: 1px solid #d9534f !important;
 				color: #d9534f !important;
+				font-size: 8.5px !important;
+				padding: 1px 4px !important;
+				-webkit-print-color-adjust: exact !important;
+				print-color-adjust: exact !important;
+			}
+
+			#wrapper1 .qp-prod-disc {
+				width: 18px !important;
+				height: 18px !important;
+				line-height: 18px !important;
+				font-size: 8px !important;
 				-webkit-print-color-adjust: exact !important;
 				print-color-adjust: exact !important;
 			}
 
 			#wrapper1 .qp-prod-img-cell {
-				padding: 4px !important;
+				height: 36px !important;
+				padding: 1px !important;
+			}
+
+			#wrapper1 .qp-prod-img {
+				max-height: 32px !important;
 			}
 
 			#wrapper1 .qp-prod-code-cell {
-				padding: 4px 2px 0 !important;
+				padding: 1px 4px 0 !important;
+				font-size: 9.5px !important;
+				line-height: 1.1 !important;
 			}
 
 			#wrapper1 .qp-prod-name-cell {
-				padding: 3px 2px 0 !important;
+				padding: 1px 4px 0 !important;
+				font-size: 8.5px !important;
+				line-height: 1.1 !important;
+				min-height: 18px !important;
+				max-height: 24px !important;
 			}
 
 			#wrapper1 .qp-prod-price-cell {
-				padding: 0 2px 10px !important;
+				padding: 1px 4px 4px !important;
 			}
 
 			#wrapper1 .qp-suggest-product-row {
@@ -384,20 +408,23 @@ $flag_d = mysqli_fetch_array($flag_r);
 			#wrapper1 .qp-prod-price-line,
 			#wrapper1 .qp-prod-price {
 				color: #0a5c24 !important;
+				font-size: 10px !important;
+				line-height: 1.2 !important;
 			}
 
 			#wrapper1 .qp-prod-unit {
 				color: #333333 !important;
+				font-size: 9px !important;
 			}
 
 			#wrapper1 .qp-prod-price-cell {
 				overflow: visible !important;
-				padding-bottom: 8px !important;
+				padding-bottom: 4px !important;
 			}
 
 			#wrapper1 .qp-suggest-cat-header {
-				page-break-after: avoid;
-				break-after: avoid-page;
+				page-break-after: auto;
+				break-after: auto;
 			}
 
 			#wrapper1 .quote-suggest-body {

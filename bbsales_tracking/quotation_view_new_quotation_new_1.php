@@ -444,29 +444,44 @@ $quotationViewStandalone = !$quotationViewEmbedded;
 				break-inside: avoid-page !important;
 			}
 
+			.quote-suggest-body .qp-prod-badge-row {
+				height: 14px !important;
+				padding: 1px 2px 0 !important;
+			}
+
 			.quote-suggest-body .qp-prod-img-cell {
-				height: 44px !important;
+				height: 38px !important;
+				padding: 1px !important;
 			}
 
 			.quote-suggest-body .qp-prod-img {
-				max-height: 36px !important;
+				max-height: 34px !important;
+			}
+
+			.quote-suggest-body .qp-prod-code-cell {
+				font-size: 8.5px !important;
+				line-height: 1.1 !important;
+				padding: 1px 2px 0 !important;
 			}
 
 			.quote-suggest-body .qp-prod-name-cell {
-				min-height: 22px !important;
-				max-height: 28px !important;
-				font-size: 9.5px !important;
+				min-height: 16px !important;
+				max-height: 22px !important;
+				font-size: 8px !important;
+				line-height: 1.1 !important;
+				padding: 1px 2px 0 !important;
 			}
 
-			.qp-suggest-cat-header {
-				page-break-after: auto;
-				break-after: auto;
+			.quote-suggest-body .qp-prod-price-cell {
+				padding: 1px 2px 2px !important;
 			}
 
 			.quote-suggest-body .qp-prod-price-line,
 			.quote-suggest-body .qp-prod-price {
 				color: #0a5c24 !important;
 				font-weight: bold !important;
+				font-size: 9px !important;
+				line-height: 1.1 !important;
 				-webkit-print-color-adjust: exact !important;
 				print-color-adjust: exact !important;
 			}
@@ -474,24 +489,55 @@ $quotationViewStandalone = !$quotationViewEmbedded;
 			.quote-suggest-body .qp-prod-unit {
 				color: #333333 !important;
 				font-weight: 600 !important;
+				font-size: 8px !important;
 				-webkit-print-color-adjust: exact !important;
 				print-color-adjust: exact !important;
+			}
+
+			.quote-suggest-body .qp-suggest-cat-header {
+				padding: 2px 5px !important;
+				font-size: 10px !important;
+				page-break-after: avoid !important;
+				break-after: avoid !important;
+			}
+
+			.quote-suggest-body .qp-suggest-print-header {
+				padding: 2px 5px !important;
+			}
+
+			.quote-suggest-body .qp-suggest-print-title {
+				font-size: 11px !important;
+				line-height: 1.2 !important;
+			}
+
+			.quote-suggest-body .qp-suggest-print-subtitle {
+				font-size: 8.5px !important;
+				line-height: 1.1 !important;
 			}
 
 			.qp-suggest-print-cell-empty {
 				display: none !important;
 			}
 
-			.quote-summary-totals-block {
-				page-break-inside: avoid;
-				break-inside: avoid-page;
-			}
-
 			.quote-summary-body {
-				page-break-before: auto;
-				break-before: auto;
+				page-break-inside: avoid !important;
+				break-inside: avoid-page !important;
+				page-break-before: auto !important;
+				break-before: auto !important;
 				border: none !important;
 				border-top: 1px solid #595959 !important;
+			}
+
+			.quote-summary-totals-block {
+				page-break-inside: avoid !important;
+				break-inside: avoid-page !important;
+			}
+
+			.quote-summary-details-row,
+			.quote-summary-terms-table,
+			.quote-summary-details-table {
+				page-break-inside: avoid !important;
+				break-inside: avoid-page !important;
 			}
 
 			.quote-summary-body table {
@@ -502,9 +548,12 @@ $quotationViewStandalone = !$quotationViewEmbedded;
 			}
 
 			.quote-footer-wrap,
-			.quote-footer-table {
-				page-break-inside: avoid;
-				break-inside: avoid;
+			.quote-footer-table,
+			.quote-hsn-table {
+				page-break-inside: avoid !important;
+				break-inside: avoid-page !important;
+				page-break-before: auto !important;
+				break-before: auto !important;
 			}
 
 			.quote-main-body {
@@ -562,7 +611,20 @@ $quotationViewStandalone = !$quotationViewEmbedded;
 			.quote-table th,
 			.product-items-table td,
 			.product-items-table th {
-				padding: 3px 4px !important;
+				padding: 2px 4px !important;
+			}
+
+			.quote-summary-terms-cell {
+				padding: 3px 5px !important;
+			}
+
+			.quote-summary-info-cell {
+				padding: 4px 6px !important;
+			}
+
+			.quote-summary-amounts-table td,
+			.quote-summary-amounts-table th {
+				padding: 2px 4px !important;
 			}
 
 			.quote-summary-amounts-table td.text-right,
@@ -581,13 +643,14 @@ $quotationViewStandalone = !$quotationViewEmbedded;
 			}
 
 			.qp-suggest-cell-inner {
-				padding-left: 12px !important;
-				padding-right: 12px !important;
+				padding-left: 4px !important;
+				padding-right: 4px !important;
 				box-sizing: border-box !important;
 			}
 
 			.qp-prod-badge-row {
-				padding: 4px 8px 0 !important;
+				height: 18px !important;
+				padding: 1px 4px 0 !important;
 				text-align: right !important;
 			}
 
@@ -595,30 +658,45 @@ $quotationViewStandalone = !$quotationViewEmbedded;
 				display: flex !important;
 				align-items: center !important;
 				justify-content: flex-end !important;
-				gap: 6px !important;
+				gap: 4px !important;
 			}
 
 			.qp-prod-disc-label {
 				border: 1px solid #d9534f !important;
 				color: #d9534f !important;
+				font-size: 8.5px !important;
+				padding: 1px 4px !important;
+				-webkit-print-color-adjust: exact !important;
+				print-color-adjust: exact !important;
+			}
+
+			.qp-prod-disc {
+				width: 18px !important;
+				height: 18px !important;
+				line-height: 18px !important;
+				font-size: 8px !important;
 				-webkit-print-color-adjust: exact !important;
 				print-color-adjust: exact !important;
 			}
 
 			.qp-prod-img-cell {
-				padding: 4px !important;
+				padding: 1px !important;
 			}
 
 			.qp-prod-code-cell {
-				padding: 4px 2px 0 !important;
+				padding: 1px 4px 0 !important;
+				font-size: 9.5px !important;
+				line-height: 1.1 !important;
 			}
 
 			.qp-prod-name-cell {
-				padding: 3px 2px 0 !important;
+				padding: 1px 4px 0 !important;
+				font-size: 8.5px !important;
+				line-height: 1.1 !important;
 			}
 
 			.qp-prod-price-cell {
-				padding: 0 2px 10px !important;
+				padding: 1px 4px 4px !important;
 			}
 
 			.qp-prod-disc,
@@ -1060,7 +1138,7 @@ $quotationViewStandalone = !$quotationViewEmbedded;
 		?>
 
 			<!-- hsn summary -->
-			<table class="quote-table">
+			<table class="quote-table quote-hsn-table">
 				<?php
 				if (strtolower(CLIENT_STATE) == strtolower($cart_detail_d['state'])) {
 					$gst_or_igst = "Total GST Rate";
