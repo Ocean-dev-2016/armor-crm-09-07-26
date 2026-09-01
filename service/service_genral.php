@@ -2907,6 +2907,7 @@ if ($is_valid_api_key) {
 
 					$quotation_detail_d['revised_quotation_main_id'] = $db->rp_getValue("quotation_detail", "quotation_no", "id='" . $quotation_detail_d['refrence_id'] . "'", 0);
 
+					$quotation_raw_date = $quotation_detail_d['quotation_date'];
 					$quotation_detail_d['quotation_date'] = date('d-m-y', strtotime($quotation_detail_d['quotation_date']));
 					$quotation_detail_d['adate'] = date('d-m-y H:i A', strtotime($quotation_detail_d['adate']));
 
@@ -2930,9 +2931,15 @@ if ($is_valid_api_key) {
 					$quotation_detail_d['status_name'] = $status_array[intval($quotation_detail_d['status'])];
 					$quotation_detail_d['status_name'] = ($quotation_detail_d['status_name'] != "") ? $quotation_detail_d['status_name'] : "";
 
+					$quotation_detail_d['color_code'] = $db->quotation_status_color[$quotation_detail_d['status_name']];
+					if ($quotation_detail_d['color_code'] == "") {
+						$quotation_detail_d['color_code'] = "";
+					}
+
 					$quotation_clean_no = str_replace(array("/", "\\", " "), "-", stripslashes($quotation_detail_d['quotation_no']));
-					$quotation_pdf_filename = date('d_m_Y', strtotime($quotation_detail_d['quotation_date'])) . "_Quotation_" . $quotation_clean_no . ".pdf";
-					$quotation_detail_d['pdf_url'] = ADMINSITEURL . "pdf/orders/" . $quotation_pdf_filename;
+					$quotation_pdf_folder = date('d_m_Y', strtotime($quotation_raw_date)) . "_Quotation_" . $quotation_clean_no . 'pdf';
+					$quotation_pdf_filename = $quotation_pdf_folder . '.pdf';
+					$quotation_detail_d['pdf_url'] = ADMINSITEURL . "pdf/orders/" . $quotation_pdf_folder . "/" . $quotation_pdf_filename;
 					$quotation_detail_d['file_url'] = $quotation_detail_d['pdf_url'];
 					$quotation_detail_d['pdf_name'] = $quotation_pdf_filename;
 					$quotation_detail_d['file_name'] = $quotation_pdf_filename;
