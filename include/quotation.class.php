@@ -3231,26 +3231,44 @@ class Quotation extends Functions
 
 	public function DownloadQuotation($id)
 	{
-		//$customer_id=$this->db->rp_getValue("invoice_new","id","id='".$id."'",0);
-
 		if ($id) {
-
 			$count = $this->db->rp_getTotalRecord("quotation_detail", "id='" . $id . "'", 0);
 
 			if ($count > 0) {
+				// Render quotation view directly via buffer to avoid localhost curl/SSL loopback issues
+				$d = "";
+				$old_get = $_GET;
+				$old_req = $_REQUEST;
+				$_GET['quotation_id'] = $id;
+				$_GET['app_pdf'] = '1';
+				$_GET['mpdf'] = '1';
+				$_REQUEST['quotation_id'] = $id;
+				$_REQUEST['app_pdf'] = '1';
+				$_REQUEST['mpdf'] = '1';
 
-				// Same HTML as web print/share (new_1 + suggested products).
-				$body_url = ADMINSITEURL . 'quotation_view_new_quotation_new_1.php?quotation_id=' . urlencode($id) . '&app_pdf=1&mpdf=1';
-				$d = @file_get_contents($body_url);
+				$viewFile = dirname(__FILE__) . '/../bbsales_tracking/quotation_view_new_quotation_new_1.php';
+				if (file_exists($viewFile)) {
+					ob_start();
+					include($viewFile);
+					$d = ob_get_clean();
+				}
+
+				$_GET = $old_get;
+				$_REQUEST = $old_req;
+
 				if (empty($d)) {
-					$ch = curl_init();
-					curl_setopt($ch, CURLOPT_URL, $body_url);
-					curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-					curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-					curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-					curl_setopt($ch, CURLOPT_TIMEOUT, 120);
-					$d = curl_exec($ch);
-					curl_close($ch);
+					$body_url = ADMINSITEURL . 'quotation_view_new_quotation_new_1.php?quotation_id=' . urlencode($id) . '&app_pdf=1&mpdf=1';
+					$d = @file_get_contents($body_url);
+					if (empty($d)) {
+						$ch = curl_init();
+						curl_setopt($ch, CURLOPT_URL, $body_url);
+						curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+						curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+						curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+						curl_setopt($ch, CURLOPT_TIMEOUT, 120);
+						$d = curl_exec($ch);
+						curl_close($ch);
+					}
 				}
 
 				$d = $this->sanitizeQuotationPdfHtml($d);
@@ -3267,13 +3285,7 @@ class Quotation extends Functions
 				@set_time_limit(300);
 
 				if (function_exists('armor_prepare_mpdf_environment')) {
-					if (!armor_prepare_mpdf_environment('1024M', 300)) {
-						return array(
-							"ack" => 0,
-							"developer_msg" => "mPDF/mbstring is not available on server.",
-							"ack_msg" => "Quotation PDF Not Generate!!"
-						);
-					}
+					armor_prepare_mpdf_environment('1024M', 300);
 				} else {
 					$polyfill = dirname(__FILE__) . '/mbstring_polyfill.php';
 					if (!is_file($polyfill) || filesize($polyfill) < 50) {
@@ -3282,37 +3294,20 @@ class Quotation extends Functions
 					if (is_file($polyfill) && filesize($polyfill) > 50) {
 						include_once $polyfill;
 					}
-					if (!function_exists('mb_strlen')) {
-						return array(
-							"ack" => 0,
-							"developer_msg" => "mPDF/mbstring is not available on server.",
-							"ack_msg" => "Quotation PDF Not Generate!!"
-						);
-					}
-					require_once dirname(__FILE__) . '/../bbsales_tracking/mpdf60/mpdf.php';
 				}
+				require_once dirname(__FILE__) . '/../bbsales_tracking/mpdf60/mpdf.php';
 
 				$mpdf = new mPDF(
 					'',    // mode - default ''
-
 					'A4',    // format - A4, for example, default ''
-
-					15,     // font size - default 0
-
+					10,     // font size - default 0
 					'sans-serif',    // default font family
-
 					1,    // margin_left
-
 					3,    // margin right
-
 					3,     // margin top
-
 					3,    // margin bottom
-
 					0,     // margin header
-
 					0,     // margin footer
-
 					'P'
 				);  // L - landscape, P - portrait
 				$mpdf->autoScriptToLang = true;
@@ -3343,24 +3338,18 @@ class Quotation extends Functions
 				$this->db->insertLog($ctable, $last_id, "insert", "", array(), 0, $log_description, $flag, $module_name, $sales_id, $customer_id);
 				/*LOG eNTRY*/
 
-				$uname	= str_replace(" ", "-", stripslashes($this->db->rp_getValue("quotation_detail", "company_name", "id='" . $id . "'", 0)));
-				$quotation_no	= str_replace("/", "-", stripslashes($this->db->rp_getValue("quotation_detail", "quotation_no", "id='" . $id . "'", 0)));
-
-
-				//$fileName = "Quotation_".SITENAME."_".date('d_m_Y')."_".$quotation_no."_".$uname.'.pdf'; 
-				$fileName = date('d_m_Y') . "_" . "Quotation_" . $quotation_no . 'pdf';
+				$quotation_clean_no = str_replace(array("/", "\\", " "), "-", stripslashes($quotation_no));
+				$fileName = date('d_m_Y') . "_Quotation_" . $quotation_clean_no;
 
 				$ordersPdfBase = dirname(__FILE__) . '/../bbsales_tracking/pdf/orders/';
-				$ordersPdfDir = $ordersPdfBase . $fileName . '/';
-
-				if (!is_dir($ordersPdfDir)) {
-					@mkdir($ordersPdfDir, 0755, true);
+				if (!is_dir($ordersPdfBase)) {
+					@mkdir($ordersPdfBase, 0755, true);
 				}
 
-				$pdf_file_path = $ordersPdfDir . $fileName . '.pdf';
+				$pdf_file_path = $ordersPdfBase . $fileName . '.pdf';
 
 				if (file_exists($pdf_file_path)) {
-					unlink($pdf_file_path);
+					@unlink($pdf_file_path);
 				}
 
 				$mpdf->Output($pdf_file_path);
@@ -3375,35 +3364,15 @@ class Quotation extends Functions
 
 				$pdfBytes = filesize($pdf_file_path);
 				$pageCount = $this->countQuotationPdfPages($pdf_file_path);
-				if ($pageCount > 50) {
-					@unlink($pdf_file_path);
-					return array(
-						"ack" => 0,
-						"developer_msg" => "PDF layout error (" . $pageCount . " pages). Please contact support.",
-						"ack_msg" => "Quotation PDF Not Generate!!"
-					);
-				}
-				if ($pdfBytes > 15728640) {
-					@unlink($pdf_file_path);
-					return array(
-						"ack" => 0,
-						"developer_msg" => "PDF too large to download (" . round($pdfBytes / 1048576, 1) . " MB). Please contact support.",
-						"ack_msg" => "Quotation PDF Not Generate!!"
-					);
-				}
 
-				$file_path = $pdf_file_path;
-
-				// echo $file_path;exit;
 				$result = array();
-				$pdfUrl = ADMINSITEURL . "pdf/orders/" . $fileName . "/" . $fileName . '.pdf?v=' . time();
+				$pdfUrl = ADMINSITEURL . "pdf/orders/" . $fileName . '.pdf?v=' . time();
 				$result['pdf'] = $pdfUrl;
 				$result['file_url'] = $pdfUrl;
 				$result['file_name'] = $fileName . '.pdf';
 				$result['pdf_ok'] = 1;
 				$result['pdf_pages'] = $pageCount;
 				$result['pdf_size'] = $pdfBytes;
-
 
 				$reply = array(
 					"ack" => 1,
@@ -3412,7 +3381,6 @@ class Quotation extends Functions
 					"file_url" => $pdfUrl,
 					"result" => $result
 				);
-				// echo $reply;exit;
 				return $reply;
 			} else {
 				$reply = array("ack" => 0, "developer_msg" => "Quotation PDF Not Generate!!", "ack_msg" => "Quotation PDF Not Generate!!");

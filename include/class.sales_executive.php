@@ -1598,17 +1598,40 @@ class SalesExecutive extends Functions
 			if ($count > 0) {
 
 
-				$body_url = ADMINSITEURL . "view_order_new_1.php?order_id=" . urlencode($order_id) . "&app_pdf=1&mpdf=1";
-				$d = @file_get_contents($body_url);
-				if(empty($d)) {
-					$ch = curl_init();
-					curl_setopt($ch, CURLOPT_URL, $body_url);
-					curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-					curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-					curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-					curl_setopt($ch, CURLOPT_TIMEOUT, 120);
-					$d = curl_exec($ch);
-					curl_close($ch);
+				// Render order view directly via buffer to avoid localhost curl/SSL loopback issues
+				$d = "";
+				$old_get = $_GET;
+				$old_req = $_REQUEST;
+				$_GET['order_id'] = $order_id;
+				$_GET['app_pdf'] = '1';
+				$_GET['mpdf'] = '1';
+				$_REQUEST['order_id'] = $order_id;
+				$_REQUEST['app_pdf'] = '1';
+				$_REQUEST['mpdf'] = '1';
+
+				$viewFile = dirname(__FILE__) . '/../bbsales_tracking/view_order_new_1.php';
+				if (file_exists($viewFile)) {
+					ob_start();
+					include($viewFile);
+					$d = ob_get_clean();
+				}
+
+				$_GET = $old_get;
+				$_REQUEST = $old_req;
+
+				if (empty($d)) {
+					$body_url = ADMINSITEURL . "view_order_new_1.php?order_id=" . urlencode($order_id) . "&app_pdf=1&mpdf=1";
+					$d = @file_get_contents($body_url);
+					if(empty($d)) {
+						$ch = curl_init();
+						curl_setopt($ch, CURLOPT_URL, $body_url);
+						curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+						curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+						curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+						curl_setopt($ch, CURLOPT_TIMEOUT, 120);
+						$d = curl_exec($ch);
+						curl_close($ch);
+					}
 				}
 
 				$d = (string) $d;
