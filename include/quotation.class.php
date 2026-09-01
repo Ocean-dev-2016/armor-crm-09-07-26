@@ -3204,12 +3204,33 @@ class Quotation extends Functions
 					);
 				}
 
-				if (!armor_prepare_mpdf_environment('1024M', 180)) {
-					return array(
-						"ack" => 0,
-						"developer_msg" => "mPDF/mbstring is not available on server.",
-						"ack_msg" => "Quotation PDF Not Generate!!"
-					);
+				@ini_set('memory_limit', '1024M');
+				@set_time_limit(180);
+
+				if (function_exists('armor_prepare_mpdf_environment')) {
+					if (!armor_prepare_mpdf_environment('1024M', 180)) {
+						return array(
+							"ack" => 0,
+							"developer_msg" => "mPDF/mbstring is not available on server.",
+							"ack_msg" => "Quotation PDF Not Generate!!"
+						);
+					}
+				} else {
+					$polyfill = dirname(__FILE__) . '/mbstring_polyfill.php';
+					if (!is_file($polyfill) || filesize($polyfill) < 50) {
+						$polyfill = dirname(__FILE__) . '/../bbsales_tracking/include/mbstring_polyfill.php';
+					}
+					if (is_file($polyfill) && filesize($polyfill) > 50) {
+						include_once $polyfill;
+					}
+					if (!function_exists('mb_strlen')) {
+						return array(
+							"ack" => 0,
+							"developer_msg" => "mPDF/mbstring is not available on server.",
+							"ack_msg" => "Quotation PDF Not Generate!!"
+						);
+					}
+					require_once dirname(__FILE__) . '/../bbsales_tracking/mpdf60/mpdf.php';
 				}
 
 				$mpdf = new mPDF(
