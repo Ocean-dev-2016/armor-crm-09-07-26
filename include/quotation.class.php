@@ -3174,15 +3174,13 @@ class Quotation extends Functions
 	/*for api function*/
 
 	/**
-	 * App PDF: mPDF embeds full-size remote images and can produce 100MB+ files that won't open on mobile.
+	 * App PDF: use proven download template (same as quotation_generate.php).
+	 * new_1 + suggest grid breaks mPDF (blank/extra pages).
 	 */
 	private function sanitizeQuotationPdfHtml($html)
 	{
 		$html = (string) $html;
 		$html = preg_replace('/<script\b[^>]*>[\s\S]*?<\/script>/i', '', $html);
-		$html = preg_replace('/<img\b[^>]*>/i', '', $html);
-		$html = preg_replace('/<div class="quote-print-toolbar"[\s\S]*?<\/div>/i', '', $html);
-		$html = preg_replace('/page-break-(inside|before|after)\s*:\s*avoid[^;"}]*/i', 'page-break-$1: auto', $html);
 		return $html;
 	}
 
@@ -3190,10 +3188,8 @@ class Quotation extends Functions
 	{
 		return '<style>
 			body { margin: 0; padding: 0; font-family: sans-serif; font-size: 11px; }
-			.main-container { padding: 6px !important; max-width: 100% !important; }
-			.quote-print-toolbar { display: none !important; }
-			table, tr, td, div { page-break-inside: auto !important; page-break-before: auto !important; page-break-after: auto !important; }
-			.qp-prod-img-cell { height: 4px !important; padding: 0 !important; }
+			table { border-collapse: collapse; }
+			img { max-width: 80px; max-height: 80px; }
 		</style>';
 	}
 
@@ -3207,8 +3203,8 @@ class Quotation extends Functions
 
 			if ($count > 0) {
 
-				// App API PDF: same content as web print=1 (QT/2554, items, suggest, totals); images stripped in sanitize.
-				$body_url = ADMINSITEURL . 'quotation_view_new_quotation_new_1.php?quotation_id=' . urlencode($id) . '&print=1&mpdf=1';
+				// Proven mPDF layout — same HTML as web quotation_generate.php / Download button.
+				$body_url = ADMINSITEURL . 'quotation_view_new_quotation_download.php?quotation_id=' . urlencode($id);
 				$d = @file_get_contents($body_url);
 				if (empty($d)) {
 					$ch = curl_init();
@@ -3231,11 +3227,11 @@ class Quotation extends Functions
 					);
 				}
 
-				@ini_set('memory_limit', '2048M');
-				@set_time_limit(300);
+				@ini_set('memory_limit', '512M');
+				@set_time_limit(180);
 
 				if (function_exists('armor_prepare_mpdf_environment')) {
-					if (!armor_prepare_mpdf_environment('2048M', 300)) {
+					if (!armor_prepare_mpdf_environment('512M', 180)) {
 						return array(
 							"ack" => 0,
 							"developer_msg" => "mPDF/mbstring is not available on server.",
@@ -3283,14 +3279,8 @@ class Quotation extends Functions
 
 					'P'
 				);  // L - landscape, P - portrait
-				$mpdf->simpleTables = true;
-				$mpdf->packTableData = true;
-				if (method_exists($mpdf, 'SetCompression')) {
-					$mpdf->SetCompression(true);
-				}
-				$mpdf->img_dpi = 72;
 				$mpdf->autoScriptToLang = true;
-				$mpdf->baseScript = 1; // Use Gujarati script
+				$mpdf->baseScript = 1;
 				$mpdf->autoLangToFont = true;
 				$mpdf->WriteHTML($this->quotationPdfMpdfCss() . $d);
 
@@ -3339,7 +3329,7 @@ class Quotation extends Functions
 				}
 
 				$pdfBytes = filesize($pdf_file_path);
-				if ($pdfBytes > 31457280) {
+				if ($pdfBytes > 10485760) {
 					@unlink($pdf_file_path);
 					return array(
 						"ack" => 0,
