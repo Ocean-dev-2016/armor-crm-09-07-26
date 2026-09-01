@@ -2337,16 +2337,25 @@ if ($is_valid_api_key) {
 				$db->printJSON($ack);
 			}
 		} else if ($service == "download_order_pdf" || $service == 98) {
-			$order_id = isset($_REQUEST['order_id']) ? $_REQUEST['order_id'] : "";
+			$order_id = isset($_REQUEST['order_id']) ? $_REQUEST['order_id'] : (isset($_REQUEST['id']) ? $_REQUEST['id'] : "");
 
-			if (isset($_REQUEST['order_id']) && $_REQUEST['order_id'] != "") {
-				$order_id	= isset($_REQUEST['order_id']) ? $db->clean($_REQUEST['order_id']) : "";
-				if (!empty($order_id) && $order_id != "") {
-					//print_r($order_id."sdafdsf");die;
-					$ack = $objSalesExecutive->DownloadOrder($order_id);
-				} else {
-					$ack = array("ack" => 0, "ack_msg" => "Internal error!!", "developer_msg" => "Service Parameter missing or not valid!!", "extra" => array("requested_params" => $_REQUEST, "other" => array()));
-				}
+			if (!empty($order_id)) {
+				$order_id = $db->clean($order_id);
+				$ack = $objSalesExecutive->DownloadOrder($order_id);
+				$db->printJSON($ack);
+			} else {
+				$ack = array("ack" => 0, "ack_msg" => "Internal error!!", "developer_msg" => "Service Parameter missing or not valid!!", "extra" => array("requested_params" => $_REQUEST, "other" => array()));
+				$db->printJSON($ack);
+			}
+		} else if ($service == "download_quotation_pdf" || $service == "share_quotation_pdf" || $service == "quotation_pdf") {
+			$quotation_id = isset($_REQUEST['quotation_id']) ? $_REQUEST['quotation_id'] : (isset($_REQUEST['id']) ? $_REQUEST['id'] : "");
+
+			if (!empty($quotation_id)) {
+				$quotation_id = $db->clean($quotation_id);
+				$ack = $objQuotation->DownloadQuotation($quotation_id);
+				$db->printJSON($ack);
+			} else {
+				$ack = array("ack" => 0, "ack_msg" => "Internal error!!", "developer_msg" => "Service Parameter missing or not valid!!", "extra" => array("requested_params" => $_REQUEST, "other" => array()));
 				$db->printJSON($ack);
 			}
 		}
@@ -2921,7 +2930,13 @@ if ($is_valid_api_key) {
 					$quotation_detail_d['status_name'] = $status_array[intval($quotation_detail_d['status'])];
 					$quotation_detail_d['status_name'] = ($quotation_detail_d['status_name'] != "") ? $quotation_detail_d['status_name'] : "";
 
-					$quotation_detail_d['color_code'] = $db->quotation_status_color[$quotation_detail_d['status_name']];
+					$quotation_clean_no = str_replace(array("/", "\\", " "), "-", stripslashes($quotation_detail_d['quotation_no']));
+					$quotation_pdf_filename = date('d_m_Y', strtotime($quotation_detail_d['quotation_date'])) . "_Quotation_" . $quotation_clean_no . ".pdf";
+					$quotation_detail_d['pdf_url'] = ADMINSITEURL . "pdf/orders/" . $quotation_pdf_filename;
+					$quotation_detail_d['file_url'] = $quotation_detail_d['pdf_url'];
+					$quotation_detail_d['pdf_name'] = $quotation_pdf_filename;
+					$quotation_detail_d['file_name'] = $quotation_pdf_filename;
+
 					$quotation_detail_data[] = $quotation_detail_d;
 				}
 				/*Get Quotaion Count*/
@@ -2982,11 +2997,9 @@ if ($is_valid_api_key) {
 		// this my code Dhaval
 		else if ($service == "invoice_pdf" || $service == 163) {
 			$type = isset($_REQUEST['type']) ? $_REQUEST['type'] : "";
+			$id = isset($_REQUEST['id']) ? $_REQUEST['id'] : (isset($_REQUEST['quotation_id']) ? $_REQUEST['quotation_id'] : (isset($_REQUEST['order_id']) ? $_REQUEST['order_id'] : ""));
 
-			$id = isset($_REQUEST['id']) ? $_REQUEST['id'] : "";
-
-
-			if (isset($_REQUEST['id']) && $_REQUEST['id'] != "") {
+			if (!empty($id)) {
 				if ($type == "1") //1=invoice
 				{
 					$ack = $objInvoice->DownloadInvoice($id);
@@ -2998,7 +3011,7 @@ if ($is_valid_api_key) {
 				{
 					//dispatch code here
 					$ack = $objInvoice->DownloadDispatch($id);
-				} else if ($type == "4") //quotation
+				} else if ($type == "4" || empty($type)) //quotation
 				{
 					//quotation code here
 					$ack = $objQuotation->DownloadQuotation($id);
