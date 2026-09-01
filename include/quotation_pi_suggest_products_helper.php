@@ -2435,6 +2435,186 @@ if (!function_exists('armor_quotation_pi_build_option_html')) {
 
 
 
+if (!function_exists('armor_quotation_pi_is_mpdf_export')) {
+
+	function armor_quotation_pi_is_mpdf_export()
+
+	{
+
+		return (!empty($_REQUEST['mpdf']) && $_REQUEST['mpdf'] == '1')
+
+			|| (!empty($_REQUEST['app_pdf']) && $_REQUEST['app_pdf'] == '1');
+
+	}
+
+}
+
+
+
+if (!function_exists('armor_quotation_pi_mpdf_suggest_styles')) {
+
+	function armor_quotation_pi_mpdf_suggest_styles()
+
+	{
+
+		return '<style type="text/css">
+
+.qp-suggest-print-section{width:100%;font-family:Arial,sans-serif;font-size:9px;}
+
+.qp-suggest-print-header{text-align:center;padding:6px 4px;background:#4a4a4a;color:#fff;border-bottom:1px solid #595959;}
+
+.qp-suggest-print-title{font-size:12px;font-weight:bold;text-transform:uppercase;color:#fff;}
+
+.qp-suggest-print-subtitle{font-size:8px;color:#e8e8e8;}
+
+.qp-suggest-print-grid{width:100%;border-collapse:collapse;table-layout:fixed;}
+
+.qp-suggest-print-grid td{border:1px solid #595959;vertical-align:top;padding:2px;width:25%;}
+
+.qp-suggest-cat-header{background:#e8e8e8;font-weight:bold;text-align:center;font-size:10px;padding:4px;}
+
+.qp-prod-card{width:100%;border-collapse:collapse;}
+
+.qp-prod-card td{border:none!important;padding:1px 2px!important;}
+
+</style>';
+
+	}
+
+}
+
+
+
+if (!function_exists('armor_quotation_pi_render_mpdf_item')) {
+
+	function armor_quotation_pi_render_mpdf_item($item)
+
+	{
+
+		$img = htmlspecialchars($item['image'], ENT_QUOTES);
+
+		$name = htmlspecialchars($item['name'], ENT_QUOTES);
+
+		$catno = htmlspecialchars($item['catno'], ENT_QUOTES);
+
+		$curr = defined('CURR') ? CURR : 'INR';
+
+		$unit = isset($item['unit_name']) ? htmlspecialchars($item['unit_name'], ENT_QUOTES) : 'Nos';
+
+		$discountPer = (int) armor_quotation_pi_suggest_display_discount_percent();
+
+
+
+		$html = '<table class="qp-prod-card" cellpadding="0" cellspacing="0" width="100%">';
+
+		$html .= '<tr><td align="right" style="font-size:7px;">Discount <strong>' . $discountPer . '%</strong></td></tr>';
+
+		$html .= '<tr><td align="center"><img src="' . $img . '" style="width:42px;height:auto;max-height:42px;" alt=""></td></tr>';
+
+		$html .= '<tr><td align="center" style="font-size:8px;color:#555;"><strong>' . $catno . '</strong></td></tr>';
+
+		$html .= '<tr><td align="center" style="font-size:7px;line-height:1.2;">' . $name . '</td></tr>';
+
+		$html .= '<tr><td align="center" style="font-size:8px;font-weight:bold;color:#0a5c24;">' . $curr . ' ' . $item['rate_label'] . ' / ' . $unit . '</td></tr>';
+
+		$html .= '</table>';
+
+		return $html;
+
+	}
+
+}
+
+
+
+if (!function_exists('armor_quotation_pi_render_mpdf_block')) {
+
+	function armor_quotation_pi_render_mpdf_block($db, $customerId, $excludeProductIds = array(), $includeStyles = true)
+
+	{
+
+		$items = armor_quotation_pi_get_suggest_products($db, $customerId, $excludeProductIds);
+
+		if (empty($items)) {
+
+			return '';
+
+		}
+
+
+
+		$cols = 4;
+
+		$groups = armor_quotation_pi_group_items_by_category($items);
+
+		$html = '';
+
+		if ($includeStyles) {
+
+			$html .= armor_quotation_pi_mpdf_suggest_styles();
+
+		}
+
+		$html .= '<table cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;border:none;"><tr><td style="border:none;padding:0;">';
+
+		$html .= '<div class="qp-suggest-print-section">';
+
+		$html .= '<div class="qp-suggest-print-header">';
+
+		$html .= '<div class="qp-suggest-print-title">Suggested Product Range</div>';
+
+		$html .= '<div class="qp-suggest-print-subtitle">Please mention Product Code when placing your order</div>';
+
+		$html .= '</div>';
+
+		$html .= '<table class="qp-suggest-print-grid" cellpadding="0" cellspacing="0"><tbody>';
+
+
+
+		foreach ($groups as $group) {
+
+			$html .= '<tr><td colspan="' . $cols . '" class="qp-suggest-cat-header">' . htmlspecialchars($group['title'], ENT_QUOTES) . '</td></tr>';
+
+			$chunks = array_chunk($group['items'], $cols);
+
+			foreach ($chunks as $row) {
+
+				$html .= '<tr>';
+
+				for ($i = 0; $i < $cols; $i++) {
+
+					if (!isset($row[$i])) {
+
+						$html .= '<td>&nbsp;</td>';
+
+						continue;
+
+					}
+
+					$html .= '<td>' . armor_quotation_pi_render_mpdf_item($row[$i]) . '</td>';
+
+				}
+
+				$html .= '</tr>';
+
+			}
+
+		}
+
+
+
+		$html .= '</tbody></table></div>';
+
+		$html .= '</td></tr></table>';
+
+		return $html;
+
+	}
+
+}
+
+
+
 if (!function_exists('armor_quotation_pi_render_print_item')) {
 
 	function armor_quotation_pi_render_print_item($item)
@@ -2604,6 +2784,12 @@ if (!function_exists('armor_quotation_pi_render_print_block')) {
 	function armor_quotation_pi_render_print_block($db, $customerId, $excludeProductIds = array(), $includeStyles = true)
 
 	{
+
+		if (armor_quotation_pi_is_mpdf_export()) {
+
+			return armor_quotation_pi_render_mpdf_block($db, $customerId, $excludeProductIds, $includeStyles);
+
+		}
 
 		$items = armor_quotation_pi_get_suggest_products($db, $customerId, $excludeProductIds);
 

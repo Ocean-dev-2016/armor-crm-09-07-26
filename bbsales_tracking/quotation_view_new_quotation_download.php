@@ -6,6 +6,7 @@ include("../include/quotation.class.php");
 $ObjQuotation=new Quotation();
 $ntw = new NumToWord_RP;
 	$quotation_id	= $_REQUEST['quotation_id'];
+	$isMpdfMode = (!empty($_REQUEST['app_pdf']) || !empty($_REQUEST['mpdf']));
 	$cart_detail_r 	= $db->rp_getData("quotation_detail","*","id='".$quotation_id."'","",0);
 	$cart_detail_d 	= mysqli_fetch_assoc($cart_detail_r);
 $order_date=($cart_detail_d['order_date']!="0000-00-00 00:00:00")?date("d-m-Y",strtotime($cart_detail_d['order_date'])):"";
@@ -40,6 +41,9 @@ $cl = "";
 if($cart_detail_d['status']!=1)
 {
 	$cl = "addwatermark";
+}
+if ($isMpdfMode) {
+	$cl = "";
 }
 $max_discount = $db->rp_getValue("quotation_product_item","MAX(`discount`)","quotation_id='".$quotation_id."'",0);
 if($max_discount=="0")
@@ -240,18 +244,10 @@ $items122=$db->rp_getData("quotation_product_item","*","quotation_id='".$quotati
 					<td colspan="16" class="no-border-bottom height-5"></td>
 				</tr> -->
 				<tr>
-					<td colspan="16">
-						<!-- <img style="width: 100%;padding: 0px !important;"  src="<?= VIEW_LOGO_All ?>"> -->
-
-						<div style="position: absolute; width: 97%; padding-left:5px; padding-right:10px; padding-top:5px;" >
-							<img   src="<?= VIEW_LOGO_All ?>">
-						</div>
-
+					<td colspan="16" style="border-bottom:none;padding:4px 0;">
+						<img style="width:100%;max-height:<?= $isMpdfMode ? '70' : '90' ?>px;display:block;" src="<?= VIEW_LOGO_All ?>">
 					</td>
 				</tr>
-
-				<br><br><br><br><br><br><br><br><br><br><br><br>
-
 				<tr>
 					<td colspan="16" class="no-border-bottom no-border-top height-5 text-center"><strong>GST - <?= COMPANY_GST ?></strong></td>
 				</tr>
@@ -503,7 +499,7 @@ $items122=$db->rp_getData("quotation_product_item","*","quotation_id='".$quotati
 				</tr>
 				<?php
 				}
-				if($count<5)
+				if(!$isMpdfMode && $count<5)
 				{
 					for($i=0;$i<12-$count;$i++)
 					{
@@ -824,23 +820,19 @@ $items122=$db->rp_getData("quotation_product_item","*","quotation_id='".$quotati
 			<tbody>
 				<tr>
 
-			<td colspan="5" rowspan="4" class="no-border-right">
-				<br><br><br><br><br>
+			<td colspan="5" rowspan="4" class="no-border-right" style="vertical-align:bottom;padding-top:<?= $isMpdfMode ? '25' : '40' ?>px;">
 				<center><strong>Prepared By&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</strong></center>	
 			</td>
 
-			<td colspan="5" rowspan="4" class="no-border-right">
-				<br><br><br><br>
+			<td colspan="5" rowspan="4" class="no-border-right" style="vertical-align:bottom;padding-top:<?= $isMpdfMode ? '25' : '40' ?>px;">
 				<center><strong>Checked By</strong></center>	
 			</td>
 
-			<td colspan="6" rowspan="4">
+			<td colspan="6" rowspan="4" style="vertical-align:bottom;padding-top:<?= $isMpdfMode ? '25' : '40' ?>px;">
 
-				<center><strong>For, <?= CLIENT_BRAND_NAME ?>.<br></center>	
+				<center><strong>For, <?= CLIENT_BRAND_NAME ?>.</strong></center>
 
-				<br><br><br><br>
-				<center><strong>
-				Authorised SIgnatory</strong></center>	
+				<center><strong>Authorised SIgnatory</strong></center>	
 			</td>
 		</tr>
 			</tbody>

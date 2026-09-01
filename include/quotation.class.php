@@ -3174,14 +3174,46 @@ class Quotation extends Functions
 	/*for api function*/
 
 	/**
-	 * App PDF: use proven download template (same as quotation_generate.php).
-	 * new_1 + suggest grid breaks mPDF (blank/extra pages).
+	 * App PDF: same layout as web print (new_1 + suggest products), mPDF-safe rendering.
 	 */
 	private function sanitizeQuotationPdfHtml($html)
 	{
 		$html = (string) $html;
 		$html = preg_replace('/<script\b[^>]*>[\s\S]*?<\/script>/i', '', $html);
+		$html = preg_replace('/<style[^>]*>[\s\S]*?quote-print-toolbar[\s\S]*?<\/style>/i', '', $html);
+		$html = preg_replace('/<div[^>]*class="[^"]*quote-print-toolbar[^"]*"[^>]*>[\s\S]*?<\/div>/i', '', $html);
+		$html = preg_replace('/(<\/tr>)\s*(?:<br\s*\/?>\s*)+/i', '$1', $html);
+		$html = preg_replace('/(?:<br\s*\/?>\s*)+(<tr\b)/i', '$1', $html);
+		$html = preg_replace('/(<tbody[^>]*>)\s*(?:<br\s*\/?>\s*)+/i', '$1', $html);
+		$html = preg_replace('/(?:<br\s*\/?>\s*)+(<\/tbody>)/i', '$1', $html);
+		$html = preg_replace('/(<br\s*\/?>\s*){4,}/i', '<br />', $html);
+		$html = preg_replace('/\s+on\w+="[^"]*"/i', '', $html);
+		$html = preg_replace('/position\s*:\s*absolute\s*;?/i', '', $html);
+		$html = preg_replace('/display\s*:\s*flex[^;]*;?/i', '', $html);
+		$html = preg_replace_callback('/<img([^>]*?)>/i', function ($m) {
+			$tag = $m[0];
+			if (stripos($tag, 'max-width') === false && stripos($tag, 'max-height') === false) {
+				if (stripos($tag, 'quote-header-img') !== false || stripos($tag, 'quote-footer-img') !== false) {
+					$tag = preg_replace('/<img/i', '<img style="max-width:100%;max-height:90px;"', $tag, 1);
+				} else {
+					$tag = preg_replace('/<img/i', '<img style="max-width:50px;max-height:50px;"', $tag, 1);
+				}
+			}
+			return $tag;
+		}, $html);
 		return $html;
+	}
+
+	private function countQuotationPdfPages($filePath)
+	{
+		$content = @file_get_contents($filePath);
+		if ($content === false || $content === '') {
+			return 0;
+		}
+		if (preg_match_all('/\/Type\s*\/Page[^s]/', $content, $matches)) {
+			return count($matches[0]);
+		}
+		return 0;
 	}
 
 	private function quotationPdfMpdfCss()
@@ -3189,7 +3221,11 @@ class Quotation extends Functions
 		return '<style>
 			body { margin: 0; padding: 0; font-family: sans-serif; font-size: 11px; }
 			table { border-collapse: collapse; }
-			img { max-width: 80px; max-height: 80px; }
+			.main-container { width: 100%; max-width: 100%; padding: 4px; }
+			.quote-wrap, .quote-main-body, .quote-suggest-body, .quote-summary-body { width: 100%; }
+			img { max-width: 50px; max-height: 50px; }
+			.quote-header-img, .quote-footer-img { max-width: 100% !important; max-height: 90px !important; width: auto !important; height: auto !important; }
+			.qp-suggest-print-grid img { max-width: 42px !important; max-height: 42px !important; }
 		</style>';
 	}
 
@@ -3203,8 +3239,8 @@ class Quotation extends Functions
 
 			if ($count > 0) {
 
-				// Proven mPDF layout — same HTML as web quotation_generate.php / Download button.
-				$body_url = ADMINSITEURL . 'quotation_view_new_quotation_download.php?quotation_id=' . urlencode($id);
+				// Same HTML as web print/share (new_1 + suggested products).
+				$body_url = ADMINSITEURL . 'quotation_view_new_quotation_new_1.php?quotation_id=' . urlencode($id) . '&app_pdf=1&mpdf=1';
 				$d = @file_get_contents($body_url);
 				if (empty($d)) {
 					$ch = curl_init();
@@ -3227,11 +3263,11 @@ class Quotation extends Functions
 					);
 				}
 
-				@ini_set('memory_limit', '512M');
-				@set_time_limit(180);
+				@ini_set('memory_limit', '1024M');
+				@set_time_limit(300);
 
 				if (function_exists('armor_prepare_mpdf_environment')) {
-					if (!armor_prepare_mpdf_environment('512M', 180)) {
+					if (!armor_prepare_mpdf_environment('1024M', 300)) {
 						return array(
 							"ack" => 0,
 							"developer_msg" => "mPDF/mbstring is not available on server.",
@@ -3282,6 +3318,15 @@ class Quotation extends Functions
 				$mpdf->autoScriptToLang = true;
 				$mpdf->baseScript = 1;
 				$mpdf->autoLangToFont = true;
+				if (property_exists($mpdf, 'img_dpi')) {
+					$mpdf->img_dpi = 72;
+				}
+				if (property_exists($mpdf, 'simpleTables')) {
+					$mpdf->simpleTables = true;
+				}
+				if (property_exists($mpdf, 'shrink_tables_to_fit')) {
+					$mpdf->shrink_tables_to_fit = 1;
+				}
 				$mpdf->WriteHTML($this->quotationPdfMpdfCss() . $d);
 
 				/*LOG eNTRY*/
@@ -3329,7 +3374,16 @@ class Quotation extends Functions
 				}
 
 				$pdfBytes = filesize($pdf_file_path);
-				if ($pdfBytes > 10485760) {
+				$pageCount = $this->countQuotationPdfPages($pdf_file_path);
+				if ($pageCount > 50) {
+					@unlink($pdf_file_path);
+					return array(
+						"ack" => 0,
+						"developer_msg" => "PDF layout error (" . $pageCount . " pages). Please contact support.",
+						"ack_msg" => "Quotation PDF Not Generate!!"
+					);
+				}
+				if ($pdfBytes > 15728640) {
 					@unlink($pdf_file_path);
 					return array(
 						"ack" => 0,
@@ -3342,11 +3396,13 @@ class Quotation extends Functions
 
 				// echo $file_path;exit;
 				$result = array();
-				$pdfUrl = ADMINSITEURL . "pdf/orders/" . $fileName . "/" . $fileName . '.pdf';
+				$pdfUrl = ADMINSITEURL . "pdf/orders/" . $fileName . "/" . $fileName . '.pdf?v=' . time();
 				$result['pdf'] = $pdfUrl;
 				$result['file_url'] = $pdfUrl;
 				$result['file_name'] = $fileName . '.pdf';
 				$result['pdf_ok'] = 1;
+				$result['pdf_pages'] = $pageCount;
+				$result['pdf_size'] = $pdfBytes;
 
 
 				$reply = array(
