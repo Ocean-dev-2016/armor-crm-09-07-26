@@ -40,8 +40,9 @@ $quotationPrintTitle = preg_replace('/\s+/', ' ', $quotationPrintTitle);
 $quotationPrintTitle = trim($quotationPrintTitle);
 
 $isPrintMode = (isset($_REQUEST['print']) && $_REQUEST['print'] == '1') || (isset($_REQUEST['p']) && $_REQUEST['p'] == '1');
-if ($isPrintMode) {
-	@ini_set('memory_limit', '512M');
+$isAppPdfMode = isset($_REQUEST['app_pdf']) && $_REQUEST['app_pdf'] == '1';
+if ($isPrintMode || $isAppPdfMode) {
+	@ini_set('memory_limit', '1024M');
 	@set_time_limit(180);
 }
 $quotationViewEmbedded = (basename($_SERVER['SCRIPT_NAME']) !== 'quotation_view_new_quotation_new_1.php');
@@ -723,9 +724,11 @@ $quotationViewStandalone = !$quotationViewEmbedded;
 		<?php } ?>
 	</style>
 	<?php
-	require_once('../include/quotation_pi_suggest_products_helper.php');
-	if ($quotationViewStandalone) {
-		echo armor_quotation_pi_suggest_styles();
+	if (!$isAppPdfMode) {
+		require_once('../include/quotation_pi_suggest_products_helper.php');
+		if ($quotationViewStandalone) {
+			echo armor_quotation_pi_suggest_styles();
+		}
 	}
 	?>
 <?php if ($quotationViewStandalone) { ?>
@@ -951,9 +954,11 @@ $quotationViewStandalone = !$quotationViewEmbedded;
 		// Summary layout uses separate terms row + details block (no rowspan) for clean print breaks.
 		?>
 	</div><!-- /.quote-main-body -->
+	<?php if (!$isAppPdfMode) { ?>
 	<div class="quote-suggest-body">
 	<?php armor_quotation_pi_echo_suggest_block_for_quotation($db, $quotation_id, $quotationViewEmbedded); ?>
 	</div>
+	<?php } ?>
 	<div class="quote-summary-body">
 		<table class="quote-table quote-summary-terms-table">
 			<tbody>

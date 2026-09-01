@@ -3183,26 +3183,34 @@ class Quotation extends Functions
 
 			if ($count > 0) {
 
-				//$d=file_get_contents(ADMINSITEURL.'order_view_new.php?order_id='.$order_id.'');
-				//$d.=$string;
-
-				// $d = file_get_contents(ADMINSITEURL_STATIC . 'bbsales_tracking/quotation_view_new_quotation_new_1.php?quotation_id=' . $id . '');
-				
-				$body_url = ADMINSITEURL . 'quotation_view_new_quotation_new_1.php?quotation_id=' . $id;
+				$body_url = ADMINSITEURL . 'quotation_view_new_quotation_new_1.php?quotation_id=' . urlencode($id) . '&p=1&app_pdf=1';
 				$d = @file_get_contents($body_url);
-				if(empty($d)) {
+				if (empty($d)) {
 					$ch = curl_init();
 					curl_setopt($ch, CURLOPT_URL, $body_url);
 					curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 					curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
 					curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+					curl_setopt($ch, CURLOPT_TIMEOUT, 120);
 					$d = curl_exec($ch);
 					curl_close($ch);
 				}
-				//$d=file_get_contents(ADMINSITEURL.'quotation_view_new_quotation.php?quotation_id='.$id.'');
-				// $d=file_get_contents(ADMINSITEURL.'quotation_view_new_quotation_new.php?quotation_id='.$id.'');
-				include_once dirname(__FILE__) . '/../bbsales_tracking/include/mbstring_polyfill.php';
-				require('../bbsales_tracking/mpdf60/mpdf.php');
+
+				if (trim((string) $d) === '') {
+					return array(
+						"ack" => 0,
+						"developer_msg" => "Quotation HTML could not be loaded for PDF.",
+						"ack_msg" => "Quotation PDF Not Generate!!"
+					);
+				}
+
+				if (!armor_prepare_mpdf_environment('1024M', 180)) {
+					return array(
+						"ack" => 0,
+						"developer_msg" => "mPDF/mbstring is not available on server.",
+						"ack_msg" => "Quotation PDF Not Generate!!"
+					);
+				}
 
 				$mpdf = new mPDF(
 					'',    // mode - default ''
@@ -3238,12 +3246,12 @@ class Quotation extends Functions
 				$customer_id = $this->db->rp_getValue("quotation_detail", "customer_id", "id='" . $id . "'");
 				$quotation_no = $this->db->rp_getValue("quotation_detail", "quotation_no", "id='" . $id . "'");
 
-				$last_id = $order_id;
+				$last_id = $id;
 				$flag = "Application";
 				$ctable = "quotation_detail";
 				$module_name = "Quotation";
 				$log_description = $module_name . " " . $quotation_no . " PDF Download By " . $sales_name . " ON " . date("Y-m-d H:i:s");
-				$this->db->insertLog($ctable, $last_id, "insert", "", $insert, 0, $log_description, $flag, $module_name, $sales_id, $customer_id);
+				$this->db->insertLog($ctable, $last_id, "insert", "", array(), 0, $log_description, $flag, $module_name, $sales_id, $customer_id);
 				/*LOG eNTRY*/
 
 				$uname	= str_replace(" ", "-", stripslashes($this->db->rp_getValue("quotation_detail", "company_name", "id='" . $id . "'", 0)));
@@ -3253,22 +3261,28 @@ class Quotation extends Functions
 				//$fileName = "Quotation_".SITENAME."_".date('d_m_Y')."_".$quotation_no."_".$uname.'.pdf'; 
 				$fileName = date('d_m_Y') . "_" . "Quotation_" . $quotation_no . 'pdf';
 
+				$ordersPdfBase = dirname(__FILE__) . '/../bbsales_tracking/pdf/orders/';
+				$ordersPdfDir = $ordersPdfBase . $fileName . '/';
 
-				if (!is_dir($fileName)) {
-
-					mkdir(ORDERS_PDF . $fileName);
+				if (!is_dir($ordersPdfDir)) {
+					@mkdir($ordersPdfDir, 0755, true);
 				}
 
-				$pdf_file_path	= ORDERS_PDF . $fileName . "/" . $fileName . '.pdf';
-
-
+				$pdf_file_path = $ordersPdfDir . $fileName . '.pdf';
 
 				if (file_exists($pdf_file_path)) {
-
 					unlink($pdf_file_path);
 				}
 
 				$mpdf->Output($pdf_file_path);
+
+				if (!file_exists($pdf_file_path) || filesize($pdf_file_path) < 50) {
+					return array(
+						"ack" => 0,
+						"developer_msg" => "PDF file was not created. Check folder permissions.",
+						"ack_msg" => "Quotation PDF Not Generate!!"
+					);
+				}
 
 				$file_path = $pdf_file_path;
 
