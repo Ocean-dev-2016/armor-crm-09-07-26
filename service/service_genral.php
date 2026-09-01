@@ -2937,9 +2937,14 @@ if ($is_valid_api_key) {
 					}
 
 					$quotation_clean_no = str_replace(array("/", "\\", " "), "-", stripslashes($quotation_detail_d['quotation_no']));
-					$quotation_pdf_folder = date('d_m_Y', strtotime($quotation_raw_date)) . "_Quotation_" . $quotation_clean_no . 'pdf';
+					$quotation_pdf_folder = date('d_m_Y') . "_Quotation_" . $quotation_clean_no . 'pdf';
 					$quotation_pdf_filename = $quotation_pdf_folder . '.pdf';
-					$quotation_detail_d['pdf_url'] = ADMINSITEURL . "pdf/orders/" . $quotation_pdf_folder . "/" . $quotation_pdf_filename;
+					$quotation_pdf_local = dirname(__FILE__) . '/../bbsales_tracking/pdf/orders/' . $quotation_pdf_folder . '/' . $quotation_pdf_filename;
+					if (is_file($quotation_pdf_local) && filesize($quotation_pdf_local) > 100) {
+						$quotation_detail_d['pdf_url'] = ADMINSITEURL . "pdf/orders/" . $quotation_pdf_folder . "/" . $quotation_pdf_filename;
+					} else {
+						$quotation_detail_d['pdf_url'] = '';
+					}
 					$quotation_detail_d['file_url'] = $quotation_detail_d['pdf_url'];
 					$quotation_detail_d['pdf_name'] = $quotation_pdf_filename;
 					$quotation_detail_d['file_name'] = $quotation_pdf_filename;

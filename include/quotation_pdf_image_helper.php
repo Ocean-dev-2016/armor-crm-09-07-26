@@ -250,8 +250,14 @@ if (!function_exists('armor_pdf_compress_images_in_html')) {
 				return $tag;
 			}
 
-			$fileSrc = str_replace('\\', '/', $filePath);
-			$newTag = preg_replace('/\bsrc=(["\'])([^"\']+)\1/i', 'src="' . $fileSrc . '"', $tag, 1);
+			$jpegBytes = @file_get_contents($filePath);
+			if ($jpegBytes === false || $jpegBytes === '') {
+				return $tag;
+			}
+			$dataUri = 'data:image/jpeg;base64,' . base64_encode($jpegBytes);
+			unset($jpegBytes);
+
+			$newTag = preg_replace('/\bsrc=(["\'])([^"\']+)\1/i', 'src="' . $dataUri . '"', $tag, 1);
 			$newTag = preg_replace('/\sstyle=(["\'])[^"\']*\1/i', '', $newTag);
 			$newTag = preg_replace('/<img/i', '<img style="max-width:' . $maxW . 'px;max-height:' . $maxH . 'px;"', $newTag, 1);
 			return $newTag;

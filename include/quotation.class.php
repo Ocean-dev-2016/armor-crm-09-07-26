@@ -3298,6 +3298,20 @@ class Quotation extends Functions
 		return true;
 	}
 
+	private function validateQuotationPdfFile($filePath)
+	{
+		if (!is_file($filePath) || filesize($filePath) < 100) {
+			return false;
+		}
+		$fh = @fopen($filePath, 'rb');
+		if (!$fh) {
+			return false;
+		}
+		$head = fread($fh, 5);
+		fclose($fh);
+		return ($head === '%PDF-');
+	}
+
 	public function DownloadQuotation($id)
 	{
 		if ($id) {
@@ -3401,7 +3415,16 @@ class Quotation extends Functions
 					@unlink($pdf_file_path);
 				}
 
-				$mpdf->Output($pdf_file_path);
+				$mpdf->Output($pdf_file_path, 'F');
+
+				if (!$this->validateQuotationPdfFile($pdf_file_path)) {
+					@unlink($pdf_file_path);
+					return array(
+						"ack" => 0,
+						"developer_msg" => "PDF file is invalid or corrupted.",
+						"ack_msg" => "Quotation PDF Not Generate!!"
+					);
+				}
 
 				if (!file_exists($pdf_file_path) || filesize($pdf_file_path) < 50) {
 					return array(
@@ -3431,13 +3454,15 @@ class Quotation extends Functions
 				}
 
 				$result = array();
-				$pdfUrl = ADMINSITEURL . "pdf/orders/" . $fileName . "/" . $fileName . '.pdf?v=' . time();
+				$pdfUrl = ADMINSITEURL . "pdf/orders/" . $fileName . "/" . $fileName . '.pdf';
 				$result['pdf'] = $pdfUrl;
 				$result['file_url'] = $pdfUrl;
 				$result['file_name'] = $fileName . '.pdf';
 				$result['pdf_ok'] = 1;
 				$result['pdf_pages'] = $pageCount;
 				$result['pdf_size'] = $pdfBytes;
+				$result['mime_type'] = 'application/pdf';
+				$result['content_type'] = 'application/pdf';
 
 				$reply = array(
 					"ack" => 1,
