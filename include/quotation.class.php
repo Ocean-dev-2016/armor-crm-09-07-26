@@ -3183,7 +3183,8 @@ class Quotation extends Functions
 
 			if ($count > 0) {
 
-				$body_url = ADMINSITEURL . 'quotation_view_new_quotation_new_1.php?quotation_id=' . urlencode($id) . '&p=1&app_pdf=1';
+				// Same HTML as web Print button (quotation_viewer.php → printReport)
+				$body_url = ADMINSITEURL . 'quotation_view_new_quotation_new_1.php?quotation_id=' . urlencode($id) . '&print=1';
 				$d = @file_get_contents($body_url);
 				if (empty($d)) {
 					$ch = curl_init();
@@ -3204,11 +3205,11 @@ class Quotation extends Functions
 					);
 				}
 
-				@ini_set('memory_limit', '1024M');
-				@set_time_limit(180);
+				@ini_set('memory_limit', '2048M');
+				@set_time_limit(300);
 
 				if (function_exists('armor_prepare_mpdf_environment')) {
-					if (!armor_prepare_mpdf_environment('1024M', 180)) {
+					if (!armor_prepare_mpdf_environment('2048M', 300)) {
 						return array(
 							"ack" => 0,
 							"developer_msg" => "mPDF/mbstring is not available on server.",
@@ -3256,6 +3257,8 @@ class Quotation extends Functions
 
 					'P'
 				);  // L - landscape, P - portrait
+				$mpdf->simpleTables = true;
+				$mpdf->packTableData = true;
 				$mpdf->autoScriptToLang = true;
 				$mpdf->baseScript = 1; // Use Gujarati script
 				$mpdf->autoLangToFont = true;
@@ -3309,10 +3312,20 @@ class Quotation extends Functions
 
 				// echo $file_path;exit;
 				$result = array();
-				$result['pdf'] = ADMINSITEURL . "pdf/orders/" . $fileName . "/" . $fileName . '.pdf';
+				$pdfUrl = ADMINSITEURL . "pdf/orders/" . $fileName . "/" . $fileName . '.pdf';
+				$result['pdf'] = $pdfUrl;
+				$result['file_url'] = $pdfUrl;
+				$result['file_name'] = $fileName . '.pdf';
+				$result['pdf_ok'] = 1;
 
 
-				$reply = array("ack" => 1, "developer_msg" => "Quotation PDF Generate Successfully", "ack_msg" => "Quotation PDF Generate Successfully", "result" => $result);
+				$reply = array(
+					"ack" => 1,
+					"developer_msg" => "Quotation PDF Generate Successfully",
+					"ack_msg" => "Quotation PDF Generate Successfully",
+					"file_url" => $pdfUrl,
+					"result" => $result
+				);
 				// echo $reply;exit;
 				return $reply;
 			} else {
