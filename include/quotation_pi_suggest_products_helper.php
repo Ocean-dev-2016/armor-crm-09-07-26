@@ -2491,8 +2491,6 @@ if (!function_exists('armor_quotation_pi_render_mpdf_item')) {
 
 	{
 
-		$img = htmlspecialchars($item['image'], ENT_QUOTES);
-
 		$name = htmlspecialchars($item['name'], ENT_QUOTES);
 
 		$catno = htmlspecialchars($item['catno'], ENT_QUOTES);
@@ -2508,8 +2506,6 @@ if (!function_exists('armor_quotation_pi_render_mpdf_item')) {
 		$html = '<table class="qp-prod-card" cellpadding="0" cellspacing="0" width="100%">';
 
 		$html .= '<tr><td align="right" style="font-size:7px;">Discount <strong>' . $discountPer . '%</strong></td></tr>';
-
-		$html .= '<tr><td align="center"><img src="' . $img . '" style="width:42px;height:auto;max-height:42px;" alt=""></td></tr>';
 
 		$html .= '<tr><td align="center" style="font-size:8px;color:#555;"><strong>' . $catno . '</strong></td></tr>';
 

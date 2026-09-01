@@ -3233,8 +3233,11 @@ class Quotation extends Functions
 	{
 		$html = (string) $html;
 		$html = preg_replace('/<script\b[^>]*>[\s\S]*?<\/script>/i', '', $html);
-		$html = preg_replace('/<style[^>]*>[\s\S]*?quote-print-toolbar[\s\S]*?<\/style>/i', '', $html);
+		$html = preg_replace('/<style\b[^>]*>[\s\S]*?<\/style>/i', '', $html);
 		$html = preg_replace('/<div[^>]*class="[^"]*quote-print-toolbar[^"]*"[^>]*>[\s\S]*?<\/div>/i', '', $html);
+		$html = preg_replace('/<img[^>]*>/i', '', $html);
+		$html = preg_replace('/background[^:]*:\s*[^;]*url\([^)]*\)[^;]*;?/i', '', $html);
+		$html = preg_replace('/\sclass="[^"]*addwatermark[^"]*"/i', '', $html);
 		$html = preg_replace('/(<\/tr>)\s*(?:<br\s*\/?>\s*)+/i', '$1', $html);
 		$html = preg_replace('/(?:<br\s*\/?>\s*)+(<tr\b)/i', '$1', $html);
 		$html = preg_replace('/(<tbody[^>]*>)\s*(?:<br\s*\/?>\s*)+/i', '$1', $html);
@@ -3243,17 +3246,7 @@ class Quotation extends Functions
 		$html = preg_replace('/\s+on\w+="[^"]*"/i', '', $html);
 		$html = preg_replace('/position\s*:\s*absolute\s*;?/i', '', $html);
 		$html = preg_replace('/display\s*:\s*flex[^;]*;?/i', '', $html);
-		$html = preg_replace_callback('/<img([^>]*?)>/i', function ($m) {
-			$tag = $m[0];
-			if (stripos($tag, 'max-width') === false && stripos($tag, 'max-height') === false) {
-				if (stripos($tag, 'quote-header-img') !== false || stripos($tag, 'quote-footer-img') !== false) {
-					$tag = preg_replace('/<img/i', '<img style="max-width:100%;max-height:90px;"', $tag, 1);
-				} else {
-					$tag = preg_replace('/<img/i', '<img style="max-width:50px;max-height:50px;"', $tag, 1);
-				}
-			}
-			return $tag;
-		}, $html);
+		$html = preg_replace('/width:\s*250mm[^;]*;?/i', 'width:100%;', $html);
 		return $html;
 	}
 
@@ -3272,11 +3265,31 @@ class Quotation extends Functions
 	private function quotationPdfMpdfCss()
 	{
 		return '<style>
-			body { margin: 0; padding: 0; font-family: sans-serif; font-size: 11px; }
-			table { border-collapse: collapse; }
-			img { max-width: 80px; max-height: 80px; }
-			.qp-suggest-print-grid img { max-width: 42px !important; max-height: 42px !important; }
+			body { margin: 0; padding: 4px; font-family: sans-serif; font-size: 10px; }
+			table { border-collapse: collapse; width: 100%; }
+			td, th { border: 1px solid #595959; padding: 3px; font-size: 10px; }
+			.qp-suggest-print-header { text-align: center; padding: 6px; background: #4a4a4a; color: #fff; }
+			.qp-suggest-print-title { font-size: 12px; font-weight: bold; }
+			.qp-suggest-cat-header { background: #e8e8e8; font-weight: bold; text-align: center; }
 		</style>';
+	}
+
+	private function writeQuotationPdfHtml($mpdf, $html)
+	{
+		$chunkSize = 180000;
+		$html = (string) $html;
+		$mpdf->WriteHTML($this->quotationPdfMpdfCss());
+		if (strlen($html) <= $chunkSize) {
+			$mpdf->WriteHTML($html);
+			return true;
+		}
+		$offset = 0;
+		$len = strlen($html);
+		while ($offset < $len) {
+			$mpdf->WriteHTML(substr($html, $offset, $chunkSize));
+			$offset += $chunkSize;
+		}
+		return true;
 	}
 
 	public function DownloadQuotation($id)
@@ -3297,17 +3310,11 @@ class Quotation extends Functions
 					);
 				}
 
-				@ini_set('memory_limit', '512M');
+				@ini_set('memory_limit', '768M');
 				@set_time_limit(180);
 
 				if (function_exists('armor_prepare_mpdf_environment')) {
-					if (!armor_prepare_mpdf_environment('512M', 180)) {
-						return array(
-							"ack" => 0,
-							"developer_msg" => "mPDF/mbstring is not available on server.",
-							"ack_msg" => "Quotation PDF Not Generate!!"
-						);
-					}
+					armor_prepare_mpdf_environment('768M', 180);
 				} else {
 					$polyfill = dirname(__FILE__) . '/mbstring_polyfill.php';
 					if (!is_file($polyfill) || filesize($polyfill) < 50) {
@@ -3348,7 +3355,11 @@ class Quotation extends Functions
 				if (property_exists($mpdf, 'simpleTables')) {
 					$mpdf->simpleTables = true;
 				}
-				$mpdf->WriteHTML($this->quotationPdfMpdfCss() . $d);
+				if (property_exists($mpdf, 'allow_html_optional_endtags')) {
+					$mpdf->allow_html_optional_endtags = true;
+				}
+				$this->writeQuotationPdfHtml($mpdf, $d);
+				unset($d);
 
 				/*LOG eNTRY*/
 				$sales_id = $this->db->rp_getValue("quotation_detail", "sales_id", "id='" . $id . "'", 0);
