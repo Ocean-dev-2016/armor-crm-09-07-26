@@ -87,7 +87,8 @@ if (!function_exists('armor_pdf_export_sanitize_html')) {
 		$html = preg_replace('/page-break-after\s*:\s*always[^;]*;?/i', '', $html);
 
 		require_once dirname(__FILE__) . '/quotation_pdf_image_helper.php';
-		$html = armor_pdf_compress_images_in_html($html, false);
+		// Local cached JPEG paths — faster than base64 for mPDF on live server.
+		$html = armor_pdf_compress_images_in_html($html, true);
 		$html = armor_pdf_strip_remaining_remote_images($html);
 
 		return $html;
@@ -255,6 +256,12 @@ if (!function_exists('armor_pdf_export_public_url')) {
 if (!function_exists('armor_pdf_export_generate')) {
 	function armor_pdf_export_generate($viewFileName, $requestParams, $validMarkers, $saveRelativePath)
 	{
+		@set_time_limit(300);
+		@ini_set('max_execution_time', '300');
+		@ini_set('memory_limit', '768M');
+		if (function_exists('ignore_user_abort')) {
+			@ignore_user_abort(true);
+		}
 		$html = armor_pdf_export_fetch_view_html($viewFileName, $requestParams, $validMarkers);
 		$html = armor_pdf_export_sanitize_html($html);
 

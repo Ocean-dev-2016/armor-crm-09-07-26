@@ -2337,6 +2337,8 @@ if ($is_valid_api_key) {
 				$db->printJSON($ack);
 			}
 		} else if ($service == "download_order_pdf" || $service == 98) {
+			@set_time_limit(300);
+			@ini_set('max_execution_time', '300');
 			$order_id = isset($_REQUEST['order_id']) ? $_REQUEST['order_id'] : (isset($_REQUEST['id']) ? $_REQUEST['id'] : "");
 
 			if (!empty($order_id)) {
@@ -3008,6 +3010,8 @@ if ($is_valid_api_key) {
 
 		// this my code Dhaval
 		else if ($service == "invoice_pdf" || $service == 163) {
+			@set_time_limit(300);
+			@ini_set('max_execution_time', '300');
 			$type = isset($_REQUEST['type']) ? $_REQUEST['type'] : "";
 			$id = isset($_REQUEST['id']) ? $_REQUEST['id'] : (isset($_REQUEST['quotation_id']) ? $_REQUEST['quotation_id'] : (isset($_REQUEST['order_id']) ? $_REQUEST['order_id'] : ""));
 

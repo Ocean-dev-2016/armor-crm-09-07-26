@@ -250,20 +250,7 @@ if (!function_exists('armor_pdf_resize_to_jpeg_bytes_from_file')) {
 			return '';
 		}
 
-		if (extension_loaded('imagick') && class_exists('Imagick')) {
-			try {
-				$im = new Imagick($path);
-				$im->setImageCompressionQuality((int) $quality);
-				$im->thumbnailImage((int) $maxW, (int) $maxH, true, true);
-				$im->setImageFormat('jpeg');
-				$jpeg = $im->getImageBlob();
-				$im->clear();
-				$im->destroy();
-				return $jpeg ? $jpeg : '';
-			} catch (Exception $e) {
-			}
-		}
-
+		// GD direct-from-file is faster than Imagick for small PDF thumbnails.
 		if (function_exists('imagecreatefromjpeg')) {
 			$ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
 			$img = false;
@@ -322,6 +309,14 @@ if (!function_exists('armor_pdf_compress_image_src')) {
 			return $GLOBALS['armor_pdf_image_cache'][$key];
 		}
 
+		$local = armor_pdf_resolve_local_image_path($src);
+		if ($local !== '' && is_file($local)) {
+			$key = md5($local . '|' . filesize($local) . '|' . @filemtime($local) . '|' . $maxW . 'x' . $maxH . '|' . $quality);
+			if (isset($GLOBALS['armor_pdf_image_cache'][$key])) {
+				return $GLOBALS['armor_pdf_image_cache'][$key];
+			}
+		}
+
 		$cacheFile = armor_pdf_image_cache_dir() . $key . '.jpg';
 		if (is_file($cacheFile) && filesize($cacheFile) > 20) {
 			$GLOBALS['armor_pdf_image_cache'][$key] = $cacheFile;
@@ -329,7 +324,6 @@ if (!function_exists('armor_pdf_compress_image_src')) {
 		}
 
 		$jpeg = '';
-		$local = armor_pdf_resolve_local_image_path($src);
 		if ($local !== '' && is_file($local)) {
 			$jpeg = armor_pdf_resize_to_jpeg_bytes_from_file($local, $maxW, $maxH, $quality);
 		}
@@ -347,21 +341,9 @@ if (!function_exists('armor_pdf_compress_image_src')) {
 		}
 
 		@file_put_contents($cacheFile, $jpeg);
-
-		// Optional webp cache copy (smaller on disk for reuse)
-		if (function_exists('imagecreatefromstring') && function_exists('imagewebp')) {
-			$img = @imagecreatefromstring($jpeg);
-			if ($img) {
-				@imagewebp($img, armor_pdf_image_cache_dir() . $key . '.webp', 60);
-				imagedestroy($img);
-			}
-		}
 		unset($jpeg);
 
 		$GLOBALS['armor_pdf_image_cache'][$key] = $cacheFile;
-		if (function_exists('gc_collect_cycles')) {
-			gc_collect_cycles();
-		}
 		return $cacheFile;
 	}
 }
@@ -422,9 +404,11 @@ if (!function_exists('armor_pdf_compress_images_in_html')) {
 	function armor_pdf_compress_images_in_html($html, $useLocalPaths = false)
 	{
 		armor_pdf_image_cache_reset();
-		$processed = 0;
+		if (!isset($GLOBALS['armor_pdf_src_map'])) {
+			$GLOBALS['armor_pdf_src_map'] = array();
+		}
 
-		$html = preg_replace_callback('/<img\b[^>]*>/i', function ($m) use (&$processed, $useLocalPaths) {
+		$html = preg_replace_callback('/<img\b[^>]*>/i', function ($m) use ($useLocalPaths) {
 			$tag = $m[0];
 			if (!preg_match('/\bsrc=(["\'])([^"\']+)\1/i', $tag, $srcMatch)) {
 				return $tag;
@@ -436,14 +420,21 @@ if (!function_exists('armor_pdf_compress_images_in_html')) {
 			}
 
 			list($maxW, $maxH, $quality) = armor_pdf_guess_image_limits($tag);
+			$mapKey = $src;
+			$localForKey = armor_pdf_resolve_local_image_path($src);
+			if ($localForKey !== '') {
+				$mapKey = $localForKey;
+			}
+
 			if (!armor_pdf_is_valid_image_src($src)) {
 				$filePath = armor_pdf_blank_jpeg_path();
+			} elseif (isset($GLOBALS['armor_pdf_src_map'][$mapKey]) && is_file($GLOBALS['armor_pdf_src_map'][$mapKey])) {
+				$filePath = $GLOBALS['armor_pdf_src_map'][$mapKey];
 			} else {
-				$processed++;
-				if (function_exists('gc_collect_cycles')) {
-					gc_collect_cycles();
-				}
 				$filePath = armor_pdf_compress_image_src($src, $maxW, $maxH, $quality);
+				if ($filePath !== '' && is_file($filePath)) {
+					$GLOBALS['armor_pdf_src_map'][$mapKey] = $filePath;
+				}
 			}
 			if ($filePath === '' || !is_file($filePath)) {
 				$filePath = armor_pdf_blank_jpeg_path();
