@@ -264,6 +264,42 @@ if (!function_exists('armor_pdf_resize_to_jpeg_bytes_from_file')) {
 			}
 		}
 
+		if (function_exists('imagecreatefromjpeg')) {
+			$ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+			$img = false;
+			if ($ext === 'jpg' || $ext === 'jpeg') {
+				$img = @imagecreatefromjpeg($path);
+			} elseif ($ext === 'png' && function_exists('imagecreatefrompng')) {
+				$img = @imagecreatefrompng($path);
+			} elseif ($ext === 'gif' && function_exists('imagecreatefromgif')) {
+				$img = @imagecreatefromgif($path);
+			} elseif ($ext === 'webp' && function_exists('imagecreatefromwebp')) {
+				$img = @imagecreatefromwebp($path);
+			}
+			if ($img) {
+				$w = imagesx($img);
+				$h = imagesy($img);
+				if ($w > 0 && $h > 0) {
+					$ratio = min($maxW / $w, $maxH / $h, 1);
+					$nw = max(1, (int) floor($w * $ratio));
+					$nh = max(1, (int) floor($h * $ratio));
+					$dst = imagecreatetruecolor($nw, $nh);
+					$white = imagecolorallocate($dst, 255, 255, 255);
+					imagefill($dst, 0, 0, $white);
+					imagecopyresampled($dst, $img, 0, 0, 0, 0, $nw, $nh, $w, $h);
+					imagedestroy($img);
+					ob_start();
+					imagejpeg($dst, null, (int) $quality);
+					imagedestroy($dst);
+					$jpeg = ob_get_clean();
+					if ($jpeg) {
+						return $jpeg;
+					}
+				}
+				imagedestroy($img);
+			}
+		}
+
 		$bytes = @file_get_contents($path);
 		if ($bytes === false || $bytes === '') {
 			return '';
@@ -294,9 +330,10 @@ if (!function_exists('armor_pdf_compress_image_src')) {
 
 		$jpeg = '';
 		$local = armor_pdf_resolve_local_image_path($src);
-		if ($local !== '' && is_file($local) && filesize($local) > 1048576) {
+		if ($local !== '' && is_file($local)) {
 			$jpeg = armor_pdf_resize_to_jpeg_bytes_from_file($local, $maxW, $maxH, $quality);
-		} else {
+		}
+		if ($jpeg === '') {
 			$bytes = armor_pdf_load_image_bytes($src);
 			if ($bytes !== false && $bytes !== '') {
 				$jpeg = armor_pdf_resize_to_jpeg_bytes($bytes, $maxW, $maxH, $quality);
@@ -349,6 +386,38 @@ if (!function_exists('armor_pdf_guess_image_limits')) {
 	}
 }
 
+if (!function_exists('armor_pdf_blank_jpeg_data_uri')) {
+	function armor_pdf_blank_jpeg_data_uri()
+	{
+		$file = armor_pdf_blank_jpeg_path();
+		if ($file === '' || !is_file($file)) {
+			return 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+		}
+		$bytes = @file_get_contents($file);
+		return ($bytes !== false && $bytes !== '') ? 'data:image/jpeg;base64,' . base64_encode($bytes) : 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+	}
+}
+
+if (!function_exists('armor_pdf_strip_remaining_remote_images')) {
+	function armor_pdf_strip_remaining_remote_images($html)
+	{
+		$blank = armor_pdf_blank_jpeg_data_uri();
+		return preg_replace_callback('/<img\b[^>]*>/i', function ($m) use ($blank) {
+			$tag = $m[0];
+			if (!preg_match('/\bsrc=(["\'])([^"\']+)\1/i', $tag, $srcMatch)) {
+				return $tag;
+			}
+			$src = $srcMatch[2];
+			if (strpos($src, 'data:image') === 0) {
+				return $tag;
+			}
+			$newTag = preg_replace('/\bsrc=(["\'])([^"\']+)\1/i', 'src="' . $blank . '"', $tag, 1);
+			$newTag = preg_replace('/<img/i', '<img style="max-width:42px;max-height:42px;"', $newTag, 1);
+			return $newTag;
+		}, (string) $html);
+	}
+}
+
 if (!function_exists('armor_pdf_compress_images_in_html')) {
 	function armor_pdf_compress_images_in_html($html, $useLocalPaths = false)
 	{
@@ -375,6 +444,9 @@ if (!function_exists('armor_pdf_compress_images_in_html')) {
 					gc_collect_cycles();
 				}
 				$filePath = armor_pdf_compress_image_src($src, $maxW, $maxH, $quality);
+			}
+			if ($filePath === '' || !is_file($filePath)) {
+				$filePath = armor_pdf_blank_jpeg_path();
 			}
 			if ($filePath === '' || !is_file($filePath)) {
 				return $tag;

@@ -27,18 +27,36 @@ if (!function_exists('armor_pdf_export_mpdf_css')) {
 	function armor_pdf_export_mpdf_css()
 	{
 		return '<style>
-			body { margin: 0; padding: 0; font-family: sans-serif; font-size: 11px; }
+			body { margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 11px; background: #fff; }
 			table { border-collapse: collapse; }
-			.main-container { width: 100%; max-width: 100%; padding: 4px; }
+			table, td, th { border: 1px solid #595959; }
+			.main-container { width: 100%; max-width: 100%; padding: 10px; }
 			.quote-wrap, .quote-main-body, .quote-suggest-body, .quote-summary-body { width: 100%; }
-			img { max-width: 50px; max-height: 50px; }
 			.quote-header-img, .quote-footer-img { max-width: 100% !important; max-height: 90px !important; width: auto !important; height: auto !important; }
-			.qp-suggest-print-header { text-align: center; padding: 6px; background: #4a4a4a; color: #fff; }
-			.qp-suggest-print-title { font-size: 12px; font-weight: bold; color: #fff; }
-			.qp-suggest-print-subtitle { font-size: 8px; color: #eee; }
-			.qp-suggest-cat-header { background: #e8e8e8; font-weight: bold; text-align: center; }
-			.qp-suggest-print-grid td { border: 1px solid #595959; width: 25%; }
-			.qp-suggest-print-grid img { max-width: 42px !important; max-height: 42px !important; }
+			.product-items-table img { max-width: 50px !important; max-height: 50px !important; }
+			img { max-width: 50px; max-height: 50px; }
+			.qp-suggest-wrap-table, .qp-suggest-wrap-table td { border: none !important; }
+			.qp-suggest-print-section { width: 100%; font-size: 9px; }
+			.qp-suggest-print-header { text-align: center; padding: 10px 8px; background: #4a4a4a; color: #fff; border-bottom: 1px solid #595959; }
+			.qp-suggest-print-title { font-size: 14px; font-weight: bold; text-transform: uppercase; color: #fff; }
+			.qp-suggest-print-subtitle { font-size: 10px; color: #e0e0e0; }
+			.qp-suggest-print-grid { width: 100%; border-collapse: collapse; table-layout: fixed; }
+			.qp-suggest-print-grid td.qp-suggest-print-cell { width: 25%; vertical-align: top; border: 1px solid #595959; padding: 0 !important; background: #fff; }
+			.qp-suggest-print-cell-empty { border: none !important; background: transparent !important; }
+			.qp-suggest-cat-header { background: #e8e8e8; font-weight: bold; text-align: center; font-size: 10px; padding: 4px; }
+			.qp-suggest-cell-inner { padding: 0 4px 2px; }
+			.qp-prod-card { width: 100%; border-collapse: collapse; table-layout: fixed; }
+			.qp-prod-card td { border: none !important; vertical-align: top; }
+			.qp-prod-badge-row { text-align: right !important; padding: 1px 2px 0 !important; }
+			.qp-prod-disc-label { border: 1px solid #d9534f; color: #d9534f; font-size: 8px; font-weight: bold; padding: 1px 3px; background: #fff; }
+			.qp-prod-disc { background: #e74c3c; color: #fff; font-size: 8px; font-weight: bold; padding: 1px 4px; border-radius: 8px; }
+			.qp-prod-img-cell { height: 38px; background: #f7f7f7; text-align: center; vertical-align: middle !important; padding: 1px !important; }
+			.qp-prod-img, .qp-suggest-print-grid img { max-width: 42px !important; max-height: 34px !important; }
+			.qp-prod-code-cell { font-size: 8.5px; font-weight: 600; color: #555 !important; }
+			.qp-prod-name-cell { font-size: 8px; line-height: 1.1; color: #000 !important; }
+			.qp-prod-price-line { color: #0a5c24 !important; font-weight: bold; font-size: 9px; }
+			.qp-prod-unit { color: #333 !important; font-size: 8px; font-weight: 600; }
+			.qp-suggest-product-row, .qp-prod-card, .qp-suggest-print-box { page-break-inside: auto !important; }
 		</style>';
 	}
 }
@@ -48,8 +66,10 @@ if (!function_exists('armor_pdf_export_sanitize_html')) {
 	{
 		$html = (string) $html;
 		$html = preg_replace('/<script\b[^>]*>[\s\S]*?<\/script>/i', '', $html);
-		$html = preg_replace('/<style[^>]*>[\s\S]*?quote-print-toolbar[\s\S]*?<\/style>/i', '', $html);
+		$html = preg_replace('/<style[^>]*>\s*\.quote-print-toolbar[\s\S]*?<\/style>/i', '', $html);
 		$html = preg_replace('/<div[^>]*class="[^"]*quote-print-toolbar[^"]*"[^>]*>[\s\S]*?<\/div>/i', '', $html);
+		// Drop embedded print CSS — mPDF uses armor_pdf_export_mpdf_css() (avoids page-break-inside:avoid explosion).
+		$html = preg_replace('/<style\b[^>]*>[\s\S]*?<\/style>/i', '', $html);
 		$html = preg_replace('/background[^:]*:\s*[^;]*url\([^)]*\)[^;]*;?/i', '', $html);
 		$html = preg_replace('/\sclass="[^"]*addwatermark[^"]*"/i', '', $html);
 		$html = preg_replace('/(<\/tr>)\s*(?:<br\s*\/?>\s*)+/i', '$1', $html);
@@ -61,9 +81,14 @@ if (!function_exists('armor_pdf_export_sanitize_html')) {
 		$html = preg_replace('/position\s*:\s*absolute\s*;?/i', '', $html);
 		$html = preg_replace('/display\s*:\s*flex[^;]*;?/i', '', $html);
 		$html = preg_replace('/width:\s*250mm[^;]*;?/i', 'width:100%;', $html);
+		$html = preg_replace('/page-break-inside\s*:\s*avoid[^;]*;?/i', 'page-break-inside:auto;', $html);
+		$html = preg_replace('/break-inside\s*:\s*avoid[^;]*;?/i', 'break-inside:auto;', $html);
+		$html = preg_replace('/page-break-before\s*:\s*always[^;]*;?/i', '', $html);
+		$html = preg_replace('/page-break-after\s*:\s*always[^;]*;?/i', '', $html);
 
 		require_once dirname(__FILE__) . '/quotation_pdf_image_helper.php';
-		$html = armor_pdf_compress_images_in_html($html, true);
+		$html = armor_pdf_compress_images_in_html($html, false);
+		$html = armor_pdf_strip_remaining_remote_images($html);
 
 		return $html;
 	}
@@ -83,10 +108,10 @@ if (!function_exists('armor_pdf_export_fetch_view_html')) {
 			$_GET[$k] = $v;
 			$_REQUEST[$k] = $v;
 		}
-		$_GET['app_pdf'] = '1';
-		$_GET['mpdf'] = '1';
-		$_REQUEST['app_pdf'] = '1';
-		$_REQUEST['mpdf'] = '1';
+		// Same HTML as web Print (print=1) — suggested products + layout match browser.
+		$_GET['print'] = '1';
+		$_REQUEST['print'] = '1';
+		unset($_GET['app_pdf'], $_GET['mpdf'], $_REQUEST['app_pdf'], $_REQUEST['mpdf']);
 
 		if (is_file($viewFile)) {
 			if (!defined('ARMOR_PDF_EXPORT_EMBED')) {
@@ -117,7 +142,7 @@ if (!function_exists('armor_pdf_export_fetch_view_html')) {
 		}
 
 		if (!$ok && defined('ADMINSITEURL')) {
-			$query = array_merge($requestParams, array('app_pdf' => '1', 'mpdf' => '1'));
+			$query = array_merge($requestParams, array('print' => '1'));
 			$bodyUrl = rtrim(ADMINSITEURL, '/') . '/' . ltrim($viewFileName, '/') . '?' . http_build_query($query);
 			$html = @file_get_contents($bodyUrl);
 			if (empty($html) && function_exists('curl_init')) {
@@ -176,18 +201,9 @@ if (!function_exists('armor_pdf_export_create_mpdf')) {
 if (!function_exists('armor_pdf_export_write_html')) {
 	function armor_pdf_export_write_html($mpdf, $html)
 	{
-		$chunkSize = 180000;
 		$html = armor_pdf_export_mpdf_css() . (string) $html;
-		if (strlen($html) <= $chunkSize) {
-			$mpdf->WriteHTML($html);
-			return true;
-		}
-		$offset = 0;
-		$len = strlen($html);
-		while ($offset < $len) {
-			$mpdf->WriteHTML(substr($html, $offset, $chunkSize));
-			$offset += $chunkSize;
-		}
+		// Do not split mid-tag — causes hundreds of blank mPDF pages.
+		$mpdf->WriteHTML($html);
 		return true;
 	}
 }
