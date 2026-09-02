@@ -1,5 +1,4 @@
 <?php
-ob_start();
 $page_id = 566;
 $page_slug = 'page_order_ajax';
 require_once("connect_in.php");
@@ -47,8 +46,11 @@ if ($isPrintMode || $isAppPdfMode || $isMpdfMode) {
 	@ini_set('memory_limit', '1024M');
 	@set_time_limit(180);
 }
-$quotationViewEmbedded = (basename($_SERVER['SCRIPT_NAME']) !== 'quotation_view_new_quotation_new_1.php');
+$quotationViewEmbedded = (basename($_SERVER['SCRIPT_NAME']) === 'quotation_viewer.php');
 $quotationViewStandalone = !$quotationViewEmbedded;
+if ($quotationViewStandalone && !$isPdfExportMode) {
+	ob_start();
+}
 ?>
 <?php if ($quotationViewStandalone) { ?><html>
 
@@ -768,12 +770,14 @@ $quotationViewStandalone = !$quotationViewEmbedded;
 	<?php
 	if ((!$isAppPdfMode || $isMpdfMode)) {
 		require_once('../include/quotation_pi_suggest_products_helper.php');
-		if ($quotationViewStandalone) {
-			if ($isPdfExportMode) {
-				echo armor_quotation_pi_mpdf_suggest_styles();
-			} else {
-				echo armor_quotation_pi_suggest_styles();
+		if ($isPdfExportMode) {
+			echo armor_quotation_pi_mpdf_suggest_styles();
+			if ($quotationViewStandalone) {
+				echo armor_quotation_pi_suggest_pi_view_overrides();
+				echo armor_quotation_pi_order_view_layout_styles();
 			}
+		} elseif ($quotationViewStandalone) {
+			echo armor_quotation_pi_suggest_styles();
 		}
 	}
 	?>

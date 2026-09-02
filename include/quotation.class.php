@@ -3174,66 +3174,55 @@ class Quotation extends Functions
 	/*for api function*/
 
 	/**
-	 * App PDF: quotation download template + mPDF-safe suggested products block.
+	 * App PDF: same web template (quotation_view_new_quotation_new_1.php) with suggested products.
 	 */
 	private function fetchQuotationPdfHtml($id)
 	{
-		$body_url = ADMINSITEURL . 'quotation_view_new_quotation_download.php?quotation_id=' . urlencode($id) . '&app_pdf=1';
-		$d = @file_get_contents($body_url);
-		if (empty($d)) {
-			$ch = curl_init();
-			curl_setopt($ch, CURLOPT_URL, $body_url);
-			curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-			curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-			curl_setopt($ch, CURLOPT_TIMEOUT, 120);
-			$d = curl_exec($ch);
-			curl_close($ch);
-		}
-		return (string) $d;
-	}
+		$id = (int) $id;
+		$d = '';
+		$old_get = isset($_GET) ? $_GET : array();
+		$old_req = isset($_REQUEST) ? $_REQUEST : array();
 
-	private function buildQuotationSuggestPdfHtml($quotationId)
-	{
-		require_once dirname(__FILE__) . '/quotation_pi_suggest_products_helper.php';
-		$quotationId = (int) $quotationId;
-		if ($quotationId <= 0) {
-			return '';
-		}
-		$customerId = (int) $this->db->rp_getValue('quotation_detail', 'customer_id', "id='" . $quotationId . "' AND isDelete=0", 0);
-		$excludeProIds = array();
-		$qItemsRes = $this->db->rp_getData('quotation_product_item', 'pro_id', "quotation_id='" . $quotationId . "' AND isDelete=0", '', 0);
-		if ($qItemsRes) {
-			while ($qi = mysqli_fetch_assoc($qItemsRes)) {
-				$excludeProIds[] = (int) $qi['pro_id'];
-			}
-		}
+		$_GET['quotation_id'] = $id;
+		$_GET['app_pdf'] = '1';
+		$_GET['mpdf'] = '1';
+		$_REQUEST['quotation_id'] = $id;
 		$_REQUEST['app_pdf'] = '1';
 		$_REQUEST['mpdf'] = '1';
-		return armor_quotation_pi_render_mpdf_block($this->db, $customerId, $excludeProIds, false);
-	}
 
-	private function appendQuotationSuggestToPdfHtml($html, $suggestHtml)
-	{
-		$suggestHtml = trim((string) $suggestHtml);
-		if ($suggestHtml === '') {
-			return $html;
+		$viewFile = dirname(__FILE__) . '/../bbsales_tracking/quotation_view_new_quotation_new_1.php';
+		if (is_file($viewFile)) {
+			ob_start();
+			include $viewFile;
+			$d = ob_get_clean();
 		}
-		if (preg_match('/(<\/table>\s*<table>\s*<tbody>\s*<tr>\s*<td colspan="5" rowspan="4")/i', $html, $m, PREG_OFFSET_CAPTURE)) {
-			$pos = $m[0][1];
-			return substr($html, 0, $pos) . $suggestHtml . "\n\n\t\t" . substr($html, $pos);
+
+		$_GET = $old_get;
+		$_REQUEST = $old_req;
+
+		if (trim((string) $d) === '') {
+			$body_url = ADMINSITEURL . 'quotation_view_new_quotation_new_1.php?quotation_id=' . urlencode($id) . '&app_pdf=1&mpdf=1';
+			$d = @file_get_contents($body_url);
+			if (empty($d)) {
+				$ch = curl_init();
+				curl_setopt($ch, CURLOPT_URL, $body_url);
+				curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+				curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+				curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+				curl_setopt($ch, CURLOPT_TIMEOUT, 180);
+				$d = curl_exec($ch);
+				curl_close($ch);
+			}
 		}
-		if (stripos($html, '</body>') !== false) {
-			return str_ireplace('</body>', $suggestHtml . '</body>', $html);
-		}
-		return $html . $suggestHtml;
+
+		return (string) $d;
 	}
 
 	private function sanitizeQuotationPdfHtml($html)
 	{
 		$html = (string) $html;
 		$html = preg_replace('/<script\b[^>]*>[\s\S]*?<\/script>/i', '', $html);
-		$html = preg_replace('/<style\b[^>]*>[\s\S]*?<\/style>/i', '', $html);
+		$html = preg_replace('/<style[^>]*>[\s\S]*?quote-print-toolbar[\s\S]*?<\/style>/i', '', $html);
 		$html = preg_replace('/<div[^>]*class="[^"]*quote-print-toolbar[^"]*"[^>]*>[\s\S]*?<\/div>/i', '', $html);
 		$html = preg_replace('/background[^:]*:\s*[^;]*url\([^)]*\)[^;]*;?/i', '', $html);
 		$html = preg_replace('/\sclass="[^"]*addwatermark[^"]*"/i', '', $html);
@@ -3268,23 +3257,25 @@ class Quotation extends Functions
 	private function quotationPdfMpdfCss()
 	{
 		return '<style>
-			body { margin: 0; padding: 4px; font-family: sans-serif; font-size: 10px; }
-			table { border-collapse: collapse; width: 100%; }
-			td, th { border: 1px solid #595959; padding: 3px; font-size: 10px; vertical-align: top; }
-			img { max-width: 55px; max-height: 55px; }
+			body { margin: 0; padding: 0; font-family: sans-serif; font-size: 11px; }
+			table { border-collapse: collapse; }
+			.main-container { width: 100%; max-width: 100%; padding: 4px; }
+			.quote-wrap, .quote-main-body, .quote-suggest-body, .quote-summary-body { width: 100%; }
+			img { max-width: 50px; max-height: 50px; }
+			.quote-header-img, .quote-footer-img { max-width: 100% !important; max-height: 90px !important; width: auto !important; height: auto !important; }
 			.qp-suggest-print-header { text-align: center; padding: 6px; background: #4a4a4a; color: #fff; }
 			.qp-suggest-print-title { font-size: 12px; font-weight: bold; color: #fff; }
 			.qp-suggest-print-subtitle { font-size: 8px; color: #eee; }
 			.qp-suggest-cat-header { background: #e8e8e8; font-weight: bold; text-align: center; }
 			.qp-suggest-print-grid td { border: 1px solid #595959; width: 25%; }
+			.qp-suggest-print-grid img { max-width: 42px !important; max-height: 42px !important; }
 		</style>';
 	}
 
 	private function writeQuotationPdfHtml($mpdf, $html)
 	{
 		$chunkSize = 180000;
-		$html = (string) $html;
-		$mpdf->WriteHTML($this->quotationPdfMpdfCss());
+		$html = $this->quotationPdfMpdfCss() . (string) $html;
 		if (strlen($html) <= $chunkSize) {
 			$mpdf->WriteHTML($html);
 			return true;
@@ -3319,7 +3310,6 @@ class Quotation extends Functions
 
 			if ($count > 0) {
 				$d = $this->fetchQuotationPdfHtml($id);
-				$d = $this->appendQuotationSuggestToPdfHtml($d, $this->buildQuotationSuggestPdfHtml($id));
 				$d = $this->sanitizeQuotationPdfHtml($d);
 
 				if (trim((string) $d) === '') {
@@ -3330,33 +3320,23 @@ class Quotation extends Functions
 					);
 				}
 
-				@ini_set('memory_limit', '768M');
-				@set_time_limit(180);
+				require_once dirname(__FILE__) . '/armor_mbstring_bootstrap.php';
 
-				if (function_exists('armor_prepare_mpdf_environment')) {
-					armor_prepare_mpdf_environment('768M', 180);
-				} else {
-					$polyfill = dirname(__FILE__) . '/mbstring_polyfill.php';
-					if (!is_file($polyfill) || filesize($polyfill) < 50) {
-						$polyfill = dirname(__FILE__) . '/../bbsales_tracking/include/mbstring_polyfill.php';
-					}
-					if (is_file($polyfill) && filesize($polyfill) > 50) {
-						include_once $polyfill;
-					}
-					if (!function_exists('mb_strlen')) {
-						return array(
-							"ack" => 0,
-							"developer_msg" => "mPDF/mbstring is not available on server.",
-							"ack_msg" => "Quotation PDF Not Generate!!"
-						);
-					}
-					require_once dirname(__FILE__) . '/../bbsales_tracking/mpdf60/mpdf.php';
+				@ini_set('memory_limit', '1024M');
+				@set_time_limit(300);
+
+				if (!armor_prepare_mpdf_environment('1024M', 300)) {
+					return array(
+						"ack" => 0,
+						"developer_msg" => "mPDF/mbstring is not available on server.",
+						"ack_msg" => "Quotation PDF Not Generate!!"
+					);
 				}
 
 				$mpdf = new mPDF(
 					'',
 					'A4',
-					15,
+					10,
 					'sans-serif',
 					1,
 					3,
@@ -3380,6 +3360,9 @@ class Quotation extends Functions
 				}
 				if (property_exists($mpdf, 'allow_html_optional_endtags')) {
 					$mpdf->allow_html_optional_endtags = true;
+				}
+				if (property_exists($mpdf, 'shrink_tables_to_fit')) {
+					$mpdf->shrink_tables_to_fit = 1;
 				}
 				$this->writeQuotationPdfHtml($mpdf, $d);
 				unset($d);
@@ -3436,7 +3419,7 @@ class Quotation extends Functions
 
 				$pdfBytes = filesize($pdf_file_path);
 				$pageCount = $this->countQuotationPdfPages($pdf_file_path);
-				if ($pageCount > 40) {
+				if ($pageCount > 80) {
 					@unlink($pdf_file_path);
 					return array(
 						"ack" => 0,
@@ -3444,7 +3427,7 @@ class Quotation extends Functions
 						"ack_msg" => "Quotation PDF Not Generate!!"
 					);
 				}
-				if ($pdfBytes > 15728640) {
+				if ($pdfBytes > 26214400) {
 					@unlink($pdf_file_path);
 					return array(
 						"ack" => 0,
