@@ -10,9 +10,9 @@ function armor_get_app_config()
 		'environment' => 'live',
 		'site_url' => 'https://armor-crm.oceanhub.co.in/',
 		'db_host' => 'localhost',
-		'db_user' => 'jrosvllq_armor_crm_09_07',
-		'db_pass' => 'ZA.e9[wUlgiu{6(%',
-		'db_name' => 'jrosvllq_armor_crm_09_07',
+		'db_user' => 'kxznassm_armorfire_crm',
+		'db_pass' => 'Armor1234!',
+		'db_name' => 'kxznassm_armorfire_crm',
 		'db_ports' => array(3306, 3307),
 	);
 
