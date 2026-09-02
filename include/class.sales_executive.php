@@ -1599,12 +1599,16 @@ class SalesExecutive extends Functions
 				require_once dirname(__FILE__) . '/armor_pdf_export_helper.php';
 
 				$date = date("d-m-Y");
-				$fileName = $date . "-" . $this->rp_createSlug($company_name) . "-" . $this->rp_createSlug($city);
+				$slugCompany = !empty($company_name) ? $this->db->rp_createSlug($company_name) : "order";
+				$slugCity = !empty($city) ? "-" . $this->db->rp_createSlug($city) : "";
+				$fileName = $date . "-" . $slugCompany . $slugCity . "-" . $order_id;
+				$saveRelative = $fileName . '.pdf';
+				$viewFile = 'view_order_new_1.php';
 				$gen = armor_pdf_export_generate(
-					'view_order_new_1.php',
-					array('order_id' => (int) $order_id),
-					array('quote-wrap', 'PRO FORMA', 'quote-main-body'),
-					$fileName . '.pdf'
+					$viewFile,
+					array('order_id' => (int) $order_id, 'print' => 1),
+					array('PRO FORMA', 'quote-wrap', 'quote-main-body', 'Order'),
+					$saveRelative
 				);
 
 				if (!$gen['ok']) {
@@ -1616,10 +1620,13 @@ class SalesExecutive extends Functions
 				}
 
 				$pdfUrl = $gen['url'];
+				$webUrl = SITEURL . 'bbsales_tracking/order_viewer.php?order_id=' . (int) $order_id;
 
 				$result = array();
 				$result['pdf'] = $pdfUrl;
 				$result['file_url'] = $pdfUrl;
+				$result['web_view_url'] = $webUrl;
+				$result['viewer_url'] = $webUrl;
 				$result['file_name'] = $fileName . '.pdf';
 				$result['lr_image'] = $file_path;
 

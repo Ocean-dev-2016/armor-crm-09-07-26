@@ -8,6 +8,7 @@ require_once("push_notification.class.php");
 require_once("channel_partner_helper.php");
 
 
+if (!class_exists('Quotation')) {
 class Quotation extends Functions
 {
 	public $db, $log, $product;
@@ -3185,13 +3186,16 @@ class Quotation extends Functions
 				require_once dirname(__FILE__) . '/armor_pdf_export_helper.php';
 
 				$quotation_no = str_replace("/", "-", stripslashes($this->db->rp_getValue("quotation_detail", "quotation_no", "id='" . $id . "'", 0)));
-				$fileName = date('d_m_Y') . "_" . "Quotation_" . $quotation_no . 'pdf';
-				$saveRelative = $fileName . '/' . $fileName . '.pdf';
-
+				if (empty($quotation_no)) {
+					$quotation_no = $id;
+				}
+				$fileName = date('d_m_Y') . "_" . "Quotation_" . $quotation_no;
+				$saveRelative = $fileName . '.pdf';
+				$viewFile = 'quotation_view_new_quotation_new_1.php';
 				$gen = armor_pdf_export_generate(
-					'quotation_view_new_quotation_new_1.php',
-					array('quotation_id' => (int) $id),
-					array('quote-wrap', 'QUOTATION', 'quote-main-body'),
+					$viewFile,
+					array('quotation_id' => (int) $id, 'print' => 1),
+					array('QUOTATION', 'quote-wrap', 'quote-main-body', 'Rate Confirmation'),
 					$saveRelative
 				);
 
@@ -3226,9 +3230,12 @@ class Quotation extends Functions
 				/*LOG eNTRY*/
 
 				$pdfUrl = $gen['url'];
+				$webUrl = SITEURL . 'bbsales_tracking/quotation_viewer.php?quotation_id=' . (int) $id;
 				$result = array();
 				$result['pdf'] = $pdfUrl;
 				$result['file_url'] = $pdfUrl;
+				$result['web_view_url'] = $webUrl;
+				$result['viewer_url'] = $webUrl;
 				$result['file_name'] = $fileName . '.pdf';
 				$result['pdf_ok'] = 1;
 				$result['pdf_pages'] = $pageCount;
@@ -3254,4 +3261,5 @@ class Quotation extends Functions
 			return $reply;
 		}
 	}
+}
 }

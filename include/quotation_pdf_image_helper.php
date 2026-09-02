@@ -183,7 +183,7 @@ if (!function_exists('armor_pdf_load_image_bytes')) {
 		// Never do slow loopback curl to own server during PDF generation
 		$host = parse_url($src, PHP_URL_HOST);
 		$curHost = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
-		if ($host && $curHost && stripos($host, $curHost) !== false) {
+		if ($host === 'localhost' || $host === '127.0.0.1' || ($curHost && stripos($host, $curHost) !== false)) {
 			return false;
 		}
 
@@ -371,19 +371,16 @@ if (!function_exists('armor_pdf_guess_image_limits')) {
 	function armor_pdf_guess_image_limits($imgTag)
 	{
 		$tag = strtolower($imgTag);
-		if (strpos($tag, 'quote-header') !== false || strpos($tag, 'craftbox_header') !== false || strpos($tag, 'view_logo') !== false || strpos($tag, 'max-height:70') !== false || strpos($tag, 'max-height:90') !== false) {
-			return array(520, 72, 55);
+		if (strpos($tag, 'quote-header') !== false || strpos($tag, 'craftbox_header') !== false || strpos($tag, 'view_logo') !== false || strpos($tag, 'quote-footer') !== false || strpos($tag, 'footer') !== false || strpos($tag, 'header') !== false) {
+			return array(1200, 260, 90);
 		}
-		if (strpos($tag, 'qp-prod') !== false || strpos($tag, '42px') !== false) {
-			return array(40, 40, 50);
+		if (strpos($tag, 'qp-prod') !== false) {
+			return array(42, 34, 75);
 		}
-		if (strpos($tag, 'width: 80px') !== false || strpos($tag, 'width:80px') !== false) {
-			return array(54, 54, 58);
+		if (strpos($tag, 'image-width') !== false || strpos($tag, 'product') !== false || strpos($tag, 'width: 50px') !== false || strpos($tag, 'width:50px') !== false || strpos($tag, 'width: 80px') !== false || strpos($tag, 'width:80px') !== false) {
+			return array(36, 36, 80);
 		}
-		if (strpos($tag, 'width: 50px') !== false || strpos($tag, 'width:50px') !== false) {
-			return array(48, 48, 58);
-		}
-		return array(50, 50, 58);
+		return array(40, 40, 75);
 	}
 }
 

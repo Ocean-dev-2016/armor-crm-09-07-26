@@ -1,8 +1,8 @@
 <?php
 $page_id=566;$page_slug='page_order_ajax';
 require_once("connect_in.php");
-include("../include/no_to_word.php");
-include("../include/quotation.class.php");
+require_once("../include/no_to_word.php");
+require_once("../include/quotation.class.php");
 $ObjQuotation=new Quotation();
 $ntw = new NumToWord_RP;
 	$quotation_id	= $_REQUEST['quotation_id'];

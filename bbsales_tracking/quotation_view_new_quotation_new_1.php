@@ -947,11 +947,11 @@ if ($quotationViewStandalone && !$isPdfExportMode && !defined('ARMOR_PDF_EXPORT_
 							<?php
 							if ($item['image_path'] != "") {
 							?>
-								<td colspan="1" class="image-width text-center"><img style="width: 50px;" src="<?php echo SITEURL . PRODUCT . $item['image_path'] ?>"></td>
+								<td colspan="1" class="image-width text-center" style="padding:2px;"><img style="max-width:34px;max-height:34px;display:inline-block;" src="<?php echo SITEURL . PRODUCT . $item['image_path'] ?>"></td>
 							<?php
 							} else {
 							?>
-								<td colspan="1" class="image-width text-center"><img style="width: 50px;" src="<?php echo SITEURL . PRODUCT . 'default.png' ?>"></td>
+								<td colspan="1" class="image-width text-center" style="padding:2px;"><img style="max-width:34px;max-height:34px;display:inline-block;" src="<?php echo SITEURL . PRODUCT . 'default.png' ?>"></td>
 							<?php
 							}
 							?>

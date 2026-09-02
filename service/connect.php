@@ -1,11 +1,30 @@
 <?php
 header('Content-Type: application/json');
-error_reporting(1);
+error_reporting(0);
 session_start();
 if (function_exists('session_write_close')) {
 	@session_write_close();
 }
 date_default_timezone_set('Asia/Kolkata');
+
+register_shutdown_function(function() {
+	$error = error_get_last();
+	if ($error && in_array($error['type'], array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR))) {
+		if (!headers_sent()) {
+			header('Content-Type: application/json');
+		}
+		$msg = isset($error['message']) ? $error['message'] : 'Fatal error occurred';
+		$file = isset($error['file']) ? basename($error['file']) : '';
+		$line = isset($error['line']) ? $error['line'] : 0;
+		echo json_encode(array(
+			"ack" => 0,
+			"ack_msg" => "Internal Server Error",
+			"developer_msg" => $msg . " (" . $file . ":" . $line . ")",
+			"extra" => array("requested_params" => $_REQUEST)
+		));
+	}
+});
+
 include("../include/define.php");
 
 include("../include/function.class.php");

@@ -27,36 +27,72 @@ if (!function_exists('armor_pdf_export_mpdf_css')) {
 	function armor_pdf_export_mpdf_css()
 	{
 		return '<style>
-			body { margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 11px; background: #fff; }
-			table { border-collapse: collapse; }
-			table, td, th { border: 1px solid #595959; }
-			.main-container { width: 100%; max-width: 100%; padding: 10px; }
-			.quote-wrap, .quote-main-body, .quote-suggest-body, .quote-summary-body { width: 100%; }
-			.quote-header-img, .quote-footer-img { max-width: 100% !important; max-height: 90px !important; width: auto !important; height: auto !important; }
-			.product-items-table img { max-width: 50px !important; max-height: 50px !important; }
-			img { max-width: 50px; max-height: 50px; }
-			.qp-suggest-wrap-table, .qp-suggest-wrap-table td { border: none !important; }
-			.qp-suggest-print-section { width: 100%; font-size: 9px; }
-			.qp-suggest-print-header { text-align: center; padding: 10px 8px; background: #4a4a4a; color: #fff; border-bottom: 1px solid #595959; }
-			.qp-suggest-print-title { font-size: 14px; font-weight: bold; text-transform: uppercase; color: #fff; }
-			.qp-suggest-print-subtitle { font-size: 10px; color: #e0e0e0; }
-			.qp-suggest-print-grid { width: 100%; border-collapse: collapse; table-layout: fixed; }
-			.qp-suggest-print-grid td.qp-suggest-print-cell { width: 25%; vertical-align: top; border: 1px solid #595959; padding: 0 !important; background: #fff; }
-			.qp-suggest-print-cell-empty { border: none !important; background: transparent !important; }
-			.qp-suggest-cat-header { background: #e8e8e8; font-weight: bold; text-align: center; font-size: 10px; padding: 4px; }
-			.qp-suggest-cell-inner { padding: 0 4px 2px; }
-			.qp-prod-card { width: 100%; border-collapse: collapse; table-layout: fixed; }
-			.qp-prod-card td { border: none !important; vertical-align: top; }
-			.qp-prod-badge-row { text-align: right !important; padding: 1px 2px 0 !important; }
-			.qp-prod-disc-label { border: 1px solid #d9534f; color: #d9534f; font-size: 8px; font-weight: bold; padding: 1px 3px; background: #fff; }
-			.qp-prod-disc { background: #e74c3c; color: #fff; font-size: 8px; font-weight: bold; padding: 1px 4px; border-radius: 8px; }
-			.qp-prod-img-cell { height: 38px; background: #f7f7f7; text-align: center; vertical-align: middle !important; padding: 1px !important; }
-			.qp-prod-img, .qp-suggest-print-grid img { max-width: 42px !important; max-height: 34px !important; }
-			.qp-prod-code-cell { font-size: 8.5px; font-weight: 600; color: #555 !important; }
-			.qp-prod-name-cell { font-size: 8px; line-height: 1.1; color: #000 !important; }
-			.qp-prod-price-line { color: #0a5c24 !important; font-weight: bold; font-size: 9px; }
-			.qp-prod-unit { color: #333 !important; font-size: 8px; font-weight: 600; }
-			.qp-suggest-product-row, .qp-prod-card, .qp-suggest-print-box { page-break-inside: auto !important; }
+			body { margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 11px; background: #fff; color: #000; }
+			.main-container, .mainDiv, .quote-wrap { width: 100%; max-width: 100%; margin: 0; padding: 0; }
+			.quote-wrap { border: 1px solid #595959; box-sizing: border-box; background: #fff; }
+			table { width: 100% !important; border-collapse: collapse !important; background-color: #fff; margin: 0; }
+			table, td, th { border: 1px solid #595959; font-size: 11px; }
+			td, th { padding: 4px 6px; }
+
+			.quote-header-cell, .quote-footer-cell {
+				padding: 0 !important;
+				margin: 0 !important;
+				line-height: 0 !important;
+				font-size: 0 !important;
+				text-align: center !important;
+				vertical-align: top !important;
+				width: 100% !important;
+				border-left: none !important;
+				border-right: none !important;
+				background: #fff;
+			}
+			.quote-header-cell {
+				border-top: none !important;
+				border-bottom: 1px solid #595959 !important;
+			}
+			.quote-footer-cell {
+				border-top: 1px solid #595959 !important;
+				border-bottom: none !important;
+			}
+			.quote-header-img, .quote-footer-img {
+				width: 100% !important;
+				max-width: 100% !important;
+				height: auto !important;
+				max-height: 180px !important;
+				display: block !important;
+				margin: 0 !important;
+				padding: 0 !important;
+			}
+
+			.text-center { text-align: center !important; }
+			.text-right { text-align: right !important; }
+			.text-left { text-align: left !important; }
+			.srno { width: 4% !important; }
+			.image-width { width: 8% !important; text-align: center !important; padding: 2px !important; }
+			.image-width img { max-width: 48px; max-height: 48px; display: inline-block; }
+			.box_qty { text-align: center !important; }
+			.quote-table { width: 100% !important; border-collapse: collapse !important; }
+			.product-items-table { width: 100% !important; table-layout: fixed !important; }
+			.quote-summary-terms-table, .quote-summary-details-table, .quote-footer-table { width: 100% !important; }
+			.font-13 { font-size: 11px !important; }
+
+			/* Suggested Products Grid */
+			.qp-suggest-print-section { width: 100%; margin: 0; }
+			.qp-suggest-print-header { text-align: center; padding: 6px; background: #595959; color: #fff; border-top: 1px solid #595959; border-bottom: 1px solid #595959; }
+			.qp-suggest-print-title { font-size: 12px; color: #fff; font-weight: bold; text-transform: uppercase; }
+			.qp-suggest-print-subtitle { font-size: 8.5px; color: #f0f0f0; }
+			.qp-suggest-print-grid { width: 100% !important; border-collapse: collapse; table-layout: fixed; border-left: none !important; border-right: none !important; }
+			.qp-suggest-cat-header { background: #e8e8e8; font-weight: bold; text-align: center; font-size: 9.5px; padding: 3px; border: 1px solid #595959; border-left: none !important; border-right: none !important; }
+			.qp-suggest-print-cell { width: 25%; vertical-align: top; border: 1px solid #595959; padding: 2px; background: #fff; }
+			.qp-prod-card { width: 100%; text-align: center; padding: 2px; }
+			.qp-prod-disc-label { border: 1px solid #d9534f; color: #d9534f; font-size: 7.5px; padding: 1px 3px; border-radius: 2px; }
+			.qp-prod-img { max-width: 44px; max-height: 34px; display: inline-block; }
+			.qp-prod-code-cell { font-size: 8px; font-weight: bold; color: #555; }
+			.qp-prod-name-cell { font-size: 7.5px; line-height: 1.1; color: #000; height: 18px; overflow: hidden; }
+			.qp-prod-price-line { color: #0a5c24; font-size: 8.5px; font-weight: bold; }
+			.qp-prod-unit { color: #333; font-size: 7.5px; }
+
+			.quote-footer-wrap { width: 100%; margin: 0; padding: 0; border-top: 1px solid #595959; }
 		</style>';
 	}
 }
@@ -65,31 +101,21 @@ if (!function_exists('armor_pdf_export_sanitize_html')) {
 	function armor_pdf_export_sanitize_html($html)
 	{
 		$html = (string) $html;
+
 		$html = preg_replace('/<script\b[^>]*>[\s\S]*?<\/script>/i', '', $html);
-		$html = preg_replace('/<style[^>]*>\s*\.quote-print-toolbar[\s\S]*?<\/style>/i', '', $html);
 		$html = preg_replace('/<div[^>]*class="[^"]*quote-print-toolbar[^"]*"[^>]*>[\s\S]*?<\/div>/i', '', $html);
-		// Drop embedded print CSS — mPDF uses armor_pdf_export_mpdf_css() (avoids page-break-inside:avoid explosion).
+
+		// Clean CSS replacement
 		$html = preg_replace('/<style\b[^>]*>[\s\S]*?<\/style>/i', '', $html);
+		$html = armor_pdf_export_mpdf_css() . $html;
+
 		$html = preg_replace('/background[^:]*:\s*[^;]*url\([^)]*\)[^;]*;?/i', '', $html);
 		$html = preg_replace('/\sclass="[^"]*addwatermark[^"]*"/i', '', $html);
-		$html = preg_replace('/(<\/tr>)\s*(?:<br\s*\/?>\s*)+/i', '$1', $html);
-		$html = preg_replace('/(?:<br\s*\/?>\s*)+(<tr\b)/i', '$1', $html);
-		$html = preg_replace('/(<tbody[^>]*>)\s*(?:<br\s*\/?>\s*)+/i', '$1', $html);
-		$html = preg_replace('/(?:<br\s*\/?>\s*)+(<\/tbody>)/i', '$1', $html);
-		$html = preg_replace('/(<br\s*\/?>\s*){4,}/i', '<br />', $html);
-		$html = preg_replace('/\s+on\w+="[^"]*"/i', '', $html);
-		$html = preg_replace('/position\s*:\s*absolute\s*;?/i', '', $html);
-		$html = preg_replace('/display\s*:\s*flex[^;]*;?/i', '', $html);
 		$html = preg_replace('/width:\s*250mm[^;]*;?/i', 'width:100%;', $html);
-		$html = preg_replace('/page-break-inside\s*:\s*avoid[^;]*;?/i', 'page-break-inside:auto;', $html);
-		$html = preg_replace('/break-inside\s*:\s*avoid[^;]*;?/i', 'break-inside:auto;', $html);
-		$html = preg_replace('/page-break-before\s*:\s*always[^;]*;?/i', '', $html);
-		$html = preg_replace('/page-break-after\s*:\s*always[^;]*;?/i', '', $html);
 
 		require_once dirname(__FILE__) . '/quotation_pdf_image_helper.php';
-		// Local cached JPEG paths — faster than base64 for mPDF on live server.
-		$html = armor_pdf_compress_images_in_html($html, true);
-		$html = armor_pdf_strip_remaining_remote_images($html);
+		// Convert all images to compressed JPEG Base64 Data URIs so they render reliably in mPDF
+		$html = armor_pdf_compress_images_in_html($html, false);
 
 		return $html;
 	}
@@ -160,7 +186,7 @@ if (!function_exists('armor_pdf_export_create_mpdf')) {
 			return null;
 		}
 
-		$mpdf = new mPDF('', 'A4', 10, 'sans-serif', 1, 3, 3, 3, 0, 0, 'P');
+		$mpdf = new mPDF('', 'A4', 10, 'sans-serif', 4, 4, 6, 6, 0, 0, 'P');
 		$mpdf->autoScriptToLang = true;
 		$mpdf->baseScript = 1;
 		$mpdf->autoLangToFont = true;

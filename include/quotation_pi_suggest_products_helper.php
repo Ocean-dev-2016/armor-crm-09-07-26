@@ -2616,263 +2616,120 @@ if (!function_exists('armor_quotation_pi_render_mpdf_block')) {
 if (!function_exists('armor_quotation_pi_render_print_item')) {
 
 	function armor_quotation_pi_render_print_item($item)
-
 	{
-
 		$img = htmlspecialchars($item['image'], ENT_QUOTES);
-
 		$name = htmlspecialchars($item['name'], ENT_QUOTES);
-
 		$catno = htmlspecialchars($item['catno'], ENT_QUOTES);
-
 		$curr = defined('CURR') ? CURR : 'INR';
-
 		$unit = isset($item['unit_name']) ? htmlspecialchars($item['unit_name'], ENT_QUOTES) : 'Nos';
-
 		$defaultImg = htmlspecialchars(armor_quotation_pi_product_image_url(''), ENT_QUOTES);
-
 		$discountPer = armor_quotation_pi_suggest_display_discount_percent();
 
-
-
-		$html = '<table class="qp-prod-card" cellpadding="0" cellspacing="0" width="100%">';
-
-		$html .= '<tr><td class="qp-prod-badge-row" valign="top" style="padding:1px 4px 0 !important;">';
-
-		$html .= '<div class="qp-prod-badge-bar" style="display:flex;align-items:center;justify-content:flex-end;gap:4px;">';
-
-		$html .= '<span class="qp-prod-disc-label">Discount</span>';
-
-		$html .= '<span class="qp-prod-disc-wrap"><span class="qp-prod-disc">' . (int) $discountPer . '%</span></span>';
-
-		$html .= '</div>';
-
-		$html .= '</td></tr>';
-
-		$html .= '<tr><td class="qp-prod-img-cell" align="center" valign="middle" style="padding:1px !important;">';
-
-		$html .= '<div class="qp-prod-img-box"><img src="' . $img . '" alt="" class="qp-prod-img" onerror="this.onerror=null;this.src=\'' . $defaultImg . '\';"></div>';
-
-		$html .= '</td></tr>';
-
-		$html .= '<tr><td class="qp-prod-code-cell" valign="top" style="padding:1px 4px 0 !important;color:#555 !important;"><div class="qp-prod-text-inner">' . $catno . '</div></td></tr>';
-
-		$html .= '<tr><td class="qp-prod-name-cell" valign="top" style="padding:1px 4px 0 !important;color:#000 !important;"><div class="qp-prod-text-inner">' . $name . '</div></td></tr>';
-
-		$html .= '<tr><td class="qp-prod-price-cell" align="center" valign="bottom" style="padding:1px 4px 4px !important;overflow:visible !important;">';
-
-		$html .= '<div class="qp-prod-price-wrap">';
-
-		$html .= '<span class="qp-prod-price-line" style="color:#0a5c24 !important;font-size:10px;font-weight:bold;line-height:1.2;">' . $curr . ' ' . $item['rate_label'] . ' <span class="qp-prod-unit" style="color:#333 !important;font-size:9px;font-weight:600;">/ ' . $unit . '</span></span>';
-
-		$html .= '</div>';
-
-		$html .= '</td></tr>';
-
+		$html = '<table class="qp-prod-card" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;border:none !important;margin:0;padding:0;">';
+		$html .= '<tr><td style="border:none !important;text-align:right;padding:1px 2px 0 0;line-height:1;"><span style="border:1px solid #d9534f;color:#d9534f;font-size:6.5px;padding:0 2px;border-radius:2px;display:inline-block;">Discount ' . (int) $discountPer . '%</span></td></tr>';
+		$html .= '<tr><td style="border:none !important;text-align:center;padding:1px 2px;vertical-align:middle;"><div class="qp-prod-img-box" style="border:1px solid #dcdcdc;background:#f9f9f9;padding:1px;height:34px;line-height:34px;text-align:center;border-radius:2px;"><img src="' . $img . '" alt="" style="max-width:38px;max-height:30px;display:inline-block;vertical-align:middle;" onerror="this.onerror=null;this.src=\'' . $defaultImg . '\';"></div></td></tr>';
+		$html .= '<tr><td style="border:none !important;text-align:left;padding:1px 2px 0 2px;font-size:7.5px;font-weight:bold;color:#444;line-height:1.1;">' . $catno . '</td></tr>';
+		$html .= '<tr><td style="border:none !important;text-align:left;padding:0 2px;font-size:6.5px;line-height:1.1;color:#111;">' . $name . '</td></tr>';
+		$html .= '<tr><td style="border:none !important;text-align:left;padding:1px 2px 2px 2px;line-height:1.2;"><span style="color:#0a5c24;font-size:7.5px;font-weight:bold;">' . $curr . ' ' . $item['rate_label'] . '</span> <span style="color:#555;font-size:6.5px;">/ ' . $unit . '</span></td></tr>';
 		$html .= '</table>';
 
 		return $html;
-
 	}
-
 }
-
-
 
 if (!function_exists('armor_quotation_pi_render_print_empty_cell')) {
-
 	function armor_quotation_pi_render_print_empty_cell()
-
 	{
-
-		return '<table class="qp-prod-card qp-prod-card-empty" cellpadding="0" cellspacing="0" width="100%"><tr><td>&nbsp;</td></tr></table>';
-
+		return '&nbsp;';
 	}
-
 }
-
-
 
 if (!function_exists('armor_quotation_pi_render_suggest_grid')) {
-
 	function armor_quotation_pi_render_suggest_grid($items, $clickable = true)
-
 	{
-
 		if (empty($items)) {
-
 			return '<div class="alert alert-info">All suggested products are already added above.</div>';
-
 		}
-
 		$curr = defined('CURR') ? CURR : 'INR';
-
 		$groups = armor_quotation_pi_group_items_by_category($items);
-
 		$html = '<div class="qp-suggest-grid-wrap">';
-
 		foreach ($groups as $group) {
-
 			$html .= '<div class="qp-suggest-cat-title">' . htmlspecialchars($group['title'], ENT_QUOTES) . '</div>';
-
 			$html .= '<div class="qp-suggest-grid clearfix">';
-
 			foreach ($group['items'] as $item) {
-
 				$img = htmlspecialchars($item['image'], ENT_QUOTES);
-
 				$name = htmlspecialchars($item['name'], ENT_QUOTES);
-
 				$unit = isset($item['unit_name']) ? htmlspecialchars($item['unit_name'], ENT_QUOTES) : 'Nos';
-
 				$discountPer = armor_quotation_pi_suggest_display_discount_percent();
-
 				$html .= '<div class="qp-suggest-col">';
-
 				$html .= '<div class="qp-suggest-card">';
-
 				if ($clickable) {
-
 					$html .= '<a href="javascript:void(0)" class="qp-suggest-add" data-product-id="' . (int) $item['product_id'] . '" data-weight-id="' . (int) $item['weight_id'] . '" data-catno="' . htmlspecialchars($item['catno'], ENT_QUOTES) . '" style="display:block;color:inherit;text-decoration:none;">';
-
 				}
-
 				$html .= '<div class="qp-suggest-img-wrap"><img src="' . $img . '" alt="" onerror="this.onerror=null;this.src=\'' . htmlspecialchars(armor_quotation_pi_product_image_url(''), ENT_QUOTES) . '\';"></div>';
-
 				$html .= '<div class="qp-suggest-info">';
-
 				$html .= '<span class="qp-suggest-code-side">' . htmlspecialchars($item['catno'], ENT_QUOTES) . '</span>';
-
 				$html .= '<div class="qp-suggest-name">' . $name . '</div>';
-
 				$html .= '<div class="qp-suggest-price-row">';
-
 				$html .= '<span class="qp-suggest-rate">' . $curr . ' ' . $item['rate_label'] . ' / ' . $unit . '</span>';
-
 				$html .= '<span class="qp-suggest-disc-badge">' . (int) $discountPer . '%</span>';
-
 				$html .= '</div></div>';
-
 				if ($clickable) {
-
 					$html .= '<div class="qp-suggest-add-btn"><span class="label label-primary"><i class="fa fa-plus"></i> Add to Quote</span></div></a>';
-
 				}
-
 				$html .= '</div></div>';
-
 			}
-
 			$html .= '</div>';
-
 		}
-
 		$html .= '</div>';
-
 		return $html;
-
 	}
-
 }
 
-
-
 if (!function_exists('armor_quotation_pi_render_print_block')) {
-
 	function armor_quotation_pi_render_print_block($db, $customerId, $excludeProductIds = array(), $includeStyles = true)
-
 	{
-
 		$items = armor_quotation_pi_get_suggest_products($db, $customerId, $excludeProductIds);
-
 		if (empty($items)) {
-
 			return '';
-
 		}
-
-
 
 		$cols = 4;
-
 		$groups = armor_quotation_pi_group_items_by_category($items);
-
 		$html = '';
-
 		if ($includeStyles) {
-
 			$html .= armor_quotation_pi_suggest_styles();
-
 		}
 
-		$html .= '<table class="qp-suggest-wrap-table" cellpadding="0" cellspacing="0"><tr><td>';
-
-		$html .= '<div class="qp-suggest-print-section">';
-
-		$html .= '<div class="qp-suggest-print-header">';
-
-		$html .= '<div class="qp-suggest-print-title">Suggested Product Range</div>';
-
-		$html .= '<div class="qp-suggest-print-subtitle">Please mention Product Code when placing your order</div>';
-
+		$html .= '<div class="qp-suggest-print-section" style="width:100%;margin-top:0;">';
+		$html .= '<div class="qp-suggest-print-header" style="text-align:center;padding:6px;background:#595959;color:#fff;font-weight:bold;border-top:1px solid #595959;border-bottom:1px solid #595959;">';
+		$html .= '<div class="qp-suggest-print-title" style="font-size:12px;color:#fff;text-transform:uppercase;">Suggested Product Range</div>';
+		$html .= '<div class="qp-suggest-print-subtitle" style="font-size:8.5px;color:#f0f0f0;">Please mention Product Code when placing your order</div>';
 		$html .= '</div>';
 
-		$html .= '<table class="qp-suggest-print-grid" cellpadding="0" cellspacing="0"><tbody>';
-
-
+		$html .= '<table class="qp-suggest-print-grid quote-table" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;table-layout:fixed;border-left:none;border-right:none;"><tbody>';
 
 		foreach ($groups as $group) {
-
-			$html .= '<tr><td colspan="' . $cols . '" class="qp-suggest-cat-header">' . htmlspecialchars($group['title'], ENT_QUOTES) . '</td></tr>';
-
+			$html .= '<tr style="page-break-inside:avoid !important;"><td colspan="' . $cols . '" class="qp-suggest-cat-header" style="background:#e8e8e8;font-weight:bold;text-align:center;font-size:9.5px;padding:3px;border:1px solid #595959;border-left:none;border-right:none;">' . htmlspecialchars($group['title'], ENT_QUOTES) . '</td></tr>';
 			$chunks = array_chunk($group['items'], $cols);
-
 			foreach ($chunks as $row) {
-
-				$html .= '<tr class="qp-suggest-product-row">';
-
+				$html .= '<tr class="qp-suggest-product-row" style="page-break-inside:avoid !important;">';
 				for ($i = 0; $i < $cols; $i++) {
-
 					if (!isset($row[$i])) {
-
-						$html .= '<td class="qp-suggest-print-cell qp-suggest-print-cell-empty"></td>';
-
+						$html .= '<td class="qp-suggest-print-cell qp-suggest-print-cell-empty" style="width:25%;border:1px solid #595959;padding:0;"></td>';
 						continue;
-
 					}
-
-					$html .= '<td class="qp-suggest-print-cell">';
-
-					$html .= '<div class="qp-suggest-print-box">';
-
-					$html .= '<div class="qp-suggest-cell-inner" style="padding-left:12px;padding-right:12px;box-sizing:border-box;">';
-
+					$html .= '<td class="qp-suggest-print-cell" style="width:25%;vertical-align:top;border:1px solid #595959;padding:2px;background:#fff;">';
 					$html .= armor_quotation_pi_render_print_item($row[$i]);
-
-					$html .= '</div>';
-
-					$html .= '</div>';
-
 					$html .= '</td>';
-
 				}
-
 				$html .= '</tr>';
-
 			}
-
 		}
 
-
-
 		$html .= '</tbody></table></div>';
-
-		$html .= '</td></tr></table>';
-
 		return $html;
-
 	}
-
 }
 
 

@@ -987,9 +987,9 @@ if ($isPrintMode || $isAppPdfMode || $isMpdfMode) {
 						<tr class="product-item-row">
 							<td class="text-center srno"><strong><?php echo $count; ?></strong></td>
 							<?php if ($item['image_path'] != "") { ?>
-								<td class="image-width text-center"><img style="width: 50px;" src="<?php echo SITEURL . PRODUCT . $item['image_path'] ?>"></td>
+								<td class="image-width text-center" style="padding:2px;"><img style="max-width:34px;max-height:34px;display:inline-block;" src="<?php echo SITEURL . PRODUCT . $item['image_path'] ?>"></td>
 							<?php } else { ?>
-								<td class="image-width text-center"><img style="width: 50px;" src="<?php echo SITEURL . PRODUCT . 'default.png' ?>"></td>
+								<td class="image-width text-center" style="padding:2px;"><img style="max-width:34px;max-height:34px;display:inline-block;" src="<?php echo SITEURL . PRODUCT . 'default.png' ?>"></td>
 							<?php } ?>
 							<td colspan="3" class="model" style="position: relative;">
 								<?php
