@@ -258,10 +258,26 @@ if (!function_exists('armor_pdf_export_public_url')) {
 	function armor_pdf_export_public_url($relativePath)
 	{
 		$relativePath = ltrim(str_replace('\\', '/', (string) $relativePath), '/');
+		$url = '';
 		if (defined('ADMINSITEURL')) {
-			return rtrim(ADMINSITEURL, '/') . '/pdf/orders/' . $relativePath;
+			$url = rtrim(ADMINSITEURL, '/') . '/pdf/orders/' . $relativePath;
+		} else {
+			$url = $relativePath;
 		}
-		return $relativePath;
+
+		$isHttps = (
+			(!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+			(isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443) ||
+			(!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') ||
+			(!empty($_SERVER['HTTP_X_FORWARDED_SSL']) && $_SERVER['HTTP_X_FORWARDED_SSL'] === 'on') ||
+			(defined('SITEURL') && stripos(SITEURL, 'https://') === 0)
+		);
+
+		if ($isHttps && strpos($url, 'http://') === 0) {
+			$url = 'https://' . substr($url, 7);
+		}
+
+		return $url;
 	}
 }
 
