@@ -7251,7 +7251,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 163\n\n**Slug:** invoice_pdf\n\n**Service (s):** 163\n\ninvoice_pdf\n\n**Parameters from backend code:** type, id, customer_id"
+                        "description": "**API Code:** 163\n\n**Slug:** invoice_pdf\n\n**Service (s):** 163\n\nInvoice / Packing Slip / Dispatch / Quotation PDF Download\n\n**Parameters:**\n- `type`: `1` (Invoice), `2` (Packing Slip), `3` (Dispatch), `4` (Quotation)\n- `id`: Record ID (or `invoice_id`, `quotation_id`, `order_id`, `customer_id`)\n- `format_type`: `1` (Original), `2` (Duplicate), `3` (Triplicate) for invoice"
                     },
                     "response": []
                 },

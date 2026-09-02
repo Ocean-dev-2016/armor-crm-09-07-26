@@ -240,317 +240,185 @@ class Invoice extends Functions
 	}
 	/*AUTO ENTRY TO ACCOUNT TRANSACTION*/
 
-	public function DownloadInvoice($id)
+	public function DownloadInvoice($id, $format_type = 1)
 	{
-		//$customer_id=$this->db->rp_getValue("invoice_new","id","id='".$id."'",0);
-		
-		$uname	= str_replace(" ","-",stripslashes($this->db->rp_getValue("invoice_new","company_name","id='".$id."'",0)));
-		$order_no	= str_replace("/","-",stripslashes($this->db->rp_getValue("invoice_new","invoice_no","id='".$id."'",0)));
+		$id = $this->db->clean($id);
+		if (!empty($id)) {
+			$count = $this->db->rp_getTotalRecord("invoice_new", "id='" . $id . "'", 0);
+			if ($count > 0) {
+				if (function_exists('session_write_close')) {
+					@session_write_close();
+				}
+				require_once dirname(__FILE__) . '/armor_pdf_export_helper.php';
 
+				$company_name = (string) $this->db->rp_getValue("invoice_new", "company_name", "id='" . $id . "'", 0);
+				$invoice_no = (string) $this->db->rp_getValue("invoice_new", "invoice_no", "id='" . $id . "'", 0);
+				$invoice_no_clean = str_replace(array('/', '\\', ' '), '-', $invoice_no);
+				$company_slug = $this->db->rp_createSlug($company_name);
+				$fileName = date('d_m_Y') . "_Invoice_" . ($company_slug ? $company_slug . "_" : "") . $invoice_no_clean;
 
-		$uname=$this->db->rp_createSlug($uname);
-		
-		if($id){
-			
-			$count=$this->db->rp_getTotalRecord("invoice_new","id='".$id."'",0);
-			
-			if($count >0){
-				$d=file_get_contents(ADMINSITEURL.'invoice_view_download.php?invoice_id='.$id.'&format_type=1');
-		// echo "string";exit();
-				//print_r($d); exit;
-				//$d=file_get_contents(ADMINSITEURL.'order_view_new.php?order_id='.$order_id.'');
-				//$d.=$string;
-				include_once dirname(__FILE__) . '/../bbsales_tracking/include/mbstring_polyfill.php';
-				require('../bbsales_tracking/mpdf60/mpdf.php');
-				// echo $mpdf; exit();
+				$gen = armor_pdf_export_generate(
+					'invoice_view_download.php',
+					array('invoice_id' => (int) $id, 'format_type' => (int) $format_type),
+					array('TAX INVOICE', 'Invoice', 'invoice', 'table', 'body', 'html'),
+					$fileName . '.pdf'
+				);
 
-
-
-				$mpdf = new mPDF('',    // mode - default ''
-
-				 'A4',    // format - A4, for example, default ''
-
-				 15,     // font size - default 0
-
-				 'sans-serif',    // default font family
-
-				 8,    // margin_left
-
-				 8,    // margin right
-
-				 8,     // margin top
-
-				 8,    // margin bottom
-
-				 0,     // margin header
-
-				 0,     // margin footer
-
-				 'P');  // L - landscape, P - portrait
-
-				$mpdf->WriteHTML($d);
-				// $exe_id = $db->rp_getValue("invoice_new","customer_id","isDelete=0 AND id='".$invoice_id."' ");
-
-				/*LOG eNTRY*/
-				$sales_id = $this->db->rp_getValue("invoice_new","sales_id","id='".$id."'",0);
-				$sales_name = $this->db->rp_getValue("sales_executive","name","id='".$sales_id."'",0);
-				$customer_id = $this->db->rp_getValue("invoice_new","customer_id","id='".$id."'");
-				$invoice_no = $this->db->rp_getValue("invoice_new","invoice_no","id='".$id."'");
-
-				$last_id = $order_id;
-				$flag = "Application";
-				$ctable = "invoice_new";
-				$module_name = "Invoice";
-				$log_description = $module_name." ".$order_no." PDF Download By ".$sales_name." ON ".date("Y-m-d H:i:s");
-				$this->db->insertLog($ctable,$last_id,"insert","",$insert,0,$log_description,$flag,$module_name,$sales_id,$customer_id);
-
-				/*LOG eNTRY*/
-
-				$uname	= str_replace(" ","-",stripslashes($this->db->rp_getValue("invoice_new","company_name","id='".$id."'",0)));
-				$order_no	= str_replace("/","-",stripslashes($this->db->rp_getValue("invoice_new","invoice_no","id='".$id."'",0)));
-
-				// $fileName = "Invoice".SITENAME."_".date('d_m_Y')."_".$order_no."_".$uname.'.pdf'; 
-				$fileName = $uname."_".date('d_m_Y')."_"."Invoice_".$order_no.'pdf';   
-			//echo $fileName;exit;
-
-
-				if(!is_dir($fileName)){
-
-					mkdir(ORDERS_PDF.$fileName);
-
+				if (!$gen['ok']) {
+					return array(
+						"ack" => 0,
+						"developer_msg" => isset($gen['error']) ? $gen['error'] : 'Invoice HTML could not be loaded for PDF.',
+						"ack_msg" => "Invoice PDF Not Generate!!"
+					);
 				}
 
-				$pdf_file_path	= ORDERS_PDF.$fileName."/".$fileName.'.pdf';
+				$sales_id = (int) $this->db->rp_getValue("invoice_new", "sales_id", "id='" . $id . "'", 0);
+				$sales_name = (string) $this->db->rp_getValue("sales_executive", "name", "id='" . $sales_id . "'", 0);
+				$customer_id = (int) $this->db->rp_getValue("invoice_new", "customer_id", "id='" . $id . "'", 0);
+				$log_description = "Invoice " . $invoice_no . " PDF Download By " . $sales_name . " ON " . date("Y-m-d H:i:s");
+				@$this->db->insertLog("invoice_new", $id, "insert", "", array(), 0, $log_description, "Application", "Invoice", $sales_id, $customer_id);
 
-				if(file_exists($pdf_file_path)){
+				$pdfUrl = $gen['url'];
+				$result = array();
+				$result['pdf'] = $pdfUrl;
+				$result['file_url'] = $pdfUrl;
+				$result['file_name'] = $fileName . '.pdf';
+				$result['pdf_ok'] = 1;
 
-					unlink($pdf_file_path);
-
-				}
-
-				$mpdf->Output($pdf_file_path);
-
-				
-				$file_path = $pdf_file_path;
-				// echo $file_path;exit;
-				$result=array();
-				$result['pdf']=ADMINSITEURL."pdf/orders/".$fileName."/".$fileName.'.pdf';
-
-
-				$reply=array("ack"=>1,"developer_msg"=>"Invoice Generate Successfully","ack_msg"=>"Invoice Generate Successfully","result"=>$result);
-				// echo $reply;exit;
-				return $reply;
+				return array(
+					"ack" => 1,
+					"developer_msg" => "Invoice PDF Generate Successfully",
+					"ack_msg" => "Invoice PDF Generate Successfully",
+					"pdf" => $pdfUrl,
+					"file_url" => $pdfUrl,
+					"result" => $result
+				);
+			} else {
+				return array("ack" => 0, "developer_msg" => "Invoice Not Found!!", "ack_msg" => "Invoice Not Generate!!");
 			}
-			else{
-				$reply=array("ack"=>0,"developer_msg"=>"Invoice Not Generate!!","ack_msg"=>"Invoice Not Generate!!");
-				return $reply;
-			}
-		}
-		else{
-			$reply=array("ack"=>0,"developer_msg"=>"Invoice No Require!!","ack_msg"=>"Invoice No Require!!");
-			return $reply;
+		} else {
+			return array("ack" => 0, "developer_msg" => "Invoice Id Required!!", "ack_msg" => "Invoice Id Required!!");
 		}
 	}
 
 	public function DownloadPackingSlip($id)
 	{
-		//$customer_id=$this->db->rp_getValue("invoice_new","id","id='".$id."'",0);
-			
-		if($id){
-			
-			$count=$this->db->rp_getTotalRecord("packing_slip","id='".$id."'",0);
-			
-			if($count >0){
-			
-				//print_r($d); exit;
-				//$d=file_get_contents(ADMINSITEURL.'order_view_new.php?order_id='.$order_id.'');
-				//$d.=$string;
-				$d=file_get_contents(ADMINSITEURL.'packing_slip_download.php?id='.$id.'');
-				//$d.=$string;
-				include_once dirname(__FILE__) . '/../bbsales_tracking/include/mbstring_polyfill.php';
-				require('../bbsales_tracking/mpdf60/mpdf.php');
+		$id = $this->db->clean($id);
+		if (!empty($id)) {
+			$count = $this->db->rp_getTotalRecord("packing_slip", "id='" . $id . "'", 0);
+			if ($count > 0) {
+				if (function_exists('session_write_close')) {
+					@session_write_close();
+				}
+				require_once dirname(__FILE__) . '/armor_pdf_export_helper.php';
 
-				$mpdf = new mPDF('',    // mode - default ''
+				$packing_slip_no = (string) $this->db->rp_getValue("packing_slip", "packing_slip_no", "id='" . $id . "'", 0);
+				$packing_slip_clean = str_replace(array('/', '\\', ' '), '-', $packing_slip_no);
+				$fileName = date('d_m_Y') . "_Packing_Slip_" . $packing_slip_clean;
 
-				 'A4',    // format - A4, for example, default ''
+				$gen = armor_pdf_export_generate(
+					'packing_slip_download.php',
+					array('id' => (int) $id),
+					array('PACKING SLIP', 'Packing Slip', 'packing', 'table', 'body', 'html'),
+					$fileName . '.pdf'
+				);
 
-				 15,     // font size - default 0
-
-				 'sans-serif',    // default font family
-
-				 3,    // margin_left
-
-				 3,    // margin right
-
-				 3,     // margin top
-
-				 3,    // margin bottom
-
-				 0,     // margin header
-
-				 0,     // margin footer
-
-				 'P');  // L - landscape, P - portrait
-
-				$mpdf->WriteHTML($d);
-				$exe_id = $this->db->rp_getValue("packing_slip","customer_id","isDelete=0 AND id='".$dispatch_id."' ");
-				/*LOG ENTRY*/
-				$sales_id = $this->db->rp_getValue("packing_slip","sales_id","id='".$id."'",0);
-				$sales_name = $this->db->rp_getValue("sales_executive","name","id='".$sales_id."'",0);
-				$customer_id = $this->db->rp_getValue("packing_slip","customer_id","id='".$id."'");
-				$packing_slip_no = $this->db->rp_getValue("packing_slip","packing_slip_no","id='".$id."'");
-				$last_id = $id;
-				$flag = "Application";
-				$ctable = "packing_slip";
-				$module_name = "Packing Slip";
-				$log_description = $module_name." ".$packing_slip_no." PDF Download By ".$sales_name." ON ".date("Y-m-d H:i:s");
-				$this->db->insertLog($ctable,$last_id,"insert","",$insert,0,$log_description,$flag,$module_name,$sales_id,$customer_id);
-
-				/*LOG ENTRY*/
-				$uname	= str_replace(" ","-",stripslashes($this->db->rp_getValue("executive","company_name","id='".$exe_id."'",0)));
-				$packing_slip_no	= str_replace("/","-",stripslashes($this->db->rp_getValue("packing_slip","packing_slip_no","id='".$id."'",0)));
-
-				// $fileName = "Packing_Slip_".SITENAME."_".date('d_m_Y')."_".$dis_no."_".$uname.'.pdf';
-				$fileName = $uname."_".date('d_m_Y')."_"."Packing_Slip_".$packing_slip_no.'pdf';   
-				 
-
-				if(!is_dir($fileName)){
-
-					mkdir(DISPATCH_PDF.$fileName);
-
+				if (!$gen['ok']) {
+					return array(
+						"ack" => 0,
+						"developer_msg" => isset($gen['error']) ? $gen['error'] : 'Packing Slip HTML could not be loaded for PDF.',
+						"ack_msg" => "Packing Slip PDF Not Generate!!"
+					);
 				}
 
-				$pdf_file_path	= DISPATCH_PDF.$fileName."/".$fileName.'.pdf';
+				$sales_id = (int) $this->db->rp_getValue("packing_slip", "sales_id", "id='" . $id . "'", 0);
+				$sales_name = (string) $this->db->rp_getValue("sales_executive", "name", "id='" . $sales_id . "'", 0);
+				$customer_id = (int) $this->db->rp_getValue("packing_slip", "customer_id", "id='" . $id . "'", 0);
+				$log_description = "Packing Slip " . $packing_slip_no . " PDF Download By " . $sales_name . " ON " . date("Y-m-d H:i:s");
+				@$this->db->insertLog("packing_slip", $id, "insert", "", array(), 0, $log_description, "Application", "Packing Slip", $sales_id, $customer_id);
 
-				if(file_exists($pdf_file_path)){
+				$pdfUrl = $gen['url'];
+				$result = array();
+				$result['pdf'] = $pdfUrl;
+				$result['file_url'] = $pdfUrl;
+				$result['file_name'] = $fileName . '.pdf';
+				$result['pdf_ok'] = 1;
 
-					unlink($pdf_file_path);
-
-				}
-
-				$mpdf->Output($pdf_file_path);
-				$file_path = $pdf_file_path;
-				
-				// echo $file_path;exit;
-				$result=array();
-				$result['pdf']=ADMINSITEURL."pdf/dispatch/".$fileName."/".$fileName.'.pdf';
-
-
-				$reply=array("ack"=>1,"developer_msg"=>"Invoice Generate Successfully","ack_msg"=>"Invoice Generate Successfully","result"=>$result);
-				// echo $reply;exit;
-				return $reply;
+				return array(
+					"ack" => 1,
+					"developer_msg" => "Packing Slip PDF Generate Successfully",
+					"ack_msg" => "Packing Slip PDF Generate Successfully",
+					"pdf" => $pdfUrl,
+					"file_url" => $pdfUrl,
+					"result" => $result
+				);
+			} else {
+				return array("ack" => 0, "developer_msg" => "Packing Slip Not Found!!", "ack_msg" => "Packing Slip Not Generate!!");
 			}
-			else{
-				$reply=array("ack"=>0,"developer_msg"=>"Invoice Not Generate!!","ack_msg"=>"Invoice Not Generate!!");
-				return $reply;
-			}
-		}
-		else{
-			$reply=array("ack"=>0,"developer_msg"=>"Invoice No Require!!","ack_msg"=>"Invoice No Require!!");
-			return $reply;
+		} else {
+			return array("ack" => 0, "developer_msg" => "Packing Slip Id Required!!", "ack_msg" => "Packing Slip Id Required!!");
 		}
 	}
 
 	public function DownloadDispatch($id)
 	{
-		//$customer_id=$this->db->rp_getValue("invoice_new","id","id='".$id."'",0);
-			
-		if($id){
-			
-			$count=$this->db->rp_getTotalRecord("dispatch_detail","id='".$id."'",0);
-			
-			if($count >0){
-			
-				//print_r($d); exit;
-				//$d=file_get_contents(ADMINSITEURL.'order_view_new.php?order_id='.$order_id.'');
-				//$d.=$string;
-				$d=file_get_contents(ADMINSITEURL.'dispatch_format_download.php?id='.$id.'');
-//$d.=$string;
-				include_once dirname(__FILE__) . '/../bbsales_tracking/include/mbstring_polyfill.php';
-				require('../bbsales_tracking/mpdf60/mpdf.php');
+		$id = $this->db->clean($id);
+		if (!empty($id)) {
+			$count = $this->db->rp_getTotalRecord("dispatch_detail", "id='" . $id . "'", 0);
+			if ($count > 0) {
+				if (function_exists('session_write_close')) {
+					@session_write_close();
+				}
+				require_once dirname(__FILE__) . '/armor_pdf_export_helper.php';
 
+				$company_name = (string) $this->db->rp_getValue("dispatch_detail", "company_name", "id='" . $id . "'", 0);
+				$dispatch_no = (string) $this->db->rp_getValue("dispatch_detail", "dispatch_no", "id='" . $id . "'", 0);
+				$dispatch_clean = str_replace(array('/', '\\', ' '), '-', $dispatch_no);
+				$company_slug = $this->db->rp_createSlug($company_name);
+				$fileName = date('d_m_Y') . "_Dispatch_Order_" . ($company_slug ? $company_slug . "_" : "") . $dispatch_clean;
 
-				$mpdf = new mPDF('',    // mode - default ''
+				$gen = armor_pdf_export_generate(
+					'dispatch_format_download.php',
+					array('id' => (int) $id),
+					array('DISPATCH', 'Dispatch', 'dispatch', 'table', 'body', 'html'),
+					$fileName . '.pdf'
+				);
 
-				 'A4',    // format - A4, for example, default ''
-
-				 15,     // font size - default 0
-
-				 'sans-serif',    // default font family
-
-				 3,    // margin_left
-
-				 3,    // margin right
-
-				 3,     // margin top
-
-				 3,    // margin bottom
-
-				 0,     // margin header
-
-				 0,     // margin footer
-
-				 'P');  // L - landscape, P - portrait
-
-				$mpdf->WriteHTML($d);
-
-
-				$sales_id = $this->db->rp_getValue("dispatch_detail","sales_id","id='".$id."'",0);
-				$sales_name = $this->db->rp_getValue("sales_executive","name","id='".$sales_id."'",0);
-				$customer_id = $this->db->rp_getValue("dispatch_detail","customer_id","id='".$id."'");
-				$dispatch_no = $this->db->rp_getValue("dispatch_detail","dispatch_no","id='".$id."'");
-
-				$last_id = $id;
-				$flag = "Application";
-				$ctable = "dispatch_detail";
-				$module_name = "Dispatch";
-				$log_description = $module_name." ".$dispatch_no." PDF Download By ".$sales_name." ON ".date("Y-m-d H:i:s");
-				$this->db->insertLog($ctable,$last_id,"insert","",$insert,0,$log_description,$flag,$module_name,$sales_id,$customer_id);
-
-				$uname	= str_replace(" ","-",stripslashes($this->db->rp_getValue("dispatch_detail","company_name","id='".$id."'",0)));
-				$dis_no	= str_replace("/","-",stripslashes($this->db->rp_getValue("dispatch_detail","dispatch_no","id='".$id."'",0)));
-
-				// $fileName = "Dispatch_Order_".SITENAME."_".date('d_m_Y')."_".$dis_no."_".$uname.'.pdf';  
-				$fileName = $uname."_".date('d_m_Y')."_"."Dispatch_Order_".$dis_no.'pdf'; 
-				 
-
-				if(!is_dir($fileName)){
-
-					mkdir(DISPATCH_PDF.$fileName);
-
+				if (!$gen['ok']) {
+					return array(
+						"ack" => 0,
+						"developer_msg" => isset($gen['error']) ? $gen['error'] : 'Dispatch HTML could not be loaded for PDF.',
+						"ack_msg" => "Dispatch PDF Not Generate!!"
+					);
 				}
 
-				$pdf_file_path	= DISPATCH_PDF.$fileName."/".$fileName.'.pdf';
+				$sales_id = (int) $this->db->rp_getValue("dispatch_detail", "sales_id", "id='" . $id . "'", 0);
+				$sales_name = (string) $this->db->rp_getValue("sales_executive", "name", "id='" . $sales_id . "'", 0);
+				$customer_id = (int) $this->db->rp_getValue("dispatch_detail", "customer_id", "id='" . $id . "'", 0);
+				$log_description = "Dispatch " . $dispatch_no . " PDF Download By " . $sales_name . " ON " . date("Y-m-d H:i:s");
+				@$this->db->insertLog("dispatch_detail", $id, "insert", "", array(), 0, $log_description, "Application", "Dispatch", $sales_id, $customer_id);
 
-				if(file_exists($pdf_file_path)){
+				$pdfUrl = $gen['url'];
+				$result = array();
+				$result['pdf'] = $pdfUrl;
+				$result['file_url'] = $pdfUrl;
+				$result['file_name'] = $fileName . '.pdf';
+				$result['pdf_ok'] = 1;
 
-					unlink($pdf_file_path);
-
-				}
-
-				$mpdf->Output($pdf_file_path);
-
-				$file_path = $pdf_file_path;
-				
-				// echo $file_path;exit;
-				$result=array();
-				$result['pdf']=ADMINSITEURL."pdf/dispatch/".$fileName."/".$fileName.'.pdf';
-
-
-				$reply=array("ack"=>1,"developer_msg"=>"Dispatch PDF Generate Successfully","ack_msg"=>"Dispatch PDF Generate Successfully","result"=>$result);
-				// echo $reply;exit;
-				return $reply;
+				return array(
+					"ack" => 1,
+					"developer_msg" => "Dispatch PDF Generate Successfully",
+					"ack_msg" => "Dispatch PDF Generate Successfully",
+					"pdf" => $pdfUrl,
+					"file_url" => $pdfUrl,
+					"result" => $result
+				);
+			} else {
+				return array("ack" => 0, "developer_msg" => "Dispatch Not Found!!", "ack_msg" => "Dispatch PDF Not Generate!!");
 			}
-			else{
-				$reply=array("ack"=>0,"developer_msg"=>"Dispatch PDF Not Generate!!","ack_msg"=>"Dispatch PDF Not Generate!!");
-				return $reply;
-			}
-		}
-		else{
-			$reply=array("ack"=>0,"developer_msg"=>"Invoice No Require!!","ack_msg"=>"Invoice No Require!!");
-			return $reply;
+		} else {
+			return array("ack" => 0, "developer_msg" => "Dispatch Id Required!!", "ack_msg" => "Dispatch Id Required!!");
 		}
 	}
 }
-
 ?>

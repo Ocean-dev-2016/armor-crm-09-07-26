@@ -3,14 +3,14 @@
 include('connect.php');
 require_once('../include/notification.class.php');
 require_once('../include/product.class.php');
-include('../include/class.executive.php');
-include('../include/class.sales_executive.php');
-include('../include/employee.class.php');
-include('../include/orders.class.php');
-include('../include/dispatch.class.php');
-include('../include/class.invoice.php');
-include('../include/quotation.class.php');
-include('../include/class.deep_freezer_scheme.php');
+require_once('../include/class.executive.php');
+require_once('../include/class.sales_executive.php');
+require_once('../include/employee.class.php');
+require_once('../include/orders.class.php');
+require_once('../include/dispatch.class.php');
+require_once('../include/class.invoice.php');
+require_once('../include/quotation.class.php');
+require_once('../include/class.deep_freezer_scheme.php');
 
 
 
@@ -3012,13 +3012,14 @@ if ($is_valid_api_key) {
 		else if ($service == "invoice_pdf" || $service == 163) {
 			@set_time_limit(300);
 			@ini_set('max_execution_time', '300');
-			$type = isset($_REQUEST['type']) ? $_REQUEST['type'] : "";
-			$id = isset($_REQUEST['id']) ? $_REQUEST['id'] : (isset($_REQUEST['quotation_id']) ? $_REQUEST['quotation_id'] : (isset($_REQUEST['order_id']) ? $_REQUEST['order_id'] : ""));
+			$type = isset($_REQUEST['type']) ? trim((string)$_REQUEST['type']) : "";
+			$format_type = isset($_REQUEST['format_type']) ? (int)$_REQUEST['format_type'] : 1;
+			$id = isset($_REQUEST['id']) ? $_REQUEST['id'] : (isset($_REQUEST['invoice_id']) ? $_REQUEST['invoice_id'] : (isset($_REQUEST['quotation_id']) ? $_REQUEST['quotation_id'] : (isset($_REQUEST['order_id']) ? $_REQUEST['order_id'] : (isset($_REQUEST['customer_id']) ? $_REQUEST['customer_id'] : ""))));
 
 			if (!empty($id)) {
 				if ($type == "1") //1=invoice
 				{
-					$ack = $objInvoice->DownloadInvoice($id);
+					$ack = $objInvoice->DownloadInvoice($id, $format_type);
 				} else if ($type == "2") //packing slip
 				{
 					//packing slip code here

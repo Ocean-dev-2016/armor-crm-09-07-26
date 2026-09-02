@@ -3,6 +3,7 @@
    * Developed: Ravi Patel
    * Converting Indian Currency Numbers to words currency format
    */
+if (!class_exists('NumToWord_RP')) {
 class NumToWord_RP{
 	public function rp_convertNumToWord($number){
 		list($no, $point) = sscanf($number, '%d.%d');
@@ -71,5 +72,6 @@ class NumToWord_RP{
 		//$points = ($point) ? "" . $words[$point / 10] . " " . $words[$point = $point % 10] : '';
 		return $result;
 	}
+}
 }
 ?> 

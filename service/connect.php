@@ -2,6 +2,9 @@
 header('Content-Type: application/json');
 error_reporting(1);
 session_start();
+if (function_exists('session_write_close')) {
+	@session_write_close();
+}
 date_default_timezone_set('Asia/Kolkata');
 include("../include/define.php");
 
