@@ -3245,10 +3245,22 @@ class Quotation extends Functions
 
 				$reply = array(
 					"ack" => 1,
+					"ack_msg" => "PDF ready",
 					"developer_msg" => "Quotation PDF Generate Successfully",
-					"ack_msg" => "Quotation PDF Generate Successfully",
-					"pdf" => $pdfUrl,
+					"id" => (int) $id,
+					"quotation_id" => (int) $id,
+					"order_id" => (int) $id,
 					"file_url" => $pdfUrl,
+					"file_name" => $fileName . '.pdf',
+					"pdf" => $pdfUrl,
+					"web_view_url" => $webUrl,
+					"viewer_url" => $webUrl,
+					"title" => "Quotation - " . ($quotation_no_log ? $quotation_no_log : $id),
+					"pdf_ok" => 1,
+					"pdf_pages" => $pageCount,
+					"pdf_size" => $pdfBytes,
+					"mime_type" => "application/pdf",
+					"content_type" => "application/pdf",
 					"result" => $result
 				);
 				return $reply;

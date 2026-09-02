@@ -1641,12 +1641,25 @@ class SalesExecutive extends Functions
 					}
 				}
 
+				$order_no_log = (string) $this->db->rp_getValue("orders", "order_no", "id='" . $order_id . "'", 0);
 				$reply = array(
 					"ack" => 1,
+					"ack_msg" => "PDF ready",
 					"developer_msg" => "Order Generate Successfully",
-					"ack_msg" => "Order Generate Successfully",
-					"pdf" => $pdfUrl,
+					"id" => (int) $order_id,
+					"order_id" => (int) $order_id,
+					"order_no" => $order_no_log,
 					"file_url" => $pdfUrl,
+					"file_name" => $fileName . '.pdf',
+					"pdf" => $pdfUrl,
+					"web_view_url" => $webUrl,
+					"viewer_url" => $webUrl,
+					"title" => "Customer Order - " . ($order_no_log != '' ? $order_no_log : $order_id),
+					"pdf_ok" => 1,
+					"pdf_pages" => $pageCount,
+					"pdf_size" => $pdfBytes,
+					"mime_type" => "application/pdf",
+					"content_type" => "application/pdf",
 					"result" => $result
 				);
 				return $reply;
