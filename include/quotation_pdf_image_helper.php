@@ -9,9 +9,15 @@ if (!function_exists('armor_pdf_image_cache_dir')) {
 	{
 		$dir = dirname(__FILE__) . '/../bbsales_tracking/pdf/tmp_img_cache/';
 		if (!is_dir($dir)) {
-			@mkdir($dir, 0755, true);
+			@mkdir($dir, 0777, true);
 		}
-		return $dir;
+		if (!is_dir($dir) || !is_writable($dir)) {
+			$dir = rtrim(sys_get_temp_dir(), '/\\') . '/armor_pdf_cache/';
+			if (!is_dir($dir)) {
+				@mkdir($dir, 0777, true);
+			}
+		}
+		return rtrim($dir, '/\\') . '/';
 	}
 }
 
