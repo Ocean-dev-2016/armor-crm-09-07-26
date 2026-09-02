@@ -1621,9 +1621,6 @@ class SalesExecutive extends Functions
 
 				$pdfUrl = $gen['url'];
 				$webUrl = SITEURL . 'bbsales_tracking/order_viewer.php?order_id=' . (int) $order_id;
-				$pdfFilePath = isset($gen['file_path']) ? $gen['file_path'] : '';
-				$pageCount = isset($gen['pages']) ? (int) $gen['pages'] : ($pdfFilePath !== '' ? armor_pdf_export_count_pages($pdfFilePath) : 1);
-				$pdfBytes = isset($gen['bytes']) ? (int) $gen['bytes'] : (($pdfFilePath !== '' && is_file($pdfFilePath)) ? (int) filesize($pdfFilePath) : 0);
 
 				$result = array();
 				$result['pdf'] = $pdfUrl;
@@ -1631,11 +1628,6 @@ class SalesExecutive extends Functions
 				$result['web_view_url'] = $webUrl;
 				$result['viewer_url'] = $webUrl;
 				$result['file_name'] = $fileName . '.pdf';
-				$result['pdf_ok'] = 1;
-				$result['pdf_pages'] = $pageCount;
-				$result['pdf_size'] = $pdfBytes;
-				$result['mime_type'] = 'application/pdf';
-				$result['content_type'] = 'application/pdf';
 				$result['lr_image'] = $file_path;
 
 				$pdf_attachment_id = trim((string) $this->db->rp_getValue("orders", "pdf_attachment", "isDelete=0 AND id='" . $order_id . "' ", 0));
