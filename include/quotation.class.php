@@ -3179,6 +3179,9 @@ class Quotation extends Functions
 			$count = $this->db->rp_getTotalRecord("quotation_detail", "id='" . $id . "'", 0);
 
 			if ($count > 0) {
+				if (function_exists('session_write_close')) {
+					@session_write_close();
+				}
 				require_once dirname(__FILE__) . '/armor_pdf_export_helper.php';
 
 				$quotation_no = str_replace("/", "-", stripslashes($this->db->rp_getValue("quotation_detail", "quotation_no", "id='" . $id . "'", 0)));

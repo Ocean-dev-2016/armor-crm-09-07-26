@@ -48,7 +48,7 @@ if ($isPrintMode || $isAppPdfMode || $isMpdfMode) {
 }
 $quotationViewEmbedded = (basename($_SERVER['SCRIPT_NAME']) === 'quotation_viewer.php');
 $quotationViewStandalone = !$quotationViewEmbedded;
-if ($quotationViewStandalone && !$isPdfExportMode) {
+if ($quotationViewStandalone && !$isPdfExportMode && !defined('ARMOR_PDF_EXPORT_EMBED')) {
 	ob_start();
 }
 ?>

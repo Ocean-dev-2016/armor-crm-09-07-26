@@ -1593,6 +1593,9 @@ class SalesExecutive extends Functions
 			$count = $this->db->rp_getTotalRecord("orders", "id='" . $order_id . "'", 0);
 
 			if ($count > 0) {
+				if (function_exists('session_write_close')) {
+					@session_write_close();
+				}
 				require_once dirname(__FILE__) . '/armor_pdf_export_helper.php';
 
 				$date = date("d-m-Y");

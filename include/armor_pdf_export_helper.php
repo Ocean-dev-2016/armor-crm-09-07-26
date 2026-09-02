@@ -103,6 +103,7 @@ if (!function_exists('armor_pdf_export_fetch_view_html')) {
 		$oldReq = isset($_REQUEST) ? $_REQUEST : array();
 		$cwd = getcwd();
 		$html = '';
+		$embedAttempted = false;
 
 		foreach ($requestParams as $k => $v) {
 			$_GET[$k] = $v;
@@ -117,6 +118,7 @@ if (!function_exists('armor_pdf_export_fetch_view_html')) {
 			if (!defined('ARMOR_PDF_EXPORT_EMBED')) {
 				define('ARMOR_PDF_EXPORT_EMBED', 1);
 			}
+			$embedAttempted = true;
 			@chdir($bbsDir);
 			ob_start();
 			@include $viewFile;
@@ -141,7 +143,8 @@ if (!function_exists('armor_pdf_export_fetch_view_html')) {
 			}
 		}
 
-		if (!$ok && defined('ADMINSITEURL')) {
+		// Never HTTP-fetch on same server during API export — causes Apache worker deadlock (hang).
+		if (!$ok && !$embedAttempted && defined('ADMINSITEURL')) {
 			$query = array_merge($requestParams, array('print' => '1'));
 			$bodyUrl = rtrim(ADMINSITEURL, '/') . '/' . ltrim($viewFileName, '/') . '?' . http_build_query($query);
 			$html = @file_get_contents($bodyUrl);
