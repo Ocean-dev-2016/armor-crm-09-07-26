@@ -35,6 +35,28 @@ if (!function_exists('armor_pdf_resolve_local_image_path')) {
 		$roots[] = realpath($includeDir . '/..');
 		$roots[] = realpath($includeDir . '/../bbsales_tracking');
 
+		$tryPath = function ($candidate) {
+			if ($candidate !== '' && is_file($candidate)) {
+				return $candidate;
+			}
+			return '';
+		};
+
+		$preferWebp = function ($path) {
+			if ($path === '' || !is_file($path)) {
+				return '';
+			}
+			$ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+			if ($ext === 'webp') {
+				return $path;
+			}
+			$webp = preg_replace('/\.[^.]+$/', '.webp', $path);
+			if ($webp !== $path && is_file($webp)) {
+				return $webp;
+			}
+			return $path;
+		};
+
 		if (preg_match('/^https?:\/\//i', $src)) {
 			foreach (array('SITEURL', 'ADMINSITEURL') as $const) {
 				if (!defined($const) || strpos($src, constant($const)) !== 0) {
@@ -43,8 +65,16 @@ if (!function_exists('armor_pdf_resolve_local_image_path')) {
 				$rel = ltrim(substr($src, strlen(constant($const))), '/');
 				foreach (array_unique(array_filter($roots)) as $root) {
 					$candidate = $root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $rel);
-					if (is_file($candidate)) {
-						return $candidate;
+					$found = $tryPath($candidate);
+					if ($found !== '') {
+						return $preferWebp($found);
+					}
+					$webpCandidate = preg_replace('/\.[^.]+$/', '.webp', $candidate);
+					if ($webpCandidate !== $candidate) {
+						$found = $tryPath($webpCandidate);
+						if ($found !== '') {
+							return $found;
+						}
 					}
 				}
 			}
@@ -52,14 +82,22 @@ if (!function_exists('armor_pdf_resolve_local_image_path')) {
 		}
 
 		if (is_file($src)) {
-			return $src;
+			return $preferWebp($src);
 		}
 
 		$urlPath = ltrim($src, '/');
 		foreach (array_unique(array_filter($roots)) as $root) {
 			$candidate = $root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $urlPath);
-			if (is_file($candidate)) {
-				return $candidate;
+			$found = $tryPath($candidate);
+			if ($found !== '') {
+				return $preferWebp($found);
+			}
+			$webpCandidate = preg_replace('/\.[^.]+$/', '.webp', $candidate);
+			if ($webpCandidate !== $candidate) {
+				$found = $tryPath($webpCandidate);
+				if ($found !== '') {
+					return $found;
+				}
 			}
 		}
 
@@ -107,7 +145,7 @@ if (!function_exists('armor_pdf_load_image_bytes')) {
 }
 
 if (!function_exists('armor_pdf_resize_to_jpeg_bytes')) {
-	function armor_pdf_resize_to_jpeg_bytes($bytes, $maxW, $maxH, $quality = 58)
+	function armor_pdf_resize_to_jpeg_bytes($bytes, $maxW, $maxH, $quality = 52)
 	{
 		if (extension_loaded('imagick') && class_exists('Imagick')) {
 			try {
@@ -115,7 +153,11 @@ if (!function_exists('armor_pdf_resize_to_jpeg_bytes')) {
 				$im->readImageBlob($bytes);
 				$im->setImageCompressionQuality((int) $quality);
 				$im->thumbnailImage((int) $maxW, (int) $maxH, true, true);
-				$im->setImageFormat('jpeg');
+				if (strtolower($im->getImageFormat()) === 'webp') {
+					$im->setImageFormat('jpeg');
+				} else {
+					$im->setImageFormat('jpeg');
+				}
 				$jpeg = $im->getImageBlob();
 				$im->clear();
 				$im->destroy();
@@ -160,7 +202,7 @@ if (!function_exists('armor_pdf_resize_to_jpeg_bytes')) {
 }
 
 if (!function_exists('armor_pdf_compress_image_src')) {
-	function armor_pdf_compress_image_src($src, $maxW, $maxH, $quality = 58)
+	function armor_pdf_compress_image_src($src, $maxW, $maxH, $quality = 52)
 	{
 		if (!isset($GLOBALS['armor_pdf_image_cache'])) {
 			$GLOBALS['armor_pdf_image_cache'] = array();
@@ -192,6 +234,15 @@ if (!function_exists('armor_pdf_compress_image_src')) {
 		}
 
 		@file_put_contents($cacheFile, $jpeg);
+
+		// Optional webp cache copy (smaller on disk for reuse)
+		if (function_exists('imagecreatefromstring') && function_exists('imagewebp')) {
+			$img = @imagecreatefromstring($jpeg);
+			if ($img) {
+				@imagewebp($img, armor_pdf_image_cache_dir() . $key . '.webp', 60);
+				imagedestroy($img);
+			}
+		}
 		unset($jpeg);
 
 		$GLOBALS['armor_pdf_image_cache'][$key] = $cacheFile;
@@ -210,7 +261,7 @@ if (!function_exists('armor_pdf_guess_image_limits')) {
 			return array(520, 72, 55);
 		}
 		if (strpos($tag, 'qp-prod') !== false || strpos($tag, '42px') !== false) {
-			return array(42, 42, 55);
+			return array(40, 40, 50);
 		}
 		if (strpos($tag, 'width: 80px') !== false || strpos($tag, 'width:80px') !== false) {
 			return array(54, 54, 58);

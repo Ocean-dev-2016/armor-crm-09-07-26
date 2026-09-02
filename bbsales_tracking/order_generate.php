@@ -2,99 +2,60 @@
 
 /*
  * @author Ravi Patel
+ * Order PDF — same template as print view (suggested products) + compressed images.
  */
 
-if($_REQUEST['staic']==2)
-{
-	$page_id=420;$page_slug='page_customer';
+$staic = isset($staic) ? $staic : (isset($_REQUEST['staic']) ? $_REQUEST['staic'] : 0);
+if ($staic == 2 && !isset($db)) {
+	$page_id = 420;
+	$page_slug = 'page_customer';
 	require_once("connect_in.php");
-	$order_id	= $_REQUEST['order_id'];
 }
 
-$relCertFileNames = array();
-$merge_file = array();
-// $string ="<style>span{padding-right:70px}</style>";
+$order_id = isset($order_id) ? (int) $order_id : (isset($_REQUEST['order_id']) ? (int) $_REQUEST['order_id'] : 0);
+$file_path = '';
 
-//$d=file_get_contents(ADMINSITEURL."print_purchase_order.php?id=".$id);
-/*old*/
-// $d=file_get_contents(ADMINSITEURL.'order_view_download.php?order_id='.$order_id.'');
-/*old*/
+if ($order_id > 0) {
+	require_once dirname(__FILE__) . '/../include/armor_pdf_export_helper.php';
 
-$d=file_get_contents(ADMINSITEURL.'order_view_download_1.php?order_id='.$order_id.'');
+	if ($staic == 2 && isset($db)) {
+		$uname = str_replace(" ", "-", stripslashes($db->rp_getValue("orders", "company_name", "id='" . $order_id . "'", 0)));
+		$uname = str_replace("/", "-", $uname);
+		$order_no = str_replace("/", "-", stripslashes($db->rp_getValue("orders", "order_no", "id='" . $order_id . "'", 0)));
+	} else {
+		$uname = 'Order';
+		$order_no = $order_id;
+	}
 
-//$d=file_get_contents(ADMINSITEURL.'order_view_new.php?order_id='.$order_id.'');
-//$d.=$string;
-require('mpdf60/mpdf.php');
+	$fileName = $uname . "_" . date('d_m_Y') . "_" . "Order_" . $order_no . 'pdf';
+	$saveRelative = $fileName . '/' . $fileName . '.pdf';
 
+	$gen = armor_pdf_export_generate(
+		'view_order_new_1.php',
+		array('order_id' => $order_id),
+		array('quote-wrap', 'PRO FORMA', 'quote-main-body'),
+		$saveRelative
+	);
 
-
-$mpdf = new mPDF('',    // mode - default ''
-
- 'A4',    // format - A4, for example, default ''
-
- 15,     // font size - default 0
-
- 'sans-serif',    // default font family
-
- 3,    // margin_left
-
- 3,    // margin right
-
- 3,     // margin top
-
- 3,    // margin bottom
-
- 0,     // margin header
-
- 0,     // margin footer
-
- 'P');  // L - landscape, P - portrait
-
-$mpdf->WriteHTML($d);
-
-$last_id = $order_id;
-$quotation_no = $db->rp_getValue("orders","order_no","id='".$order_id."'");
-$customer_id = $db->rp_getValue("orders","customer_id","id='".$order_id."'");
-$flag = "Web";
-$ctable = "orders";
-$module_name = "Orders";
-$log_description = $module_name." ".$quotation_no." PDF Download By ".$_SESSION[SITE_SESS.'SESS_NAME']." ON ".date("Y-m-d H:i:s");
-$db->insertLog($ctable,$last_id,"insert","",$insert,0,$log_description,$flag,$module_name,$user_id,$customer_id);
-
-$uname	= str_replace(" ","-",stripslashes($db->rp_getValue("orders","company_name","id='".$order_id."'",0)));
-$uname  = str_replace("/","-",stripslashes($db->rp_getValue("orders","company_name","id='".$order_id."'",0)));
-$order_no	= str_replace("/","-",stripslashes($db->rp_getValue("orders","order_no","id='".$order_id."'",0)));
-
-// $fileName = "Sales_Order".SITENAME."_".date('d_m_Y')."_".$order_no."_".$uname.'.pdf';  
-$fileName = $uname."_".date('d_m_Y')."_"."Order_".$order_no.'pdf'; 
-
-
-if(!is_dir($fileName)){
-
-	mkdir(ORDERS_PDF.$fileName);
-
-}
-
-$pdf_file_path	= ORDERS_PDF.$fileName."/".$fileName.'.pdf';
-
-
-
-if(file_exists($pdf_file_path)){
-
-	unlink($pdf_file_path);
-
-}
-
-$mpdf->Output($pdf_file_path);
-
-
-if($_REQUEST['staic']==2)
-{
-	echo $pdf_file_path;
-}
-else
-{
-	$file_path = $pdf_file_path;
+	if ($gen['ok']) {
+		if ($staic == 2 && isset($db)) {
+			$quotation_no = $db->rp_getValue("orders", "order_no", "id='" . $order_id . "'");
+			$customer_id = $db->rp_getValue("orders", "customer_id", "id='" . $order_id . "'");
+			$flag = "Web";
+			$ctable = "orders";
+			$module_name = "Orders";
+			$log_description = $module_name . " " . $quotation_no . " PDF Download By " . $_SESSION[SITE_SESS . 'SESS_NAME'] . " ON " . date("Y-m-d H:i:s");
+			$user_id = isset($user_id) ? $user_id : 0;
+			$db->insertLog($ctable, $order_id, "insert", "", array(), 0, $log_description, $flag, $module_name, $user_id, $customer_id);
+			echo $gen['url'];
+			exit;
+		}
+		$file_path = $gen['path'];
+	} elseif ($staic == 2) {
+		header('Content-Type: application/json; charset=utf-8');
+		echo json_encode(array('ack' => 0, 'ack_msg' => isset($gen['error']) ? $gen['error'] : 'Order PDF Not Generate!!'));
+		exit;
+	}
 }
 
 ?>

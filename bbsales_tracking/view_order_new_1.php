@@ -727,7 +727,7 @@ if ($isPrintMode || $isAppPdfMode || $isMpdfMode) {
 			}
 		}
 
-		<?php if ($isPrintMode) { ?>
+		<?php if ($isPrintMode && !$isPdfExportMode) { ?>
 		html, body {
 			margin: 0;
 			padding: 0;
@@ -741,15 +741,61 @@ if ($isPrintMode || $isAppPdfMode || $isMpdfMode) {
 			margin: 0 auto !important;
 		}
 		<?php } ?>
+		<?php if ($isPdfExportMode) { ?>
+		html, body {
+			margin: 0;
+			padding: 0;
+			background: #fff;
+		}
+
+		.mpdf-export-mode .main-container {
+			padding: 6px !important;
+			max-width: 100% !important;
+			width: 100% !important;
+			margin: 0 !important;
+		}
+
+		.mpdf-export-mode .quote-header-img,
+		.mpdf-export-mode .quote-footer-img {
+			max-height: 90px !important;
+		}
+
+		.mpdf-export-mode table,
+		.mpdf-export-mode tr,
+		.mpdf-export-mode td,
+		.mpdf-export-mode div {
+			page-break-inside: auto !important;
+			page-break-before: auto !important;
+			page-break-after: auto !important;
+		}
+
+		.mpdf-export-mode .qp-prod-img-cell,
+		.mpdf-export-mode .product-items-table .image-width {
+			width: 6% !important;
+			min-width: 6% !important;
+			max-width: 6% !important;
+		}
+
+		.mpdf-export-mode .product-items-table img {
+			max-width: 50px !important;
+			max-height: 50px !important;
+		}
+		<?php } ?>
 	</style>
 	<?php
 	if ($orderViewStandalone) {
-		echo armor_quotation_pi_suggest_styles();
+		if ($isPdfExportMode) {
+			echo armor_quotation_pi_mpdf_suggest_styles();
+			echo armor_quotation_pi_suggest_pi_view_overrides();
+			echo armor_quotation_pi_order_view_layout_styles();
+		} else {
+			echo armor_quotation_pi_suggest_styles();
+		}
 	}
 	?>
 </head>
 
-<body<?= $isPrintMode ? ' class="print-a4"' : '' ?>>
+<body<?= $isPdfExportMode ? ' class="mpdf-export-mode"' : ($isPrintMode ? ' class="print-a4"' : '') ?>>
 <?php } else { echo armor_quotation_pi_order_view_layout_styles(); } ?>
 <div class="main-container">
 <div class="quote-wrap">

@@ -1593,109 +1593,26 @@ class SalesExecutive extends Functions
 			$count = $this->db->rp_getTotalRecord("orders", "id='" . $order_id . "'", 0);
 
 			if ($count > 0) {
-				$d = $this->fetchOrderPdfHtml($order_id);
-				$d = $this->sanitizeOrderPdfHtml($d);
-
-				if (trim((string) $d) === '') {
-					return array(
-						"ack" => 0,
-						"developer_msg" => "Order HTML could not be loaded for PDF.",
-						"ack_msg" => "Order PDF Not Generate!!"
-					);
-				}
-
-				require_once dirname(__FILE__) . '/armor_mbstring_bootstrap.php';
-
-				@ini_set('memory_limit', '1024M');
-				@set_time_limit(300);
-
-				if (!armor_prepare_mpdf_environment('1024M', 300)) {
-					return array(
-						"ack" => 0,
-						"developer_msg" => "mPDF/mbstring is not available on server.",
-						"ack_msg" => "Order PDF Not Generate!!"
-					);
-				}
-
-				$mpdf = new mPDF(
-					'',
-					'A4',
-					10,
-					'sans-serif',
-					1,
-					3,
-					3,
-					3,
-					0,
-					0,
-					'P'
-				);
-
-				$mpdf->autoScriptToLang = true;
-				$mpdf->baseScript = 1;
-				$mpdf->autoLangToFont = true;
-				if (property_exists($mpdf, 'img_dpi')) {
-					$mpdf->img_dpi = 72;
-				}
-				if (property_exists($mpdf, 'simpleTables')) {
-					$mpdf->simpleTables = true;
-				}
-				if (property_exists($mpdf, 'shrink_tables_to_fit')) {
-					$mpdf->shrink_tables_to_fit = 1;
-				}
-
-				$custom_mpdf_css = '<style>
-					body { margin: 0; padding: 0; font-family: sans-serif; font-size: 11px; }
-					table { border-collapse: collapse; }
-					.main-container { width: 100%; max-width: 100%; padding: 4px; }
-					.quote-wrap, .quote-main-body, .quote-suggest-body, .quote-summary-body { width: 100%; }
-					img { max-width: 50px; max-height: 50px; }
-					.quote-header-img, .quote-footer-img { max-width: 100% !important; max-height: 90px !important; width: auto !important; height: auto !important; }
-					.qp-suggest-print-grid img { max-width: 42px !important; max-height: 42px !important; }
-				</style>';
-
-				try {
-					$mpdf->WriteHTML($custom_mpdf_css . $d);
-				} catch (Exception $e) {
-					return array(
-						"ack" => 0,
-						"developer_msg" => "mPDF error: " . $e->getMessage(),
-						"ack_msg" => "Order PDF Not Generate!!"
-					);
-				}
-				unset($d);
+				require_once dirname(__FILE__) . '/armor_pdf_export_helper.php';
 
 				$date = date("d-m-Y");
 				$fileName = $date . "-" . $this->rp_createSlug($company_name) . "-" . $this->rp_createSlug($city);
-				$ordersPdfDir = dirname(__FILE__) . '/../bbsales_tracking/pdf/orders/';
-				if (!is_dir($ordersPdfDir)) {
-					@mkdir($ordersPdfDir, 0755, true);
-				}
-				$pdf_file_path = $ordersPdfDir . $fileName . '.pdf';
+				$gen = armor_pdf_export_generate(
+					'view_order_new_1.php',
+					array('order_id' => (int) $order_id),
+					array('quote-wrap', 'PRO FORMA', 'quote-main-body'),
+					$fileName . '.pdf'
+				);
 
-				if (file_exists($pdf_file_path)) {
-					@unlink($pdf_file_path);
-				}
-
-				try {
-					$mpdf->Output($pdf_file_path, 'F');
-				} catch (Exception $e) {
+				if (!$gen['ok']) {
 					return array(
 						"ack" => 0,
-						"developer_msg" => "PDF save error: " . $e->getMessage(),
+						"developer_msg" => isset($gen['error']) ? $gen['error'] : 'Order HTML could not be loaded for PDF.',
 						"ack_msg" => "Order PDF Not Generate!!"
 					);
 				}
 
-				if (!is_file($pdf_file_path) || filesize($pdf_file_path) < 100) {
-					return array(
-						"ack" => 0,
-						"developer_msg" => "PDF file was not created. Check folder permissions.",
-						"ack_msg" => "Order PDF Not Generate!!"
-					);
-				}
-
-				$pdfUrl = ADMINSITEURL . "pdf/orders/" . $fileName . '.pdf';
+				$pdfUrl = $gen['url'];
 
 				$result = array();
 				$result['pdf'] = $pdfUrl;
@@ -1731,77 +1648,6 @@ class SalesExecutive extends Functions
 			$reply = array("ack" => 0, "developer_msg" => "Order Id Require!!", "ack_msg" => "Order Id Require!!");
 			return $reply;
 		}
-	}
-
-	private function fetchOrderPdfHtml($order_id)
-	{
-		$order_id = (int) $order_id;
-		$d = '';
-		$bbsDir = dirname(__FILE__) . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'bbsales_tracking' . DIRECTORY_SEPARATOR;
-		$viewFile = $bbsDir . 'view_order_new_1.php';
-		$old_get = isset($_GET) ? $_GET : array();
-		$old_req = isset($_REQUEST) ? $_REQUEST : array();
-		$cwd = getcwd();
-
-		$_GET['order_id'] = $order_id;
-		$_GET['app_pdf'] = '1';
-		$_GET['mpdf'] = '1';
-		$_REQUEST['order_id'] = $order_id;
-		$_REQUEST['app_pdf'] = '1';
-		$_REQUEST['mpdf'] = '1';
-
-		if (is_file($viewFile)) {
-			@chdir($bbsDir);
-			ob_start();
-			@include $viewFile;
-			$d = ob_get_clean();
-			if ($cwd) {
-				@chdir($cwd);
-			}
-		}
-
-		$_GET = $old_get;
-		$_REQUEST = $old_req;
-
-		$d = (string) $d;
-		if (trim($d) === '' || (stripos($d, 'quote-wrap') === false && stripos($d, 'PRO FORMA') === false && stripos($d, 'quote-main-body') === false)) {
-			$body_url = ADMINSITEURL . "view_order_new_1.php?order_id=" . urlencode($order_id) . "&app_pdf=1&mpdf=1";
-			$d = @file_get_contents($body_url);
-			if (empty($d)) {
-				$ch = curl_init();
-				curl_setopt($ch, CURLOPT_URL, $body_url);
-				curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-				curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-				curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-				curl_setopt($ch, CURLOPT_TIMEOUT, 180);
-				$d = curl_exec($ch);
-				curl_close($ch);
-			}
-			$d = (string) $d;
-		}
-
-		return $d;
-	}
-
-	private function sanitizeOrderPdfHtml($html)
-	{
-		$html = (string) $html;
-		$html = preg_replace('/<script\b[^>]*>[\s\S]*?<\/script>/i', '', $html);
-		$html = preg_replace('/<style[^>]*>[\s\S]*?quote-print-toolbar[\s\S]*?<\/style>/i', '', $html);
-		$html = preg_replace('/<div[^>]*class="[^"]*quote-print-toolbar[^"]*"[^>]*>[\s\S]*?<\/div>/i', '', $html);
-		$html = preg_replace('/(<\/tr>)\s*(?:<br\s*\/?>\s*)+/i', '$1', $html);
-		$html = preg_replace('/(?:<br\s*\/?>\s*)+(<tr\b)/i', '$1', $html);
-		$html = preg_replace('/(<tbody[^>]*>)\s*(?:<br\s*\/?>\s*)+/i', '$1', $html);
-		$html = preg_replace('/(?:<br\s*\/?>\s*)+(<\/tbody>)/i', '$1', $html);
-		$html = preg_replace('/(<br\s*\/?>\s*){4,}/i', '<br />', $html);
-		$html = preg_replace('/\s+on\w+="[^"]*"/i', '', $html);
-		$html = preg_replace('/position\s*:\s*absolute\s*;?/i', '', $html);
-		$html = preg_replace('/display\s*:\s*flex[^;]*;?/i', '', $html);
-
-		require_once dirname(__FILE__) . '/quotation_pdf_image_helper.php';
-		$html = armor_pdf_compress_images_in_html($html, true);
-
-		return $html;
 	}
 
 	public function UpdateSalesExecutiveProfile($detail, $file)
