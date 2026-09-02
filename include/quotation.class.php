@@ -3180,8 +3180,11 @@ class Quotation extends Functions
 	{
 		$id = (int) $id;
 		$d = '';
+		$bbsDir = dirname(__FILE__) . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'bbsales_tracking' . DIRECTORY_SEPARATOR;
+		$viewFile = $bbsDir . 'quotation_view_new_quotation_new_1.php';
 		$old_get = isset($_GET) ? $_GET : array();
 		$old_req = isset($_REQUEST) ? $_REQUEST : array();
+		$cwd = getcwd();
 
 		$_GET['quotation_id'] = $id;
 		$_GET['app_pdf'] = '1';
@@ -3190,17 +3193,21 @@ class Quotation extends Functions
 		$_REQUEST['app_pdf'] = '1';
 		$_REQUEST['mpdf'] = '1';
 
-		$viewFile = dirname(__FILE__) . '/../bbsales_tracking/quotation_view_new_quotation_new_1.php';
 		if (is_file($viewFile)) {
+			@chdir($bbsDir);
 			ob_start();
-			include $viewFile;
+			@include $viewFile;
 			$d = ob_get_clean();
+			if ($cwd) {
+				@chdir($cwd);
+			}
 		}
 
 		$_GET = $old_get;
 		$_REQUEST = $old_req;
 
-		if (trim((string) $d) === '') {
+		$d = (string) $d;
+		if (trim($d) === '' || (stripos($d, 'quote-wrap') === false && stripos($d, 'QUOTATION') === false && stripos($d, 'quote-main-body') === false)) {
 			$body_url = ADMINSITEURL . 'quotation_view_new_quotation_new_1.php?quotation_id=' . urlencode($id) . '&app_pdf=1&mpdf=1';
 			$d = @file_get_contents($body_url);
 			if (empty($d)) {
@@ -3213,9 +3220,10 @@ class Quotation extends Functions
 				$d = curl_exec($ch);
 				curl_close($ch);
 			}
+			$d = (string) $d;
 		}
 
-		return (string) $d;
+		return $d;
 	}
 
 	private function sanitizeQuotationPdfHtml($html)
@@ -3237,7 +3245,7 @@ class Quotation extends Functions
 		$html = preg_replace('/width:\s*250mm[^;]*;?/i', 'width:100%;', $html);
 
 		require_once dirname(__FILE__) . '/quotation_pdf_image_helper.php';
-		$html = armor_pdf_compress_images_in_html($html);
+		$html = armor_pdf_compress_images_in_html($html, true);
 
 		return $html;
 	}
@@ -3364,22 +3372,17 @@ class Quotation extends Functions
 				if (property_exists($mpdf, 'shrink_tables_to_fit')) {
 					$mpdf->shrink_tables_to_fit = 1;
 				}
-				$this->writeQuotationPdfHtml($mpdf, $d);
+
+				try {
+					$this->writeQuotationPdfHtml($mpdf, $d);
+				} catch (Exception $e) {
+					return array(
+						"ack" => 0,
+						"developer_msg" => "mPDF error: " . $e->getMessage(),
+						"ack_msg" => "Quotation PDF Not Generate!!"
+					);
+				}
 				unset($d);
-
-				/*LOG eNTRY*/
-				$sales_id = $this->db->rp_getValue("quotation_detail", "sales_id", "id='" . $id . "'", 0);
-				$sales_name = $this->db->rp_getValue("sales_executive", "name", "id='" . $sales_id . "'", 0);
-				$customer_id = $this->db->rp_getValue("quotation_detail", "customer_id", "id='" . $id . "'");
-				$quotation_no = $this->db->rp_getValue("quotation_detail", "quotation_no", "id='" . $id . "'");
-
-				$last_id = $id;
-				$flag = "Application";
-				$ctable = "quotation_detail";
-				$module_name = "Quotation";
-				$log_description = $module_name . " " . $quotation_no . " PDF Download By " . $sales_name . " ON " . date("Y-m-d H:i:s");
-				$this->db->insertLog($ctable, $last_id, "insert", "", array(), 0, $log_description, $flag, $module_name, $sales_id, $customer_id);
-				/*LOG eNTRY*/
 
 				$quotation_no	= str_replace("/", "-", stripslashes($this->db->rp_getValue("quotation_detail", "quotation_no", "id='" . $id . "'", 0)));
 
@@ -3398,7 +3401,15 @@ class Quotation extends Functions
 					@unlink($pdf_file_path);
 				}
 
-				$mpdf->Output($pdf_file_path, 'F');
+				try {
+					$mpdf->Output($pdf_file_path, 'F');
+				} catch (Exception $e) {
+					return array(
+						"ack" => 0,
+						"developer_msg" => "PDF save error: " . $e->getMessage(),
+						"ack_msg" => "Quotation PDF Not Generate!!"
+					);
+				}
 
 				if (!$this->validateQuotationPdfFile($pdf_file_path)) {
 					@unlink($pdf_file_path);
@@ -3436,6 +3447,15 @@ class Quotation extends Functions
 					);
 				}
 
+				/*LOG eNTRY*/
+				$sales_id = $this->db->rp_getValue("quotation_detail", "sales_id", "id='" . $id . "'", 0);
+				$sales_name = $this->db->rp_getValue("sales_executive", "name", "id='" . $sales_id . "'", 0);
+				$customer_id = $this->db->rp_getValue("quotation_detail", "customer_id", "id='" . $id . "'");
+				$quotation_no_log = $this->db->rp_getValue("quotation_detail", "quotation_no", "id='" . $id . "'");
+				$log_description = "Quotation " . $quotation_no_log . " PDF Download By " . $sales_name . " ON " . date("Y-m-d H:i:s");
+				@$this->db->insertLog("quotation_detail", $id, "insert", "", array(), 0, $log_description, "Application", "Quotation", $sales_id, $customer_id);
+				/*LOG eNTRY*/
+
 				$result = array();
 				$pdfUrl = ADMINSITEURL . "pdf/orders/" . $fileName . "/" . $fileName . '.pdf';
 				$result['pdf'] = $pdfUrl;
@@ -3451,6 +3471,7 @@ class Quotation extends Functions
 					"ack" => 1,
 					"developer_msg" => "Quotation PDF Generate Successfully",
 					"ack_msg" => "Quotation PDF Generate Successfully",
+					"pdf" => $pdfUrl,
 					"file_url" => $pdfUrl,
 					"result" => $result
 				);

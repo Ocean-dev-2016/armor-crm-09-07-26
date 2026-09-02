@@ -223,12 +223,12 @@ if (!function_exists('armor_pdf_guess_image_limits')) {
 }
 
 if (!function_exists('armor_pdf_compress_images_in_html')) {
-	function armor_pdf_compress_images_in_html($html)
+	function armor_pdf_compress_images_in_html($html, $useLocalPaths = false)
 	{
 		armor_pdf_image_cache_reset();
 		$processed = 0;
 
-		$html = preg_replace_callback('/<img\b[^>]*>/i', function ($m) use (&$processed) {
+		$html = preg_replace_callback('/<img\b[^>]*>/i', function ($m) use (&$processed, $useLocalPaths) {
 			$tag = $m[0];
 			if (!preg_match('/\bsrc=(["\'])([^"\']+)\1/i', $tag, $srcMatch)) {
 				return $tag;
@@ -250,14 +250,18 @@ if (!function_exists('armor_pdf_compress_images_in_html')) {
 				return $tag;
 			}
 
-			$jpegBytes = @file_get_contents($filePath);
-			if ($jpegBytes === false || $jpegBytes === '') {
-				return $tag;
+			if ($useLocalPaths) {
+				$imgSrc = str_replace('\\', '/', $filePath);
+			} else {
+				$jpegBytes = @file_get_contents($filePath);
+				if ($jpegBytes === false || $jpegBytes === '') {
+					return $tag;
+				}
+				$imgSrc = 'data:image/jpeg;base64,' . base64_encode($jpegBytes);
+				unset($jpegBytes);
 			}
-			$dataUri = 'data:image/jpeg;base64,' . base64_encode($jpegBytes);
-			unset($jpegBytes);
 
-			$newTag = preg_replace('/\bsrc=(["\'])([^"\']+)\1/i', 'src="' . $dataUri . '"', $tag, 1);
+			$newTag = preg_replace('/\bsrc=(["\'])([^"\']+)\1/i', 'src="' . $imgSrc . '"', $tag, 1);
 			$newTag = preg_replace('/\sstyle=(["\'])[^"\']*\1/i', '', $newTag);
 			$newTag = preg_replace('/<img/i', '<img style="max-width:' . $maxW . 'px;max-height:' . $maxH . 'px;"', $newTag, 1);
 			return $newTag;

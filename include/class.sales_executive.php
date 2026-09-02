@@ -1581,9 +1581,7 @@ class SalesExecutive extends Functions
 		$uname = $this->db->rp_createSlug($uname);
 		$lr_image = $this->db->rp_getValue("orders", "lr_image", "id='" . $order_id . "'", 0);
 		$company_name = $this->db->rp_getValue("orders", "company_name", "id='" . $order_id . "'", 0);
-		//$company_name=$this->db->rp_createSlug($company_name);
 		$city = $this->db->rp_getValue("orders", "city", "id='" . $order_id . "'", 0);
-		//$city=$this->db->rp_createSlug($city);
 
 		if ($lr_image != "") {
 			$file_path = SITEURL . LRCOPY . $lr_image;
@@ -1592,71 +1590,11 @@ class SalesExecutive extends Functions
 		}
 
 		if ($order_id) {
-
 			$count = $this->db->rp_getTotalRecord("orders", "id='" . $order_id . "'", 0);
 
 			if ($count > 0) {
-
-
-				// Render order view directly via buffer to avoid localhost curl/SSL loopback issues
-				$d = "";
-				$old_get = $_GET;
-				$old_req = $_REQUEST;
-				$_GET['order_id'] = $order_id;
-				$_GET['app_pdf'] = '1';
-				$_GET['mpdf'] = '1';
-				$_REQUEST['order_id'] = $order_id;
-				$_REQUEST['app_pdf'] = '1';
-				$_REQUEST['mpdf'] = '1';
-
-				$viewFile = dirname(__FILE__) . '/../bbsales_tracking/view_order_new_1.php';
-				if (file_exists($viewFile)) {
-					ob_start();
-					include($viewFile);
-					$d = ob_get_clean();
-				}
-
-				$_GET = $old_get;
-				$_REQUEST = $old_req;
-
-				if (empty($d)) {
-					$body_url = ADMINSITEURL . "view_order_new_1.php?order_id=" . urlencode($order_id) . "&app_pdf=1&mpdf=1";
-					$d = @file_get_contents($body_url);
-					if(empty($d)) {
-						$ch = curl_init();
-						curl_setopt($ch, CURLOPT_URL, $body_url);
-						curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-						curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-						curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-						curl_setopt($ch, CURLOPT_TIMEOUT, 120);
-						$d = curl_exec($ch);
-						curl_close($ch);
-					}
-				}
-
-				$d = (string) $d;
-				$d = preg_replace('/<script\b[^>]*>[\s\S]*?<\/script>/i', '', $d);
-				$d = preg_replace('/<style[^>]*>[\s\S]*?quote-print-toolbar[\s\S]*?<\/style>/i', '', $d);
-				$d = preg_replace('/<div[^>]*class="[^"]*quote-print-toolbar[^"]*"[^>]*>[\s\S]*?<\/div>/i', '', $d);
-				$d = preg_replace('/(<\/tr>)\s*(?:<br\s*\/?>\s*)+/i', '$1', $d);
-				$d = preg_replace('/(?:<br\s*\/?>\s*)+(<tr\b)/i', '$1', $d);
-				$d = preg_replace('/(<tbody[^>]*>)\s*(?:<br\s*\/?>\s*)+/i', '$1', $d);
-				$d = preg_replace('/(?:<br\s*\/?>\s*)+(<\/tbody>)/i', '$1', $d);
-				$d = preg_replace('/(<br\s*\/?>\s*){4,}/i', '<br />', $d);
-				$d = preg_replace('/\s+on\w+="[^"]*"/i', '', $d);
-				$d = preg_replace('/position\s*:\s*absolute\s*;?/i', '', $d);
-				$d = preg_replace('/display\s*:\s*flex[^;]*;?/i', '', $d);
-				$d = preg_replace_callback('/<img([^>]*?)>/i', function ($m) {
-					$tag = $m[0];
-					if (stripos($tag, 'max-width') === false && stripos($tag, 'max-height') === false) {
-						if (stripos($tag, 'quote-header-img') !== false || stripos($tag, 'quote-footer-img') !== false) {
-							$tag = preg_replace('/<img/i', '<img style="max-width:100%;max-height:90px;"', $tag, 1);
-						} else {
-							$tag = preg_replace('/<img/i', '<img style="max-width:50px;max-height:50px;"', $tag, 1);
-						}
-					}
-					return $tag;
-				}, $d);
+				$d = $this->fetchOrderPdfHtml($order_id);
+				$d = $this->sanitizeOrderPdfHtml($d);
 
 				if (trim((string) $d) === '') {
 					return array(
@@ -1666,34 +1604,35 @@ class SalesExecutive extends Functions
 					);
 				}
 
+				require_once dirname(__FILE__) . '/armor_mbstring_bootstrap.php';
+
 				@ini_set('memory_limit', '1024M');
 				@set_time_limit(300);
 
-				if (function_exists('armor_prepare_mpdf_environment')) {
-					armor_prepare_mpdf_environment('1024M', 300);
-				} else {
-					$polyfill = dirname(__FILE__) . '/../bbsales_tracking/include/mbstring_polyfill.php';
-					if (file_exists($polyfill)) {
-						include_once $polyfill;
-					}
+				if (!armor_prepare_mpdf_environment('1024M', 300)) {
+					return array(
+						"ack" => 0,
+						"developer_msg" => "mPDF/mbstring is not available on server.",
+						"ack_msg" => "Order PDF Not Generate!!"
+					);
 				}
-				require_once('../bbsales_tracking/mpdf60/mpdf.php');
+
 				$mpdf = new mPDF(
-					'', // mode - default ''
-					'A4', // format - A4, for example, default ''
-					10,     // font size - default 0
-					'sans-serif',  // default font family
-					1,    // margin_left
-					3,    // margin right
-					3,   // margin top
-					3,    // margin bottom
-					0,    // margin header
-					0,    // margin footer
+					'',
+					'A4',
+					10,
+					'sans-serif',
+					1,
+					3,
+					3,
+					3,
+					0,
+					0,
 					'P'
-				); // L - landscape, P - portrait
+				);
 
 				$mpdf->autoScriptToLang = true;
-				$mpdf->baseScript = 1; // Use Gujarati script
+				$mpdf->baseScript = 1;
 				$mpdf->autoLangToFont = true;
 				if (property_exists($mpdf, 'img_dpi')) {
 					$mpdf->img_dpi = 72;
@@ -1715,59 +1654,74 @@ class SalesExecutive extends Functions
 					.qp-suggest-print-grid img { max-width: 42px !important; max-height: 42px !important; }
 				</style>';
 
-				$mpdf->WriteHTML($custom_mpdf_css . $d);
+				try {
+					$mpdf->WriteHTML($custom_mpdf_css . $d);
+				} catch (Exception $e) {
+					return array(
+						"ack" => 0,
+						"developer_msg" => "mPDF error: " . $e->getMessage(),
+						"ack_msg" => "Order PDF Not Generate!!"
+					);
+				}
+				unset($d);
 
-				/*log entry*/
-				/*$sales_id = $this->db->rp_getValue("orders","sales_id","id='".$order_id."'",0);
-				$sales_name = $this->db->rp_getValue("sales_executive","name","id='".$sales_id."'",0);
-				$customer_id = $this->db->rp_getValue("orders","customer_id","id='".$order_id."'");
-				$order_no = $this->db->rp_getValue("orders","order_no","id='".$order_id."'");
-
-				$last_id = $order_id;
-				$flag = "Application";
-				$ctable = "orders";
-				$module_name = "Orders";
-				$log_description = $module_name." ".$order_no." PDF Download By ".$sales_name." ON ".date("Y-m-d H:i:s");
-				$this->db->insertLog($ctable,$last_id,"insert","",$insert,0,$log_description,$flag,$module_name,$sales_id,$customer_id);*/
-				/*log entry*/
-
-				//$fileName = "orders".$order_id;
 				$date = date("d-m-Y");
 				$fileName = $date . "-" . $this->rp_createSlug($company_name) . "-" . $this->rp_createSlug($city);
-				//$fileName = $date."-".$uname."-".$order_id;
+				$ordersPdfDir = dirname(__FILE__) . '/../bbsales_tracking/pdf/orders/';
+				if (!is_dir($ordersPdfDir)) {
+					@mkdir($ordersPdfDir, 0755, true);
+				}
+				$pdf_file_path = $ordersPdfDir . $fileName . '.pdf';
 
-				// if(!is_dir("../bbsales_tracking/pdf/orders/".$fileName)){
-
-				// mkdir("../bbsales_tracking/pdf/orders/".$fileName);
-				// }
-
-				$pdf_file_path	= "../bbsales_tracking/pdf/orders/" . $fileName . '.pdf';
 				if (file_exists($pdf_file_path)) {
-
-					unlink($pdf_file_path);
+					@unlink($pdf_file_path);
 				}
 
-				$mpdf->Output($pdf_file_path);
-				$pdf_file_path;
+				try {
+					$mpdf->Output($pdf_file_path, 'F');
+				} catch (Exception $e) {
+					return array(
+						"ack" => 0,
+						"developer_msg" => "PDF save error: " . $e->getMessage(),
+						"ack_msg" => "Order PDF Not Generate!!"
+					);
+				}
+
+				if (!is_file($pdf_file_path) || filesize($pdf_file_path) < 100) {
+					return array(
+						"ack" => 0,
+						"developer_msg" => "PDF file was not created. Check folder permissions.",
+						"ack_msg" => "Order PDF Not Generate!!"
+					);
+				}
+
+				$pdfUrl = ADMINSITEURL . "pdf/orders/" . $fileName . '.pdf';
 
 				$result = array();
-				$result['pdf'] = ADMINSITEURL . "pdf/orders/" . $fileName . '.pdf';
+				$result['pdf'] = $pdfUrl;
+				$result['file_url'] = $pdfUrl;
+				$result['file_name'] = $fileName . '.pdf';
 				$result['lr_image'] = $file_path;
-				// $result['fileName']=$fileName.'.pdf';
 
-				$result['pdf'] = ADMINSITEURL . "pdf/orders/" . $fileName . '.pdf';
-
-				$pdf_attachment_id = $this->db->rp_getValue("orders", "pdf_attachment", "isDelete=0 AND id='" . $order_id . "' ", 0);
-
-				$pdf_attach_r = $this->db->rp_getData("media", "url", "reference_id='" . $order_id . "' AND id IN(" . $pdf_attachment_id . ") ", "", 0);
-
+				$pdf_attachment_id = trim((string) $this->db->rp_getValue("orders", "pdf_attachment", "isDelete=0 AND id='" . $order_id . "' ", 0));
 				$result['pdf_attachment'] = array();
-
-				while ($pdf_attach_d = mysqli_fetch_assoc($pdf_attach_r)) {
-					$result['pdf_attachment'][] = ADMINSITEURL . 'order_documents/' . $pdf_attach_d['url'];
+				if ($pdf_attachment_id !== '' && $pdf_attachment_id !== '0') {
+					$pdf_attach_r = $this->db->rp_getData("media", "url", "reference_id='" . $order_id . "' AND id IN(" . $pdf_attachment_id . ") ", "", 0);
+					if ($pdf_attach_r) {
+						while ($pdf_attach_d = mysqli_fetch_assoc($pdf_attach_r)) {
+							$result['pdf_attachment'][] = ADMINSITEURL . 'order_documents/' . $pdf_attach_d['url'];
+						}
+					}
 				}
 
-				$reply = array("ack" => 1, "developer_msg" => "Order Generate Successfully", "ack_msg" => "Order Generate Successfully", "result" => $result);
+				$reply = array(
+					"ack" => 1,
+					"developer_msg" => "Order Generate Successfully",
+					"ack_msg" => "Order Generate Successfully",
+					"pdf" => $pdfUrl,
+					"file_url" => $pdfUrl,
+					"result" => $result
+				);
 				return $reply;
 			} else {
 				$reply = array("ack" => 0, "developer_msg" => "Order Not Generate!!", "ack_msg" => "Order Not Generate!!");
@@ -1777,6 +1731,77 @@ class SalesExecutive extends Functions
 			$reply = array("ack" => 0, "developer_msg" => "Order Id Require!!", "ack_msg" => "Order Id Require!!");
 			return $reply;
 		}
+	}
+
+	private function fetchOrderPdfHtml($order_id)
+	{
+		$order_id = (int) $order_id;
+		$d = '';
+		$bbsDir = dirname(__FILE__) . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'bbsales_tracking' . DIRECTORY_SEPARATOR;
+		$viewFile = $bbsDir . 'view_order_new_1.php';
+		$old_get = isset($_GET) ? $_GET : array();
+		$old_req = isset($_REQUEST) ? $_REQUEST : array();
+		$cwd = getcwd();
+
+		$_GET['order_id'] = $order_id;
+		$_GET['app_pdf'] = '1';
+		$_GET['mpdf'] = '1';
+		$_REQUEST['order_id'] = $order_id;
+		$_REQUEST['app_pdf'] = '1';
+		$_REQUEST['mpdf'] = '1';
+
+		if (is_file($viewFile)) {
+			@chdir($bbsDir);
+			ob_start();
+			@include $viewFile;
+			$d = ob_get_clean();
+			if ($cwd) {
+				@chdir($cwd);
+			}
+		}
+
+		$_GET = $old_get;
+		$_REQUEST = $old_req;
+
+		$d = (string) $d;
+		if (trim($d) === '' || (stripos($d, 'quote-wrap') === false && stripos($d, 'PRO FORMA') === false && stripos($d, 'quote-main-body') === false)) {
+			$body_url = ADMINSITEURL . "view_order_new_1.php?order_id=" . urlencode($order_id) . "&app_pdf=1&mpdf=1";
+			$d = @file_get_contents($body_url);
+			if (empty($d)) {
+				$ch = curl_init();
+				curl_setopt($ch, CURLOPT_URL, $body_url);
+				curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+				curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+				curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+				curl_setopt($ch, CURLOPT_TIMEOUT, 180);
+				$d = curl_exec($ch);
+				curl_close($ch);
+			}
+			$d = (string) $d;
+		}
+
+		return $d;
+	}
+
+	private function sanitizeOrderPdfHtml($html)
+	{
+		$html = (string) $html;
+		$html = preg_replace('/<script\b[^>]*>[\s\S]*?<\/script>/i', '', $html);
+		$html = preg_replace('/<style[^>]*>[\s\S]*?quote-print-toolbar[\s\S]*?<\/style>/i', '', $html);
+		$html = preg_replace('/<div[^>]*class="[^"]*quote-print-toolbar[^"]*"[^>]*>[\s\S]*?<\/div>/i', '', $html);
+		$html = preg_replace('/(<\/tr>)\s*(?:<br\s*\/?>\s*)+/i', '$1', $html);
+		$html = preg_replace('/(?:<br\s*\/?>\s*)+(<tr\b)/i', '$1', $html);
+		$html = preg_replace('/(<tbody[^>]*>)\s*(?:<br\s*\/?>\s*)+/i', '$1', $html);
+		$html = preg_replace('/(?:<br\s*\/?>\s*)+(<\/tbody>)/i', '$1', $html);
+		$html = preg_replace('/(<br\s*\/?>\s*){4,}/i', '<br />', $html);
+		$html = preg_replace('/\s+on\w+="[^"]*"/i', '', $html);
+		$html = preg_replace('/position\s*:\s*absolute\s*;?/i', '', $html);
+		$html = preg_replace('/display\s*:\s*flex[^;]*;?/i', '', $html);
+
+		require_once dirname(__FILE__) . '/quotation_pdf_image_helper.php';
+		$html = armor_pdf_compress_images_in_html($html, true);
+
+		return $html;
 	}
 
 	public function UpdateSalesExecutiveProfile($detail, $file)
