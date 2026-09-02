@@ -3202,16 +3202,8 @@ class Quotation extends Functions
 
 				$pdf_file_path = $gen['path'];
 				$pdfBytes = isset($gen['size']) ? (int) $gen['size'] : filesize($pdf_file_path);
-				$pageCount = armor_pdf_export_count_pages($pdf_file_path);
+				$pageCount = isset($gen['pages']) ? (int) $gen['pages'] : armor_pdf_export_count_pages($pdf_file_path);
 
-				if ($pageCount > 80) {
-					@unlink($pdf_file_path);
-					return array(
-						"ack" => 0,
-						"developer_msg" => "PDF layout error (" . $pageCount . " pages).",
-						"ack_msg" => "Quotation PDF Not Generate!!"
-					);
-				}
 				if ($pdfBytes > 26214400) {
 					@unlink($pdf_file_path);
 					return array(

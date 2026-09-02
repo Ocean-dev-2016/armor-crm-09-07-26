@@ -2783,12 +2783,6 @@ if (!function_exists('armor_quotation_pi_render_print_block')) {
 
 	{
 
-		if (armor_quotation_pi_is_mpdf_export()) {
-
-			return armor_quotation_pi_render_mpdf_block($db, $customerId, $excludeProductIds, $includeStyles);
-
-		}
-
 		$items = armor_quotation_pi_get_suggest_products($db, $customerId, $excludeProductIds);
 
 		if (empty($items)) {

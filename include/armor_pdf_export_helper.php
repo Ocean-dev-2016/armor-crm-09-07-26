@@ -215,7 +215,7 @@ if (!function_exists('armor_pdf_export_count_pages')) {
 		if ($content === false || $content === '') {
 			return 0;
 		}
-		if (preg_match_all('/\/Type\s*\/Page[^s]/', $content, $matches)) {
+		if (preg_match_all('/\/Type\s*\/Page\b/', $content, $matches)) {
 			return count($matches[0]);
 		}
 		return 0;
@@ -253,6 +253,7 @@ if (!function_exists('armor_pdf_export_generate')) {
 		} catch (Exception $e) {
 			return array('ok' => false, 'error' => 'mPDF error: ' . $e->getMessage());
 		}
+		$pageCount = (property_exists($mpdf, 'page') && (int) $mpdf->page > 0) ? (int) $mpdf->page : 0;
 		unset($html);
 
 		$saveRelativePath = str_replace('\\', '/', $saveRelativePath);
@@ -281,6 +282,7 @@ if (!function_exists('armor_pdf_export_generate')) {
 			'path' => $fullPath,
 			'url' => armor_pdf_export_public_url($saveRelativePath),
 			'size' => filesize($fullPath),
+			'pages' => $pageCount > 0 ? $pageCount : armor_pdf_export_count_pages($fullPath),
 		);
 	}
 }

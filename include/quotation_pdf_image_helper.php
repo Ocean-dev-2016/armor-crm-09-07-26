@@ -105,11 +105,53 @@ if (!function_exists('armor_pdf_resolve_local_image_path')) {
 	}
 }
 
+if (!function_exists('armor_pdf_is_valid_image_src')) {
+	function armor_pdf_is_valid_image_src($src)
+	{
+		$src = trim(html_entity_decode((string) $src));
+		if ($src === '' || $src === '#') {
+			return false;
+		}
+		$path = parse_url($src, PHP_URL_PATH);
+		if ($path !== null && preg_match('#/images/product/?$#i', $path)) {
+			return false;
+		}
+		if (preg_match('#/images/product/?$#i', $src)) {
+			return false;
+		}
+		$local = armor_pdf_resolve_local_image_path($src);
+		if ($local !== '' && is_file($local) && filesize($local) > 20) {
+			return true;
+		}
+		if (preg_match('/^https?:\/\//i', $src)) {
+			return ($path !== null && $path !== '' && substr($path, -1) !== '/');
+		}
+		return ($local !== '' && is_file($local));
+	}
+}
+
+if (!function_exists('armor_pdf_blank_jpeg_path')) {
+	function armor_pdf_blank_jpeg_path()
+	{
+		$file = armor_pdf_image_cache_dir() . '_blank.jpg';
+		if (!is_file($file) || filesize($file) < 10) {
+			if (function_exists('imagecreatetruecolor')) {
+				$img = imagecreatetruecolor(1, 1);
+				$white = imagecolorallocate($img, 255, 255, 255);
+				imagefill($img, 0, 0, $white);
+				imagejpeg($img, $file, 60);
+				imagedestroy($img);
+			}
+		}
+		return is_file($file) ? $file : '';
+	}
+}
+
 if (!function_exists('armor_pdf_load_image_bytes')) {
 	function armor_pdf_load_image_bytes($src)
 	{
 		$src = trim(html_entity_decode($src));
-		if ($src === '') {
+		if ($src === '' || !armor_pdf_is_valid_image_src($src)) {
 			return false;
 		}
 		if (strpos($src, 'data:image') === 0) {
@@ -201,6 +243,37 @@ if (!function_exists('armor_pdf_resize_to_jpeg_bytes')) {
 	}
 }
 
+if (!function_exists('armor_pdf_resize_to_jpeg_bytes_from_file')) {
+	function armor_pdf_resize_to_jpeg_bytes_from_file($path, $maxW, $maxH, $quality = 52)
+	{
+		if ($path === '' || !is_file($path)) {
+			return '';
+		}
+
+		if (extension_loaded('imagick') && class_exists('Imagick')) {
+			try {
+				$im = new Imagick($path);
+				$im->setImageCompressionQuality((int) $quality);
+				$im->thumbnailImage((int) $maxW, (int) $maxH, true, true);
+				$im->setImageFormat('jpeg');
+				$jpeg = $im->getImageBlob();
+				$im->clear();
+				$im->destroy();
+				return $jpeg ? $jpeg : '';
+			} catch (Exception $e) {
+			}
+		}
+
+		$bytes = @file_get_contents($path);
+		if ($bytes === false || $bytes === '') {
+			return '';
+		}
+		$jpeg = armor_pdf_resize_to_jpeg_bytes($bytes, $maxW, $maxH, $quality);
+		unset($bytes);
+		return $jpeg;
+	}
+}
+
 if (!function_exists('armor_pdf_compress_image_src')) {
 	function armor_pdf_compress_image_src($src, $maxW, $maxH, $quality = 52)
 	{
@@ -219,14 +292,17 @@ if (!function_exists('armor_pdf_compress_image_src')) {
 			return $cacheFile;
 		}
 
-		$bytes = armor_pdf_load_image_bytes($src);
-		if ($bytes === false || strlen($bytes) > 3145728) {
-			unset($bytes);
-			$GLOBALS['armor_pdf_image_cache'][$key] = '';
-			return '';
+		$jpeg = '';
+		$local = armor_pdf_resolve_local_image_path($src);
+		if ($local !== '' && is_file($local) && filesize($local) > 1048576) {
+			$jpeg = armor_pdf_resize_to_jpeg_bytes_from_file($local, $maxW, $maxH, $quality);
+		} else {
+			$bytes = armor_pdf_load_image_bytes($src);
+			if ($bytes !== false && $bytes !== '') {
+				$jpeg = armor_pdf_resize_to_jpeg_bytes($bytes, $maxW, $maxH, $quality);
+				unset($bytes);
+			}
 		}
-		$jpeg = armor_pdf_resize_to_jpeg_bytes($bytes, $maxW, $maxH, $quality);
-		unset($bytes);
 
 		if ($jpeg === '') {
 			$GLOBALS['armor_pdf_image_cache'][$key] = '';
@@ -290,19 +366,23 @@ if (!function_exists('armor_pdf_compress_images_in_html')) {
 				return $tag;
 			}
 
-			$processed++;
-			if (function_exists('gc_collect_cycles')) {
-				gc_collect_cycles();
-			}
-
 			list($maxW, $maxH, $quality) = armor_pdf_guess_image_limits($tag);
-			$filePath = armor_pdf_compress_image_src($src, $maxW, $maxH, $quality);
+			if (!armor_pdf_is_valid_image_src($src)) {
+				$filePath = armor_pdf_blank_jpeg_path();
+			} else {
+				$processed++;
+				if (function_exists('gc_collect_cycles')) {
+					gc_collect_cycles();
+				}
+				$filePath = armor_pdf_compress_image_src($src, $maxW, $maxH, $quality);
+			}
 			if ($filePath === '' || !is_file($filePath)) {
 				return $tag;
 			}
 
 			if ($useLocalPaths) {
-				$imgSrc = str_replace('\\', '/', $filePath);
+				$resolved = realpath($filePath);
+				$imgSrc = str_replace('\\', '/', ($resolved !== false ? $resolved : $filePath));
 			} else {
 				$jpegBytes = @file_get_contents($filePath);
 				if ($jpegBytes === false || $jpegBytes === '') {
