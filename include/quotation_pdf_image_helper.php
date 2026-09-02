@@ -124,6 +124,9 @@ if (!function_exists('armor_pdf_is_valid_image_src')) {
 		if ($src === '' || $src === '#') {
 			return false;
 		}
+		if (strpos($src, 'data:image') === 0) {
+			return true;
+		}
 		$path = parse_url($src, PHP_URL_PATH);
 		if ($path !== null && preg_match('#/images/product/?$#i', $path)) {
 			return false;
@@ -132,13 +135,7 @@ if (!function_exists('armor_pdf_is_valid_image_src')) {
 			return false;
 		}
 		$local = armor_pdf_resolve_local_image_path($src);
-		if ($local !== '' && is_file($local) && filesize($local) > 20) {
-			return true;
-		}
-		if (preg_match('/^https?:\/\//i', $src)) {
-			return ($path !== null && $path !== '' && substr($path, -1) !== '/');
-		}
-		return ($local !== '' && is_file($local));
+		return ($local !== '' && is_file($local) && filesize($local) > 20);
 	}
 }
 
@@ -176,31 +173,7 @@ if (!function_exists('armor_pdf_load_image_bytes')) {
 			return @file_get_contents($local);
 		}
 
-		if (!preg_match('/^https?:\/\//i', $src)) {
-			return false;
-		}
-
-		// Never do slow loopback curl to own server during PDF generation
-		$host = parse_url($src, PHP_URL_HOST);
-		$curHost = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
-		if ($host === 'localhost' || $host === '127.0.0.1' || ($curHost && stripos($host, $curHost) !== false)) {
-			return false;
-		}
-
-		if (function_exists('curl_init')) {
-			$ch = curl_init($src);
-			curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-			curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-			curl_setopt($ch, CURLOPT_TIMEOUT, 2);
-			curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-			$data = curl_exec($ch);
-			curl_close($ch);
-			if ($data) {
-				return $data;
-			}
-		}
-
+		// Never do slow network curl during PDF generation - always return immediately
 		return false;
 	}
 }
