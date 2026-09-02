@@ -89,6 +89,9 @@ if (!function_exists('armor_pdf_export_fetch_view_html')) {
 		$_REQUEST['mpdf'] = '1';
 
 		if (is_file($viewFile)) {
+			if (!defined('ARMOR_PDF_EXPORT_EMBED')) {
+				define('ARMOR_PDF_EXPORT_EMBED', 1);
+			}
 			@chdir($bbsDir);
 			ob_start();
 			@include $viewFile;

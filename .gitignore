@@ -17,6 +17,8 @@ bbsales_tracking/order_documents/
 bbsales_tracking/inquiry_documents/
 bbsales_tracking/sheet_import/uploads/
 bbsales_tracking/report/
+bbsales_tracking/pdf/orders/
+bbsales_tracking/pdf/tmp_img_cache/
 resource/image/*
 !resource/image/.gitkeep
 
