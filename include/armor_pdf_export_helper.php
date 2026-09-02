@@ -187,23 +187,27 @@ if (!function_exists('armor_pdf_export_create_mpdf')) {
 		}
 
 		$mpdf = new mPDF('', 'A4', 10, 'sans-serif', 4, 4, 6, 6, 0, 0, 'P');
+		$mpdf->pdf_version = '1.4';
 		$mpdf->autoScriptToLang = true;
 		$mpdf->baseScript = 1;
 		$mpdf->autoLangToFont = true;
+		if (property_exists($mpdf, 'showImageErrors')) {
+			$mpdf->showImageErrors = false;
+		}
 		if (property_exists($mpdf, 'img_dpi')) {
-			$mpdf->img_dpi = 72;
+			$mpdf->img_dpi = 96;
 		}
 		if (method_exists($mpdf, 'SetCompression')) {
 			$mpdf->SetCompression(true);
 		}
 		if (property_exists($mpdf, 'simpleTables')) {
-			$mpdf->simpleTables = true;
+			$mpdf->simpleTables = false;
 		}
-		if (property_exists($mpdf, 'allow_html_optional_endtags')) {
-			$mpdf->allow_html_optional_endtags = true;
+		if (property_exists($mpdf, 'packTableData')) {
+			$mpdf->packTableData = true;
 		}
-		if (property_exists($mpdf, 'shrink_tables_to_fit')) {
-			$mpdf->shrink_tables_to_fit = 1;
+		if (method_exists($mpdf, 'SetDisplayMode')) {
+			$mpdf->SetDisplayMode('fullpage');
 		}
 
 		return $mpdf;

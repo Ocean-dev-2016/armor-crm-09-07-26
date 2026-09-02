@@ -455,20 +455,18 @@ if (!function_exists('armor_pdf_compress_images_in_html')) {
 			if ($filePath === '' || !is_file($filePath)) {
 				$filePath = armor_pdf_blank_jpeg_path();
 			}
-			if ($filePath === '' || !is_file($filePath)) {
-				return $tag;
-			}
 
-			if ($useLocalPaths) {
+			if ($useLocalPaths && $filePath !== '' && is_file($filePath)) {
 				$resolved = realpath($filePath);
 				$imgSrc = str_replace('\\', '/', ($resolved !== false ? $resolved : $filePath));
 			} else {
-				$jpegBytes = @file_get_contents($filePath);
+				$jpegBytes = ($filePath !== '' && is_file($filePath)) ? @file_get_contents($filePath) : false;
 				if ($jpegBytes === false || $jpegBytes === '') {
-					return $tag;
+					$imgSrc = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+				} else {
+					$imgSrc = 'data:image/jpeg;base64,' . base64_encode($jpegBytes);
+					unset($jpegBytes);
 				}
-				$imgSrc = 'data:image/jpeg;base64,' . base64_encode($jpegBytes);
-				unset($jpegBytes);
 			}
 
 			$newTag = preg_replace('/\bsrc=(["\'])([^"\']+)\1/i', 'src="' . $imgSrc . '"', $tag, 1);

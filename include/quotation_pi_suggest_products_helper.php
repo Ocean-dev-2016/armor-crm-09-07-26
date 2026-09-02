@@ -2720,7 +2720,9 @@ if (!function_exists('armor_quotation_pi_render_print_block')) {
 						continue;
 					}
 					$html .= '<td class="qp-suggest-print-cell" style="width:25%;vertical-align:top;border:1px solid #595959;padding:2px;background:#fff;">';
+					$html .= '<div class="qp-prod-box-wrap" style="border:1px solid #c8c8c8;background:#fff;padding:2px;border-radius:2px;">';
 					$html .= armor_quotation_pi_render_print_item($row[$i]);
+					$html .= '</div>';
 					$html .= '</td>';
 				}
 				$html .= '</tr>';
