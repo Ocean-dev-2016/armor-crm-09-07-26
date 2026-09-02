@@ -32,8 +32,10 @@ if (!function_exists('armor_pdf_resolve_local_image_path')) {
 
 		$roots = array();
 		$includeDir = dirname(__FILE__);
-		$roots[] = realpath($includeDir . '/..');
-		$roots[] = realpath($includeDir . '/../bbsales_tracking');
+		$r1 = realpath($includeDir . '/..');
+		$r2 = realpath($includeDir . '/../bbsales_tracking');
+		if ($r1) $roots[] = $r1;
+		if ($r2) $roots[] = $r2;
 
 		$tryPath = function ($candidate) {
 			if ($candidate !== '' && is_file($candidate)) {
@@ -57,13 +59,27 @@ if (!function_exists('armor_pdf_resolve_local_image_path')) {
 			return $path;
 		};
 
+		if (is_file($src)) {
+			return $preferWebp($src);
+		}
+
+		// Extract URL path if full URL
+		$urlPath = $src;
 		if (preg_match('/^https?:\/\//i', $src)) {
-			foreach (array('SITEURL', 'ADMINSITEURL') as $const) {
-				if (!defined($const) || strpos($src, constant($const)) !== 0) {
-					continue;
-				}
-				$rel = ltrim(substr($src, strlen(constant($const))), '/');
-				foreach (array_unique(array_filter($roots)) as $root) {
+			$parsed = parse_url($src, PHP_URL_PATH);
+			if ($parsed !== null && $parsed !== false) {
+				$urlPath = $parsed;
+			}
+		}
+
+		$urlPath = str_replace(array('\\', '//'), '/', $urlPath);
+
+		// Match known root relative subdirectories
+		foreach (array('/images/', '/bbsales_tracking/', '/upload/', '/pdf/', '/assets/') as $subDir) {
+			$pos = strpos($urlPath, $subDir);
+			if ($pos !== false) {
+				$rel = ltrim(substr($urlPath, $pos), '/');
+				foreach ($roots as $root) {
 					$candidate = $root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $rel);
 					$found = $tryPath($candidate);
 					if ($found !== '') {
@@ -78,16 +94,12 @@ if (!function_exists('armor_pdf_resolve_local_image_path')) {
 					}
 				}
 			}
-			return '';
 		}
 
-		if (is_file($src)) {
-			return $preferWebp($src);
-		}
-
-		$urlPath = ltrim($src, '/');
-		foreach (array_unique(array_filter($roots)) as $root) {
-			$candidate = $root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $urlPath);
+		// Try direct root join with trimmed path
+		$cleanPath = ltrim($urlPath, '/');
+		foreach ($roots as $root) {
+			$candidate = $root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $cleanPath);
 			$found = $tryPath($candidate);
 			if ($found !== '') {
 				return $preferWebp($found);
@@ -168,12 +180,19 @@ if (!function_exists('armor_pdf_load_image_bytes')) {
 			return false;
 		}
 
+		// Never do slow loopback curl to own server during PDF generation
+		$host = parse_url($src, PHP_URL_HOST);
+		$curHost = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
+		if ($host && $curHost && stripos($host, $curHost) !== false) {
+			return false;
+		}
+
 		if (function_exists('curl_init')) {
 			$ch = curl_init($src);
 			curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
 			curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-			curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+			curl_setopt($ch, CURLOPT_TIMEOUT, 2);
 			curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
 			$data = curl_exec($ch);
 			curl_close($ch);
@@ -182,7 +201,7 @@ if (!function_exists('armor_pdf_load_image_bytes')) {
 			}
 		}
 
-		return @file_get_contents($src);
+		return false;
 	}
 }
 

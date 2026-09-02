@@ -144,24 +144,6 @@ if (!function_exists('armor_pdf_export_fetch_view_html')) {
 			}
 		}
 
-		// Never HTTP-fetch on same server during API export — causes Apache worker deadlock (hang).
-		if (!$ok && !$embedAttempted && defined('ADMINSITEURL')) {
-			$query = array_merge($requestParams, array('print' => '1'));
-			$bodyUrl = rtrim(ADMINSITEURL, '/') . '/' . ltrim($viewFileName, '/') . '?' . http_build_query($query);
-			$html = @file_get_contents($bodyUrl);
-			if (empty($html) && function_exists('curl_init')) {
-				$ch = curl_init();
-				curl_setopt($ch, CURLOPT_URL, $bodyUrl);
-				curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-				curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-				curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-				curl_setopt($ch, CURLOPT_TIMEOUT, 180);
-				$html = curl_exec($ch);
-				curl_close($ch);
-			}
-			$html = (string) $html;
-		}
-
 		return $html;
 	}
 }
