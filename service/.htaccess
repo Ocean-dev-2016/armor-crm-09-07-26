@@ -1,0 +1,12 @@
+# LiteSpeed: allow long PDF API requests (Order s=98, Quotation s=163).
+# Prevents "Request Timeout" while service_genral.php generates PDF.
+<IfModule LiteSpeed>
+	RewriteEngine On
+	RewriteRule ^service_genral\.php$ - [E=noabort:1,E=noconntimeout:1]
+</IfModule>
+
+# Apache/LiteSpeed fallback env vars
+<IfModule mod_env.c>
+	SetEnvIf Request_URI "service_genral\.php$" noabort=1
+	SetEnvIf Request_URI "service_genral\.php$" noconntimeout=1
+</IfModule>
