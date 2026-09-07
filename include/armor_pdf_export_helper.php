@@ -119,6 +119,8 @@ if (!function_exists('armor_pdf_export_sanitize_html')) {
 		$html = preg_replace('/width:\s*250mm[^;]*;?/i', 'width:100%;', $html);
 		$html = preg_replace('/page-break-inside\s*:\s*avoid[^;]*;?/i', 'page-break-inside:auto;', $html);
 		$html = preg_replace('/break-inside\s*:\s*avoid[^;]*;?/i', 'break-inside:auto;', $html);
+		// mPDF ignores onerror; nested this.src='...' also confuses src parsers — strip first.
+		$html = preg_replace('/\s+onerror=(["\'])[\s\S]*?\1/i', '', $html);
 
 		require_once dirname(__FILE__) . '/quotation_pdf_image_helper.php';
 		// Compress to JPEG files, embed via mPDF var: (Web-like images, live-safe).
