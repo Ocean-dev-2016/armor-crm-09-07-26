@@ -75,9 +75,14 @@ if($scheck_res && mysqli_num_rows($scheck_res)>0){
 		{
 			$_SESSION[SITE_SESS.'REFERANCE_ID'] 	= $res_d['sales_executive_id'];
 		}
-		else if($res_d['type']==3)
+		else if($res_d['type']==3 || $res_d['type']==4)
 		{
+			/* type 3 = Customer, type 4 = Channel Partner — both use customer_id (executive.id) */
 			$_SESSION[SITE_SESS.'REFERANCE_ID'] 	= $res_d['customer_id'];
+		}
+		else
+		{
+			$_SESSION[SITE_SESS.'REFERANCE_ID'] 	= 0;
 		}
 		
 		$db->rp_update(CTABLE_ADMIN,array("last_login"=>$last_login),"id=1");
