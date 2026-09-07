@@ -146,7 +146,7 @@ if ($ctable_r) {
 
         .consultant-report-table th,
         .consultant-report-table td {
-            border: 1px solid #b0bec5;
+            border: 1px solid #333;
             padding: 8px 6px;
             text-align: left;
             vertical-align: top;
@@ -156,15 +156,13 @@ if ($ctable_r) {
             word-wrap: break-word;
             overflow-wrap: break-word;
             white-space: normal;
-            background: #fff;
         }
 
         .consultant-report-table th {
-            background-color: #eceff1;
+            background-color: #f2f2f2;
             font-weight: 600;
             text-align: center;
             vertical-align: middle;
-            color: #263238;
         }
 
         .consultant-report-table td.col-num,
@@ -176,28 +174,22 @@ if ($ctable_r) {
         .consultant-report-table .plan-header {
             text-align: center;
             font-weight: bold;
-            background: #cfd8dc;
         }
 
-        .consultant-report-table .header-row th {
-            background-color: #cfd8dc;
+        .consultant-report-table .header-row {
+            background-color: #e6e6e6;
         }
 
         .consultant-report-table .report-title th {
             font-size: 16px;
             background: #3598dc;
             color: #fff;
-            border-color: #2980b9;
         }
 
         .consultant-report-table .report-person th {
-            background: #e3f2fd;
+            background: #f5f5f5;
             text-align: left;
             font-size: 13px;
-        }
-
-        .consultant-report-table tbody tr:nth-child(even) td {
-            background: #fafafa;
         }
     </style>
     <?php echo consultant_approval_process_styles(); ?>
