@@ -1052,7 +1052,7 @@ if (!function_exists('armor_quotation_pi_suggest_display_discount_percent')) {
 
 	{
 
-		return 44;
+		return 40;
 
 	}
 
@@ -2561,6 +2561,8 @@ if (!function_exists('armor_quotation_pi_render_mpdf_block')) {
 
 		$html .= '<div class="qp-suggest-print-title">Suggested Product Range</div>';
 
+		$html .= '<div class="qp-suggest-print-subtitle">Book Order in Full Range &amp; Get ' . (int) armor_quotation_pi_suggest_display_discount_percent() . '% Discount</div>';
+
 		$html .= '<div class="qp-suggest-print-subtitle">Please mention Product Code when placing your order</div>';
 
 		$html .= '</div>';
@@ -2704,6 +2706,7 @@ if (!function_exists('armor_quotation_pi_render_print_block')) {
 		$html .= '<div class="qp-suggest-print-section" style="width:100%;margin-top:0;">';
 		$html .= '<div class="qp-suggest-print-header" style="text-align:center;padding:6px;background:#595959;color:#fff;font-weight:bold;border-top:1px solid #595959;border-bottom:1px solid #595959;">';
 		$html .= '<div class="qp-suggest-print-title" style="font-size:12px;color:#fff;text-transform:uppercase;">Suggested Product Range</div>';
+		$html .= '<div class="qp-suggest-print-subtitle" style="font-size:8.5px;color:#f0f0f0;margin-top:2px;">Book Order in Full Range &amp; Get ' . (int) armor_quotation_pi_suggest_display_discount_percent() . '% Discount</div>';
 		$html .= '<div class="qp-suggest-print-subtitle" style="font-size:8.5px;color:#f0f0f0;">Please mention Product Code when placing your order</div>';
 		$html .= '</div>';
 

@@ -1572,7 +1572,7 @@ if (isset($_REQUEST['id']) && $_REQUEST['id'] > 0 && $_REQUEST['mode'] == "isAct
       $quot_discount_customer_id = isset($dealer_id) ? (int) $dealer_id : 0;
       $MAX_ITEM_DISCOUNT_PCT = function_exists('cp_get_max_item_discount_percent')
          ? (int) cp_get_max_item_discount_percent($db, $quot_discount_customer_id, false)
-         : 44;
+         : 40;
       ?>
       var MAX_ITEM_DISCOUNT_PCT = <?php echo (int) $MAX_ITEM_DISCOUNT_PCT; ?>;
 
@@ -1581,7 +1581,7 @@ if (isset($_REQUEST['id']) && $_REQUEST['id'] > 0 && $_REQUEST['mode'] == "isAct
          if ($("#dealer_id").length && $("#dealer_id").val()) {
             cpFlag = parseInt($("#dealer_id option:selected").attr("data-channel-partner-flag") || "0", 10) || 0;
          }
-         MAX_ITEM_DISCOUNT_PCT = (cpFlag === 1) ? 50 : 44;
+         MAX_ITEM_DISCOUNT_PCT = (cpFlag === 1) ? 50 : 40;
       }
 
       function recalculateRow(t, discount_type = "") {

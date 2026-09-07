@@ -2187,7 +2187,7 @@
 			$order_force_cp = (isset($c_type) && $c_type == 'channel_partner');
 			$MAX_ITEM_DISCOUNT_PCT = function_exists('cp_get_max_item_discount_percent')
 				? (int) cp_get_max_item_discount_percent($db, $order_discount_customer_id, $order_force_cp)
-				: ($order_force_cp ? 50 : 44);
+				: ($order_force_cp ? 50 : 40);
 			?>
 			var MAX_ITEM_DISCOUNT_PCT = <?php echo (int) $MAX_ITEM_DISCOUNT_PCT; ?>;
 			var ORDER_IS_CHANNEL_PARTNER = <?php echo $order_force_cp ? 'true' : 'false'; ?>;
@@ -2203,7 +2203,7 @@
 				} else if ($("#channel_partner_order_flag").val() == "1") {
 					cpFlag = 1;
 				}
-				MAX_ITEM_DISCOUNT_PCT = (cpFlag === 1) ? 50 : 44;
+				MAX_ITEM_DISCOUNT_PCT = (cpFlag === 1) ? 50 : 40;
 			}
 
 			function recalculateRow(t,discount_type="") {

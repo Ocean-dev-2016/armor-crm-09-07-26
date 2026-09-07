@@ -45,7 +45,7 @@ if (!function_exists('cp_is_channel_partner_customer')) {
 if (!function_exists('cp_get_max_item_discount_percent')) {
 	/**
 	 * Max item Dis(%) / Dis(Flat) for Quotation & Order.
-	 * Regular Customer = 44%, Channel Partner = 50%.
+	 * Regular Customer = 40%, Channel Partner = 50%.
 	 *
 	 * @param object $db
 	 * @param int $customerId executive.id (dealer / CP)
@@ -60,7 +60,7 @@ if (!function_exists('cp_get_max_item_discount_percent')) {
 		if (cp_is_channel_partner_customer($db, $customerId)) {
 			return 50;
 		}
-		return 44;
+		return 40;
 	}
 }
 
