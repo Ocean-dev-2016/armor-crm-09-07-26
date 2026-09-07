@@ -136,11 +136,13 @@ if (!function_exists('consultant_approval_render_project_list_html')) {
 		}
 
 		$html = '<div class="consultant-project-list">';
-		$showPlus = count($items) > 1;
+		$total = count($items);
+		$showPlus = $total > 1;
 
 		foreach ($items as $index => $item) {
 			$item = preg_replace('/^\(\s*\d+\s*\)\s*/', '', trim((string) $item));
-			$html .= '<div class="consultant-project-item">';
+			$isLast = ($index === $total - 1);
+			$html .= '<div class="consultant-project-item' . ($isLast ? ' is-last' : '') . '">';
 			if ($showPlus) {
 				$html .= '<span class="consultant-project-plus" title="Project ' . ($index + 1) . '">+</span>';
 				$html .= '<span class="consultant-project-text">(' . ($index + 1) . ') ' . htmlspecialchars($item, ENT_QUOTES, 'UTF-8') . '</span>';
@@ -152,6 +154,30 @@ if (!function_exists('consultant_approval_render_project_list_html')) {
 
 		$html .= '</div>';
 		return $html;
+	}
+}
+
+if (!function_exists('consultant_approval_format_project_text')) {
+	function consultant_approval_format_project_text($raw)
+	{
+		$items = consultant_approval_parse_list_field($raw);
+		$lines = array();
+		$total = count($items);
+		foreach ($items as $index => $item) {
+			$item = preg_replace('/^\(\s*\d+\s*\)\s*/', '', trim((string) $item));
+			if ($item === '') {
+				continue;
+			}
+			if ($total > 1) {
+				$lines[] = '(' . ($index + 1) . ') ' . $item;
+			} else {
+				$lines[] = $item;
+			}
+			if ($index < $total - 1) {
+				$lines[] = '--------------------';
+			}
+		}
+		return implode("\n", $lines);
 	}
 }
 
@@ -263,7 +289,10 @@ if (!function_exists('consultant_approval_render_product_list_html')) {
 		}
 
 		$html = '<div class="consultant-product-list">';
-		foreach ($groups as $group) {
+		$totalGroups = count($groups);
+		foreach ($groups as $gIndex => $group) {
+			$isLastGroup = ($gIndex === $totalGroups - 1);
+			$html .= '<div class="consultant-product-group' . ($isLastGroup ? ' is-last' : '') . '">';
 			if ($group['category'] !== '') {
 				$html .= '<div class="consultant-product-category">' . htmlspecialchars($group['category'], ENT_QUOTES, 'UTF-8') . '</div>';
 			}
@@ -273,9 +302,33 @@ if (!function_exists('consultant_approval_render_product_list_html')) {
 				$html .= '<span class="consultant-product-text">' . htmlspecialchars($item, ENT_QUOTES, 'UTF-8') . '</span>';
 				$html .= '</div>';
 			}
+			$html .= '</div>';
 		}
 		$html .= '</div>';
 		return $html;
+	}
+}
+
+if (!function_exists('consultant_approval_format_product_text')) {
+	function consultant_approval_format_product_text($raw)
+	{
+		$groups = consultant_approval_parse_product_groups($raw);
+		if (empty($groups)) {
+			return '';
+		}
+
+		$blocks = array();
+		foreach ($groups as $group) {
+			$lines = array();
+			if ($group['category'] !== '') {
+				$lines[] = $group['category'];
+			}
+			foreach ($group['items'] as $item) {
+				$lines[] = '✓ ' . $item;
+			}
+			$blocks[] = implode("\n", $lines);
+		}
+		return implode("\n--------------------\n", $blocks);
 	}
 }
 
@@ -291,11 +344,14 @@ if (!function_exists('consultant_approval_process_styles')) {
 	display: flex;
 	align-items: flex-start;
 	gap: 6px;
-	margin: 0 0 6px 0;
+	margin: 0;
+	padding: 5px 0 6px 0;
 	line-height: 1.35;
+	border-bottom: 1px solid #cfd8dc;
 }
-.consultant-project-item:last-child {
-	margin-bottom: 0;
+.consultant-project-item.is-last {
+	border-bottom: 0;
+	padding-bottom: 0;
 }
 .consultant-project-plus {
 	display: inline-block;
@@ -314,28 +370,37 @@ if (!function_exists('consultant_approval_process_styles')) {
 	display: block;
 	word-break: break-word;
 }
-.consultant-report-table td.consultant-project-cell {
+.consultant-report-table td.consultant-project-cell,
+.consultant-report-table td.consultant-product-cell {
 	vertical-align: top;
+	min-width: 140px;
 }
 .consultant-product-list {
 	margin: 0;
 	padding: 0;
 }
+.consultant-product-group {
+	margin: 0;
+	padding: 0 0 8px 0;
+	border-bottom: 1px solid #cfd8dc;
+}
+.consultant-product-group.is-last {
+	border-bottom: 0;
+	padding-bottom: 0;
+}
 .consultant-product-category {
 	font-weight: bold;
 	font-size: 11px;
 	margin: 0 0 4px 0;
-	color: #333;
-}
-.consultant-product-category + .consultant-product-item,
-.consultant-product-item + .consultant-product-category {
-	margin-top: 6px;
+	padding: 2px 0;
+	color: #1f4e79;
+	border-bottom: 1px dashed #90a4ae;
 }
 .consultant-product-item {
 	display: flex;
 	align-items: flex-start;
 	gap: 6px;
-	margin: 0 0 4px 0;
+	margin: 0 0 3px 0;
 	line-height: 1.35;
 }
 .consultant-product-item:last-child {
@@ -353,14 +418,18 @@ if (!function_exists('consultant_approval_process_styles')) {
 	display: block;
 	word-break: break-word;
 }
-.consultant-report-table td.consultant-product-cell {
-	vertical-align: top;
-}
 @media print {
 	.consultant-project-plus,
-	.consultant-product-tick {
+	.consultant-product-tick,
+	.consultant-project-item,
+	.consultant-product-group,
+	.consultant-product-category {
 		-webkit-print-color-adjust: exact;
 		print-color-adjust: exact;
+	}
+	.consultant-project-item,
+	.consultant-product-group {
+		border-bottom-color: #888 !important;
 	}
 }
 </style>';

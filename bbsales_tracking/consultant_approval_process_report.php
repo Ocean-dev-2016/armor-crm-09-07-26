@@ -195,26 +195,22 @@ include("connect.php");
                                                                 <i class="fa fa-gear"></i>
                                                             </button>
                                                             <ul role="menu" class="dropdown-menu dropdown-menu-right pull-right">
-                                                                <!-- <li>
-																<a onClick="Importexcel(this)" data-toggle="modal" data-target="#uploadLeeds"><i class="fa fa-download"></i>Import</a>
-															</li> -->
                                                                 <?php
-                                                                if ($rights['print_flag'] == 1  || $_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0) {
+                                                                if ($rights['print_flag'] == 1 || $_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0) {
                                                                 ?>
                                                                     <li>
-                                                                        <!-- <a name="print" onClick="genexpensePrint()" title="Print Report"><i class="fa fa-print"></i>Print</a> -->
-                                                                        <a name="print" onClick="genSalesPlanPrint()" title="Print Report"><i class="fa fa-print"></i>Print</a>
-                                                                    </li>
-                                                                    <!--  <?php
-                                                                        }
-                                                                        if ($rights['export_excel_flag'] == 1 || $_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0) {
-                                                                            ?>
-                                                                    <li>
-                                                                        <a class="excel" name="excel" onClick="genReport()" id="excel" title="Download XL Report"><i class="fa fa-file-excel-o"></i>Excel</a>
+                                                                        <a href="javascript:;" name="print" onClick="genSalesPlanPrint();" title="Print Report"><i class="fa fa-print"></i> Print</a>
                                                                     </li>
                                                                 <?php
-                                                                        }
-                                                                ?> -->
+                                                                }
+                                                                if ($rights['export_excel_flag'] == 1 || $_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0) {
+                                                                ?>
+                                                                    <li>
+                                                                        <a href="javascript:;" class="excel" name="excel" onClick="genConsultantApprovalExcel();" id="excel" title="Download Excel Report"><i class="fa fa-file-excel-o"></i> Excel</a>
+                                                                    </li>
+                                                                <?php
+                                                                }
+                                                                ?>
                                                             </ul>
                                                         </div>
                                                     </div>
@@ -388,66 +384,71 @@ include("connect.php");
         </script>
 
         <script type="text/javascript">
-            // function genReport1(cid) {
-            //     var rc = encodeURIComponent($("#print_info").html());
-            //     $.ajax({
-            //         type: "POST",
-            //         url: "attandanceee_genreport_ajax.php",
-            //         data: '&rc=' + rc,
-            //         beforeSend: function() {
-            //             $('.preloader').fadeIn('slow');
-            //         },
-            //         success: function(result) { //alert(result);
-            //             setTimeout(function() {
-            //                 $('.preloader').fadeOut('slow');
-            //                 window.location.href = result;
-            //             }, 1500);
-            //         }
-            //     });
-            // }
-
-            function genReport() {
-                var query = encodeURIComponent($(".tag_search_input").val());
-                var searchName = encodeURIComponent($('#searchName').val());
-                var sales_executive = encodeURIComponent($('#sales_executive').val());
-                var df1 = $("#material_request_filter_input").val();
-                //var searchName = $("#searchName").val();
-                //var sales_executive = $("#sales_executive").val();
-                //alert(label_id);
+            function genConsultantApprovalExcel() {
+                var sales_executive = String($("#sales_executive").val() || "");
+                if (!sales_executive || sales_executive === "null") {
+                    toastr.error("Please select Sales Person first.", "Filter Required");
+                    return;
+                }
+                var searchName = ($("#searchName").val() || "").trim();
+                var approval_type = String($("#approval_type").val() || "");
 
                 $.ajax({
                     type: "POST",
-                    url: "attendance_report_genreport_excel.php",
+                    url: "consultant_approval_process_excel.php",
+                    dataType: "json",
                     data: {
                         searchName: searchName,
                         sales_executive: sales_executive,
-                        df1: df1,
-                        ToDate:ToDate,
-                        FromDate:FromDate,
+                        approval_type: approval_type,
+                        ToDate: ToDate,
+                        FromDate: FromDate
                     },
                     beforeSend: function() {
                         $("#loading-modal").modal({
                             backdrop: 'static',
                             keyboard: false
-                        })
+                        });
                     },
                     success: function(result) {
-                        setTimeout(function() {
-                            $("#loading-modal").modal('hide');
-                            window.open(result, '_blank');
-                        }, 1000);
+                        $("#loading-modal").modal('hide');
+                        if (result && result.ack == 1 && result.file_path) {
+                            window.open("../" + result.file_path, "_blank");
+                        } else {
+                            toastr.error((result && result.ack_msg) ? result.ack_msg : "Excel export failed", "Error");
+                        }
+                    },
+                    error: function() {
+                        $("#loading-modal").modal('hide');
+                        toastr.error("Server Error!", "Error");
                     }
                 });
             }
 
             function genSalesPlanPrint() {
-                var searchName = $("#searchName").val();
-                searchName = encodeURIComponent(searchName.trim());
-                var sales_executive = String($("#sales_executive").val());
-                var approval_type = String($("#approval_type").val() || "");
-                // type = $("#type").val();
-                var myWindow = window.open('consultant_approval_process_print.php?searchName=' + searchName + '&sales_executive=' + sales_executive + '&approval_type=' + encodeURIComponent(approval_type) + '&ToDate='+ToDate+'&FromDate='+FromDate, '', 'width=700,height=800');
-                myWindow.print();
+                var sales_executive = String($("#sales_executive").val() || "");
+                if (!sales_executive || sales_executive === "null") {
+                    toastr.error("Please select Sales Person first.", "Filter Required");
+                    return;
+                }
+                var searchName = encodeURIComponent(($("#searchName").val() || "").trim());
+                var approval_type = encodeURIComponent(String($("#approval_type").val() || ""));
+                var printUrl = 'consultant_approval_process_print.php?searchName=' + searchName +
+                    '&sales_executive=' + encodeURIComponent(sales_executive) +
+                    '&approval_type=' + approval_type +
+                    '&ToDate=' + encodeURIComponent(ToDate) +
+                    '&FromDate=' + encodeURIComponent(FromDate);
+                var myWindow = window.open(printUrl, 'consultant_approval_print', 'width=1000,height=800,scrollbars=yes');
+                if (!myWindow) {
+                    toastr.error("Please allow popups to print.", "Popup Blocked");
+                    return;
+                }
+                myWindow.focus();
+                setTimeout(function() {
+                    try {
+                        myWindow.print();
+                    } catch (e) {}
+                }, 900);
             }
         </script>
         <?php include("footer.php"); ?>

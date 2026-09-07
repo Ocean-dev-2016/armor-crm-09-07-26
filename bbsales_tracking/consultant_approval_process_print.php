@@ -138,7 +138,7 @@ if ($ctable_r) {
 
         .consultant-report-table th,
         .consultant-report-table td {
-            border: 1px solid #333;
+            border: 1px solid #b0bec5;
             padding: 8px 6px;
             text-align: left;
             vertical-align: top;
@@ -151,7 +151,7 @@ if ($ctable_r) {
         }
 
         .consultant-report-table th {
-            background-color: #f2f2f2;
+            background-color: #eceff1;
             font-weight: 600;
             text-align: center;
             vertical-align: middle;
@@ -166,10 +166,11 @@ if ($ctable_r) {
         .consultant-report-table .plan-header {
             text-align: center;
             font-weight: bold;
+            background: #cfd8dc;
         }
 
-        .consultant-report-table .header-row {
-            background-color: #e6e6e6;
+        .consultant-report-table .header-row th {
+            background-color: #cfd8dc;
         }
     </style>
     <?php echo consultant_approval_process_styles(); ?>
