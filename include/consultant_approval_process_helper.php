@@ -343,11 +343,11 @@ if (!function_exists('consultant_approval_process_styles')) {
 .consultant-project-item {
 	display: flex;
 	align-items: flex-start;
-	gap: 6px;
+	gap: 8px;
 	margin: 0;
-	padding: 5px 0 6px 0;
-	line-height: 1.35;
-	border-bottom: 1px solid #cfd8dc;
+	padding: 8px 0 10px 0;
+	line-height: 1.45;
+	border-bottom: 1px solid #607d8b;
 }
 .consultant-project-item.is-last {
 	border-bottom: 0;
@@ -365,6 +365,7 @@ if (!function_exists('consultant_approval_process_styles')) {
 	font-size: 12px;
 	font-weight: bold;
 	flex: 0 0 16px;
+	margin-top: 1px;
 }
 .consultant-project-text {
 	display: block;
@@ -374,6 +375,8 @@ if (!function_exists('consultant_approval_process_styles')) {
 .consultant-report-table td.consultant-product-cell {
 	vertical-align: top;
 	min-width: 140px;
+	padding-top: 8px !important;
+	padding-bottom: 8px !important;
 }
 .consultant-product-list {
 	margin: 0;
@@ -381,8 +384,8 @@ if (!function_exists('consultant_approval_process_styles')) {
 }
 .consultant-product-group {
 	margin: 0;
-	padding: 0 0 8px 0;
-	border-bottom: 1px solid #cfd8dc;
+	padding: 6px 0 10px 0;
+	border-bottom: 1px solid #607d8b;
 }
 .consultant-product-group.is-last {
 	border-bottom: 0;
@@ -391,17 +394,17 @@ if (!function_exists('consultant_approval_process_styles')) {
 .consultant-product-category {
 	font-weight: bold;
 	font-size: 11px;
-	margin: 0 0 4px 0;
-	padding: 2px 0;
-	color: #1f4e79;
-	border-bottom: 1px dashed #90a4ae;
+	margin: 0 0 6px 0;
+	padding: 0 0 4px 0;
+	color: #333;
+	border-bottom: 1px solid #90a4ae;
 }
 .consultant-product-item {
 	display: flex;
 	align-items: flex-start;
 	gap: 6px;
-	margin: 0 0 3px 0;
-	line-height: 1.35;
+	margin: 0 0 5px 0;
+	line-height: 1.45;
 }
 .consultant-product-item:last-child {
 	margin-bottom: 0;
@@ -413,6 +416,7 @@ if (!function_exists('consultant_approval_process_styles')) {
 	font-size: 12px;
 	font-weight: bold;
 	flex: 0 0 14px;
+	margin-top: 1px;
 }
 .consultant-product-text {
 	display: block;
@@ -428,8 +432,9 @@ if (!function_exists('consultant_approval_process_styles')) {
 		print-color-adjust: exact;
 	}
 	.consultant-project-item,
-	.consultant-product-group {
-		border-bottom-color: #888 !important;
+	.consultant-product-group,
+	.consultant-product-category {
+		border-bottom-color: #555 !important;
 	}
 }
 </style>';
