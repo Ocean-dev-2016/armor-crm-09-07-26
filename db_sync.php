@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 define('DB_SYNC_KEY', 'armor_cp_sync_2026');
-define('DB_SYNC_VERSION', '2026.08.16.2');
+define('DB_SYNC_VERSION', '2026.09.07.1');
 
 if (!isset($_GET['key']) || $_GET['key'] !== DB_SYNC_KEY) {
 	header('HTTP/1.1 403 Forbidden');
@@ -128,6 +128,39 @@ function db_sync_add_index_if_missing($conn, $table, $indexName, $columnsSql)
 	}
 	$sql = "ALTER TABLE `{$table}` ADD INDEX `{$indexName}` ({$columnsSql})";
 	return db_sync_run_query($conn, $sql, 'Add index ' . $table . '.' . $indexName);
+}
+
+function db_sync_column_type($conn, $table, $column)
+{
+	if (!db_sync_table_exists($conn, $table)) {
+		return '';
+	}
+	$table = mysqli_real_escape_string($conn, $table);
+	$column = mysqli_real_escape_string($conn, $column);
+	$res = mysqli_query($conn, "SHOW COLUMNS FROM `{$table}` LIKE '{$column}'");
+	if (!$res || mysqli_num_rows($res) == 0) {
+		return '';
+	}
+	$row = mysqli_fetch_assoc($res);
+	return isset($row['Type']) ? strtolower((string) $row['Type']) : '';
+}
+
+/**
+ * Widen truncated varchar columns used for multi-select JSON (consultant approval report).
+ */
+function db_sync_widen_column_to_text_if_varchar($conn, $table, $column)
+{
+	$type = db_sync_column_type($conn, $table, $column);
+	if ($type === '') {
+		db_sync_log('SKIP', $table . '.' . $column . ' missing — skip widen');
+		return false;
+	}
+	if (strpos($type, 'text') !== false || strpos($type, 'blob') !== false) {
+		db_sync_log('SKIP', $table . '.' . $column . ' already ' . $type);
+		return true;
+	}
+	$sql = "ALTER TABLE `{$table}` MODIFY `{$column}` TEXT NOT NULL";
+	return db_sync_run_query($conn, $sql, 'Widen ' . $table . '.' . $column . ' from ' . $type . ' to TEXT');
 }
 
 function db_sync_append_page_urls($conn, $pageId, $newUrls)
@@ -997,6 +1030,15 @@ db_sync_add_column_if_missing(
 );
 
 /* ------------------------------------------------------------------
+ * STEP 5j — Consultant Approval Process: product/project JSON was varchar(255)
+ * and truncated multi-category selections in the report Product Name column.
+ * ------------------------------------------------------------------ */
+db_sync_log('INFO', '--- Consultant Approval Process column widen ---');
+db_sync_widen_column_to_text_if_varchar($conn, 'sales_vs_consultant_approval_process', 'process_four_product_name');
+db_sync_widen_column_to_text_if_varchar($conn, 'sales_vs_consultant_approval_process', 'process_three_project_name');
+db_sync_widen_column_to_text_if_varchar($conn, 'sales_vs_consultant_approval_process', 'process_three_project_location');
+
+/* ------------------------------------------------------------------
  * STEP 6 — Final verification (every run)
  * ------------------------------------------------------------------ */
 $requiredExecutiveColumns = array('channel_partner_flag');
@@ -1685,6 +1727,7 @@ $environment = isset($config['environment']) ? $config['environment'] : 'unknown
 			<li>Column <code>sales_executive.device_id</code> + <code>sales_executive_login.device_id</code> (App login <code>token</code> → device_id for notifications)</li>
 			<li>Column <code>visit.note</code> + <code>visit.followup_date</code> (App stopVisit <code>note</code> / <code>date</code> → <code>followup_date</code>, format <code>Y-m-d H:i</code>)</li>
 			<li>Column <code>quotation_detail.approve_by_id</code> (Quotation Approve → Approved By in KRA)</li>
+			<li>Widen <code>sales_vs_consultant_approval_process.process_four_product_name</code> (+ project name/location) from <code>varchar(255)</code> → <code>TEXT</code> so all selected products show in Consultant Approval Process Report</li>
 		</ul>
 		<p><strong>Safe:</strong> Idempotent — run multiple times; existing data is not deleted.</p>
 		<p><strong>Security:</strong> Delete <code>db_sync.php</code> from live after final READY confirmation.</p>
