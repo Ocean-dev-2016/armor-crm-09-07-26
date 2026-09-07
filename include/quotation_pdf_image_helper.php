@@ -254,15 +254,20 @@ if (!function_exists('armor_pdf_resize_to_jpeg_bytes_from_file')) {
 		}
 
 		// GD direct-from-file is faster than Imagick for small PDF thumbnails.
+		// Never decode GIF here — animated/corrupt GIFs hang GD/mPDF for minutes (gif.php).
 		if (function_exists('imagecreatefromjpeg')) {
 			$ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+			if ($ext === 'gif') {
+				return '';
+			}
 			$img = false;
 			if ($ext === 'jpg' || $ext === 'jpeg') {
 				$img = @imagecreatefromjpeg($path);
 			} elseif ($ext === 'png' && function_exists('imagecreatefrompng')) {
-				$img = @imagecreatefrompng($path);
-			} elseif ($ext === 'gif' && function_exists('imagecreatefromgif')) {
-				$img = @imagecreatefromgif($path);
+				$sz = @filesize($path);
+				if ($sz !== false && $sz > 0 && $sz < 4000000) {
+					$img = @imagecreatefrompng($path);
+				}
 			} elseif ($ext === 'webp' && function_exists('imagecreatefromwebp')) {
 				$img = @imagecreatefromwebp($path);
 			}
@@ -328,9 +333,21 @@ if (!function_exists('armor_pdf_compress_image_src')) {
 
 		$jpeg = '';
 		if ($local !== '' && is_file($local)) {
-			// Already-small JPEG: copy as-is (big live speed win on warm/cold).
 			$ext = strtolower(pathinfo($local, PATHINFO_EXTENSION));
 			$sz = @filesize($local);
+			// GIF → never decode (hangs). Prefer sibling .jpg/.webp or blank later.
+			if ($ext === 'gif') {
+				$siblingJpg = preg_replace('/\.gif$/i', '.jpg', $local);
+				if ($siblingJpg !== $local && is_file($siblingJpg)) {
+					$local = $siblingJpg;
+					$ext = 'jpg';
+					$sz = @filesize($local);
+				} else {
+					$GLOBALS['armor_pdf_image_cache'][$key] = '';
+					return '';
+				}
+			}
+			// Already-small JPEG: copy as-is (big live speed win on warm/cold).
 			if (($ext === 'jpg' || $ext === 'jpeg') && $sz > 20 && $sz < 12000) {
 				@copy($local, $cacheFile);
 				if (is_file($cacheFile) && filesize($cacheFile) > 20) {
@@ -383,11 +400,54 @@ if (!function_exists('armor_pdf_blank_jpeg_data_uri')) {
 	{
 		$file = armor_pdf_blank_jpeg_path();
 		if ($file === '' || !is_file($file)) {
-			return 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+			// 1x1 JPEG (not GIF) — mPDF gif.php hangs on GIF decode.
+			return 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAn/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAGcP//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAQUCf//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQMBAT8Bf//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQIBAT8Bf//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEABj8Cf//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAT8hf//Z';
 		}
 		$bytes = @file_get_contents($file);
-		return ($bytes !== false && $bytes !== '') ? 'data:image/jpeg;base64,' . base64_encode($bytes) : 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+		return ($bytes !== false && $bytes !== '') ? 'data:image/jpeg;base64,' . base64_encode($bytes) : 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAn/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAGcP//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAQUCf//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQMBAT8Bf//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQIBAT8Bf//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEABj8Cf//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAT8hf//Z';
 	}
+
+if (!function_exists('armor_pdf_force_jpeg_only_images')) {
+	/**
+	 * mPDF gif.php can hang 300s on GIF product images — only allow JPEG/data JPEG to mPDF.
+	 */
+	function armor_pdf_force_jpeg_only_images($html)
+	{
+		$blankPath = armor_pdf_blank_jpeg_path();
+		$blankSrc = '';
+		if ($blankPath !== '' && is_file($blankPath)) {
+			$resolved = realpath($blankPath);
+			$blankSrc = str_replace('\\', '/', ($resolved !== false ? $resolved : $blankPath));
+		} else {
+			$blankSrc = armor_pdf_blank_jpeg_data_uri();
+		}
+
+		return preg_replace_callback('/<img\b[^>]*>/i', function ($m) use ($blankSrc) {
+			$tag = $m[0];
+			if (!preg_match('/\bsrc=(["\'])([^"\']+)\1/i', $tag, $srcMatch)) {
+				return $tag;
+			}
+			$src = $srcMatch[2];
+			if (strpos($src, 'data:image/jpeg') === 0 || strpos($src, 'data:image/jpg') === 0) {
+				return $tag;
+			}
+			if (strpos($src, 'data:image') === 0) {
+				// data:image/gif|png → blank jpeg
+				return preg_replace('/\bsrc=(["\'])([^"\']+)\1/i', 'src="' . $blankSrc . '"', $tag, 1);
+			}
+			$pathOnly = parse_url($src, PHP_URL_PATH);
+			if ($pathOnly === null || $pathOnly === false) {
+				$pathOnly = $src;
+			}
+			$ext = strtolower(pathinfo($pathOnly, PATHINFO_EXTENSION));
+			if ($ext === 'jpg' || $ext === 'jpeg') {
+				return $tag;
+			}
+			// gif/png/webp/empty/http leftovers → blank jpeg (never let mPDF open GIF)
+			return preg_replace('/\bsrc=(["\'])([^"\']+)\1/i', 'src="' . $blankSrc . '"', $tag, 1);
+		}, (string) $html);
+	}
+}
 }
 
 if (!function_exists('armor_pdf_strip_remaining_remote_images')) {
@@ -460,7 +520,7 @@ if (!function_exists('armor_pdf_compress_images_in_html')) {
 			} else {
 				$jpegBytes = ($filePath !== '' && is_file($filePath)) ? @file_get_contents($filePath) : false;
 				if ($jpegBytes === false || $jpegBytes === '') {
-					$imgSrc = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+					$imgSrc = armor_pdf_blank_jpeg_data_uri();
 				} else {
 					$imgSrc = 'data:image/jpeg;base64,' . base64_encode($jpegBytes);
 					unset($jpegBytes);

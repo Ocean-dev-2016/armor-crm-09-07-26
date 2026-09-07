@@ -119,6 +119,8 @@ if (!function_exists('armor_pdf_export_sanitize_html')) {
 		// Local cached JPEG paths (fast on live) — avoid base64 + same-server HTTP hangs.
 		$html = armor_pdf_compress_images_in_html($html, true);
 		$html = armor_pdf_strip_remaining_remote_images($html);
+		// Critical: never pass GIF to mPDF (gif.php can hang 300s on live).
+		$html = armor_pdf_force_jpeg_only_images($html);
 
 		return $html;
 	}
