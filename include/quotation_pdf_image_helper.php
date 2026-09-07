@@ -216,28 +216,24 @@ if (!function_exists('armor_pdf_is_jpeg_bytes')) {
 
 if (!function_exists('armor_pdf_safer_source_path')) {
 	/**
-	 * Huge company headers (10k+ px) crash/black-box on live GD/mPDF — prefer craftbox/small JPEG.
-	 * Product: prefer thumb/small siblings when present.
+	 * Prefer smaller product thumbs when present.
+	 * Headers: always keep the real company header (same as web print) — never swap to craftbox here.
 	 */
 	function armor_pdf_safer_source_path($local, $maxW, $maxH, $isHeader)
 	{
 		if ($local === '' || !is_file($local)) {
 			return '';
 		}
-		$projectRoot = realpath(dirname(__FILE__) . '/..');
+		// Keep real header/footer (web print image). Huge files are downscaled in resize step.
+		if ($isHeader) {
+			return $local;
+		}
+
 		$info = @getimagesize($local);
 		$w = ($info && isset($info[0])) ? (int) $info[0] : 0;
 		$h = ($info && isset($info[1])) ? (int) $info[1] : 0;
 		$sz = (int) @filesize($local);
 		$pixels = ($w > 0 && $h > 0) ? ($w * $h) : 0;
-
-		if ($isHeader && $projectRoot) {
-			$craft = $projectRoot . DIRECTORY_SEPARATOR . 'images' . DIRECTORY_SEPARATOR . 'craftbox_header.jpg';
-			// Prefer compact header when source is enormous (live black-square cause).
-			if (is_file($craft) && ($pixels > 2000000 || $sz > 400000 || $w > 2500)) {
-				return $craft;
-			}
-		}
 
 		// Product thumbs
 		$ext = strtolower(pathinfo($local, PATHINFO_EXTENSION));
@@ -428,8 +424,8 @@ if (!function_exists('armor_pdf_resize_to_jpeg_bytes_from_file')) {
 		$h0 = ($info && isset($info[1])) ? (int) $info[1] : 0;
 		$pixels = ($w0 > 0 && $h0 > 0) ? ($w0 * $h0) : 0;
 
-		// Imagick handles huge headers better than GD (avoids black squares / OOM).
-		if ($pixels > 2500000 && extension_loaded('imagick') && class_exists('Imagick')) {
+		// Imagick first for large images (company headers can be 10k+ px — must keep real image, not craftbox).
+		if ($pixels > 1500000 && extension_loaded('imagick') && class_exists('Imagick')) {
 			try {
 				$im = new Imagick($path);
 				$im->setImageCompressionQuality((int) $quality);
@@ -446,8 +442,12 @@ if (!function_exists('armor_pdf_resize_to_jpeg_bytes_from_file')) {
 			}
 		}
 
-		// GD: refuse decoding extremely large bitmaps (live OOM → black box).
-		if ($pixels > 4500000) {
+		// Huge JPEG headers: raise memory and still decode real file (web print image).
+		if ($pixels > 4000000) {
+			@ini_set('memory_limit', '1024M');
+		}
+		// Hard refuse only absurd sizes (prevents live OOM kill).
+		if ($pixels > 40000000) {
 			return '';
 		}
 
