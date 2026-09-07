@@ -44,8 +44,9 @@ if (!function_exists('cp_is_channel_partner_customer')) {
 
 if (!function_exists('cp_get_max_item_discount_percent')) {
 	/**
-	 * Max item Dis(%) / Dis(Flat) for Quotation & Order.
-	 * Regular Customer = 40%, Channel Partner = 50%.
+	 * Max item Dis(%) / Dis(Flat) for Quotation & Order create/edit.
+	 * Regular Customer = 44%, Channel Partner = 50%.
+	 * PDF Suggested Product Range display uses armor_quotation_pi_suggest_display_discount_percent() (40%).
 	 *
 	 * @param object $db
 	 * @param int $customerId executive.id (dealer / CP)
@@ -60,7 +61,7 @@ if (!function_exists('cp_get_max_item_discount_percent')) {
 		if (cp_is_channel_partner_customer($db, $customerId)) {
 			return 50;
 		}
-		return 40;
+		return 44;
 	}
 }
 

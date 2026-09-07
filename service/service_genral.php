@@ -1800,7 +1800,7 @@ if ($is_valid_api_key) {
 				$item_gst = $GST;
 				//$item_gst=$_REQUEST['item_gst'];
 
-				// Max item discount: Regular 40% / Channel Partner 50% — same as web Order/Quotation
+				// Max item discount: Regular 44% / Channel Partner 50% — create/edit validation (PDF suggest badges stay 40%)
 				$disc_customer_id = 0;
 				$disc_force_cp = false;
 				$cart_main_id = isset($_REQUEST['cart_id']) ? (int) $_REQUEST['cart_id'] : (isset($cart_id) ? (int) $cart_id : 0);
@@ -1827,7 +1827,7 @@ if ($is_valid_api_key) {
 						exit;
 					}
 				} else {
-					$maxPct = $disc_force_cp ? 50 : 40;
+					$maxPct = $disc_force_cp ? 50 : 44;
 					$discount_check = floatval($discount);
 					$discount_amt_check = floatval($discount_amt);
 					$original_price_check = floatval($original_price);

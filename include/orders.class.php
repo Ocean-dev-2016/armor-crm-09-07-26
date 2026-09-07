@@ -3914,7 +3914,7 @@ class Order extends Functions
 	}
 
 	/**
-	 * Item discount max: Regular Customer 40%, Channel Partner 50%.
+	 * Item discount max: Regular Customer 44%, Channel Partner 50%.
 	 * Returns error ack array, or false when valid.
 	 */
 	private function validateItemDiscountMax50($discount, $discount_amount, $original_price, $customerId = 0, $forceCp = false)
@@ -3922,7 +3922,7 @@ class Order extends Functions
 		if (function_exists('cp_validate_item_discount_max')) {
 			return cp_validate_item_discount_max($this->db, $discount, $discount_amount, $original_price, $customerId, $forceCp);
 		}
-		$maxPct = $forceCp ? 50 : 40;
+		$maxPct = $forceCp ? 50 : 44;
 		$discount = floatval($discount);
 		$discount_amount = floatval($discount_amount);
 		$original_price = floatval($original_price);
