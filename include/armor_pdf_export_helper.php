@@ -58,10 +58,15 @@ if (!function_exists('armor_pdf_export_mpdf_css')) {
 				width: 100% !important;
 				max-width: 100% !important;
 				height: auto !important;
-				max-height: 180px !important;
+				max-height: 170px !important;
 				display: block !important;
-				margin: 0 !important;
+				margin: 0 auto !important;
 				padding: 0 !important;
+			}
+			img.quote-header-img, img.quote-footer-img {
+				width: 100% !important;
+				max-width: 100% !important;
+				max-height: 170px !important;
 			}
 
 			.text-center { text-align: center !important; }
@@ -116,8 +121,8 @@ if (!function_exists('armor_pdf_export_sanitize_html')) {
 		$html = preg_replace('/break-inside\s*:\s*avoid[^;]*;?/i', 'break-inside:auto;', $html);
 
 		require_once dirname(__FILE__) . '/quotation_pdf_image_helper.php';
-		// Local cached JPEG paths (fast on live) — avoid base64 + same-server HTTP hangs.
-		$html = armor_pdf_compress_images_in_html($html, true);
+		// Base64 JPEG for mPDF reliability on live (local paths often fail open_basedir / path).
+		$html = armor_pdf_compress_images_in_html($html, false);
 		$html = armor_pdf_strip_remaining_remote_images($html);
 		// Critical: never pass GIF to mPDF (gif.php can hang 300s on live).
 		$html = armor_pdf_force_jpeg_only_images($html);
