@@ -8,3 +8,9 @@
 <IfModule lsapi_module>
   AddHandler application/x-httpd-alt-php56___lsphp .php
 </IfModule>
+
+# LiteSpeed: long-running App PDF APIs (service_genral.php s=98 / s=163)
+<IfModule LiteSpeed>
+  RewriteEngine On
+  RewriteRule ^service/service_genral\.php$ - [E=noabort:1,E=noconntimeout:1]
+</IfModule>

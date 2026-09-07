@@ -42,6 +42,11 @@ if (!function_exists('armor_pdf_resolve_local_image_path')) {
 		$r2 = realpath($includeDir . '/../bbsales_tracking');
 		if ($r1) $roots[] = $r1;
 		if ($r2) $roots[] = $r2;
+		if (!empty($_SERVER['DOCUMENT_ROOT'])) {
+			$doc = realpath($_SERVER['DOCUMENT_ROOT']);
+			if ($doc) $roots[] = $doc;
+		}
+		$roots = array_values(array_unique(array_filter($roots)));
 
 		$tryPath = function ($candidate) {
 			if ($candidate !== '' && is_file($candidate)) {
@@ -323,6 +328,16 @@ if (!function_exists('armor_pdf_compress_image_src')) {
 
 		$jpeg = '';
 		if ($local !== '' && is_file($local)) {
+			// Already-small JPEG: copy as-is (big live speed win on warm/cold).
+			$ext = strtolower(pathinfo($local, PATHINFO_EXTENSION));
+			$sz = @filesize($local);
+			if (($ext === 'jpg' || $ext === 'jpeg') && $sz > 20 && $sz < 12000) {
+				@copy($local, $cacheFile);
+				if (is_file($cacheFile) && filesize($cacheFile) > 20) {
+					$GLOBALS['armor_pdf_image_cache'][$key] = $cacheFile;
+					return $cacheFile;
+				}
+			}
 			$jpeg = armor_pdf_resize_to_jpeg_bytes_from_file($local, $maxW, $maxH, $quality);
 		}
 		if ($jpeg === '') {
@@ -350,16 +365,16 @@ if (!function_exists('armor_pdf_guess_image_limits')) {
 	function armor_pdf_guess_image_limits($imgTag)
 	{
 		$tag = strtolower($imgTag);
-		if (strpos($tag, 'quote-header') !== false || strpos($tag, 'craftbox_header') !== false || strpos($tag, 'view_logo') !== false || strpos($tag, 'quote-footer') !== false || strpos($tag, 'footer') !== false || strpos($tag, 'header') !== false) {
-			return array(1200, 260, 90);
+		if (strpos($tag, 'quote-header') !== false || strpos($tag, 'craftbox_header') !== false || strpos($tag, 'view_logo') !== false || strpos($tag, 'quote-footer') !== false) {
+			return array(700, 90, 62);
 		}
-		if (strpos($tag, 'qp-prod') !== false) {
-			return array(42, 34, 75);
+		if (strpos($tag, 'qp-prod') !== false || strpos($tag, '42px') !== false) {
+			return array(36, 30, 55);
 		}
 		if (strpos($tag, 'image-width') !== false || strpos($tag, 'product') !== false || strpos($tag, 'width: 50px') !== false || strpos($tag, 'width:50px') !== false || strpos($tag, 'width: 80px') !== false || strpos($tag, 'width:80px') !== false) {
-			return array(36, 36, 80);
+			return array(40, 40, 58);
 		}
-		return array(40, 40, 75);
+		return array(40, 40, 58);
 	}
 }
 
@@ -386,6 +401,10 @@ if (!function_exists('armor_pdf_strip_remaining_remote_images')) {
 			}
 			$src = $srcMatch[2];
 			if (strpos($src, 'data:image') === 0) {
+				return $tag;
+			}
+			// Keep local filesystem paths for mPDF; only strip remote HTTP(S) URLs.
+			if (!preg_match('/^https?:\/\//i', $src)) {
 				return $tag;
 			}
 			$newTag = preg_replace('/\bsrc=(["\'])([^"\']+)\1/i', 'src="' . $blank . '"', $tag, 1);

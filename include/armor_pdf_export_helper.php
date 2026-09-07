@@ -112,10 +112,13 @@ if (!function_exists('armor_pdf_export_sanitize_html')) {
 		$html = preg_replace('/background[^:]*:\s*[^;]*url\([^)]*\)[^;]*;?/i', '', $html);
 		$html = preg_replace('/\sclass="[^"]*addwatermark[^"]*"/i', '', $html);
 		$html = preg_replace('/width:\s*250mm[^;]*;?/i', 'width:100%;', $html);
+		$html = preg_replace('/page-break-inside\s*:\s*avoid[^;]*;?/i', 'page-break-inside:auto;', $html);
+		$html = preg_replace('/break-inside\s*:\s*avoid[^;]*;?/i', 'break-inside:auto;', $html);
 
 		require_once dirname(__FILE__) . '/quotation_pdf_image_helper.php';
-		// Convert all images to compressed JPEG Base64 Data URIs so they render reliably in mPDF
-		$html = armor_pdf_compress_images_in_html($html, false);
+		// Local cached JPEG paths (fast on live) — avoid base64 + same-server HTTP hangs.
+		$html = armor_pdf_compress_images_in_html($html, true);
+		$html = armor_pdf_strip_remaining_remote_images($html);
 
 		return $html;
 	}
@@ -289,6 +292,14 @@ if (!function_exists('armor_pdf_export_generate')) {
 		@ini_set('memory_limit', '768M');
 		if (function_exists('ignore_user_abort')) {
 			@ignore_user_abort(true);
+		}
+		// LiteSpeed: keep connection open during long PDF generation (same idea as CP PDF).
+		if (function_exists('apache_setenv')) {
+			@apache_setenv('noabort', '1');
+			@apache_setenv('noconntimeout', '1');
+		}
+		if (function_exists('session_write_close')) {
+			@session_write_close();
 		}
 		$html = armor_pdf_export_fetch_view_html($viewFileName, $requestParams, $validMarkers);
 		$html = armor_pdf_export_sanitize_html($html);
