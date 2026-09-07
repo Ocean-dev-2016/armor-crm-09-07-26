@@ -121,10 +121,9 @@ if (!function_exists('armor_pdf_export_sanitize_html')) {
 		$html = preg_replace('/break-inside\s*:\s*avoid[^;]*;?/i', 'break-inside:auto;', $html);
 
 		require_once dirname(__FILE__) . '/quotation_pdf_image_helper.php';
-		// Base64 JPEG for mPDF reliability on live (local paths often fail open_basedir / path).
+		// Compress to JPEG files, embed via mPDF var: (Web-like images, live-safe).
 		$html = armor_pdf_compress_images_in_html($html, false);
 		$html = armor_pdf_strip_remaining_remote_images($html);
-		// Critical: never pass GIF to mPDF (gif.php can hang 300s on live).
 		$html = armor_pdf_force_jpeg_only_images($html);
 
 		return $html;
@@ -227,6 +226,10 @@ if (!function_exists('armor_pdf_export_create_mpdf')) {
 if (!function_exists('armor_pdf_export_write_html')) {
 	function armor_pdf_export_write_html($mpdf, $html)
 	{
+		require_once dirname(__FILE__) . '/quotation_pdf_image_helper.php';
+		if (function_exists('armor_pdf_apply_mpdf_image_vars')) {
+			armor_pdf_apply_mpdf_image_vars($mpdf);
+		}
 		$html = armor_pdf_export_mpdf_css() . (string) $html;
 		// Do not split mid-tag — causes hundreds of blank mPDF pages.
 		$mpdf->WriteHTML($html);

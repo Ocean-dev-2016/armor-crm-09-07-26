@@ -25,6 +25,10 @@ if (!function_exists('armor_pdf_image_cache_reset')) {
 	function armor_pdf_image_cache_reset()
 	{
 		$GLOBALS['armor_pdf_image_cache'] = array();
+		$GLOBALS['armor_pdf_src_map'] = array();
+		$GLOBALS['armor_pdf_mpdf_vars'] = array();
+		$GLOBALS['armor_pdf_mpdf_var_i'] = 0;
+		$GLOBALS['armor_pdf_var_by_hash'] = array();
 	}
 }
 
@@ -108,7 +112,10 @@ if (!function_exists('armor_pdf_resolve_local_image_path')) {
 					if ($webpCandidate !== $candidate) {
 						$found = $tryPath($webpCandidate);
 						if ($found !== '') {
-							return $found;
+							$converted = $preferWebp($found);
+							if ($converted !== '') {
+								return $converted;
+							}
 						}
 					}
 				}
@@ -127,7 +134,10 @@ if (!function_exists('armor_pdf_resolve_local_image_path')) {
 			if ($webpCandidate !== $candidate) {
 				$found = $tryPath($webpCandidate);
 				if ($found !== '') {
-					return $found;
+					$converted = $preferWebp($found);
+					if ($converted !== '') {
+						return $converted;
+					}
 				}
 			}
 		}
@@ -423,7 +433,13 @@ if (!function_exists('armor_pdf_force_jpeg_only_images')) {
 	 */
 	function armor_pdf_force_jpeg_only_images($html)
 	{
-		$blankSrc = armor_pdf_blank_jpeg_data_uri();
+		$blankSrc = 'var:armorpdf_blank';
+		$blankFile = armor_pdf_blank_jpeg_path();
+		if ($blankFile !== '' && is_file($blankFile)) {
+			$GLOBALS['armor_pdf_mpdf_vars']['armorpdf_blank'] = @file_get_contents($blankFile);
+		} else {
+			$blankSrc = armor_pdf_blank_jpeg_data_uri();
+		}
 
 		return preg_replace_callback('/<img\b[^>]*>/i', function ($m) use ($blankSrc) {
 			$tag = $m[0];
@@ -431,10 +447,12 @@ if (!function_exists('armor_pdf_force_jpeg_only_images')) {
 				return $tag;
 			}
 			$src = $srcMatch[2];
+			if (strpos($src, 'var:') === 0) {
+				return $tag;
+			}
 			if (strpos($src, 'data:image/jpeg') === 0 || strpos($src, 'data:image/jpg') === 0) {
 				return $tag;
 			}
-			// Anything else (gif/png data, local png/gif/webp, http) → blank jpeg data URI
 			$isHeader = (stripos($tag, 'quote-header') !== false || stripos($tag, 'quote-footer') !== false);
 			$newTag = preg_replace('/\bsrc=(["\'])([^"\']+)\1/i', 'src="' . $blankSrc . '"', $tag, 1);
 			if ($isHeader) {
@@ -450,22 +468,32 @@ if (!function_exists('armor_pdf_force_jpeg_only_images')) {
 if (!function_exists('armor_pdf_strip_remaining_remote_images')) {
 	function armor_pdf_strip_remaining_remote_images($html)
 	{
-		$blank = armor_pdf_blank_jpeg_data_uri();
-		return preg_replace_callback('/<img\b[^>]*>/i', function ($m) use ($blank) {
+		$blankSrc = 'var:armorpdf_blank';
+		$blankFile = armor_pdf_blank_jpeg_path();
+		if ($blankFile !== '' && is_file($blankFile)) {
+			if (empty($GLOBALS['armor_pdf_mpdf_vars']['armorpdf_blank'])) {
+				$GLOBALS['armor_pdf_mpdf_vars']['armorpdf_blank'] = @file_get_contents($blankFile);
+			}
+		} else {
+			$blankSrc = armor_pdf_blank_jpeg_data_uri();
+		}
+		return preg_replace_callback('/<img\b[^>]*>/i', function ($m) use ($blankSrc) {
 			$tag = $m[0];
 			if (!preg_match('/\bsrc=(["\'])([^"\']+)\1/i', $tag, $srcMatch)) {
 				return $tag;
 			}
 			$src = $srcMatch[2];
-			if (strpos($src, 'data:image') === 0) {
+			if (strpos($src, 'var:') === 0 || strpos($src, 'data:image') === 0) {
 				return $tag;
 			}
-			// Keep local filesystem paths for mPDF; only strip remote HTTP(S) URLs.
 			if (!preg_match('/^https?:\/\//i', $src)) {
-				return $tag;
+				// Non-http leftover file path that is not jpeg → blank var
+				$ext = strtolower(pathinfo(parse_url($src, PHP_URL_PATH) ? parse_url($src, PHP_URL_PATH) : $src, PATHINFO_EXTENSION));
+				if ($ext === 'jpg' || $ext === 'jpeg') {
+					return $tag;
+				}
 			}
-			$newTag = preg_replace('/\bsrc=(["\'])([^"\']+)\1/i', 'src="' . $blank . '"', $tag, 1);
-			// Do not force 42px on blanked remote leftovers that might be header/footer.
+			$newTag = preg_replace('/\bsrc=(["\'])([^"\']+)\1/i', 'src="' . $blankSrc . '"', $tag, 1);
 			if (stripos($tag, 'quote-header') !== false || stripos($tag, 'quote-footer') !== false) {
 				$newTag = preg_replace('/<img/i', '<img style="width:100%;max-height:170px;display:block;"', $newTag, 1);
 			} else {
@@ -479,19 +507,24 @@ if (!function_exists('armor_pdf_strip_remaining_remote_images')) {
 if (!function_exists('armor_pdf_compress_images_in_html')) {
 	function armor_pdf_compress_images_in_html($html, $useLocalPaths = false)
 	{
+		@ini_set('pcre.backtrack_limit', '10000000');
+		@ini_set('pcre.recursion_limit', '1000000');
 		armor_pdf_image_cache_reset();
-		if (!isset($GLOBALS['armor_pdf_src_map'])) {
-			$GLOBALS['armor_pdf_src_map'] = array();
+		if (!isset($GLOBALS['armor_pdf_mpdf_vars']) || !is_array($GLOBALS['armor_pdf_mpdf_vars'])) {
+			$GLOBALS['armor_pdf_mpdf_vars'] = array();
+		}
+		if (!isset($GLOBALS['armor_pdf_mpdf_var_i'])) {
+			$GLOBALS['armor_pdf_mpdf_var_i'] = 0;
 		}
 
-		$html = preg_replace_callback('/<img\b[^>]*>/i', function ($m) use ($useLocalPaths) {
+		$html = preg_replace_callback('/<img\b[^>]*>/i', function ($m) {
 			$tag = $m[0];
 			if (!preg_match('/\bsrc=(["\'])([^"\']+)\1/i', $tag, $srcMatch)) {
 				return $tag;
 			}
 
 			$src = $srcMatch[2];
-			if (strpos($src, 'data:image') === 0) {
+			if (strpos($src, 'data:image') === 0 || strpos($src, 'var:') === 0) {
 				return $tag;
 			}
 
@@ -516,18 +549,29 @@ if (!function_exists('armor_pdf_compress_images_in_html')) {
 				$filePath = armor_pdf_blank_jpeg_path();
 			}
 
-			if ($useLocalPaths && $filePath !== '' && is_file($filePath)) {
-				$resolved = realpath($filePath);
-				$imgSrc = str_replace('\\', '/', ($resolved !== false ? $resolved : $filePath));
-			} else {
+			$jpegBytes = ($filePath !== '' && is_file($filePath)) ? @file_get_contents($filePath) : false;
+			if ($jpegBytes === false || $jpegBytes === '') {
+				$filePath = armor_pdf_blank_jpeg_path();
 				$jpegBytes = ($filePath !== '' && is_file($filePath)) ? @file_get_contents($filePath) : false;
-				if ($jpegBytes === false || $jpegBytes === '') {
-					$imgSrc = armor_pdf_blank_jpeg_data_uri();
-				} else {
-					$imgSrc = 'data:image/jpeg;base64,' . base64_encode($jpegBytes);
-					unset($jpegBytes);
-				}
 			}
+			if ($jpegBytes === false || $jpegBytes === '') {
+				return $tag;
+			}
+
+			// mPDF-native embedding: src="var:name" + $mpdf->name = jpeg bytes (reliable vs data-URI).
+			// Reuse same var for identical JPEG bytes (many Suggested Products share default.png).
+			if (!isset($GLOBALS['armor_pdf_var_by_hash']) || !is_array($GLOBALS['armor_pdf_var_by_hash'])) {
+				$GLOBALS['armor_pdf_var_by_hash'] = array();
+			}
+			$hash = md5($jpegBytes);
+			if (isset($GLOBALS['armor_pdf_var_by_hash'][$hash])) {
+				$varName = $GLOBALS['armor_pdf_var_by_hash'][$hash];
+			} else {
+				$varName = 'armorpdf_' . ((int) $GLOBALS['armor_pdf_mpdf_var_i']++);
+				$GLOBALS['armor_pdf_mpdf_vars'][$varName] = $jpegBytes;
+				$GLOBALS['armor_pdf_var_by_hash'][$hash] = $varName;
+			}
+			$imgSrc = 'var:' . $varName;
 
 			$newTag = preg_replace('/\bsrc=(["\'])([^"\']+)\1/i', 'src="' . $imgSrc . '"', $tag, 1);
 			$newTag = preg_replace('/\sstyle=(["\'])[^"\']*\1/i', '', $newTag);
@@ -541,5 +585,21 @@ if (!function_exists('armor_pdf_compress_images_in_html')) {
 		}, (string) $html);
 
 		return $html;
+	}
+}
+
+if (!function_exists('armor_pdf_apply_mpdf_image_vars')) {
+	function armor_pdf_apply_mpdf_image_vars($mpdf)
+	{
+		if (!$mpdf || empty($GLOBALS['armor_pdf_mpdf_vars']) || !is_array($GLOBALS['armor_pdf_mpdf_vars'])) {
+			return;
+		}
+		foreach ($GLOBALS['armor_pdf_mpdf_vars'] as $name => $bytes) {
+			if ($name === '' || $bytes === '' || $bytes === false) {
+				continue;
+			}
+			// mPDF6: <img src="var:name"> reads $mpdf->name
+			$mpdf->{$name} = $bytes;
+		}
 	}
 }
