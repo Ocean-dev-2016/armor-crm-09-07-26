@@ -1261,12 +1261,12 @@ class Order extends Functions
 				);
 				$values = array(
 					$order_no,
-					$customer_r['id'],
-					$customer_r['dealer_distributor_id'],
-					$customer_r['super_stockist_id'],
+					(int) $customer_r['id'],
+					(int) $customer_r['dealer_distributor_id'],
+					(int) $customer_r['super_stockist_id'],
 					$customer_r['cname'],
 					$customer_r['client_code'],
-					$customer_r['customer_flag'],
+					(int) $customer_r['customer_flag'],
 					$customer_r['company_name'],
 					$customer_r['type_of_executive'],
 					// $customer_r['phone'],
@@ -1280,28 +1280,28 @@ class Order extends Functions
 					$order_date,
 					// $customer_r['brand_id'],
 					-1,
-					($detail['sales_executive_id']) ? $detail['sales_executive_id'] : "",
-					($detail['chalan_no']) ? $detail['chalan_no'] : "",
-					($detail['po_no']) ? $detail['po_no'] : "",
-					($detail['po_date']) ? $detail['po_date'] : "",
-					($detail['terms_comdition']) ? $detail['terms_comdition'] : "",
-					($detail['faithfully']) ? $detail['faithfully'] : "",
-					($detail['transport_name']) ? $detail['transport_name'] : "",
-					($detail['transport_through']) ? $detail['transport_through'] : "",
-					($detail['transport_charge']) ? $detail['transport_charge'] : "",
-					$this->db->clean($detail['shipping_address']),
-					$this->db->clean($detail['billing_address']),
-					($detail['packing_charge']) ? $detail['packing_charge'] : "",
-					($detail['name_gstin']) ? $detail['name_gstin'] : "",
-					($detail['vendor_code']) ? $detail['vendor_code'] : "",
-					($detail['tendor_code']) ? $detail['tendor_code'] : "",
+					(isset($detail['sales_executive_id']) && $detail['sales_executive_id'] !== '' && $detail['sales_executive_id'] !== null) ? (int) $detail['sales_executive_id'] : 0,
+					isset($detail['chalan_no']) ? $detail['chalan_no'] : "",
+					isset($detail['po_no']) ? $detail['po_no'] : "",
+					(!empty($detail['po_date']) && $detail['po_date'] != '0000-00-00' && $detail['po_date'] != '1970-01-01') ? $detail['po_date'] : date('Y-m-d'),
+					isset($detail['terms_comdition']) ? $this->db->rp_escapeString($detail['terms_comdition']) : "",
+					isset($detail['faithfully']) ? $this->db->rp_escapeString($detail['faithfully']) : "",
+					isset($detail['transport_name']) ? $detail['transport_name'] : "",
+					isset($detail['transport_through']) ? $detail['transport_through'] : "",
+					(isset($detail['transport_charge']) && $detail['transport_charge'] !== '') ? $detail['transport_charge'] : 0,
+					$this->db->clean(isset($detail['shipping_address']) ? $detail['shipping_address'] : ""),
+					$this->db->clean(isset($detail['billing_address']) ? $detail['billing_address'] : ""),
+					(isset($detail['packing_charge']) && $detail['packing_charge'] !== '') ? $detail['packing_charge'] : 0,
+					isset($detail['name_gstin']) ? $detail['name_gstin'] : "",
+					isset($detail['vendor_code']) ? $detail['vendor_code'] : "",
+					isset($detail['tendor_code']) ? $detail['tendor_code'] : "",
 					1,
-					($detail['apply_scheme']) ? $detail['apply_scheme'] : "",
-					($detail['type_of_company']) ? $detail['type_of_company'] : "",
-					($detail['terms_condition_id']) ? $detail['terms_condition_id'] : "",
-					($detail['booking_place']) ? $detail['booking_place'] : "",
-					($detail['booking_pincode']) ? $detail['booking_pincode'] : "",
-					($detail['max_dispatch_date']) ? $detail['max_dispatch_date'] : "",
+					(isset($detail['apply_scheme']) && $detail['apply_scheme'] !== '') ? (int) $detail['apply_scheme'] : 0,
+					(isset($detail['type_of_company']) && $detail['type_of_company'] !== '') ? (int) $detail['type_of_company'] : 0,
+					(isset($detail['terms_condition_id']) && $detail['terms_condition_id'] !== '') ? (int) $detail['terms_condition_id'] : 0,
+					isset($detail['booking_place']) ? $detail['booking_place'] : "",
+					(isset($detail['booking_pincode']) && $detail['booking_pincode'] !== '') ? (int) $detail['booking_pincode'] : 0,
+					(!empty($detail['max_dispatch_date']) && $detail['max_dispatch_date'] != '0000-00-00' && $detail['max_dispatch_date'] != '1970-01-01') ? $detail['max_dispatch_date'] : date('Y-m-d'),
 				);
 				if ($has_cp_order_flag) {
 					/* Insert after customer_type */
@@ -1655,7 +1655,11 @@ class Order extends Functions
 					}
 				} else {
 					$db_err = @mysqli_error($this->db->myconn);
-					$reply = array("ack" => 0, "developer_msg" => "Request Not Generated: " . $db_err, "ack_msg" => "Order save failed. Please run db_sync and try again.");
+					$ack_msg = "Order save failed. Please run db_sync and try again.";
+					if ($db_err != "") {
+						$ack_msg .= " [" . $db_err . "]";
+					}
+					$reply = array("ack" => 0, "developer_msg" => "Request Not Generated: " . $db_err, "ack_msg" => $ack_msg);
 					return $reply;
 				}
 			}
