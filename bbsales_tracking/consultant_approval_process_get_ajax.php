@@ -112,21 +112,40 @@ if ($_SESSION[SITE_SESS . '_ADMIN_TYPE'] != 0) {
 
 
 
-$item_per_page =  ($_REQUEST["show"] <> "" && is_numeric($_REQUEST["show"])) ? intval($_REQUEST["show"]) : 100;
+$item_per_page = (isset($_REQUEST["show"]) && $_REQUEST["show"] != "" && is_numeric($_REQUEST["show"])) ? intval($_REQUEST["show"]) : 10;
+if ($item_per_page < 1) {
+    $item_per_page = 10;
+}
 
-$get_total_rows = $db->rp_getTotalRecord($ctable, $ctable_where, 0); //hold total records in variable
-//break records into pages
-$total_pages = ceil($get_total_rows / $item_per_page);
-
-//get starting position to fetch the records
-$page_position = (($page_number - 1) * $item_per_page);
-$ctable_r = $db->rp_getData($ctable, "*", "", 0);
-
-if ($ctable_r) {
-    while ($row = mysqli_fetch_assoc($ctable_r)) {
-        $sales_name_get = $db->rp_getValue("sales_executive", "name", "isDelete=0 AND isActive=1 AND id='" . $_REQUEST['sales_executive'] . "'", 0);
+if (isset($_REQUEST["page"]) && $_REQUEST["page"] != "") {
+    $page_number = filter_var($_REQUEST["page"], FILTER_SANITIZE_NUMBER_INT, FILTER_FLAG_STRIP_HIGH);
+    if (!is_numeric($page_number) || (int) $page_number < 1) {
+        $page_number = 1;
+    } else {
+        $page_number = (int) $page_number;
     }
+} else {
+    $page_number = 1;
+}
 
+$list_where = "isDelete=0 AND isActive=1 AND " . $ctable_where;
+$get_total_rows = (int) $db->rp_getTotalRecord($ctable, $list_where, 0);
+$total_pages = ($item_per_page > 0) ? (int) ceil($get_total_rows / $item_per_page) : 1;
+if ($total_pages < 1) {
+    $total_pages = 1;
+}
+if ($page_number > $total_pages) {
+    $page_number = $total_pages;
+}
+$page_position = ($page_number - 1) * $item_per_page;
+$limit = $page_position . "," . $item_per_page;
+
+$sales_name_get = '';
+if (!empty($_REQUEST['sales_executive']) && $_REQUEST['sales_executive'] != "null") {
+    $sales_name_get = $db->rp_getValue("sales_executive", "name", "isDelete=0 AND isActive=1 AND id='" . (int) $_REQUEST['sales_executive'] . "'", 0);
+}
+
+if ($get_total_rows >= 0) {
 ?>
     <style>
         .consultant-report-wrap {
@@ -253,9 +272,9 @@ if ($ctable_r) {
             </thead>
             <tbody>
                 <?php
-                $result = $db->rp_getData($ctable, "*", "isDelete=0 AND isActive=1 AND $ctable_where", "", 0);
+                $result = $db->rp_getData($ctable, "*", $list_where, "id DESC", 0, $limit);
                 if ($result) {
-                    $sr = 1;
+                    $sr = $page_position + 1;
                     while ($d = mysqli_fetch_assoc($result)) {
                         $purchase_date = $d['process_four_purchase_date'];
                         if ($purchase_date && $purchase_date <= date("Y-m-d")) {
@@ -283,8 +302,8 @@ if ($ctable_r) {
                             }
                         }
                         $projectCells = consultant_approval_render_project_cells(
-                            isset($d['process_three_project_name']) ? $d['process_three_project_name'] : '',
-                            isset($d['process_three_project_location']) ? $d['process_three_project_location'] : ''
+                            isset($d['process_three_project_location']) ? $d['process_three_project_location'] : '',
+                            isset($d['process_three_project_name']) ? $d['process_three_project_name'] : ''
                         );
                         $productHtml = consultant_approval_render_product_list_html(
                             isset($d['process_four_product_name']) ? $d['process_four_product_name'] : ''
@@ -347,11 +366,27 @@ if ($ctable_r) {
         </table>
         </div>
     </form>
+    <div class="row" style="margin-top:10px;">
+        <div class="col-md-6">
+            <div class="dataTables_info">
+                Showing <?php echo ($get_total_rows > 0) ? ($page_position + 1) : 0; ?>
+                to <?php echo min($page_position + $item_per_page, $get_total_rows); ?>
+                of <?php echo (int) $get_total_rows; ?> entries
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="dataTables_paginate paging_simple_numbers pull-right">
+                <ul class="pagination" style="margin:0;">
+                    <?php echo $db->rp_paginate_function($item_per_page, $page_number, $get_total_rows, $total_pages); ?>
+                </ul>
+            </div>
+        </div>
+    </div>
 
 <?php
 } else {
 ?>
-    <td colspan="9" style="text-align: center; font-size: medium;">no data Found</td>
+    <div style="text-align: center; font-size: medium;">no data Found</div>
 <?php
 }
 ?>

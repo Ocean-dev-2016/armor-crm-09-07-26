@@ -261,7 +261,7 @@ include("connect.php");
             var data_url = "consultant_approval_process_get_ajax.php";
 
             function searchByName() {
-                displayRecords(100, 1);
+                displayRecords(10, 1);
                 return false;
             }
 
@@ -282,16 +282,14 @@ include("connect.php");
                   $("#ToDate").val("");
                   $("#FromDate").val("");
 
-                displayRecords(100, 1);
+                displayRecords(10, 1);
             }
 
             function loadDataTable() {
-                $('#datatable_1').dataTable({
-                    "bPaginate": false,
-                    "bFilter": false,
-                    "bInfo": false,
-                    "bAutoWidth": false,
-                });
+                // server-side pagination used; keep client DataTable pagination off
+                if ($.fn.dataTable && $.fn.dataTable.isDataTable('#datatable_1')) {
+                    $('#datatable_1').dataTable().fnDestroy();
+                }
             }
          function getByDate() 
                {
@@ -299,32 +297,51 @@ include("connect.php");
                   {
                      ToDate = $("#ToDate").val();
                      FromDate = $("#FromDate").val();
-                     displayRecords(100,1);
+                     displayRecords(10,1);
                   }
                   else
                   {
                      alert("From Date Should Be Less Than To Date");
                   }
                }
-            function displayRecords(numRecords) {
+            function displayRecords(numRecords, pageNumber) {
                 var sales_executive = $("#sales_executive").val();
                 var approval_type = $("#approval_type").val();
-                var searchName = $("#searchName").val();
+                var searchName = $("#searchName").val() || "";
                 searchName = encodeURIComponent(searchName.trim());
+                numRecords = parseInt(numRecords, 10) || 10;
+                pageNumber = parseInt(pageNumber, 10) || 1;
 
                 $("#results").html("");
-                $("#results").load(data_url + "?show=" + numRecords + "&sales_executive=" + sales_executive + "&approval_type=" + encodeURIComponent(approval_type) + "&ToDate=" + ToDate + "&FromDate=" + FromDate + "&searchName=" + searchName, function() {
-                    loadDataTable();
-                }); //load initial records
+                $("#results").load(
+                    data_url + "?show=" + numRecords +
+                    "&page=" + pageNumber +
+                    "&sales_executive=" + sales_executive +
+                    "&approval_type=" + encodeURIComponent(approval_type) +
+                    "&ToDate=" + ToDate +
+                    "&FromDate=" + FromDate +
+                    "&searchName=" + searchName,
+                    function() {
+                        loadDataTable();
+                    }
+                );
             }
 
             $(document).ready(function() {
-                displayRecords(100, 1);
+                displayRecords(10, 1);
                 $("#approval_type").on("change", function() {
-                    displayRecords(100, 1);
+                    displayRecords(10, 1);
                 });
                 $("#sales_executive").on("change", function() {
-                    displayRecords(100, 1);
+                    displayRecords(10, 1);
+                });
+                $("#results").on("click", ".paging_simple_numbers a, .pagination a", function(e) {
+                    e.preventDefault();
+                    var page = $(this).attr("data-page");
+                    if (!page) {
+                        return;
+                    }
+                    displayRecords(10, page);
                 });
             });
 
@@ -342,7 +359,7 @@ include("connect.php");
                 response = $.parseJSON(response);
                 if (response.ack == 1) {
                     toastr.success("Deleted Successfully!", "Success");
-                    displayRecords(); 
+                    displayRecords(10, 1); 
                 } else {
                     toastr.error("Delete Failed!", "Error");
                 }

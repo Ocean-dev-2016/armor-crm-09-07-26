@@ -260,8 +260,8 @@ if ($ctable_r) {
                             }
                         }
                         $projectCells = consultant_approval_render_project_cells(
-                            isset($d['process_three_project_name']) ? $d['process_three_project_name'] : '',
-                            isset($d['process_three_project_location']) ? $d['process_three_project_location'] : ''
+                            isset($d['process_three_project_location']) ? $d['process_three_project_location'] : '',
+                            isset($d['process_three_project_name']) ? $d['process_three_project_name'] : ''
                         );
                         $productHtml = consultant_approval_render_product_list_html(
                             isset($d['process_four_product_name']) ? $d['process_four_product_name'] : ''
