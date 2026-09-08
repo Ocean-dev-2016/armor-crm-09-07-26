@@ -164,8 +164,8 @@ if ($result) {
 			$approval_type_label = $db->approval_type_arr[$d['process_one_approval_type']];
 		}
 
-		$projectName = consultant_approval_format_project_text(isset($d['process_three_project_location']) ? $d['process_three_project_location'] : '');
-		$projectLocation = consultant_approval_format_project_text(isset($d['process_three_project_name']) ? $d['process_three_project_name'] : '');
+		$projectName = consultant_approval_format_project_text(isset($d['process_three_project_name']) ? $d['process_three_project_name'] : '');
+		$projectLocation = consultant_approval_format_project_text(isset($d['process_three_project_location']) ? $d['process_three_project_location'] : '');
 		$productName = consultant_approval_format_product_text(isset($d['process_four_product_name']) ? $d['process_four_product_name'] : '');
 
 		$purchase_date = '';
