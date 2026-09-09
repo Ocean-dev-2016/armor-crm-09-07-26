@@ -1020,7 +1020,8 @@ if ($quotationViewStandalone && !$isPdfExportMode && !defined('ARMOR_PDF_EXPORT_
 								<span class="font-13"><?php echo html_entity_decode($cart_detail_d['terms_comdition']); ?></span><br>
 							</div>
 						</div>
-						<span class="font-13" style="color: red;"><b>This quotation is valid for 7 days.</b></span>
+						<span class="font-13" style="color: red;"><b>1) This quotation is valid for 7 days.</b></span><br>
+						<span class="font-13" style="color: red;"><b>2) For Gun Metal Products, quote valid for 3 Days only.</b></span>
 					</td>
 				</tr>
 			</tbody>

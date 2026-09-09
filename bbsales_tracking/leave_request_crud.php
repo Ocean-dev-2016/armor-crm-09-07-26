@@ -127,9 +127,21 @@ if(isset($_REQUEST['id']) && $_REQUEST['id']>0 && $_REQUEST['mode']=="isActive" 
 <meta charset="utf-8"/>
 <title><?php echo $page_title; ?> | <?php echo SITETITLE; ?></title>
 <?php include("include_css.php"); ?>
-<!-- <link rel="stylesheet" type="text/css" href="assets/global/plugins/bootstrap-datepicker/css/bootstrap-datepicker3.min.css"/> -->
-<link rel="stylesheet" type="text/css" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/themes/redmond/jquery-ui.css">
+<link rel="stylesheet" type="text/css" href="assets/global/plugins/jquery-ui/jquery-ui.min.css"/>
 <link rel="stylesheet" type="text/css" href="assets/global/plugins/bootstrap-timepicker/css/bootstrap-timepicker.min.css"/>
+<style type="text/css">
+	#ui-datepicker-div {
+		z-index: 99999 !important;
+	}
+	.ui-datepicker {
+		width: 17em;
+		padding: 0.2em 0.2em 0;
+		display: none;
+		background: #fff;
+		border: 1px solid #ccc;
+		box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+	}
+</style>
 </head>
 <body class="page-md">
 <?php include("header.php"); ?>
@@ -270,7 +282,7 @@ if(isset($_REQUEST['id']) && $_REQUEST['id']>0 && $_REQUEST['mode']=="isActive" 
 									<div class="form-group">
 										<label>To Time</label>
 										<input type="time" name="end_time" id="end_time" value="" class="form-control">	
-										<p cass="help-block"></p>
+										<p class="help-block"></p>
 									</div>
 								</div>
 
@@ -306,8 +318,6 @@ if(isset($_REQUEST['id']) && $_REQUEST['id']>0 && $_REQUEST['mode']=="isActive" 
 </div>
 <?php include("footer.php"); ?>
 <?php include("include_js.php"); ?>
-<!-- <script type="text/javascript" src="assets/global/plugins/bootstrap-datepicker/js/bootstrap-datepicker.min.js"></script> -->
-<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/jquery-ui.js"></script>
 <script type="text/javascript" src="assets/global/plugins/bootstrap-timepicker/js/bootstrap-timepicker.min.js"></script>
 
 <script type="text/javascript">
@@ -316,20 +326,22 @@ $("#checkAll").change(function () {
 });
 </script>
 <script type="text/javascript">
-	// $('#start_date').datepicker({  datepicker: true, autoclose: true, dateFormat: 'dd-mm-yy',"setDate": new Date(), });
-	// $("#start_date").datepicker("setDate", new Date());
-
 	$("#start_date").datepicker({
+	  dateFormat: 'dd-mm-yy',
+	  changeMonth: true,
+	  changeYear: true,
 	  minDate: 0,
-
-	  onSelect: function(date) {
-	    $("#end_date").datepicker('option', 'minDate', date);
+	  onSelect: function(dateText) {
+	    $("#end_date").datepicker('option', 'minDate', dateText);
 	  }
 	});
 
-	$("#end_date").datepicker({});
-
-	
+	$("#end_date").datepicker({
+	  dateFormat: 'dd-mm-yy',
+	  changeMonth: true,
+	  changeYear: true,
+	  minDate: 0
+	});
 </script>
 <!-- <script type="text/javascript">
 	$('#start_time').timepicker({timepicker: true, autoclose: true });

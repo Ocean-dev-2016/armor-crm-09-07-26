@@ -488,7 +488,8 @@ $auto_print = isset($_REQUEST['p']) && $_REQUEST['p'] == '1';
 						<?php echo html_entity_decode($pi_terms); ?>
 						<br>
 					<?php } ?>
-					<span class="muted" style="color:red;"><b>This Pro Forma Invoice is valid for 7 days.</b></span>
+					<span class="muted" style="color:red;"><b>1) This Pro Forma Invoice is valid for 7 days.</b></span><br>
+					<span class="muted" style="color:red;"><b>2) For Gun Metal Products, quote valid for 3 Days only.</b></span>
 					<?php if (!empty($ord['remarks'])) { ?>
 						<br><br><strong>Note:</strong><br><?php echo nl2br(htmlspecialchars($ord['remarks'])); ?>
 					<?php } ?>

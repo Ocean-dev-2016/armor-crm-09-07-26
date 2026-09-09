@@ -587,7 +587,8 @@ $weight_total = 0;
 							<span class="font-13"><strong>Terms & Condition : </strong></span>
 							<span style="font-weight:normal;"><?= $cart_detail_d['terms_comdition'] ?></span>
 							<br>
-							<span class="font-13" style="color: red;"><b>This Pro Forma Invoice is valid for 7 days.</b></span>
+							<span class="font-13" style="color: red;"><b>1) This Pro Forma Invoice is valid for 7 days.</b></span><br>
+							<span class="font-13" style="color: red;"><b>2) For Gun Metal Products, quote valid for 3 Days only.</b></span>
 							<br>
 							<span class="font-13"><b>Note</b></span><br>
 							<span style="font-weight:normal;"><?php echo $cart_detail_d['remarks'] ?></span>
@@ -640,7 +641,8 @@ $weight_total = 0;
 							<span class="font-13"><strong>Terms & Condition : </strong></span>
 							<span style="font-weight:normal;"><?= $cart_detail_d['terms_comdition'] ?></span>
 							<br>
-							<span class="font-13" style="color: red;"><b>This Pro Forma Invoice is valid for 7 days.</b></span>
+							<span class="font-13" style="color: red;"><b>1) This Pro Forma Invoice is valid for 7 days.</b></span><br>
+							<span class="font-13" style="color: red;"><b>2) For Gun Metal Products, quote valid for 3 Days only.</b></span>
 							<br>
 							<span class="font-13"><b>Remarks</b></span><br>
 							<span style="font-weight:normal;"><?php echo $cart_detail_d['remarks'] ?></span>

@@ -583,7 +583,8 @@ $headerImgHeight = defined('HEADER_IMAGE_HEIGHT') ? (int) HEADER_IMAGE_HEIGHT : 
 				<td class="terms-cell">
 					<span class="font-13"><b>Terms & Condition : </b></span>
 					<span class="font-13"><?= $cart_detail_d['terms_comdition'] ?></span>
-					<span class="font-13" style="color: red;"><b> This quotation is valid for 7 days.</b></span><br>
+					<span class="font-13" style="color: red;"><b>1) This quotation is valid for 7 days.</b></span><br>
+					<span class="font-13" style="color: red;"><b>2) For Gun Metal Products, quote valid for 3 Days only.</b></span><br>
 					<span class="font-13"><b>Grand Total In Words</b> :
 						<?php
 						$grand_total_words = $ntw->rp_convertNumToWord($display_grand_total);
