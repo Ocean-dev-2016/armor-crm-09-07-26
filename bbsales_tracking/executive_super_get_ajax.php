@@ -667,7 +667,7 @@ if ($isFillter) {
 														</li>
 													<?php
 													}
-													if (isset($_REQUEST['flag']) && $_REQUEST['flag'] == "") {
+													if (isset($_REQUEST['flag']) && ($_REQUEST['flag'] == "" || $_REQUEST['flag'] == "channel_partner")) {
 														$SEID = $db->rp_getvalue("dealer_distributor_network", "sales_executive_id", "id='" . $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'] . "' ", 0);
 														/*if($SEID==0)
 																							{
