@@ -31,7 +31,10 @@ define('DO_NOT_CHANGE',"eVk5K2tiZ0hNSk40VDZ1M2hCMS9Sdz09"); // extended to 31-08
 define('DO_NOT_CHANGE_ANOTHER',"ckNqZnV4bkRtbEdyUE15L1lFNTdQUT09");
 define("SITE_USER","MAHADEV_CC");
 define("SITE_SHORT","MAHADEV_SS");
-define("FINANCIAL_YEAR","24-25");
+/* Indian FY: Apr–Mar. Auto current (Sep 2026 => 26-27) */
+$_armor_fy_start = ((int) date('n') >= 4) ? (int) date('y') : ((int) date('y') - 1);
+define("FINANCIAL_YEAR", sprintf('%02d-%02d', $_armor_fy_start, $_armor_fy_start + 1));
+unset($_armor_fy_start);
 
 define("API_TABLE","api_key_table");
 define("API_PARAM","key");
