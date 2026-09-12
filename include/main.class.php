@@ -27,7 +27,14 @@ class Database
       if(!$this->con)
       {
         $lastErr = '';
+        // #region agent log
+        $armorDbgT0 = microtime(true);
+        $armorDbgPortsTried = array();
+        // #endregion
         foreach ($this->db_ports as $port) {
+          // #region agent log
+          $armorDbgPortT0 = microtime(true);
+          // #endregion
           $this->myconn = @mysqli_connect(
             $this->db_host,
             $this->db_user,
@@ -35,8 +42,26 @@ class Database
             $this->db_name,
             $port
           );
+          // #region agent log
+          $armorDbgPortsTried[] = array(
+            'port' => (int) $port,
+            'ok' => $this->myconn ? 1 : 0,
+            'ms' => round((microtime(true) - $armorDbgPortT0) * 1000, 1)
+          );
+          // #endregion
           if ($this->myconn) {
             $this->con = true;
+            // #region agent log
+            if (!isset($GLOBALS['armor_dbg_timing'])) {
+              $GLOBALS['armor_dbg_timing'] = array();
+            }
+            $GLOBALS['armor_dbg_timing']['db_connect'] = array(
+              'hypothesisId' => 'A',
+              'total_ms' => round((microtime(true) - $armorDbgT0) * 1000, 1),
+              'ports' => $armorDbgPortsTried,
+              'host' => $this->db_host
+            );
+            // #endregion
             return true;
           }
           $lastErr = mysqli_connect_error();

@@ -111,7 +111,6 @@ include("connect.php");
 										?>	
 
 										<a class="btn btn-primary" href='#addProductUnit' data-toggle='modal'><i class="fa fa-pencil"></i> Add Order Unit</a>
-										<a class="btn yellow" href="product_convert_webp.php" title="Convert existing product images to WebP"><i class="fa fa-picture-o"></i> Convert Images → WebP</a>
 									 </div>
 	                            	  <div class="col-md-7 col-xs-7 col-sm-7 pull-right">
                              <div class="form-inline" role="form">
@@ -527,8 +526,19 @@ function displayRecords(numRecords, pageNum) {
 
 	$('.preloader').fadeIn('slow');
 	$("#results").html("");
+	// #region agent log
+	var _prodAjaxT0 = (window.performance && performance.now) ? performance.now() : Date.now();
+	// #endregion
 	$("#results").load(data_url + "?show=" + numRecords + "&page=" + pageNum + "&" + filterQuery, function(response, status){
 		$('.preloader').fadeOut('slow');
+		// #region agent log
+		try {
+			var _prodAjaxMs = Math.round(((window.performance && performance.now) ? performance.now() : Date.now()) - _prodAjaxT0);
+			var _imgInResult = $("#results img").length;
+			var _rows = $("#results tbody tr").length;
+			fetch('http://127.0.0.1:7588/ingest/23157f6e-3ade-4fbf-b20f-72d006391582',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0faf73'},body:JSON.stringify({sessionId:'0faf73',runId:'slow-load',hypothesisId:'B',location:'product_manage.php:displayRecords',message:'product grid ajax done',data:{status:status,show:numRecords,page:pageNum,ajax_ms:_prodAjaxMs,rows:_rows,imgs:_imgInResult,search:(params&&params.searchName)||''},timestamp:Date.now()})}).catch(function(){});
+		} catch (e) {}
+		// #endregion
 		if (status === "error") {
 			$("#results").html("<div class='alert alert-danger'>Failed to load products. Please try again.</div>");
 			return;

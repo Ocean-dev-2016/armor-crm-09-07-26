@@ -1,4 +1,8 @@
 <?php
+// #region agent log
+$GLOBALS['armor_dbg_page_t0'] = microtime(true);
+$GLOBALS['armor_dbg_timing'] = array('page' => isset($_SERVER['SCRIPT_NAME']) ? basename($_SERVER['SCRIPT_NAME']) : '');
+// #endregion
 error_reporting(0);
 session_start();
 date_default_timezone_set('Asia/Kolkata');
@@ -15,7 +19,13 @@ if (!defined('DO_NOT_CHANGE')) {
 // echo DO_NOT_CHANGE;exit;
 $system = new System();
 require_once("../include/master_activity_helper.php");
+// #region agent log
+$GLOBALS['armor_dbg_timing']['before_security_ms'] = round((microtime(true) - $GLOBALS['armor_dbg_page_t0']) * 1000, 1);
+// #endregion
 include("../include/security.php");
+// #region agent log
+$GLOBALS['armor_dbg_timing']['after_security_ms'] = round((microtime(true) - $GLOBALS['armor_dbg_page_t0']) * 1000, 1);
+// #endregion
 
 if (armor_is_master_activity_user()) {
 	$currentPage = basename($_SERVER['PHP_SELF']);

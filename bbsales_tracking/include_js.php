@@ -511,6 +511,12 @@ if($remainingdate>=$lastdatedate)
 
 	// First sync: set baseline without toast flood
 	$.getJSON("employee_chat_ajax.php", { mode: "live_notify", after_id: 0 }, function (res) {
+		// #region agent log
+		try {
+			var _chatMs = (window.performance && performance.now) ? Math.round(performance.now()) : 0;
+			fetch('http://127.0.0.1:7588/ingest/23157f6e-3ade-4fbf-b20f-72d006391582',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0faf73'},body:JSON.stringify({sessionId:'0faf73',runId:'slow-load',hypothesisId:'C',location:'include_js.php:chat_first_poll',message:'employee_chat live_notify first response',data:{ack:res&&res.ack,unread:res&&res.unread_total,msFromNavStart:_chatMs,path:location.pathname},timestamp:Date.now()})}).catch(function(){});
+		} catch (e) {}
+		// #endregion
 		if (!res || res.ack != 1) return;
 		updateBadges(res.unread_total);
 		if (res.latest_msg_id) {
@@ -521,3 +527,48 @@ if($remainingdate>=$lastdatedate)
 	});
 })();
 </script>
+<!-- #region agent log -->
+<script type="text/javascript">
+(function () {
+	window.__ARMOR_DBG__ = window.__ARMOR_DBG__ || {};
+	<?php if (!empty($GLOBALS['armor_dbg_timing'])) { ?>
+	window.__ARMOR_DBG__.server = <?php echo json_encode($GLOBALS['armor_dbg_timing']); ?>;
+	<?php } ?>
+	function armorDbgSend(payload) {
+		try {
+			payload.sessionId = '0faf73';
+			payload.runId = payload.runId || 'slow-load';
+			payload.timestamp = Date.now();
+			fetch('http://127.0.0.1:7588/ingest/23157f6e-3ade-4fbf-b20f-72d006391582',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0faf73'},body:JSON.stringify(payload)}).catch(function(){});
+		} catch (e) {}
+	}
+	armorDbgSend({hypothesisId:'A',location:'include_js.php:server_timing',message:'PHP bootstrap timing',data:window.__ARMOR_DBG__.server||{}});
+	function armorDbgPerf(stage) {
+		var nav = (window.performance && performance.timing) ? performance.timing : null;
+		var data = {stage:stage, path:location.pathname, href:location.href};
+		if (nav && nav.navigationStart) {
+			data.dns_ms = nav.domainLookupEnd - nav.domainLookupStart;
+			data.tcp_ms = nav.connectEnd - nav.connectStart;
+			data.ttfb_ms = nav.responseStart - nav.requestStart;
+			data.dom_ms = nav.domContentLoadedEventEnd - nav.navigationStart;
+			data.load_ms = nav.loadEventEnd - nav.navigationStart;
+			data.response_ms = nav.responseEnd - nav.responseStart;
+		}
+		if (window.performance && performance.getEntriesByType) {
+			try {
+				var imgs = performance.getEntriesByType('resource').filter(function(r){ return (r.initiatorType==='img' || /\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(r.name)); });
+				data.img_count = imgs.length;
+				data.img_total_ms = Math.round(imgs.reduce(function(s,r){ return s + (r.duration||0); }, 0));
+				data.script_count = performance.getEntriesByType('resource').filter(function(r){ return r.initiatorType==='script'; }).length;
+			} catch (e) {}
+		}
+		armorDbgSend({hypothesisId:'D',location:'include_js.php:perf',message:'browser page perf',data:data});
+	}
+	if (document.readyState === 'complete') {
+		setTimeout(function(){ armorDbgPerf('complete'); }, 0);
+	} else {
+		window.addEventListener('load', function(){ setTimeout(function(){ armorDbgPerf('load'); }, 50); });
+	}
+})();
+</script>
+<!-- #endregion -->
