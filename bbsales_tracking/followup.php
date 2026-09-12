@@ -353,7 +353,8 @@ $ObjFollowup = new  Followup();
 <?php include("include_js.php"); ?>
 
 <script type="text/javascript">
-	var CurrentView=1;	
+	var CurrentView=1;
+	window.followupSalesId = "<?php echo isset($_REQUEST['sales_id']) ? $_REQUEST['sales_id'] : ''; ?>";
 	$("input[name=view]").on('change',function(){
     CurrentView=$(this).val();  
     ChannelAjax.init();

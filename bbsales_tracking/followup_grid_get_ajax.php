@@ -191,7 +191,7 @@ $ctable_r = $db->rp_getData($ctable,"*",$ctable_where,"followup_date DESC limit 
         <?php
         if(mysqli_num_rows($ctable_r)>0)
         {
-            $count = 0;
+            $count = (int) $page_position;
             while($ctable_d = mysqli_fetch_array($ctable_r))
             {
                 $fdt = date('d-m-Y',strtotime($ctable_d['followup_date']));
@@ -357,7 +357,7 @@ $ctable_r = $db->rp_getData($ctable,"*",$ctable_where,"followup_date DESC limit 
     <div class="row">
 		<div class="col-md-6">
 			<div class="dataTables_info"> Rows Limit:
-				<select id="numRecords" onChange="changeDisplayRowCount(this.value);">
+				<select id="numRecords" class="rowCountSpinner" onChange="changeDisplayRowCount(this.value);">
 					<option value="100" <?php if ($_REQUEST["show"] == 100 || $_REQUEST["show"] == "" ) { echo ' selected="selected"'; }  ?> >100</option>
 					<option value="500" <?php if ($_REQUEST["show"] == 500) { echo ' selected="selected"'; }  ?> >500</option>
 					<option value="1000" <?php if ($_REQUEST["show"] == 1000) { echo ' selected="selected"'; }  ?> >1000</option>

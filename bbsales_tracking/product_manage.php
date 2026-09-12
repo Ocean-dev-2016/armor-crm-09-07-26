@@ -111,6 +111,7 @@ include("connect.php");
 										?>	
 
 										<a class="btn btn-primary" href='#addProductUnit' data-toggle='modal'><i class="fa fa-pencil"></i> Add Order Unit</a>
+										<a class="btn yellow" href="product_convert_webp.php" title="Convert existing product images to WebP"><i class="fa fa-picture-o"></i> Convert Images → WebP</a>
 									 </div>
 	                            	  <div class="col-md-7 col-xs-7 col-sm-7 pull-right">
                              <div class="form-inline" role="form">
@@ -400,24 +401,32 @@ var data_url = "<?php echo $ctable ?>_get_ajax.php";
 
 function getProductFilterParams()
 {
+	// Prefer filter dropdowns inside #results (loaded grid), fallback to top search only
+	var $scope = $("#results");
+	var topCat = $scope.find("#top_category_id").length ? $scope.find("#top_category_id").val() : ($("#top_category_id").val() || "");
+	var catId = $scope.find("#category_id").length ? $scope.find("#category_id").val() : ($("#category_id").val() || "");
+	var unitId = $scope.find("#unit_id").length ? $scope.find("#unit_id").val() : ($("#unit_id").val() || "");
+	var productType = $scope.find("#product_type").length ? $scope.find("#product_type").val() : ($("#product_type").val() || "");
+	var salesUnit = $scope.find("#sales_order_unit_filter").length ? $scope.find("#sales_order_unit_filter").val() : ($("#sales_order_unit_filter").val() || "");
+
 	return {
-		searchName: encodeURIComponent(($("#searchName").val() || "").trim()),
-		top_category_id: ($("#top_category_id").length ? ($("#top_category_id").val() || "") : ""),
-		category_id: ($("#category_id").length ? ($("#category_id").val() || "") : ""),
-		unit_id: ($("#unit_id").length ? ($("#unit_id").val() || "") : ""),
-		product_type: ($("#product_type").length ? ($("#product_type").val() || "") : ""),
-		sales_order_unit_filter: ($("#sales_order_unit_filter").length ? ($("#sales_order_unit_filter").val() || "") : "")
+		searchName: ($("#searchName").val() || "").trim(),
+		top_category_id: topCat || "",
+		category_id: catId || "",
+		unit_id: unitId || "",
+		product_type: productType || "",
+		sales_order_unit_filter: salesUnit || ""
 	};
 }
 
 function buildProductFilterQuery(params)
 {
-	return "searchName=" + params.searchName
-		+ "&top_category_id=" + params.top_category_id
-		+ "&unit_id=" + params.unit_id
-		+ "&product_type=" + params.product_type
-		+ "&category_id=" + params.category_id
-		+ "&sales_order_unit_filter=" + params.sales_order_unit_filter;
+	return "searchName=" + encodeURIComponent(params.searchName || "")
+		+ "&top_category_id=" + encodeURIComponent(params.top_category_id || "")
+		+ "&unit_id=" + encodeURIComponent(params.unit_id || "")
+		+ "&product_type=" + encodeURIComponent(params.product_type || "")
+		+ "&category_id=" + encodeURIComponent(params.category_id || "")
+		+ "&sales_order_unit_filter=" + encodeURIComponent(params.sales_order_unit_filter || "");
 }
 
 /*dispay order function*/
@@ -447,22 +456,24 @@ function CheckDispalyOrder(id)
 /*dispay order function*/
 	
 function searchByName(){
-	displayRecords(500,1);
+	displayRecords(($("#numRecords").val() || 500), 1);
 	return false;
 }
 function clearSearchByName(){
 	$("#searchName").val("");
-	if($("#category_id").length){ $("#category_id").select2("val",""); }
-	if($("#top_category_id").length){ $("#top_category_id").select2("val",""); }
-	if($("#unit_id").length){ $("#unit_id").select2("val",""); }
-	if($("#product_type").length){ $("#product_type").select2("val",""); }
-	if($("#brand_id").length){ $("#brand_id").select2("val",""); }
-	if($("#sales_order_unit_filter").length){ $("#sales_order_unit_filter").select2("val",""); }
-	displayRecords(500,1);
+	if($("#results #category_id").length){ $("#results #category_id").val("").trigger("change"); }
+	if($("#results #top_category_id").length){ $("#results #top_category_id").val("").trigger("change"); }
+	if($("#results #unit_id").length){ $("#results #unit_id").val("").trigger("change"); }
+	if($("#results #product_type").length){ $("#results #product_type").val("").trigger("change"); }
+	if($("#results #brand_id").length){ $("#results #brand_id").val("").trigger("change"); }
+	if($("#results #sales_order_unit_filter").length){ $("#results #sales_order_unit_filter").val("").trigger("change"); }
+	displayRecords(($("#numRecords").val() || 500), 1);
+	return false;
 }
-$("#searchName").keyup(function(event){
+$("#searchName").off("keyup.productSearch").on("keyup.productSearch", function(event){
 	if(event.keyCode == 13){
-		$("#searchByName").click();
+		event.preventDefault();
+		searchByName();
 	}
 });
 
@@ -477,56 +488,55 @@ function getTopCat(tcid){
 	});
 }
 function getSubCat(cid){
-	displayRecords(500,1);
+	displayRecords(($("#numRecords").val() || 500), 1);
 }
 function loadDataTable(){
+	if (!$('#datatable_1').length) {
+		return;
+	}
+	if ($.fn.DataTable && $.fn.DataTable.isDataTable && $.fn.DataTable.isDataTable('#datatable_1')) {
+		try { $('#datatable_1').DataTable().destroy(); } catch (e) {}
+	} else if ($.fn.dataTable && $.fn.dataTable.fnIsDataTable && $.fn.dataTable.fnIsDataTable('#datatable_1')) {
+		try { $('#datatable_1').dataTable().fnDestroy(); } catch (e) {}
+	}
 	$('#datatable_1').dataTable({
 		"bPaginate": false,
-		"order": [[1, 'asc']],
 		"bFilter": false,
 		"bInfo": false,
-		"aDataSort": false,
-		"bAutoWidth": false, 
+		"bAutoWidth": false,
 		"aoColumns": [
-			  { "sWidth": "5%" }, 
-			  { "sWidth": "5%" }, 
-			  { "sWidth": "5%" }, 
-			  { "sWidth": "30%" }, 
-			  { "sWidth": "10%" }, 
-			  { "sWidth": "10%" }, 
-			  { "sWidth": "10%" }, 
+			  { "sWidth": "5%", "bSortable": false },
+			  { "sWidth": "8%" },
+			  { "sWidth": "18%" },
+			  { "sWidth": "18%" },
+			  { "sWidth": "10%" },
+			  { "sWidth": "12%" },
+			  { "sWidth": "10%" },
+			  { "sWidth": "10%" },
+			  { "sWidth": "8%", "bSortable": false },
+			  { "sWidth": "5%", "bSortable": false }
 			]
 	});
 }
-function displayRecords(numRecords) {
+function displayRecords(numRecords, pageNum) {
+	numRecords = parseInt(numRecords, 10) || 500;
+	pageNum = parseInt(pageNum, 10) || 1;
+
 	var params = getProductFilterParams();
 	var filterQuery = buildProductFilterQuery(params);
-	top_category_id = params.top_category_id;
-	category_id = params.category_id;
-	unit_id = params.unit_id;
-	product_type = params.product_type;
-	sales_order_unit_filter = params.sales_order_unit_filter;
-	searchName = params.searchName;
 
 	$('.preloader').fadeIn('slow');
-	$("#results" ).html("");
-	$("#results" ).load( data_url+"?show=" + numRecords + "&" + filterQuery, function(){
+	$("#results").html("");
+	$("#results").load(data_url + "?show=" + numRecords + "&page=" + pageNum + "&" + filterQuery, function(response, status){
 		$('.preloader').fadeOut('slow');
-		loadDataTable();
-		if(top_category_id != ""){
-			getCategory(top_category_id, category_id);
+		if (status === "error") {
+			$("#results").html("<div class='alert alert-danger'>Failed to load products. Please try again.</div>");
+			return;
 		}
-	});
-	
-	$("#results").off("click.productPager").on( "click.productPager", ".paging_simple_numbers a", function (e){
-		e.preventDefault();
-		var numRecords  = $("#numRecords").val();
-		$(".loading-div").show();
-		var page = $(this).attr("data-page");
-		$("#results").load(data_url+"?show=" + numRecords + "&" + filterQuery, {"page":page}, function(){
-			$(".loading-div").hide();
-			loadDataTable();
-		});
+		loadDataTable();
+		if (params.top_category_id && params.top_category_id !== "" && typeof getCategory === "function") {
+			getCategory(params.top_category_id, params.category_id);
+		}
 	});
 }
 
@@ -536,7 +546,20 @@ function changeDisplayRowCount(numRecords) {
 }
 
 $(document).ready(function() {
-	displayRecords(500,1);
+	// Single delegated pager handler
+	$("#results").off("click.productPager").on("click.productPager", ".paging_simple_numbers a, .pagination a", function (e) {
+		e.preventDefault();
+		e.stopPropagation();
+		var page = $(this).attr("data-page");
+		if (!page) {
+			return false;
+		}
+		var numRecords = $("#numRecords").val() || 500;
+		displayRecords(numRecords, page);
+		return false;
+	});
+
+	displayRecords(500, 1);
 });
 </script>
 <script type="text/javascript">

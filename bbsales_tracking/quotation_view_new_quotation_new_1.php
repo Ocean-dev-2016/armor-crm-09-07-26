@@ -1402,65 +1402,121 @@ if ($quotationViewStandalone && !$isPdfExportMode && !defined('ARMOR_PDF_EXPORT_
 	}
 </style>
 <div class="quote-print-toolbar">
-	Quotation ready — Quote items, Suggested Products, Terms & Footer
+	<span id="quotePrintStatus">Quotation ready — Quote items, Suggested Products, Terms & Footer</span>
 	<button type="button" onclick="quotePrintNow();">Print Quotation</button>
 </div>
 <?php } ?>
+<style>
+	/* Keep print toolbar from covering content while loading */
+	body.print-a4 {
+		padding-top: 54px !important;
+	}
+	@media print {
+		body.print-a4 {
+			padding-top: 0 !important;
+		}
+	}
+</style>
 <?php if ($quotationViewStandalone) { ?>
 <script type="text/javascript">
 (function() {
 	var quotePrintTitle = <?= json_encode($quotationPrintTitle) ?>;
+	var printTriggered = false;
 
 	window.quotePrintNow = function() {
 		document.title = quotePrintTitle;
 		quoteWaitForImages(function() {
 			setTimeout(function() {
-				window.print();
-			}, 300);
-		});
+				try { window.print(); } catch (e) {}
+			}, 250);
+		}, 4000);
 	};
 
-	function quoteWaitForImages(callback) {
+	function quoteWaitForImages(callback, maxWaitMs) {
+		maxWaitMs = maxWaitMs || 5000;
+		var finished = false;
+		function finish() {
+			if (finished) { return; }
+			finished = true;
+			try { callback(); } catch (e) {}
+		}
+
 		var imgs = document.images;
 		if (!imgs || !imgs.length) {
-			callback();
+			finish();
 			return;
 		}
+
 		var pending = 0;
 		var i;
 		for (i = 0; i < imgs.length; i++) {
-			if (!imgs[i].complete) {
+			// Force broken/hanging image decode to settle
+			try {
+				if (imgs[i].complete) {
+					// naturalWidth 0 often means broken image — treat as done
+					continue;
+				}
 				pending++;
-			}
+			} catch (e) {}
 		}
+
 		if (!pending) {
-			callback();
+			finish();
 			return;
 		}
-		function done() {
+
+		function doneOne() {
 			pending--;
 			if (pending <= 0) {
-				callback();
+				finish();
 			}
 		}
+
 		for (i = 0; i < imgs.length; i++) {
-			if (!imgs[i].complete) {
-				imgs[i].addEventListener('load', done);
-				imgs[i].addEventListener('error', done);
+			try {
+				if (!imgs[i].complete) {
+					imgs[i].addEventListener('load', doneOne);
+					imgs[i].addEventListener('error', doneOne);
+				}
+			} catch (e) {
+				doneOne();
 			}
 		}
+
+		// HARD TIMEOUT — never keep browser tab spinning forever
+		setTimeout(finish, maxWaitMs);
 	}
 
 <?php if ($isPrintMode && !$isAppPdfMode && !$isMpdfMode) { ?>
+	// Do NOT auto-open print dialog immediately (causes URL "loading" hang).
+	// Wait for images with timeout, then enable toolbar; print only on button click
+	// OR auto-print once after page is settled.
 	window.addEventListener('load', function() {
 		document.title = quotePrintTitle;
+		document.documentElement.className += ' quote-print-ready';
+		var statusEl = document.getElementById('quotePrintStatus');
+		if (statusEl) {
+			statusEl.textContent = 'Loading images...';
+		}
 		quoteWaitForImages(function() {
-			setTimeout(function() {
-				window.print();
-			}, 1200);
-		});
+			if (statusEl) {
+				statusEl.textContent = 'Ready — click Print Quotation';
+			}
+			// Auto print once after ready (safe timeout already applied)
+			if (!printTriggered) {
+				printTriggered = true;
+				setTimeout(function() {
+					try { window.print(); } catch (e) {}
+				}, 600);
+			}
+		}, 5000);
 	});
-	<?php } ?>
+
+	// Stop infinite loading indicators from unfinished media
+	window.addEventListener('pageshow', function() {
+		document.title = quotePrintTitle;
+	});
+<?php } ?>
 })();
 </script>
 </body>

@@ -52,14 +52,8 @@ $ctable_r = $db->rp_getData($ctable,"*",$ctable_where,"display_order ASC, name A
     }
 </style>
 
-	<div style="margin-left: -300px;" class="col-md-2">
-			<!-- <div class="btn-group">
-				<input type="hidden" name="disp_count" value="<?php echo $count; ?>">
-				<button type="submit" name="submit" onClick="document.frm.submit();" class="btn btn-primary btn-flat" >Update</button>
-			</div> -->
-		</div>	
 <div class="table-scrollable">
-<table id="datatable_12" class="table table-bordered table-striped dataTable">
+<table id="datatable_1" class="table table-bordered table-striped dataTable">
 	<thead class="fix-th">
 		<tr>
 			<th></th>
@@ -301,22 +295,14 @@ $ctable_r = $db->rp_getData($ctable,"*",$ctable_where,"display_order ASC, name A
 		</div>
 	</div>
 </div>
-<!-- <div class="row">
+<div class="row">
 	<div class="col-md-6">
 		<div class="dataTables_info"> Rows Limit:
-			<select id="numRecords" onChange="changeDisplayRowCount(this.value);">
-				<option value="500" <?php if ($_REQUEST["show"] == 500 || $_REQUEST["show"] == "") {
-										echo ' selected="selected"';
-									}  ?>>500</option>
-				<option value="1000" <?php if ($_REQUEST["show"] == 1000) {
-										echo ' selected="selected"';
-									}  ?>>1000</option>
-				<option value="2000" <?php if ($_REQUEST["show"] == 2000) {
-											echo ' selected="selected"';
-										}  ?>>2000</option>
-				<option value="5000" <?php if ($_REQUEST["show"] == 5000) {
-											echo ' selected="selected"';
-										}  ?>>5000</option>
+			<select id="numRecords" class="rowCountSpinner" onChange="changeDisplayRowCount(this.value);">
+				<option value="100" <?php if ($_REQUEST["show"] == 100) { echo ' selected="selected"'; } ?>>100</option>
+				<option value="500" <?php if ($_REQUEST["show"] == 500 || $_REQUEST["show"] == "") { echo ' selected="selected"'; } ?>>500</option>
+				<option value="1000" <?php if ($_REQUEST["show"] == 1000) { echo ' selected="selected"'; } ?>>1000</option>
+				<option value="2000" <?php if ($_REQUEST["show"] == 2000) { echo ' selected="selected"'; } ?>>2000</option>
 			</select>
 		</div>
 	</div>
@@ -329,7 +315,7 @@ $ctable_r = $db->rp_getData($ctable,"*",$ctable_where,"display_order ASC, name A
 			</ul>
 		</div>
 	</div>
-</div> -->
+</div>
 		
 <script type="text/javascript">
 	$("#product_type").select2(); 

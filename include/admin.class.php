@@ -168,7 +168,8 @@ class Admin extends Functions
 				}
 			}
 			if($current_page < $total_pages){ 
-				$next_link = ($i > $total_pages)? $total_pages : $i;
+				$next_link = $current_page + 1;
+				if($next_link > $total_pages){ $next_link = $total_pages; }
 				$pagination .= '<li class="paginate_button "><a href="#" aria-controls="datatable1" data-page="'.$next_link.'" title="Next">&gt;</a></li>'; //next link
 				$pagination .= '<li class="paginate_button "><a href="#" aria-controls="datatable1" data-page="'.$total_pages.'" title="Last">&raquo;</a></li>'; //last link
 			}

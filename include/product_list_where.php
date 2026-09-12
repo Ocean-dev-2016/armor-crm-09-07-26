@@ -9,22 +9,26 @@ function productListBuildWhere($db, $request)
 	if(isset($request['searchName']) && trim($request['searchName']) != "")
 	{
 		$search = $db->clean(trim($request['searchName']));
+		$searchLower = strtolower($search);
 		$where11 = "";
-		$pro_r1 = $db->rp_getData("product_weight_price","product_id","catno LIKE '%".$search."%' AND isDelete=0","",0);
 		$PROIDS1 = array();
+		$pro_r1 = $db->rp_getData("product_weight_price","product_id","(catno LIKE '%".$search."%' OR LOWER(catno) LIKE '%".$searchLower."%') AND isDelete=0","",0);
 		if($pro_r1)
 		{
 			while($pro_d1 = mysqli_fetch_assoc($pro_r1))
 			{
-				$PROIDS1[] = $pro_d1['product_id'];
+				if(!empty($pro_d1['product_id']))
+				{
+					$PROIDS1[] = (int) $pro_d1['product_id'];
+				}
 			}
 		}
+		$PROIDS1 = array_values(array_unique($PROIDS1));
 		if(!empty($PROIDS1))
 		{
-			$PROIDS1 = implode(",", $PROIDS1);
-			$where11 = " OR id IN (".$PROIDS1.")";
+			$where11 = " OR id IN (".implode(",", $PROIDS1).")";
 		}
-		$ctable_where .= " (LOWER(name) like '%".strtolower($search)."%' ".$where11.") AND ";
+		$ctable_where .= " (LOWER(name) LIKE '%".$searchLower."%' OR LOWER(IFNULL(product_code,'')) LIKE '%".$searchLower."%' ".$where11.") AND ";
 	}
 
 	$ctable_where .= " 1=1 AND isDelete='0' AND id!='0'";

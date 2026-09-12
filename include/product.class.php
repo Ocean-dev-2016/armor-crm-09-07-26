@@ -1,6 +1,7 @@
 <?php
 require_once("main.class.php");
 require_once("function.class.php");
+require_once(__DIR__ . "/image_webp_helper.php");
 class Product extends Functions
 {
 	public $db;
@@ -24,7 +25,7 @@ class Product extends Functions
 			return $reply;
 		} else {
 			if (isset($file["image_path"])) {
-				$allowedExts = array("jpg", "jpeg", "png", "gif", "JPG", "JPEG");
+				$allowedExts = array("jpg", "jpeg", "png", "gif", "webp", "JPG", "JPEG", "PNG", "GIF", "WEBP");
 				$temp = explode(".", $file["image_path"]["name"]);
 				$extension = end($temp);
 
@@ -38,10 +39,16 @@ class Product extends Functions
 						$file_error = true;
 					}
 
-					$image_path	= 'image_' . substr(sha1(time()), 0, 6) . "." . $extension;
+					$baseName = 'image_' . substr(sha1(uniqid((string) mt_rand(), true)), 0, 8);
+					$image_path	= $baseName . "." . strtolower($extension);
 					$filePath 	= PRODUCT_A . $image_path;
-					$file['image_path']['tmp_name'];
 					move_uploaded_file($file['image_path']['tmp_name'], $filePath);
+
+					// Auto convert uploaded image to WebP
+					$webpRes = armor_product_process_uploaded_image($filePath, $baseName, 80);
+					if (!empty($webpRes['ack']) && !empty($webpRes['image_path'])) {
+						$image_path = $webpRes['image_path'];
+					}
 
 					$new_image = true;
 				} else {
@@ -100,8 +107,8 @@ class Product extends Functions
 				$customer_unit_id,
 			);
 
-			/*genrate a compress image*/
-			if (isset($image_path) && !empty($image_path)) {
+			/*genrate a compress image — skip when already converted to webp (thumb created by helper)*/
+			if (isset($image_path) && !empty($image_path) && strtolower(pathinfo($image_path, PATHINFO_EXTENSION)) !== 'webp') {
 				$localSource = PRODUCT_A . $image_path;
 				if (file_exists($localSource)) {
 					$compressedImage = PRODUCT_THUMB_A . $image_path;
@@ -215,7 +222,7 @@ class Product extends Functions
 					}
 				}*/
 		if (isset($file["image_path"]) && $file["image_path"]['size'] != 0) {
-			$allowedExts = array("jpg", "jpeg", "png", "gif", "JPG", "JPEG");
+			$allowedExts = array("jpg", "jpeg", "png", "gif", "webp", "JPG", "JPEG", "PNG", "GIF", "WEBP");
 			$temp = explode(".", $file["image_path"]["name"]);
 			$extension = end($temp);
 
@@ -228,10 +235,16 @@ class Product extends Functions
 				if (!in_array($extension, $allowedExts)) {
 					$file_error = true;
 				}
-				$image_path	= 'image_' . substr(sha1(time()), 0, 6) . "." . $extension;
+				$baseName = 'image_' . substr(sha1(uniqid((string) mt_rand(), true)), 0, 8);
+				$image_path	= $baseName . "." . strtolower($extension);
 				$filePath 	= PRODUCT_A . $image_path;
-				$file['image_path']['tmp_name'];
 				move_uploaded_file($file['image_path']['tmp_name'], $filePath);
+
+				// Auto convert uploaded image to WebP
+				$webpRes = armor_product_process_uploaded_image($filePath, $baseName, 80);
+				if (!empty($webpRes['ack']) && !empty($webpRes['image_path'])) {
+					$image_path = $webpRes['image_path'];
+				}
 				$new_image = true;
 			} else {
 				$image_path = $detail['old_image_path'];
@@ -241,8 +254,8 @@ class Product extends Functions
 			$image_path = isset($detail['old_image_path']) ? $detail['old_image_path'] : '';
 			unset($detail['old_image_path']);
 		}
-		/*genrate a compress image — only for newly uploaded files */
-		if ($new_image && isset($image_path) && !empty($image_path)) {
+		/*genrate a compress image — only for newly uploaded non-webp files */
+		if ($new_image && isset($image_path) && !empty($image_path) && strtolower(pathinfo($image_path, PATHINFO_EXTENSION)) !== 'webp') {
 			$localSource = PRODUCT_A . $image_path;
 			if (file_exists($localSource)) {
 				$compressedImage = PRODUCT_THUMB_A . $image_path;
