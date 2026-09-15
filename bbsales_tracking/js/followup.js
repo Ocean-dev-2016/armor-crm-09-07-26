@@ -56,6 +56,7 @@ var ChannelAjax = function () {
 		var quotation_id = $("#quotation_id").val();
 		var executive_id = $("#executive_id").val();
 		var sales_id = (typeof window.followupSalesId !== "undefined") ? window.followupSalesId : "";
+		var salesIdNum = parseInt(sales_id, 10) || 0;
 
 		// Prefer current dropdown value if already rendered
 		var numSel = $(result_container).find("#numRecords").val();
@@ -63,22 +64,27 @@ var ChannelAjax = function () {
 			show_count = parseInt(numSel, 10) || show_count;
 		}
 
+		var ajaxData = {
+			page: page,
+			visitor_id: visitor_id,
+			followup_flag: followup_flag,
+			inquiry_id: inquiry_id,
+			quotation_id: quotation_id,
+			executive_id: executive_id,
+			show: show_count,
+			channel_name: channel_name_filter,
+			interests: interests,
+			locations: locations
+		};
+		// Never send sales_id=0 — it was filtering visitor_id=0 and hiding all followups
+		if (salesIdNum > 0) {
+			ajaxData.sales_id = salesIdNum;
+		}
+
 		$.ajax({
 			url: ajax_url,
 			type: "GET",
-			data: {
-				page: page,
-				visitor_id: visitor_id,
-				followup_flag: followup_flag,
-				inquiry_id: inquiry_id,
-				quotation_id: quotation_id,
-				executive_id: executive_id,
-				sales_id: sales_id,
-				show: show_count,
-				channel_name: channel_name_filter,
-				interests: interests,
-				locations: locations
-			},
+			data: ajaxData,
 			success: function (result) {
 				$(result_container).html(result);
 			},

@@ -7,30 +7,43 @@ $ctable1    = "followup";
 $ctable_where = "";
 // Get the total number of rows in the table
 // if($_REQUEST[''])
-if($_REQUEST['followup_flag']=="inquiry_followup")
+$followup_flag = isset($_REQUEST['followup_flag']) ? $_REQUEST['followup_flag'] : '';
+$executive_id = isset($_REQUEST['executive_id']) ? intval($_REQUEST['executive_id']) : 0;
+$sales_id = isset($_REQUEST['sales_id']) ? intval($_REQUEST['sales_id']) : 0;
+
+if($followup_flag=="inquiry_followup")
 {
     $ctable_where .= "reference_id = '".$_REQUEST['inquiry_id']."' AND isDelete=0  AND reference_table='no_order_inquiry'";
 }
-else if($_REQUEST['followup_flag']=="leads_followup")
+else if($followup_flag=="leads_followup")
 {
     $ctable_where .= "reference_id = '".$_REQUEST['inquiry_id']."' AND isDelete=0 AND reference_table='customer_inquiry'";
 }
-else if($_REQUEST['followup_flag']=="quotation_followup")
+else if($followup_flag=="quotation_followup")
 {
     $ctable_where .= "reference_id = '".$_REQUEST['quotation_id']."' AND isDelete=0 AND reference_table='quotation_detail'";
 }
-else if($_REQUEST['followup_flag']=="customer_followup")
+else if($followup_flag=="customer_followup")
 {
-    $ctable_where .= "reference_id = '".$_REQUEST['executive_id']."' AND isDelete=0 AND reference_table='executive'";
+    // Customer followups from web + app (old + new):
+    // - new/app: reference_table='executive' AND reference_id=customer_id
+    // - old:     reference_table='sales_executive' AND visitor_id=customer_id
+    // - also:    visitor_id may equal customer id with reference_table='executive'
+    $ctable_where .= " isDelete=0 AND (
+        (reference_table='executive' AND (reference_id='".$executive_id."' OR visitor_id='".$executive_id."'))
+        OR (reference_table='sales_executive' AND visitor_id='".$executive_id."')
+    )";
 }
 else
 {
     $ctable_where .= "visitor_id = '".$_REQUEST['visitor_id']."' AND isDelete=0 ";
 }
 
-if(isset($_REQUEST['sales_id']) && $_REQUEST['sales_id']!="" && $_REQUEST['sales_id']!=NULL)
+// sales_id=0 (admin) must NOT filter visitor_id — that hides all app/web followups
+// For customer_followup, sales_id means sales officer (user_id), not visitor_id
+if($sales_id > 0 && $followup_flag != "customer_followup")
 {
-    $ctable_where .= " And visitor_id='".$_REQUEST['sales_id']."'";
+    $ctable_where .= " AND visitor_id='".$sales_id."'";
 }
 
 if(isset($_REQUEST['ToDate']) && $_REQUEST['ToDate']!="" && $_REQUEST['ToDate']!=NULL)
@@ -232,7 +245,9 @@ $ctable_r = $db->rp_getData($ctable,"*",$ctable_where,"followup_date DESC limit 
                         <?php
                         if($ctable_d['reference_table']=="sales_executive")
                         {
-                            echo $db->rp_getValue("executive","cname","id='".$ctable_d['visitor_id']."'");
+                            $cname = $db->rp_getValue("executive","company_name","id='".$ctable_d['visitor_id']."'",0);
+                            if($cname==""){ $cname = $db->rp_getValue("executive","cname","id='".$ctable_d['visitor_id']."'",0); }
+                            echo $cname;
                         }
                         else if($ctable_d['reference_table']=="no_order_inquiry")
                         {
@@ -249,7 +264,8 @@ $ctable_r = $db->rp_getData($ctable,"*",$ctable_where,"followup_date DESC limit 
                         }
                         else if($ctable_d['reference_table']=="executive")
                         {
-                            echo $db->rp_getValue("executive","company_name","id='".$ctable_d['reference_id']."'");
+                            $cid = ($ctable_d['reference_id'] > 0) ? $ctable_d['reference_id'] : $ctable_d['visitor_id'];
+                            echo $db->rp_getValue("executive","company_name","id='".$cid."'",0);
                         }
                         ?>
                     </td>
@@ -274,7 +290,8 @@ $ctable_r = $db->rp_getData($ctable,"*",$ctable_where,"followup_date DESC limit 
                         }
                         else if($ctable_d['reference_table']=="executive")
                         {
-                            echo $db->rp_getValue("executive","mobile_no1","id='".$ctable_d['reference_id']."'");
+                            $cid = ($ctable_d['reference_id'] > 0) ? $ctable_d['reference_id'] : $ctable_d['visitor_id'];
+                            echo $db->rp_getValue("executive","mobile_no1","id='".$cid."'",0);
                         }
                         ?>
                     </td>

@@ -8,17 +8,24 @@ $next_action_array=array("1"=>"Next Followup","2"=>"In Future","-1"=>"Followup E
 $ctable_where = "";
 // Get the total number of rows in the table
 
-if($_REQUEST['followup_flag']=="inquiry_followup")
+$followup_flag = isset($_REQUEST['followup_flag']) ? $_REQUEST['followup_flag'] : '';
+$executive_id = isset($_REQUEST['executive_id']) ? intval($_REQUEST['executive_id']) : 0;
+$sales_id = isset($_REQUEST['sales_id']) ? intval($_REQUEST['sales_id']) : 0;
+
+if($followup_flag=="inquiry_followup")
 {
     $ctable_where .= "reference_id = '".$_REQUEST['inquiry_id']."' AND isDelete=0  AND reference_table='no_order_inquiry'";
 }
-else if($_REQUEST['followup_flag']=="leads_followup")
+else if($followup_flag=="leads_followup")
 {
     $ctable_where .= "reference_id = '".$_REQUEST['inquiry_id']."' AND isDelete=0 AND reference_table='customer_inquiry'";
 }
-else if($_REQUEST['followup_flag']=="customer_followup")
+else if($followup_flag=="customer_followup")
 {
-    $ctable_where .= "reference_id = '".$_REQUEST['executive_id']."' AND isDelete=0 AND reference_table='executive'";
+    $ctable_where .= " isDelete=0 AND (
+        (reference_table='executive' AND (reference_id='".$executive_id."' OR visitor_id='".$executive_id."'))
+        OR (reference_table='sales_executive' AND visitor_id='".$executive_id."')
+    )";
 }
 else
 {
@@ -26,9 +33,9 @@ else
 }
 
 
-if(isset($_REQUEST['sales_id']) && $_REQUEST['sales_id']!="" && $_REQUEST['sales_id']!=NULL)
+if($sales_id > 0 && $followup_flag != "customer_followup")
 {
-	$ctable_where .= " And visitor_id='".$_REQUEST['sales_id']."'";
+	$ctable_where .= " AND visitor_id='".$sales_id."'";
 }
 
 if(isset($_REQUEST['ToDate']) && $_REQUEST['ToDate']!="" && $_REQUEST['ToDate']!=NULL)

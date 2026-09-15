@@ -673,9 +673,13 @@ if ($isFillter) {
 																							{
 																								$SEID=1;
 																							}*/
+														$followupUrl = "followup.php?mode=customer_followup&executive_id=" . intval($ctable_d['id']);
+														if (intval($SEID) > 0) {
+															$followupUrl .= "&sales_id=" . intval($SEID);
+														}
 													?>
 														<li>
-															<a href="followup.php?mode=customer_followup&executive_id=<?php echo $ctable_d['id'] ?>&sales_id=<?= $SEID; ?>" class="" title="Followup"><span class="text-success"><i class="fa fa-circle"></i>&nbsp; Followup</span></a>
+															<a href="<?php echo $followupUrl; ?>" class="" title="Followup"><span class="text-success"><i class="fa fa-circle"></i>&nbsp; Followup</span></a>
 														</li>
 														<?php
 														if ($db->checkUserPermission(669, $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'], 'view')) {
