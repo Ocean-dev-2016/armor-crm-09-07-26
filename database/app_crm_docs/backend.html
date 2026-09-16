@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Armor CRM — Backend Developer Document</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <h1>Armor CRM — Backend Developer Document</h1>
+    <div class="meta">PHP 5.6 · MySQL/MariaDB · 16-Sep-2026 · Version 1.0</div>
+  </div>
+  <nav class="topbar-nav">
+    <a href="index.html">Home</a>
+    <a href="backend.html" class="active">Backend</a>
+    <a href="frontend.html">Frontend</a>
+  </nav>
+</div>
+
+<div class="layout">
+  <aside class="sidebar">
+    <h3>Table of Contents</h3>
+    <ul>
+      <li><a href="#overview">1. Overview</a></li>
+      <li><a href="#api-summary">2. API Summary</a></li>
+      <li><a href="#api-new">2.1 New APIs</a></li>
+      <li><a href="#api-modified">2.2 Modified APIs</a></li>
+      <li><a href="#api-reused">2.3 Reused APIs</a></li>
+      <li><a href="#database">3. Database Changes</a></li>
+      <li><a href="#table-daily-plan">3.1 daily_plan</a></li>
+      <li><a href="#table-daily-plan-customer">3.1 daily_plan_customer</a></li>
+      <li><a href="#table-daily-plan-completion">3.1 daily_plan_completion</a></li>
+      <li><a href="#table-visit-start-type">3.1 visit_start_type_master</a></li>
+      <li><a href="#table-visit-completion">3.1 visit_completion_answer</a></li>
+      <li><a href="#table-quotation-questionnaire">3.1 quotation_submit_questionnaire</a></li>
+      <li><a href="#alter-tables">3.2 Alter Tables</a></li>
+      <li><a href="#seed-data">3.3 Seed — 19 Types</a></li>
+      <li><a href="#api-details">4. API Details</a></li>
+      <li><a href="#api-236">4.1 save_daily_plan (236)</a></li>
+      <li><a href="#api-237">4.2 get_daily_plan_status (237)</a></li>
+      <li><a href="#api-238">4.3 save_daily_plan_completion (238)</a></li>
+      <li><a href="#api-20">4.4 add_attendance (20)</a></li>
+      <li><a href="#api-12">4.5 get_customer (12)</a></li>
+      <li><a href="#api-239">4.6 get_visit_start_types (239)</a></li>
+      <li><a href="#api-75">4.7 Add_visit (75)</a></li>
+      <li><a href="#api-122">4.8 update_visit (122)</a></li>
+      <li><a href="#api-240">4.9 save_quotation_questionnaire (240)</a></li>
+      <li><a href="#api-165">4.10 create_quotation (165)</a></li>
+      <li><a href="#api-234">4.11 High Rate Form (234)</a></li>
+      <li><a href="#api-233">4.12 Consultant Form (233)</a></li>
+      <li><a href="#files">5. Files to Create / Modify</a></li>
+      <li><a href="#business-rules">6. Business Rules</a></li>
+      <li><a href="#implementation-order">7. Implementation Order</a></li>
+      <li><a href="#testing">8. Testing Checklist</a></li>
+      <li><a href="#web-admin">9. Web Admin (Future)</a></li>
+    </ul>
+  </aside>
+
+  <main class="content">
+
+    <div class="hero backend">
+      <h2>Armor CRM — Backend Developer Document</h2>
+      <p class="subtitle">App Side Changes · PHP APIs · Database · Validation · Request/Response</p>
+      <div class="badges">
+        <span class="badge badge-blue">PHP 5.6</span>
+        <span class="badge badge-green">5 New APIs</span>
+        <span class="badge badge-orange">5 Modified APIs</span>
+        <span class="badge badge-gray">6 New Tables</span>
+        <span class="badge badge-blue">3 Reused APIs</span>
+      </div>
+      <p style="margin-top:16px;margin-bottom:0;font-size:.9rem;color:var(--muted);">
+        <strong>API Base:</strong>
+        <code>service/service_sales_executive.php</code>,
+        <code>service/service_visit.php</code>,
+        <code>service/service_quotation.php</code>
+      </p>
+    </div>
+
+    <!-- ========== 1. OVERVIEW ========== -->
+    <section id="overview">
+      <h2>1. Overview</h2>
+      <p>4 new business flows are required on the mobile app. Backend must support:</p>
+      <table>
+        <thead>
+          <tr><th>#</th><th>Feature</th><th>Trigger</th><th>Backend Action</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>Daily Plan (Morning)</td><td>Punch IN</td><td>Save expected targets + optional customers</td></tr>
+          <tr><td>2</td><td>Daily Completion (Evening)</td><td>Punch OUT</td><td>Block OUT until completion submitted</td></tr>
+          <tr><td>3</td><td>Visit Start Type</td><td>Visit Start</td><td>Mandatory 1-of-19 type selection</td></tr>
+          <tr><td>4</td><td>Visit Complete Questions</td><td>Visit Stop</td><td>Save 5 Yes/No answers</td></tr>
+          <tr><td>5</td><td>PI/Quotation Questionnaire</td><td>Quotation Submit</td><td>Save popup answers + link forms</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ========== 2. API SUMMARY ========== -->
+    <section id="api-summary">
+      <h2>2. API Summary</h2>
+
+      <h3 id="api-new">2.1 New APIs (5)</h3>
+      <table>
+        <thead>
+          <tr><th>Service No.</th><th>Service Name</th><th>File</th><th>Method</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="svc">236</span></td>
+            <td><code>save_daily_plan</code></td>
+            <td><code>service_sales_executive.php</code></td>
+            <td>POST</td>
+          </tr>
+          <tr>
+            <td><span class="svc">237</span></td>
+            <td><code>get_daily_plan_status</code></td>
+            <td><code>service_sales_executive.php</code></td>
+            <td>GET/POST</td>
+          </tr>
+          <tr>
+            <td><span class="svc">238</span></td>
+            <td><code>save_daily_plan_completion</code></td>
+            <td><code>service_sales_executive.php</code></td>
+            <td>POST</td>
+          </tr>
+          <tr>
+            <td><span class="svc">239</span></td>
+            <td><code>get_visit_start_types</code></td>
+            <td><code>service_visit.php</code></td>
+            <td>GET/POST</td>
+          </tr>
+          <tr>
+            <td><span class="svc">240</span></td>
+            <td><code>save_quotation_questionnaire</code></td>
+            <td><code>service_quotation.php</code></td>
+            <td>POST</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 id="api-modified">2.2 Modified APIs (5)</h3>
+      <table>
+        <thead>
+          <tr><th>Service No.</th><th>Service Name</th><th>File</th><th>Change</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="svc">12</span></td>
+            <td><code>get_customer</code></td>
+            <td><code>service_sales_executive.php</code></td>
+            <td>Add <code>search</code> param for dropdown</td>
+          </tr>
+          <tr>
+            <td><span class="svc">20</span></td>
+            <td><code>add_attendance</code></td>
+            <td><code>service_sales_executive.php</code></td>
+            <td>Punch IN/OUT validation</td>
+          </tr>
+          <tr>
+            <td><span class="svc">75</span></td>
+            <td><code>Add_visit</code></td>
+            <td><code>service_visit.php</code></td>
+            <td>Require <code>visit_start_type_id</code></td>
+          </tr>
+          <tr>
+            <td><span class="svc">122</span></td>
+            <td><code>update_visit</code></td>
+            <td><code>service_visit.php</code></td>
+            <td>Accept visit completion answers</td>
+          </tr>
+          <tr>
+            <td><span class="svc">165</span></td>
+            <td><code>create_quotation</code></td>
+            <td><code>service_quotation.php</code></td>
+            <td>Require questionnaire before submit</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 id="api-reused">2.3 Reused APIs (No change — App only)</h3>
+      <table>
+        <thead>
+          <tr><th>Service No.</th><th>Service Name</th><th>Use</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="svc">233</span></td>
+            <td><code>save_visit_consultant_form</code></td>
+            <td>PI popup → Need Approval</td>
+          </tr>
+          <tr>
+            <td><span class="svc">234</span></td>
+            <td><code>save_visit_high_rate_form</code></td>
+            <td>PI popup → Price High</td>
+          </tr>
+          <tr>
+            <td><span class="svc">235</span></td>
+            <td><code>get_visit_high_rate_products</code></td>
+            <td>High Rate form products</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ========== 3. DATABASE ========== -->
+    <section id="database">
+      <h2>3. Database Changes</h2>
+
+      <h3>3.1 New Tables (6)</h3>
+      <div class="note info">
+        <strong>Migration:</strong> Run <code>database/APP_CRM_DB_MIGRATION.sql</code> on the tenant database.
+      </div>
+
+      <!-- Table 1 -->
+      <h3 id="table-daily-plan">Table 1: <code>daily_plan</code></h3>
+      <p>Morning punch-in targets (savare data).</p>
+      <table>
+        <thead>
+          <tr><th>Column</th><th>Type</th><th>Null</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>id</code></td><td>INT(11) AUTO_INCREMENT</td><td>NO</td><td>Primary key</td></tr>
+          <tr><td><code>sales_id</code></td><td>INT(11)</td><td>NO</td><td><code>sales_executive.id</code></td></tr>
+          <tr><td><code>plan_date</code></td><td>DATE</td><td>NO</td><td>Business date (Y-m-d)</td></tr>
+          <tr><td><code>expected_order_amount</code></td><td>DECIMAL(15,2)</td><td>YES</td><td>Q1: Expected order amount (₹)</td></tr>
+          <tr><td><code>expected_approval_count</code></td><td>INT(11)</td><td>YES</td><td>Q2: Expected approval count</td></tr>
+          <tr><td><code>expected_project_detail_count</code></td><td>INT(11)</td><td>YES</td><td>Q3: Expected project detail count</td></tr>
+          <tr><td><code>attendance_in_id</code></td><td>INT(11)</td><td>YES</td><td>Link to <code>attendance.id</code> (Punch IN)</td></tr>
+          <tr><td><code>created_date</code></td><td>DATETIME</td><td>NO</td><td>Record created</td></tr>
+          <tr><td><code>isDelete</code></td><td>TINYINT(1)</td><td>NO</td><td>Default 0</td></tr>
+          <tr><td><code>isActive</code></td><td>TINYINT(1)</td><td>NO</td><td>Default 1</td></tr>
+        </tbody>
+      </table>
+      <p><strong>Indexes:</strong></p>
+      <ul>
+        <li>UNIQUE (<code>sales_id</code>, <code>plan_date</code>, <code>isDelete</code>) — one plan per sales person per day</li>
+        <li>INDEX (<code>plan_date</code>)</li>
+      </ul>
+      <div class="note">
+        <strong>Validation (backend):</strong><br>
+        • At least 1 of 3 expected fields must be &gt; 0<br>
+        • If <code>expected_order_amount</code> &gt; 0 OR <code>expected_approval_count</code> &gt; 0 → at least 1 row in <code>daily_plan_customer</code> required
+      </div>
+
+      <!-- Table 2 -->
+      <h3 id="table-daily-plan-customer">Table 2: <code>daily_plan_customer</code></h3>
+      <p>Customers linked to morning plan (when order/approval target filled).</p>
+      <table>
+        <thead>
+          <tr><th>Column</th><th>Type</th><th>Null</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>id</code></td><td>INT(11) AUTO_INCREMENT</td><td>NO</td><td>Primary key</td></tr>
+          <tr><td><code>daily_plan_id</code></td><td>INT(11)</td><td>NO</td><td>FK → <code>daily_plan.id</code></td></tr>
+          <tr><td><code>customer_id</code></td><td>INT(11)</td><td>NO</td><td>FK → <code>executive.id</code></td></tr>
+          <tr><td><code>target_type</code></td><td>ENUM('order','approval')</td><td>NO</td><td>Which target this customer is for</td></tr>
+          <tr><td><code>created_date</code></td><td>DATETIME</td><td>NO</td><td>Record created</td></tr>
+          <tr><td><code>isDelete</code></td><td>TINYINT(1)</td><td>NO</td><td>Default 0</td></tr>
+        </tbody>
+      </table>
+      <p><strong>Indexes:</strong></p>
+      <ul>
+        <li>INDEX (<code>daily_plan_id</code>)</li>
+        <li>INDEX (<code>customer_id</code>)</li>
+      </ul>
+
+      <!-- Table 3 -->
+      <h3 id="table-daily-plan-completion">Table 3: <code>daily_plan_completion</code></h3>
+      <p>Evening completion (punch out pela submit).</p>
+      <table>
+        <thead>
+          <tr><th>Column</th><th>Type</th><th>Null</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>id</code></td><td>INT(11) AUTO_INCREMENT</td><td>NO</td><td>Primary key</td></tr>
+          <tr><td><code>daily_plan_id</code></td><td>INT(11)</td><td>NO</td><td>FK → <code>daily_plan.id</code></td></tr>
+          <tr><td><code>actual_order_amount</code></td><td>DECIMAL(15,2)</td><td>YES</td><td>Actual order amount achieved</td></tr>
+          <tr><td><code>actual_approval_count</code></td><td>INT(11)</td><td>YES</td><td>Actual approvals achieved</td></tr>
+          <tr><td><code>actual_project_detail_count</code></td><td>INT(11)</td><td>YES</td><td>Actual project details achieved</td></tr>
+          <tr><td><code>attendance_out_id</code></td><td>INT(11)</td><td>YES</td><td>Link to <code>attendance.id</code> (Punch OUT)</td></tr>
+          <tr><td><code>submitted_at</code></td><td>DATETIME</td><td>NO</td><td>When completion was submitted</td></tr>
+          <tr><td><code>isDelete</code></td><td>TINYINT(1)</td><td>NO</td><td>Default 0</td></tr>
+        </tbody>
+      </table>
+      <p><strong>Indexes:</strong></p>
+      <ul>
+        <li>UNIQUE (<code>daily_plan_id</code>, <code>isDelete</code>) — one completion per plan</li>
+        <li>INDEX (<code>submitted_at</code>)</li>
+      </ul>
+      <div class="note">
+        <strong>Validation (backend):</strong><br>
+        • Can only submit if <code>daily_plan</code> exists for today<br>
+        • Fields filled in morning plan should have matching actual values (can be 0 but not NULL if morning had value)
+      </div>
+
+      <!-- Table 4 -->
+      <h3 id="table-visit-start-type">Table 4: <code>visit_start_type_master</code></h3>
+      <p>19 visit start types (seed data).</p>
+      <table>
+        <thead>
+          <tr><th>Column</th><th>Type</th><th>Null</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>id</code></td><td>INT(11) AUTO_INCREMENT</td><td>NO</td><td>Primary key</td></tr>
+          <tr><td><code>code</code></td><td>VARCHAR(10)</td><td>NO</td><td>e.g. VST01</td></tr>
+          <tr><td><code>name</code></td><td>VARCHAR(255)</td><td>NO</td><td>English display name</td></tr>
+          <tr><td><code>display_name</code></td><td>VARCHAR(300)</td><td>NO</td><td>Full label for app dropdown</td></tr>
+          <tr><td><code>sort_order</code></td><td>INT(11)</td><td>NO</td><td>Display order 1–19</td></tr>
+          <tr><td><code>isActive</code></td><td>TINYINT(1)</td><td>NO</td><td>Default 1</td></tr>
+          <tr><td><code>isDelete</code></td><td>TINYINT(1)</td><td>NO</td><td>Default 0</td></tr>
+        </tbody>
+      </table>
+      <p><strong>Seed:</strong> 19 rows — see <a href="#seed-data">Section 3.3</a></p>
+      <div class="note">
+        <strong>Note:</strong> Do NOT reuse <code>purpose_master</code> table. That is for visit purpose, not visit start type.
+      </div>
+
+      <!-- Table 5 -->
+      <h3 id="table-visit-completion">Table 5: <code>visit_completion_answer</code></h3>
+      <p>5 Yes/No questions when CRM visit completes.</p>
+      <table>
+        <thead>
+          <tr><th>Column</th><th>Type</th><th>Null</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>id</code></td><td>INT(11) AUTO_INCREMENT</td><td>NO</td><td>Primary key</td></tr>
+          <tr><td><code>visit_id</code></td><td>INT(11)</td><td>NO</td><td>FK → <code>visit.id</code></td></tr>
+          <tr><td><code>order_came</code></td><td>TINYINT(1)</td><td>NO</td><td>0=No, 1=Yes</td></tr>
+          <tr><td><code>approval_came</code></td><td>TINYINT(1)</td><td>NO</td><td>0=No, 1=Yes</td></tr>
+          <tr><td><code>project_detail_came</code></td><td>TINYINT(1)</td><td>NO</td><td>0=No, 1=Yes</td></tr>
+          <tr><td><code>contract_detail_came</code></td><td>TINYINT(1)</td><td>NO</td><td>0=No, 1=Yes</td></tr>
+          <tr><td><code>payment_came</code></td><td>TINYINT(1)</td><td>NO</td><td>0=No, 1=Yes</td></tr>
+          <tr><td><code>created_date</code></td><td>DATETIME</td><td>NO</td><td>Record created</td></tr>
+          <tr><td><code>isDelete</code></td><td>TINYINT(1)</td><td>NO</td><td>Default 0</td></tr>
+        </tbody>
+      </table>
+      <p><strong>Indexes:</strong></p>
+      <ul>
+        <li>UNIQUE (<code>visit_id</code>, <code>isDelete</code>)</li>
+      </ul>
+
+      <!-- Table 6 -->
+      <h3 id="table-quotation-questionnaire">Table 6: <code>quotation_submit_questionnaire</code></h3>
+      <p>PI/Quotation submit popup answers.</p>
+      <table>
+        <thead>
+          <tr><th>Column</th><th>Type</th><th>Null</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>id</code></td><td>INT(11) AUTO_INCREMENT</td><td>NO</td><td>Primary key</td></tr>
+          <tr><td><code>quotation_id</code></td><td>INT(11)</td><td>NO</td><td>FK → <code>quotation_detail.id</code></td></tr>
+          <tr><td><code>knows_full_range</code></td><td>TINYINT(1)</td><td>NO</td><td>0=No, 1=Yes — customer knows full product range?</td></tr>
+          <tr><td><code>not_buying_reason</code></td><td>TINYINT(1)</td><td>YES</td><td>NULL if knows_full_range=1. Values: 1=No product info, 2=Price high, 3=Need MEP/Govt approval</td></tr>
+          <tr><td><code>high_rate_form_id</code></td><td>INT(11)</td><td>YES</td><td>FK → <code>visit_high_rate_form.id</code> (if reason=2)</td></tr>
+          <tr><td><code>consultant_form_id</code></td><td>INT(11)</td><td>YES</td><td>FK → <code>visit_consultant_form.id</code> (if reason=3)</td></tr>
+          <tr><td><code>remark</code></td><td>TEXT</td><td>YES</td><td>Optional free text</td></tr>
+          <tr><td><code>created_date</code></td><td>DATETIME</td><td>NO</td><td>Record created</td></tr>
+          <tr><td><code>isDelete</code></td><td>TINYINT(1)</td><td>NO</td><td>Default 0</td></tr>
+        </tbody>
+      </table>
+      <p><strong>Indexes:</strong></p>
+      <ul>
+        <li>INDEX (<code>quotation_id</code>)</li>
+      </ul>
+
+      <!-- 3.2 Alter -->
+      <h3 id="alter-tables">3.2 Alter Existing Tables</h3>
+
+      <h4><code>visit</code> table — add column</h4>
+      <table>
+        <thead>
+          <tr><th>Column</th><th>Type</th><th>Null</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>visit_start_type_id</code></td><td>INT(11)</td><td>YES</td><td>FK → <code>visit_start_type_master.id</code></td></tr>
+        </tbody>
+      </table>
+      <p>Add after <code>purpose_id</code> or at end of table.</p>
+
+      <h4><code>quotation_detail</code> table — add column (optional, for quick lookup)</h4>
+      <table>
+        <thead>
+          <tr><th>Column</th><th>Type</th><th>Null</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>questionnaire_id</code></td><td>INT(11)</td><td>YES</td><td>FK → <code>quotation_submit_questionnaire.id</code></td></tr>
+        </tbody>
+      </table>
+
+      <!-- 3.3 Seed -->
+      <h3 id="seed-data">3.3 Seed Data — 19 Visit Start Types</h3>
+      <table>
+        <thead>
+          <tr><th>sort_order</th><th>code</th><th>name</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>VST01</td><td>New Customer - Fresh Visit</td></tr>
+          <tr><td>2</td><td>VST02</td><td>Repeat Customer Order Visit</td></tr>
+          <tr><td>3</td><td>VST03</td><td>Old Customer Order Visit</td></tr>
+          <tr><td>4</td><td>VST04</td><td>Old Customer Payment Visit</td></tr>
+          <tr><td>5</td><td>VST05</td><td>New MEP Approval Visit</td></tr>
+          <tr><td>6</td><td>VST06</td><td>Repeat MEP Approval Visit</td></tr>
+          <tr><td>7</td><td>VST07</td><td>MEP - Add Project/Contractor Details</td></tr>
+          <tr><td>8</td><td>VST08</td><td>New Government Approval Visit</td></tr>
+          <tr><td>9</td><td>VST09</td><td>Repeat Government Approval - Tender Name Add</td></tr>
+          <tr><td>10</td><td>VST10</td><td>Repeat Government Contractor Approval Visit</td></tr>
+          <tr><td>11</td><td>VST11</td><td>CPWD/PWD Approval Visit</td></tr>
+          <tr><td>12</td><td>VST12</td><td>CPWD/PWD Tender Name Add Visit</td></tr>
+          <tr><td>13</td><td>VST13</td><td>CPWD/PWD Contractor Details Add Visit</td></tr>
+          <tr><td>14</td><td>VST14</td><td>New Corporate Approval Visit</td></tr>
+          <tr><td>15</td><td>VST15</td><td>Repeat Corporate Approval</td></tr>
+          <tr><td>16</td><td>VST16</td><td>Corporate Project/Contractor Detail Visit</td></tr>
+          <tr><td>17</td><td>VST17</td><td>New Developer Approval</td></tr>
+          <tr><td>18</td><td>VST18</td><td>Repeat Developer Approval</td></tr>
+          <tr><td>19</td><td>VST19</td><td>Repeat Developer Contract/Project Detail Visit</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ========== 4. API DETAILS ========== -->
+    <section id="api-details">
+      <h2>4. API Details (Request / Response / Validation)</h2>
+
+      <div class="note info">
+        <strong>Common params (all APIs):</strong><br>
+        • <code>api_key</code> — required<br>
+        • <code>service</code> — service number or name
+      </div>
+
+      <!-- 4.1 -->
+      <h3 id="api-236">4.1 NEW — <code>save_daily_plan</code> <span class="svc">236</span></h3>
+      <p><strong>File:</strong> <code>service/service_sales_executive.php</code></p>
+      <p><strong>When:</strong> Before or with Punch IN</p>
+      <p><strong>Request Parameters:</strong></p>
+      <table>
+        <thead>
+          <tr><th>Param</th><th>Type</th><th>Required</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>sales_id</code></td><td>int</td><td>YES</td><td>Sales executive ID</td></tr>
+          <tr><td><code>plan_date</code></td><td>string</td><td>NO</td><td>Default: today (Y-m-d)</td></tr>
+          <tr><td><code>expected_order_amount</code></td><td>decimal</td><td>NO*</td><td>Expected order amount in ₹</td></tr>
+          <tr><td><code>expected_approval_count</code></td><td>int</td><td>NO*</td><td>Expected approval count</td></tr>
+          <tr><td><code>expected_project_detail_count</code></td><td>int</td><td>NO*</td><td>Expected project detail count</td></tr>
+          <tr><td><code>customers</code></td><td>JSON string</td><td>NO**</td><td>Array of <code>{customer_id, target_type}</code></td></tr>
+        </tbody>
+      </table>
+      <div class="note">
+        <code>*</code> At least 1 of the 3 expected fields must be provided and &gt; 0<br>
+        <code>**</code> Required if <code>expected_order_amount &gt; 0</code> OR <code>expected_approval_count &gt; 0</code>
+      </div>
+
+      <p><strong>customers JSON example:</strong></p>
+<pre><code>[
+  {"customer_id": "101", "target_type": "order"},
+  {"customer_id": "205", "target_type": "approval"}
+]</code></pre>
+
+      <p><strong>Success Response:</strong></p>
+<pre><code>{
+  "ack": 1,
+  "ack_msg": "Daily plan saved successfully.",
+  "developer_msg": "daily_plan insert success",
+  "daily_plan_id": "15",
+  "result": {
+    "id": "15",
+    "sales_id": "5",
+    "plan_date": "2026-09-16",
+    "expected_order_amount": "50000.00",
+    "expected_approval_count": "2",
+    "expected_project_detail_count": null
+  }
+}</code></pre>
+
+      <p><strong>Error Responses:</strong></p>
+      <table>
+        <thead>
+          <tr><th>ack_msg</th><th>Condition</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>At least one target is required</td><td>All 3 fields empty or 0</td></tr>
+          <tr><td>Customer selection required</td><td>Order/approval filled but no customers</td></tr>
+          <tr><td>Daily plan already submitted</td><td>Plan exists for sales_id + plan_date</td></tr>
+          <tr><td>Invalid customer</td><td>customer_id not assigned to sales_id</td></tr>
+        </tbody>
+      </table>
+
+      <p><strong>Backend Logic:</strong></p>
+      <ol>
+        <li>Validate sales_id exists and is active</li>
+        <li>Check duplicate plan for same date</li>
+        <li>Validate min 1 target</li>
+        <li>If order/approval target → validate customers array</li>
+        <li>Verify each customer_id belongs to sales executive (<code>executive.seid = sales_id</code>)</li>
+        <li>Insert <code>daily_plan</code> + <code>daily_plan_customer</code> rows in transaction</li>
+      </ol>
+
+      <!-- 4.2 -->
+      <h3 id="api-237">4.2 NEW — <code>get_daily_plan_status</code> <span class="svc">237</span></h3>
+      <p><strong>File:</strong> <code>service/service_sales_executive.php</code></p>
+      <p><strong>When:</strong> App open, before Punch OUT screen, after Punch IN</p>
+      <p><strong>Request Parameters:</strong></p>
+      <table>
+        <thead>
+          <tr><th>Param</th><th>Type</th><th>Required</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>sales_id</code></td><td>int</td><td>YES</td><td>Sales executive ID</td></tr>
+          <tr><td><code>plan_date</code></td><td>string</td><td>NO</td><td>Default: today</td></tr>
+        </tbody>
+      </table>
+
+      <p><strong>Success Response (plan exists, completion pending):</strong></p>
+<pre><code>{
+  "ack": 1,
+  "ack_msg": "Daily plan found.",
+  "plan_submitted": 1,
+  "completion_submitted": 0,
+  "can_punch_out": 0,
+  "result": {
+    "daily_plan_id": "15",
+    "plan_date": "2026-09-16",
+    "expected_order_amount": "50000.00",
+    "expected_approval_count": "2",
+    "expected_project_detail_count": "1",
+    "customers": [
+      {
+        "customer_id": "101",
+        "customer_code": "C001",
+        "customer_name": "ABC Traders",
+        "display_label": "C001 - ABC Traders",
+        "target_type": "order"
+      }
+    ]
+  }
+}</code></pre>
+
+      <p><strong>Success Response (completion done — can punch out):</strong></p>
+<pre><code>{
+  "ack": 1,
+  "plan_submitted": 1,
+  "completion_submitted": 1,
+  "can_punch_out": 1,
+  "result": {
+    "daily_plan_id": "15",
+    "completion": {
+      "actual_order_amount": "45000.00",
+      "actual_approval_count": "1",
+      "actual_project_detail_count": "1"
+    }
+  }
+}</code></pre>
+
+      <p><strong>No plan today:</strong></p>
+<pre><code>{
+  "ack": 1,
+  "plan_submitted": 0,
+  "completion_submitted": 0,
+  "can_punch_out": 0,
+  "result": null
+}</code></pre>
+
+      <!-- 4.3 -->
+      <h3 id="api-238">4.3 NEW — <code>save_daily_plan_completion</code> <span class="svc">238</span></h3>
+      <p><strong>File:</strong> <code>service/service_sales_executive.php</code></p>
+      <p><strong>When:</strong> Before Punch OUT (mandatory)</p>
+      <p><strong>Request Parameters:</strong></p>
+      <table>
+        <thead>
+          <tr><th>Param</th><th>Type</th><th>Required</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>sales_id</code></td><td>int</td><td>YES</td><td>Sales executive ID</td></tr>
+          <tr><td><code>daily_plan_id</code></td><td>int</td><td>YES</td><td>From get_daily_plan_status</td></tr>
+          <tr><td><code>actual_order_amount</code></td><td>decimal</td><td>NO*</td><td>Actual achieved</td></tr>
+          <tr><td><code>actual_approval_count</code></td><td>int</td><td>NO*</td><td>Actual achieved</td></tr>
+          <tr><td><code>actual_project_detail_count</code></td><td>int</td><td>NO*</td><td>Actual achieved</td></tr>
+        </tbody>
+      </table>
+      <div class="note">
+        <code>*</code> Must fill actual value for each field that was set in morning plan (can be 0)
+      </div>
+
+      <p><strong>Success Response:</strong></p>
+<pre><code>{
+  "ack": 1,
+  "ack_msg": "Daily completion saved. You can now punch out.",
+  "developer_msg": "daily_plan_completion insert success",
+  "completion_id": "8",
+  "can_punch_out": 1
+}</code></pre>
+
+      <p><strong>Error Responses:</strong></p>
+      <table>
+        <thead>
+          <tr><th>ack_msg</th><th>Condition</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Daily plan not found</td><td>Invalid daily_plan_id</td></tr>
+          <tr><td>Completion already submitted</td><td>Duplicate for same plan</td></tr>
+          <tr><td>Please fill completion for all morning targets</td><td>Missing actual field</td></tr>
+        </tbody>
+      </table>
+
+      <p><strong>Backend Logic:</strong></p>
+      <ol>
+        <li>Load daily_plan by id + sales_id</li>
+        <li>Check completion not already exists</li>
+        <li>Validate actual fields match morning plan fields</li>
+        <li>Insert <code>daily_plan_completion</code></li>
+        <li>Return <code>can_punch_out: 1</code></li>
+      </ol>
+
+      <!-- 4.4 -->
+      <h3 id="api-20">4.4 MODIFY — <code>add_attendance</code> <span class="svc">20</span></h3>
+      <p><strong>File:</strong> <code>service/service_sales_executive.php</code></p>
+      <p><strong>Existing params:</strong> <code>sales_id</code>, <code>type</code> (In/Out), <code>lat</code>, <code>lng</code>, <code>imei</code>, <code>app_address</code>, <code>date_time</code>, <code>image_path</code>, <code>auto_out_flag</code></p>
+      <p><strong>New behaviour:</strong></p>
+
+      <h4>Punch IN (<code>type=In</code>)</h4>
+      <ul>
+        <li><strong>Option A (recommended):</strong> App calls <code>save_daily_plan</code> <span class="svc">236</span> first, then <code>add_attendance</code> <span class="svc">20</span></li>
+        <li><strong>Option B:</strong> Accept plan fields in same request and save internally</li>
+        <li>After successful IN insert → update <code>daily_plan.attendance_in_id = attendance.id</code></li>
+      </ul>
+
+      <p><strong>New optional params (Option B only):</strong></p>
+      <table>
+        <thead>
+          <tr><th>Param</th><th>Type</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>daily_plan_id</code></td><td>int</td><td>If plan already saved separately</td></tr>
+          <tr><td><code>expected_order_amount</code></td><td>decimal</td><td>Inline plan save</td></tr>
+          <tr><td><code>expected_approval_count</code></td><td>int</td><td>Inline plan save</td></tr>
+          <tr><td><code>expected_project_detail_count</code></td><td>int</td><td>Inline plan save</td></tr>
+          <tr><td><code>customers</code></td><td>JSON</td><td>Inline customer list</td></tr>
+        </tbody>
+      </table>
+      <div class="note">
+        <strong>Block IN if:</strong> No daily plan for today (when feature flag enabled)
+      </div>
+
+      <h4>Punch OUT (<code>type=Out</code>)</h4>
+      <p>Before insert, call internal check:</p>
+<pre><code>// Pseudocode
+$plan = getTodayPlan($sales_id);
+if (!$plan) → ack=0, "Please submit daily plan first"
+$completion = getCompletion($plan['id']);
+if (!$completion) → ack=0, "Please submit daily completion before punch out"</code></pre>
+      <p>After successful OUT insert → update <code>daily_plan_completion.attendance_out_id = attendance.id</code></p>
+
+      <p><strong>New error response (Punch OUT blocked):</strong></p>
+<pre><code>{
+  "ack": 0,
+  "ack_msg": "Please submit daily completion before punch out.",
+  "developer_msg": "daily_plan_completion missing",
+  "require_completion": 1,
+  "daily_plan_id": "15"
+}</code></pre>
+
+      <!-- 4.5 -->
+      <h3 id="api-12">4.5 MODIFY — <code>get_customer</code> <span class="svc">12</span></h3>
+      <p><strong>File:</strong> <code>service/service_sales_executive.php</code></p>
+      <p><strong>Existing param:</strong> <code>sales_executive_id</code></p>
+      <p><strong>New optional param:</strong></p>
+      <table>
+        <thead>
+          <tr><th>Param</th><th>Type</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>search</code></td><td>string</td><td>Filter by <code>client_code</code> OR <code>cname</code> OR <code>company_name</code> (LIKE)</td></tr>
+        </tbody>
+      </table>
+
+      <p><strong>Response enhancement — add display fields:</strong></p>
+      <p>Each customer in <code>result[]</code> should include:</p>
+<pre><code>{
+  "id": "101",
+  "client_code": "C001",
+  "cname": "ABC Traders",
+  "company_name": "ABC Traders Pvt Ltd",
+  "display_label": "C001 - ABC Traders",
+  "phone": "9876543210"
+}</code></pre>
+
+      <p><strong>Backend change in</strong> <code>include/class.executive.php</code> → <code>getCustomer()</code>:</p>
+      <ul>
+        <li>Add search WHERE clause when <code>search</code> param present</li>
+        <li>Add <code>display_label = client_code + ' - ' + cname</code> in response loop</li>
+      </ul>
+
+      <div class="note success">
+        <strong>Filter rule (existing — keep):</strong><br>
+        • Only customers where <code>executive.seid = sales_executive_id</code><br>
+        • Only active, non-deleted, non-channel-partner
+      </div>
+
+      <!-- 4.6 -->
+      <h3 id="api-239">4.6 NEW — <code>get_visit_start_types</code> <span class="svc">239</span></h3>
+      <p><strong>File:</strong> <code>service/service_visit.php</code></p>
+      <p><strong>Request:</strong> No extra params (optional <code>sales_id</code> for logging)</p>
+      <p><strong>Success Response:</strong></p>
+<pre><code>{
+  "ack": 1,
+  "ack_msg": "Visit start types fetched.",
+  "result": [
+    {
+      "id": "1",
+      "code": "VST01",
+      "name": "New Customer - Fresh Visit",
+      "display_name": "1. New Customer - Fresh Visit",
+      "sort_order": "1"
+    }
+  ]
+}</code></pre>
+      <p><strong>Backend:</strong></p>
+<pre><code>SELECT * FROM visit_start_type_master
+WHERE isDelete=0 AND isActive=1
+ORDER BY sort_order ASC</code></pre>
+
+      <!-- 4.7 -->
+      <h3 id="api-75">4.7 MODIFY — <code>Add_visit</code> <span class="svc">75</span></h3>
+      <p><strong>File:</strong> <code>service/service_visit.php</code> + <code>include/class.visit.php</code></p>
+      <p><strong>New required param:</strong></p>
+      <table>
+        <thead>
+          <tr><th>Param</th><th>Type</th><th>Required</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>visit_start_type_id</code></td><td>int</td><td>YES</td><td>Selected from 19 types</td></tr>
+        </tbody>
+      </table>
+      <p><strong>Existing params (unchanged):</strong></p>
+      <p><code>user_id</code>, <code>customer_id</code>, <code>inquiry_id</code>, <code>latitude</code>, <code>longitude</code>, <code>remark</code>, <code>app_address</code>, <code>purpose_id</code>, <code>company_id</code>, <code>flag</code></p>
+      <p><strong>Validation:</strong></p>
+      <ul>
+        <li><code>visit_start_type_id</code> must exist in <code>visit_start_type_master</code> and be active</li>
+        <li>Block visit start if empty</li>
+      </ul>
+      <p><strong>Error:</strong></p>
+<pre><code>{
+  "ack": 0,
+  "ack_msg": "Please select visit start type.",
+  "developer_msg": "visit_start_type_id missing or invalid"
+}</code></pre>
+      <p><strong>Backend change in</strong> <code>class.visit.php</code> → <code>AddVisit()</code>:</p>
+      <ul>
+        <li>Add <code>visit_start_type_id</code> to insert columns array</li>
+      </ul>
+
+      <!-- 4.8 -->
+      <h3 id="api-122">4.8 MODIFY — <code>update_visit</code> <span class="svc">122</span></h3>
+      <p><strong>File:</strong> <code>service/service_visit.php</code> + <code>include/class.visit.php</code></p>
+      <p><strong>New params (visit complete questions):</strong></p>
+      <table>
+        <thead>
+          <tr><th>Param</th><th>Type</th><th>Required</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>order_came</code></td><td>int (0/1)</td><td>YES</td><td>Did order come in this visit?</td></tr>
+          <tr><td><code>approval_came</code></td><td>int (0/1)</td><td>YES</td><td>Did approval come?</td></tr>
+          <tr><td><code>project_detail_came</code></td><td>int (0/1)</td><td>YES</td><td>Did project details come?</td></tr>
+          <tr><td><code>contract_detail_came</code></td><td>int (0/1)</td><td>YES</td><td>Did contract details come?</td></tr>
+          <tr><td><code>payment_came</code></td><td>int (0/1)</td><td>YES</td><td>Did payment come?</td></tr>
+        </tbody>
+      </table>
+      <p><strong>Backend logic (on visit stop success):</strong></p>
+      <ol>
+        <li>Insert/update <code>visit_completion_answer</code> for this <code>visit_id</code></li>
+        <li>All 5 fields mandatory (0 or 1 only)</li>
+      </ol>
+      <p><strong>Error:</strong></p>
+<pre><code>{
+  "ack": 0,
+  "ack_msg": "Please answer all visit completion questions.",
+  "developer_msg": "visit completion answer missing"
+}</code></pre>
+
+      <!-- 4.9 -->
+      <h3 id="api-240">4.9 NEW — <code>save_quotation_questionnaire</code> <span class="svc">240</span></h3>
+      <p><strong>File:</strong> <code>service/service_quotation.php</code></p>
+      <p><strong>When:</strong> After PI/Quotation popup, before final <code>create_quotation</code> <span class="svc">165</span></p>
+      <p><strong>Request Parameters:</strong></p>
+      <table>
+        <thead>
+          <tr><th>Param</th><th>Type</th><th>Required</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>quotation_id</code></td><td>int</td><td>YES*</td><td>Existing draft quotation ID</td></tr>
+          <tr><td><code>cart_id</code></td><td>int</td><td>ALT</td><td>Same as quotation_id if draft</td></tr>
+          <tr><td><code>sales_executive_id</code></td><td>int</td><td>YES</td><td>Sales person</td></tr>
+          <tr><td><code>customer_id</code></td><td>int</td><td>YES</td><td>Customer</td></tr>
+          <tr><td><code>knows_full_range</code></td><td>int (0/1)</td><td>YES</td><td>Customer knows full product range?</td></tr>
+          <tr><td><code>not_buying_reason</code></td><td>int</td><td>NO**</td><td>1=No info, 2=Price high, 3=Need approval</td></tr>
+          <tr><td><code>high_rate_form_id</code></td><td>int</td><td>NO***</td><td>Required if reason=2</td></tr>
+          <tr><td><code>consultant_form_id</code></td><td>int</td><td>NO***</td><td>Required if reason=3</td></tr>
+          <tr><td><code>remark</code></td><td>string</td><td>NO</td><td>Free text</td></tr>
+        </tbody>
+      </table>
+      <div class="note">
+        <code>*</code> quotation must exist (draft status)<br>
+        <code>**</code> Required if <code>knows_full_range=0</code><br>
+        <code>***</code> Required based on reason selected
+      </div>
+
+      <p><strong>Success Response:</strong></p>
+<pre><code>{
+  "ack": 1,
+  "ack_msg": "Questionnaire saved.",
+  "questionnaire_id": "22",
+  "can_submit_quotation": 1
+}</code></pre>
+
+      <!-- 4.10 -->
+      <h3 id="api-165">4.10 MODIFY — <code>create_quotation</code> <span class="svc">165</span></h3>
+      <p><strong>File:</strong> <code>service/service_quotation.php</code> + <code>include/quotation.class.php</code></p>
+      <p><strong>New optional/required param:</strong></p>
+      <table>
+        <thead>
+          <tr><th>Param</th><th>Type</th><th>Required</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>questionnaire_id</code></td><td>int</td><td>YES</td><td>From save_quotation_questionnaire <span class="svc">240</span></td></tr>
+        </tbody>
+      </table>
+      <p><strong>Validation before final submit:</strong></p>
+      <ul>
+        <li>If <code>knows_full_range=0</code> and <code>not_buying_reason=2</code> → <code>high_rate_form_id</code> must exist</li>
+        <li>If <code>knows_full_range=0</code> and <code>not_buying_reason=3</code> → <code>consultant_form_id</code> must exist</li>
+        <li>Update <code>quotation_detail.questionnaire_id</code></li>
+      </ul>
+      <p><strong>Error:</strong></p>
+<pre><code>{
+  "ack": 0,
+  "ack_msg": "Please complete quotation questionnaire before submit.",
+  "developer_msg": "questionnaire_id missing",
+  "require_questionnaire": 1
+}</code></pre>
+
+      <!-- 4.11 -->
+      <h3 id="api-234">4.11 REUSE — High Rate Form <span class="svc">234</span> for PI Popup</h3>
+      <p>When PI popup reason = Price High (2), App opens existing High Rate form.</p>
+      <div class="note info">
+        <strong>Note for PI flow:</strong> Form can be saved with <code>quotation_id</code> context instead of <code>visit_id</code> if visit not active. Backend may need to accept optional <code>quotation_id</code> param in service 234 (minor extension).
+      </div>
+      <p><strong>Suggested new optional param on service 234:</strong></p>
+      <table>
+        <thead>
+          <tr><th>Param</th><th>Type</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>quotation_id</code></td><td>int</td><td>Link form to quotation instead of visit</td></tr>
+        </tbody>
+      </table>
+
+      <!-- 4.12 -->
+      <h3 id="api-233">4.12 REUSE — Consultant Form <span class="svc">233</span> for PI Popup</h3>
+      <p>When PI popup reason = Need Approval (3), App opens existing Consultant form.</p>
+      <p><strong>Suggested new optional param on service 233:</strong></p>
+      <table>
+        <thead>
+          <tr><th>Param</th><th>Type</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>quotation_id</code></td><td>int</td><td>Link form to quotation instead of visit</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ========== 5. FILES ========== -->
+    <section id="files">
+      <h2>5. Files to Create / Modify</h2>
+
+      <h3>5.1 New Files</h3>
+      <table>
+        <thead>
+          <tr><th>File</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>database/APP_CRM_DB_MIGRATION.sql</code></td><td>All CREATE TABLE + ALTER + seed</td></tr>
+          <tr><td><code>include/class.daily_plan.php</code></td><td>Daily plan + completion logic</td></tr>
+          <tr><td><code>include/class.visit_start_type.php</code></td><td>Visit start type master (optional)</td></tr>
+          <tr><td><code>include/class.quotation_questionnaire.php</code></td><td>Quotation popup logic (optional)</td></tr>
+        </tbody>
+      </table>
+
+      <h3>5.2 Modify Files</h3>
+      <table>
+        <thead>
+          <tr><th>File</th><th>Changes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>service/service_sales_executive.php</code></td><td>APIs 236, 237, 238 + modify 12, 20</td></tr>
+          <tr><td><code>service/service_visit.php</code></td><td>API 239 + modify 75, 122</td></tr>
+          <tr><td><code>service/service_quotation.php</code></td><td>API 240 + modify 165</td></tr>
+          <tr><td><code>include/class.visit.php</code></td><td>AddVisit + UpdateVisit — new fields</td></tr>
+          <tr><td><code>include/class.executive.php</code></td><td>getCustomer — search + display_label</td></tr>
+          <tr><td><code>include/quotation.class.php</code></td><td>AddQuotationApi — questionnaire check</td></tr>
+        </tbody>
+      </table>
+
+      <h3>5.3 Register Services</h3>
+      <p>Add new service numbers in API config / service list comments at top of each service file.</p>
+    </section>
+
+    <!-- ========== 6. BUSINESS RULES ========== -->
+    <section id="business-rules">
+      <h2>6. Business Rules Summary</h2>
+      <table>
+        <thead>
+          <tr><th>Rule</th><th>Where Enforced</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Morning: min 1 of 3 targets required</td><td>save_daily_plan <span class="svc">236</span></td></tr>
+          <tr><td>Morning: customer required if order/approval target set</td><td>save_daily_plan <span class="svc">236</span></td></tr>
+          <tr><td>Customer must belong to logged-in sales person</td><td>save_daily_plan <span class="svc">236</span>, get_customer <span class="svc">12</span></td></tr>
+          <tr><td>One daily plan per sales person per day</td><td>DB UNIQUE + API check</td></tr>
+          <tr><td>Punch OUT blocked without completion</td><td>add_attendance <span class="svc">20</span></td></tr>
+          <tr><td>Visit start blocked without type selection</td><td>Add_visit <span class="svc">75</span></td></tr>
+          <tr><td>Visit stop blocked without 5 answers</td><td>update_visit <span class="svc">122</span></td></tr>
+          <tr><td>Quotation submit blocked without questionnaire</td><td>create_quotation <span class="svc">165</span></td></tr>
+          <tr><td>Price high → High Rate form required</td><td>save_quotation_questionnaire <span class="svc">240</span></td></tr>
+          <tr><td>Need approval → Consultant form required</td><td>save_quotation_questionnaire <span class="svc">240</span></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ========== 7. IMPLEMENTATION ORDER ========== -->
+    <section id="implementation-order">
+      <h2>7. Implementation Order</h2>
+      <ol>
+        <li>Run <code>APP_CRM_DB_MIGRATION.sql</code> on tenant DB</li>
+        <li>Create <code>class.daily_plan.php</code></li>
+        <li>Implement APIs <span class="svc">236</span>, <span class="svc">237</span>, <span class="svc">238</span></li>
+        <li>Modify API <span class="svc">20</span> (attendance validation)</li>
+        <li>Modify API <span class="svc">12</span> (customer search)</li>
+        <li>Implement API <span class="svc">239</span> + modify API <span class="svc">75</span></li>
+        <li>Modify API <span class="svc">122</span> (visit completion)</li>
+        <li>Implement API <span class="svc">240</span> + modify API <span class="svc">165</span></li>
+        <li>Extend APIs <span class="svc">233</span>, <span class="svc">234</span> for quotation_id (optional)</li>
+        <li>Test all flows with Postman / App</li>
+      </ol>
+    </section>
+
+    <!-- ========== 8. TESTING ========== -->
+    <section id="testing">
+      <h2>8. Testing Checklist (Backend)</h2>
+      <ul class="checklist">
+        <li>Punch IN without plan → blocked (if enforced)</li>
+        <li>Punch IN with only project detail target → allowed, no customer needed</li>
+        <li>Punch IN with order target but no customer → blocked</li>
+        <li>Punch IN with order target + customer → allowed</li>
+        <li>Duplicate plan same day → blocked</li>
+        <li>Punch OUT without completion → blocked</li>
+        <li>Punch OUT after completion → allowed</li>
+        <li>Visit start without visit_start_type_id → blocked</li>
+        <li>Visit start with valid type → allowed</li>
+        <li>Visit stop without 5 answers → blocked</li>
+        <li>Visit stop with all answers → saved in visit_completion_answer</li>
+        <li>Quotation submit without questionnaire → blocked</li>
+        <li>Quotation with full range=Yes → submit allowed</li>
+        <li>Quotation with reason=Price high but no form → blocked</li>
+        <li>get_customer search returns only assigned customers</li>
+      </ul>
+    </section>
+
+    <!-- ========== 9. WEB ADMIN ========== -->
+    <section id="web-admin">
+      <h2>9. Web Admin (Future — Optional)</h2>
+      <p>Not in current App scope, but backend tables support future reports:</p>
+      <ul>
+        <li>Daily Plan vs Completion Report (by sales person, by date)</li>
+        <li>Visit Start Type Analysis Report</li>
+        <li>Visit Completion Answer Report</li>
+        <li>Quotation Questionnaire Report (full range awareness)</li>
+      </ul>
+      <div class="note info" style="margin-top:20px;">
+        <strong>Document Version:</strong> 1.0<br>
+        <strong>Related:</strong>
+        <code>APP_CRM_FRONTEND_CHANGES.md</code>,
+        <code>APP_CRM_DB_MIGRATION.sql</code>,
+        <a href="frontend.html">frontend.html</a>,
+        <a href="index.html">index.html</a>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div class="footer">
+  Armor CRM App Changes · Backend Developer Documentation v1.0 · Sep 2026
+</div>
+
+</body>
+</html>

@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Armor CRM — Frontend / Android Developer Document</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <h1>Armor CRM — Frontend / Android Developer Document</h1>
+    <div class="meta">Android App UI · 16-Sep-2026 · Version 1.0</div>
+  </div>
+  <nav class="topbar-nav">
+    <a href="index.html">Home</a>
+    <a href="backend.html">Backend</a>
+    <a href="frontend.html" class="active">Frontend</a>
+  </nav>
+</div>
+
+<div class="layout">
+  <aside class="sidebar">
+    <h3>Table of Contents</h3>
+    <ul>
+      <li><a href="#overview">1. Overview</a></li>
+      <li><a href="#feature-summary">2. Feature Summary</a></li>
+      <li><a href="#feature-1">3. Morning Daily Plan</a></li>
+      <li><a href="#f1-trigger">3.1 Trigger</a></li>
+      <li><a href="#f1-flow">3.2 UI Flow</a></li>
+      <li><a href="#f1-screen">3.3 Screen Fields</a></li>
+      <li><a href="#f1-validation">3.4 Validation</a></li>
+      <li><a href="#f1-customer">3.5 Customer Dropdown</a></li>
+      <li><a href="#f1-api">3.6 API Sequence</a></li>
+      <li><a href="#f1-handling">3.7 Success / Error</a></li>
+      <li><a href="#feature-2">4. Evening Completion</a></li>
+      <li><a href="#f2-trigger">4.1 Trigger</a></li>
+      <li><a href="#f2-flow">4.2 UI Flow</a></li>
+      <li><a href="#f2-screen">4.3 Screen Fields</a></li>
+      <li><a href="#f2-validation">4.4 Validation</a></li>
+      <li><a href="#f2-api">4.5 API Sequence</a></li>
+      <li><a href="#f2-block">4.6 Block Punch OUT</a></li>
+      <li><a href="#feature-3">5. Visit Start Type</a></li>
+      <li><a href="#f3-list">5.4 19 Types List</a></li>
+      <li><a href="#feature-4">6. Visit Complete Q&amp;A</a></li>
+      <li><a href="#feature-5">7. PI / Quotation Popup</a></li>
+      <li><a href="#screen-map">8. Screen Map</a></li>
+      <li><a href="#local-state">9. Local State / Storage</a></li>
+      <li><a href="#error-messages">10. Error Messages</a></li>
+      <li><a href="#api-reference">11. API Quick Reference</a></li>
+      <li><a href="#testing">12. Testing Checklist</a></li>
+      <li><a href="#implementation">13. Implementation Order</a></li>
+    </ul>
+  </aside>
+
+  <main class="content">
+
+    <div class="hero frontend">
+      <h2>Armor CRM — Frontend / Android Developer Document</h2>
+      <p class="subtitle">Screens · Popups · Fields (EN/GU) · Validation · API call sequences · UX flows</p>
+      <div class="badges">
+        <span class="badge badge-green">5 UI Flows</span>
+        <span class="badge badge-blue">Punch IN / OUT</span>
+        <span class="badge badge-orange">Visit Start / Stop</span>
+        <span class="badge badge-gray">PI / Quotation Popup</span>
+      </div>
+    </div>
+
+    <!-- 1. Overview -->
+    <section id="overview">
+      <h2>1. Overview</h2>
+      <p>5 UI flows to implement on the Armor CRM Android app. Each section covers: <strong>Screen</strong>, <strong>Fields</strong>, <strong>Validation</strong>, <strong>API calls</strong>, and <strong>Navigation</strong>.</p>
+      <div class="note info">
+        <strong>Project:</strong> Armor CRM Mobile App (Android)<br>
+        <strong>Date:</strong> 16-Sep-2026<br>
+        <strong>Backend Reference:</strong> <a href="backend.html">backend.html</a> / <code>APP_CRM_BACKEND_CHANGES.md</code>
+      </div>
+    </section>
+
+    <!-- 2. Feature Summary -->
+    <section id="feature-summary">
+      <h2>2. Feature Summary</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Feature</th>
+            <th>Screen / Popup</th>
+            <th>APIs Used</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>Morning Daily Plan</td>
+            <td>Punch IN popup</td>
+            <td><span class="svc">236</span> <span class="svc">12</span> <span class="svc">20</span></td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>Evening Completion</td>
+            <td>Punch OUT popup</td>
+            <td><span class="svc">237</span> <span class="svc">238</span> <span class="svc">20</span></td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>Visit Start Type</td>
+            <td>Visit Start screen</td>
+            <td><span class="svc">239</span> <span class="svc">75</span></td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>Visit Complete Q&amp;A</td>
+            <td>Visit Stop popup</td>
+            <td><span class="svc">122</span></td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td>PI / Quotation Popup</td>
+            <td>Submit popup</td>
+            <td><span class="svc">240</span> <span class="svc">233</span>/<span class="svc">234</span> <span class="svc">165</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 3. Feature 1 — Morning Daily Plan -->
+    <section id="feature-1">
+      <h2>3. Feature 1 — Morning Daily Plan (Punch IN)</h2>
+
+      <h3 id="f1-trigger">3.1 Trigger</h3>
+      <p>User taps <strong>Punch IN</strong> button on Attendance screen.</p>
+
+      <h3 id="f1-flow">3.2 UI Flow</h3>
+      <div class="flow-box">Punch IN tap
+    → Open "Daily Plan" popup/dialog (full screen or bottom sheet)
+    → User fills questions
+    → Validate
+    → If order/approval filled → show Customer dropdown
+    → Submit plan (API 236)
+    → On success → call Punch IN (API 20)
+    → Show success message</div>
+
+      <h3 id="f1-screen">3.3 Screen: Daily Plan Popup</h3>
+      <p><strong>Title:</strong> <code>Today's Plan</code> / <code>આજનો પ્લાન</code></p>
+
+      <h4>Question 1 — Expected Order Amount</h4>
+      <table>
+        <thead>
+          <tr>
+            <th>UI Element</th>
+            <th>Type</th>
+            <th>Field Key</th>
+            <th>Label (Gujarati)</th>
+            <th>Label (English)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Label</td>
+            <td>Text</td>
+            <td>—</td>
+            <td>શું આજે કેટલા રૂપિયાના ઓર્ડર આવશે?</td>
+            <td>How much order amount expected today?</td>
+          </tr>
+          <tr>
+            <td>Input</td>
+            <td>Number (decimal)</td>
+            <td><code>expected_order_amount</code></td>
+            <td>Amount (₹)</td>
+            <td>Amount (₹)</td>
+          </tr>
+          <tr>
+            <td>Button</td>
+            <td>OK</td>
+            <td>—</td>
+            <td>OK</td>
+            <td>OK</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h4>Question 2 — Expected Approvals</h4>
+      <table>
+        <thead>
+          <tr>
+            <th>UI Element</th>
+            <th>Type</th>
+            <th>Field Key</th>
+            <th>Label (Gujarati)</th>
+            <th>Label (English)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Label</td>
+            <td>Text</td>
+            <td>—</td>
+            <td>શું આજે કેટલા Approval આવશે?</td>
+            <td>How many approvals expected today?</td>
+          </tr>
+          <tr>
+            <td>Input</td>
+            <td>Number (integer)</td>
+            <td><code>expected_approval_count</code></td>
+            <td>Count</td>
+            <td>Count</td>
+          </tr>
+          <tr>
+            <td>Button</td>
+            <td>OK</td>
+            <td>—</td>
+            <td>OK</td>
+            <td>OK</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h4>Question 3 — Expected Project Details</h4>
+      <table>
+        <thead>
+          <tr>
+            <th>UI Element</th>
+            <th>Type</th>
+            <th>Field Key</th>
+            <th>Label (Gujarati)</th>
+            <th>Label (English)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Label</td>
+            <td>Text</td>
+            <td>—</td>
+            <td>આજે કેટલા project ની Detail આવશે?</td>
+            <td>How many project details expected today?</td>
+          </tr>
+          <tr>
+            <td>Input</td>
+            <td>Number (integer)</td>
+            <td><code>expected_project_detail_count</code></td>
+            <td>Count</td>
+            <td>Count</td>
+          </tr>
+          <tr>
+            <td>Button</td>
+            <td>OK</td>
+            <td>—</td>
+            <td>OK</td>
+            <td>OK</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h4>Footer Buttons</h4>
+      <table>
+        <thead>
+          <tr><th>Button</th><th>Action</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Submit Plan</strong></td><td>Validate + call API 236</td></tr>
+          <tr><td><strong>Cancel</strong></td><td>Close popup (Punch IN not done)</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="f1-validation">3.4 Validation Rules (App-side)</h3>
+      <table>
+        <thead>
+          <tr><th>Rule</th><th>Error Message</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>At least 1 of 3 fields must be filled and &gt; 0</td>
+            <td><code>કૃપા કરીને ઓછામાં ઓછું એક target ભરો</code> / <code>Please fill at least one target</code></td>
+          </tr>
+          <tr>
+            <td>Order amount must be numeric ≥ 0</td>
+            <td><code>Invalid amount</code></td>
+          </tr>
+          <tr>
+            <td>Approval count must be integer ≥ 0</td>
+            <td><code>Invalid count</code></td>
+          </tr>
+          <tr>
+            <td>Project detail count must be integer ≥ 0</td>
+            <td><code>Invalid count</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 id="f1-customer">3.5 Conditional — Customer Dropdown</h3>
+      <div class="note">
+        <strong>Show when:</strong> <code>expected_order_amount &gt; 0</code> OR <code>expected_approval_count &gt; 0</code>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>UI Element</th>
+            <th>Type</th>
+            <th>Field Key</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Label</td>
+            <td>Text</td>
+            <td>—</td>
+            <td>Select Customer</td>
+          </tr>
+          <tr>
+            <td>Dropdown</td>
+            <td>Searchable spinner</td>
+            <td><code>customer_id</code></td>
+            <td>Shows assigned customers only</td>
+          </tr>
+          <tr>
+            <td>Display format</td>
+            <td>—</td>
+            <td>—</td>
+            <td><code>[ client_code - customer_name ]</code> e.g. <code>C001 - ABC Traders</code></td>
+          </tr>
+          <tr>
+            <td>Search box</td>
+            <td>Text input</td>
+            <td><code>search</code></td>
+            <td>Filters dropdown list</td>
+          </tr>
+        </tbody>
+      </table>
+      <p><strong>API for dropdown:</strong> <code>get_customer</code> (<span class="svc">12</span>)<br>
+      <strong>Params:</strong> <code>sales_executive_id</code>, optional <code>search</code></p>
+
+      <h4>Multi-select rule</h4>
+      <ul>
+        <li>If both order AND approval targets filled → allow selecting customer for each target type</li>
+        <li>Minimum 1 customer required when dropdown visible</li>
+      </ul>
+
+      <p><strong>customers array to send:</strong></p>
+<pre><code>[
+  {"customer_id": "101", "target_type": "order"},
+  {"customer_id": "205", "target_type": "approval"}
+]</code></pre>
+
+      <h3 id="f1-api">3.6 API Call Sequence</h3>
+      <h4>Step 1 — Save Plan</h4>
+<pre><code>POST service/service_sales_executive.php
+service=236 (save_daily_plan)
+
+Params:
+  sales_id
+  expected_order_amount
+  expected_approval_count
+  expected_project_detail_count
+  customers (JSON string)</code></pre>
+
+      <h4>Step 2 — Punch IN (on plan success)</h4>
+<pre><code>POST service/service_sales_executive.php
+service=20 (add_attendance)
+
+Params:
+  sales_id
+  type=In
+  lat, lng, imei, app_address, date_time
+  image_path (if camera capture)</code></pre>
+
+      <h3 id="f1-handling">3.7 Success / Error Handling</h3>
+      <table>
+        <thead>
+          <tr><th>Response</th><th>App Action</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Plan saved + Punch IN success</td>
+            <td>Show "Welcome! Attendance submitted" → go to dashboard</td>
+          </tr>
+          <tr>
+            <td>Plan validation fail</td>
+            <td>Show error on popup, stay on popup</td>
+          </tr>
+          <tr>
+            <td>Punch IN fail (late etc.)</td>
+            <td>Show server <code>ack_msg</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 4. Feature 2 — Evening Completion -->
+    <section id="feature-2">
+      <h2>4. Feature 2 — Evening Completion (Punch OUT)</h2>
+
+      <h3 id="f2-trigger">4.1 Trigger</h3>
+      <p>User taps <strong>Punch OUT</strong> button.</p>
+
+      <h3 id="f2-flow">4.2 UI Flow</h3>
+      <div class="flow-box">Punch OUT tap
+    → Call get_daily_plan_status (237)
+    → If completion_submitted=0 → open "Daily Completion" popup
+    → Show morning targets (read-only)
+    → User fills actual achieved values
+    → Submit completion (API 238)
+    → On success → call Punch OUT (API 20)
+    → If completion already done → directly Punch OUT</div>
+
+      <h3 id="f2-screen">4.3 Screen: Daily Completion Popup</h3>
+      <p><strong>Title:</strong> <code>Today's Completion</code> / <code>આજે કેટલું complete થયું</code></p>
+
+      <h4>Read-only Section (Morning Targets)</h4>
+      <table>
+        <thead>
+          <tr><th>Label</th><th>Value Source</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Expected Order Amount</td><td><code>result.expected_order_amount</code></td></tr>
+          <tr><td>Expected Approvals</td><td><code>result.expected_approval_count</code></td></tr>
+          <tr><td>Expected Project Details</td><td><code>result.expected_project_detail_count</code></td></tr>
+          <tr><td>Selected Customers</td><td><code>result.customers[].display_label</code></td></tr>
+        </tbody>
+      </table>
+
+      <h4>Input Section (Actual Completion)</h4>
+      <table>
+        <thead>
+          <tr>
+            <th>UI Element</th>
+            <th>Type</th>
+            <th>Field Key</th>
+            <th>Label</th>
+            <th>Show When</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Input</td>
+            <td>Number (decimal)</td>
+            <td><code>actual_order_amount</code></td>
+            <td>Actual Order Amount (₹)</td>
+            <td>Morning order amount was set</td>
+          </tr>
+          <tr>
+            <td>Input</td>
+            <td>Number (integer)</td>
+            <td><code>actual_approval_count</code></td>
+            <td>Actual Approvals</td>
+            <td>Morning approval count was set</td>
+          </tr>
+          <tr>
+            <td>Input</td>
+            <td>Number (integer)</td>
+            <td><code>actual_project_detail_count</code></td>
+            <td>Actual Project Details</td>
+            <td>Morning project detail was set</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="note info">
+        Only show input fields that had a morning target. Value can be 0 but field must not be empty.
+      </div>
+
+      <h4>Footer Buttons</h4>
+      <table>
+        <thead>
+          <tr><th>Button</th><th>Action</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Submit &amp; Punch Out</strong></td><td>API 238 → then API 20</td></tr>
+          <tr><td><strong>Cancel</strong></td><td>Close popup</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="f2-validation">4.4 Validation Rules</h3>
+      <table>
+        <thead>
+          <tr><th>Rule</th><th>Error Message</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>All visible actual fields must be filled</td>
+            <td><code>Please fill all completion fields</code></td>
+          </tr>
+          <tr>
+            <td>Values must be ≥ 0</td>
+            <td><code>Invalid value</code></td>
+          </tr>
+          <tr>
+            <td>Cannot punch out if plan not submitted today</td>
+            <td><code>Daily plan not found. Contact admin.</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 id="f2-api">4.5 API Call Sequence</h3>
+      <h4>Step 1 — Check Status</h4>
+<pre><code>POST service/service_sales_executive.php
+service=237 (get_daily_plan_status)
+
+Params:
+  sales_id
+  plan_date (optional, default today)</code></pre>
+
+      <h4>Step 2 — Save Completion</h4>
+<pre><code>POST service/service_sales_executive.php
+service=238 (save_daily_plan_completion)
+
+Params:
+  sales_id
+  daily_plan_id
+  actual_order_amount
+  actual_approval_count
+  actual_project_detail_count</code></pre>
+
+      <h4>Step 3 — Punch OUT</h4>
+<pre><code>POST service/service_sales_executive.php
+service=20 (add_attendance)
+
+Params:
+  sales_id
+  type=Out
+  lat, lng, imei, app_address, date_time
+  image_path (if required)</code></pre>
+
+      <h3 id="f2-block">4.6 Block Punch OUT Screen State</h3>
+      <p>If API 20 returns <code>require_completion=1</code>:</p>
+      <ul>
+        <li>Do NOT close attendance screen</li>
+        <li>Open completion popup automatically</li>
+        <li>Show message: <code>Punch out કરતા પહેલાં completion submit કરવું જરૂરી છે</code></li>
+      </ul>
+    </section>
+
+    <!-- 5. Feature 3 — Visit Start Type -->
+    <section id="feature-3">
+      <h2>5. Feature 3 — Visit Start Type (19 Points)</h2>
+
+      <h3>5.1 Trigger</h3>
+      <p>User taps <strong>Start Visit</strong> (before existing visit start form).</p>
+
+      <h3>5.2 UI Flow</h3>
+      <div class="flow-box">Start Visit tap
+    → Call get_visit_start_types (239) — cache locally after first load
+    → Show "Select Visit Type" screen/dialog
+    → User selects exactly 1 option (radio list or searchable dropdown)
+    → Validate selection
+    → Continue to existing visit start flow (customer, location, etc.)
+    → Call Add_visit (75) with visit_start_type_id</div>
+
+      <h3>5.3 Screen: Visit Start Type Selection</h3>
+      <p><strong>Title:</strong> <code>Select Visit Type</code> / <code>Visit Start Type પસંદ કરો</code><br>
+      <strong>Subtitle:</strong> <code>Total 19 options — select one before starting visit</code></p>
+      <table>
+        <thead>
+          <tr>
+            <th>UI Element</th>
+            <th>Type</th>
+            <th>Field Key</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>List</td>
+            <td>Radio / Single-select</td>
+            <td><code>visit_start_type_id</code></td>
+            <td>19 items from API</td>
+          </tr>
+          <tr>
+            <td>Search</td>
+            <td>Text filter</td>
+            <td><code>local_search</code></td>
+            <td>Client-side filter on name</td>
+          </tr>
+          <tr>
+            <td>Item display</td>
+            <td>Text</td>
+            <td>—</td>
+            <td><code>sort_order. display_name</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 id="f3-list">5.4 Visit Type List (Display in App)</h3>
+      <table>
+        <thead>
+          <tr><th>#</th><th>Display Name</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>New Customer - Fresh Visit</td></tr>
+          <tr><td>2</td><td>Repeat Customer Order Visit</td></tr>
+          <tr><td>3</td><td>Old Customer Order Visit</td></tr>
+          <tr><td>4</td><td>Old Customer Payment Visit</td></tr>
+          <tr><td>5</td><td>New MEP Approval Visit</td></tr>
+          <tr><td>6</td><td>Repeat MEP Approval Visit</td></tr>
+          <tr><td>7</td><td>MEP - Add Project/Contractor Details</td></tr>
+          <tr><td>8</td><td>New Government Approval Visit</td></tr>
+          <tr><td>9</td><td>Repeat Government Approval - Tender Name Add</td></tr>
+          <tr><td>10</td><td>Repeat Government Contractor Approval Visit</td></tr>
+          <tr><td>11</td><td>CPWD/PWD Approval Visit</td></tr>
+          <tr><td>12</td><td>CPWD/PWD Tender Name Add Visit</td></tr>
+          <tr><td>13</td><td>CPWD/PWD Contractor Details Add Visit</td></tr>
+          <tr><td>14</td><td>New Corporate Approval Visit</td></tr>
+          <tr><td>15</td><td>Repeat Corporate Approval</td></tr>
+          <tr><td>16</td><td>Corporate Project/Contractor Detail Visit</td></tr>
+          <tr><td>17</td><td>New Developer Approval</td></tr>
+          <tr><td>18</td><td>Repeat Developer Approval</td></tr>
+          <tr><td>19</td><td>Repeat Developer Contract/Project Detail Visit</td></tr>
+        </tbody>
+      </table>
+
+      <h3>5.5 Validation</h3>
+      <table>
+        <thead>
+          <tr><th>Rule</th><th>Error Message</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Must select 1 type</td>
+            <td><code>Please select visit start type</code></td>
+          </tr>
+          <tr>
+            <td>Cannot proceed without selection</td>
+            <td>Block Next/Start button</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>5.6 API Calls</h3>
+      <p><strong>Load types (once per session or daily cache):</strong></p>
+<pre><code>POST service/service_visit.php
+service=239 (get_visit_start_types)</code></pre>
+
+      <p><strong>Start visit (existing — add new param):</strong></p>
+<pre><code>POST service/service_visit.php
+service=75 (Add_visit)
+
+New param:
+  visit_start_type_id
+
+Existing params:
+  user_id, customer_id, inquiry_id, latitude, longitude,
+  remark, app_address, purpose_id, company_id, flag</code></pre>
+
+      <h3>5.7 UX Notes</h3>
+      <ul>
+        <li>Store selected <code>visit_start_type_id</code> in visit session/state until visit ends</li>
+        <li>Show selected type name on active visit banner (optional)</li>
+        <li>Do not allow changing type after visit started</li>
+      </ul>
+    </section>
+
+    <!-- 6. Feature 4 — Visit Complete Questions -->
+    <section id="feature-4">
+      <h2>6. Feature 4 — Visit Complete Questions</h2>
+
+      <h3>6.1 Trigger</h3>
+      <p>User completes CRM visit and taps <strong>Stop Visit</strong> / <strong>End Visit</strong>.</p>
+
+      <h3>6.2 UI Flow</h3>
+      <div class="flow-box">Stop Visit tap
+    → Open "Visit Summary" popup with 5 Yes/No questions
+    → User answers all 5
+    → Continue to existing visit stop flow (remark, followup date, etc.)
+    → Call update_visit (122) with completion flags + existing params</div>
+
+      <h3>6.3 Screen: Visit Complete Questions Popup</h3>
+      <p><strong>Title:</strong> <code>Visit Result</code> / <code>Visit Complete</code><br>
+      <strong>Instruction:</strong> <code>Answer all questions before completing visit</code></p>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Question (English)</th>
+            <th>Question (Gujarati)</th>
+            <th>Field Key</th>
+            <th>Input Type</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>Did an order come in this visit?</td>
+            <td>શું આ visit માં order આવ્યો?</td>
+            <td><code>order_came</code></td>
+            <td>Yes / No (Radio)</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>Did an approval come in this visit?</td>
+            <td>શું આ visit માં approval આવ્યું?</td>
+            <td><code>approval_came</code></td>
+            <td>Yes / No</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>Did project details come in this visit?</td>
+            <td>શું આ visit માં project details આવી?</td>
+            <td><code>project_detail_came</code></td>
+            <td>Yes / No</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>Did contract details come in this visit?</td>
+            <td>શું આ visit માં contract details આવી?</td>
+            <td><code>contract_detail_came</code></td>
+            <td>Yes / No</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td>Did payment come in this visit?</td>
+            <td>શું આ visit માં payment આવ્યું?</td>
+            <td><code>payment_came</code></td>
+            <td>Yes / No</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="note success">
+        <strong>Values to send:</strong> <code>1</code> = Yes, <code>0</code> = No
+      </div>
+
+      <h4>Footer Buttons</h4>
+      <table>
+        <thead>
+          <tr><th>Button</th><th>Action</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Next / Continue</strong></td><td>Validate all answered → proceed to existing stop visit UI</td></tr>
+          <tr><td><strong>Cancel</strong></td><td>Close popup (visit not stopped)</td></tr>
+        </tbody>
+      </table>
+
+      <h3>6.4 Validation</h3>
+      <table>
+        <thead>
+          <tr><th>Rule</th><th>Error Message</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>All 5 questions must be answered</td>
+            <td><code>Please answer all questions</code></td>
+          </tr>
+          <tr>
+            <td>Each answer must be 0 or 1</td>
+            <td>—</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>6.5 API Call</h3>
+      <p><strong>Existing visit stop API — add 5 new params:</strong></p>
+<pre><code>POST service/service_visit.php
+service=122 (update_visit)
+
+New params:
+  order_came=0|1
+  approval_came=0|1
+  project_detail_came=0|1
+  contract_detail_came=0|1
+  payment_came=0|1
+
+Existing params (unchanged):
+  id / visit_id, user_id, stop_latitude, stop_longitude,
+  stop_remark, note, date, remark_code, reason_code,
+  stop_app_address, customer_id, inquiry_id, visit_type, etc.</code></pre>
+
+      <h3>6.6 Integration with Existing Visit Stop</h3>
+      <p>Current flow has remark/reason selection (A–G codes). New popup should appear in this order:</p>
+      <ol>
+        <li>Visit Complete 5 Questions <strong>(NEW)</strong></li>
+        <li>Existing Remark/Reason selection</li>
+        <li>Conditional forms (High Rate, Consultant) if applicable</li>
+        <li>Final <code>update_visit</code> API call with ALL data</li>
+      </ol>
+    </section>
+
+    <!-- 7. Feature 5 — PI / Quotation Popup -->
+    <section id="feature-5">
+      <h2>7. Feature 5 — PI / Quotation Submit Popup</h2>
+
+      <h3>7.1 Trigger</h3>
+      <p>User creates PI or Quotation on app and taps <strong>Submit</strong> button.</p>
+
+      <h3>7.2 UI Flow</h3>
+      <div class="flow-box">Submit tap (PI/Quotation)
+    → Open "Product Range" popup (do NOT submit yet)
+    → Q1: Customer knows full range?
+    → If Yes → save questionnaire → create_quotation (165)
+    → If No → show reason options
+        → Reason 1: No product info → save → submit
+        → Reason 2: Price high → open High Rate form (234) → save → submit
+        → Reason 3: Need approval → open Consultant form (233) → save → submit</div>
+
+      <h3>7.3 Screen: Quotation Questionnaire Popup</h3>
+      <p><strong>Title:</strong> <code>Before Submit</code> / <code>Submit પહેલાં</code></p>
+
+      <h4>Question 1</h4>
+      <table>
+        <thead>
+          <tr>
+            <th>UI Element</th>
+            <th>Type</th>
+            <th>Field Key</th>
+            <th>Label</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Label</td>
+            <td>Text</td>
+            <td>—</td>
+            <td>Does customer know about our company's full range of products?</td>
+          </tr>
+          <tr>
+            <td>Options</td>
+            <td>Yes / No Radio</td>
+            <td><code>knows_full_range</code></td>
+            <td>Yes = 1, No = 0</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h4>Question 2 (Show only if knows_full_range = No)</h4>
+      <table>
+        <thead>
+          <tr>
+            <th>UI Element</th>
+            <th>Type</th>
+            <th>Field Key</th>
+            <th>Label</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Label</td>
+            <td>Text</td>
+            <td>—</td>
+            <td>If customer does not purchase from full range, what is the reason?</td>
+          </tr>
+          <tr>
+            <td>Option 1</td>
+            <td>Radio</td>
+            <td><code>not_buying_reason=1</code></td>
+            <td>Customer doesn't have product information</td>
+          </tr>
+          <tr>
+            <td>Option 2</td>
+            <td>Radio</td>
+            <td><code>not_buying_reason=2</code></td>
+            <td>Price feels too high</td>
+          </tr>
+          <tr>
+            <td>Option 3</td>
+            <td>Radio</td>
+            <td><code>not_buying_reason=3</code></td>
+            <td>Customer needs MEP / Government approval</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>7.4 Conditional Navigation</h3>
+      <table>
+        <thead>
+          <tr><th>Reason Selected</th><th>Next Screen</th><th>API</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1 — No product info</td>
+            <td>Save questionnaire → Submit quotation</td>
+            <td><span class="svc">240</span> → <span class="svc">165</span></td>
+          </tr>
+          <tr>
+            <td>2 — Price high</td>
+            <td>Open <strong>High Rate Form</strong> (existing UI)</td>
+            <td><span class="svc">234</span> → <span class="svc">240</span> → <span class="svc">165</span></td>
+          </tr>
+          <tr>
+            <td>3 — Need approval</td>
+            <td>Open <strong>Need Approval / Consultant Form</strong> (existing UI)</td>
+            <td><span class="svc">233</span> → <span class="svc">240</span> → <span class="svc">165</span></td>
+          </tr>
+          <tr>
+            <td>knows_full_range = Yes</td>
+            <td>Direct submit</td>
+            <td><span class="svc">240</span> → <span class="svc">165</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>7.5 High Rate Form (Existing — Reuse)</h3>
+      <p><strong>API:</strong> <code>save_visit_high_rate_form</code> (<span class="svc">234</span>)</p>
+      <p><strong>When opened from Quotation (not visit):</strong></p>
+      <ul>
+        <li>Pass <code>quotation_id</code> instead of/in addition to <code>visit_id</code></li>
+        <li>After form save → get <code>high_rate_form_id</code> from response</li>
+        <li>Pass to questionnaire API</li>
+      </ul>
+      <p><strong>Key fields (existing):</strong></p>
+      <ul>
+        <li><code>customer_name</code>, <code>payment_option</code>, <code>payment_remark</code></li>
+        <li><code>items</code> (JSON array of products with rates)</li>
+      </ul>
+      <p><strong>Products list API:</strong> <code>get_visit_high_rate_products</code> (<span class="svc">235</span>)</p>
+
+      <h3>7.6 Consultant / Need Approval Form (Existing — Reuse)</h3>
+      <p><strong>API:</strong> <code>save_visit_consultant_form</code> (<span class="svc">233</span>)</p>
+      <p><strong>When opened from Quotation:</strong></p>
+      <ul>
+        <li>Pass <code>quotation_id</code></li>
+        <li>After form save → get <code>consultant_form_id</code> from response</li>
+      </ul>
+      <p><strong>Key fields (existing):</strong></p>
+      <ul>
+        <li><code>firm_name</code>, <code>address</code>, <code>city</code>, <code>state</code>, <code>pincode</code></li>
+        <li><code>contact_person</code>, <code>mobile</code>, <code>email</code></li>
+        <li><code>approval_type</code> (1=Private, 2=Government)</li>
+        <li><code>reason_code</code> (C1/C2)</li>
+      </ul>
+
+      <h3>7.7 API Call Sequence</h3>
+      <h4>Step 1 — Save Questionnaire</h4>
+<pre><code>POST service/service_quotation.php
+service=240 (save_quotation_questionnaire)
+
+Params:
+  quotation_id / cart_id
+  sales_executive_id
+  customer_id
+  knows_full_range (0|1)
+  not_buying_reason (1|2|3) — if knows_full_range=0
+  high_rate_form_id — if reason=2
+  consultant_form_id — if reason=3
+  remark (optional)</code></pre>
+
+      <h4>Step 2 — Submit Quotation</h4>
+<pre><code>POST service/service_quotation.php
+service=165 (create_quotation)
+
+New param:
+  questionnaire_id
+
+Existing params:
+  customer_id, sales_executive_id, shipping_address,
+  billing_address, quotation_date, terms, etc.
+  + product body JSON</code></pre>
+
+      <h3>7.8 Validation</h3>
+      <table>
+        <thead>
+          <tr><th>Rule</th><th>Error Message</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Q1 must be answered</td>
+            <td><code>Please select Yes or No</code></td>
+          </tr>
+          <tr>
+            <td>If No → reason must be selected</td>
+            <td><code>Please select a reason</code></td>
+          </tr>
+          <tr>
+            <td>If reason=2 → High Rate form must be completed</td>
+            <td><code>Please complete High Rate form</code></td>
+          </tr>
+          <tr>
+            <td>If reason=3 → Consultant form must be completed</td>
+            <td><code>Please complete Approval form</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 8. Screen Map -->
+    <section id="screen-map">
+      <h2>8. Screen Map (All New UI)</h2>
+      <div class="flow-box">Attendance Screen
+├── Punch IN → [Daily Plan Popup] → Punch IN API
+└── Punch OUT → [Daily Completion Popup] → Punch OUT API
+
+Visit Module
+├── Start Visit → [Visit Type Selection] → Existing Start → Add_visit API
+└── Stop Visit → [5 Yes/No Popup] → Existing Remark Flow → update_visit API
+
+Quotation Module
+└── Submit → [Full Range Popup] → [High Rate / Consultant Form if needed] → create_quotation API</div>
+    </section>
+
+    <!-- 9. Local State / Storage -->
+    <section id="local-state">
+      <h2>9. Local State / Storage Recommendations</h2>
+      <table>
+        <thead>
+          <tr><th>Key</th><th>Store</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>daily_plan_id</code></td>
+            <td>Session / SharedPref</td>
+            <td>Link completion to morning plan</td>
+          </tr>
+          <tr>
+            <td><code>visit_start_type_id</code></td>
+            <td>Visit session</td>
+            <td>Until visit ends</td>
+          </tr>
+          <tr>
+            <td><code>visit_start_type_name</code></td>
+            <td>Visit session</td>
+            <td>Display on active visit</td>
+          </tr>
+          <tr>
+            <td><code>questionnaire_id</code></td>
+            <td>Quotation draft session</td>
+            <td>Before final submit</td>
+          </tr>
+          <tr>
+            <td><code>visit_start_types_cache</code></td>
+            <td>Local cache 24h</td>
+            <td>Avoid repeated API 239 calls</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 10. Error Messages -->
+    <section id="error-messages">
+      <h2>10. Error Messages (User-facing)</h2>
+      <table>
+        <thead>
+          <tr><th>Scenario</th><th>English</th><th>Gujarati</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>No daily target filled</td>
+            <td>Please fill at least one target</td>
+            <td>કૃપા કરીને ઓછામાં ઓછું એક target ભરો</td>
+          </tr>
+          <tr>
+            <td>Customer required</td>
+            <td>Please select customer</td>
+            <td>Customer પસંદ કરો</td>
+          </tr>
+          <tr>
+            <td>Completion required</td>
+            <td>Submit completion before punch out</td>
+            <td>Punch out પહેલાં completion submit કરો</td>
+          </tr>
+          <tr>
+            <td>Visit type required</td>
+            <td>Please select visit start type</td>
+            <td>Visit type પસંદ કરો</td>
+          </tr>
+          <tr>
+            <td>Visit questions incomplete</td>
+            <td>Please answer all visit questions</td>
+            <td>બધા પ્રશ્નોના જવાબ આપો</td>
+          </tr>
+          <tr>
+            <td>Questionnaire required</td>
+            <td>Complete questionnaire before submit</td>
+            <td>Submit પહેલાં questionnaire પૂર્ણ કરો</td>
+          </tr>
+          <tr>
+            <td>High rate form required</td>
+            <td>Please complete High Rate form</td>
+            <td>High Rate form ભરો</td>
+          </tr>
+          <tr>
+            <td>Approval form required</td>
+            <td>Please complete Approval form</td>
+            <td>Approval form ભરો</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 11. API Quick Reference -->
+    <section id="api-reference">
+      <h2>11. API Quick Reference (Frontend)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Action</th>
+            <th>Service #</th>
+            <th>Service Name</th>
+            <th>File</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Save morning plan</td>
+            <td><span class="svc">236</span></td>
+            <td><code>save_daily_plan</code></td>
+            <td>service_sales_executive.php</td>
+          </tr>
+          <tr>
+            <td>Get plan status</td>
+            <td><span class="svc">237</span></td>
+            <td><code>get_daily_plan_status</code></td>
+            <td>service_sales_executive.php</td>
+          </tr>
+          <tr>
+            <td>Save evening completion</td>
+            <td><span class="svc">238</span></td>
+            <td><code>save_daily_plan_completion</code></td>
+            <td>service_sales_executive.php</td>
+          </tr>
+          <tr>
+            <td>Punch IN/OUT</td>
+            <td><span class="svc">20</span></td>
+            <td><code>add_attendance</code></td>
+            <td>service_sales_executive.php</td>
+          </tr>
+          <tr>
+            <td>Get customers</td>
+            <td><span class="svc">12</span></td>
+            <td><code>get_customer</code></td>
+            <td>service_sales_executive.php</td>
+          </tr>
+          <tr>
+            <td>Get visit types</td>
+            <td><span class="svc">239</span></td>
+            <td><code>get_visit_start_types</code></td>
+            <td>service_visit.php</td>
+          </tr>
+          <tr>
+            <td>Start visit</td>
+            <td><span class="svc">75</span></td>
+            <td><code>Add_visit</code></td>
+            <td>service_visit.php</td>
+          </tr>
+          <tr>
+            <td>Stop visit</td>
+            <td><span class="svc">122</span></td>
+            <td><code>update_visit</code></td>
+            <td>service_visit.php</td>
+          </tr>
+          <tr>
+            <td>Save questionnaire</td>
+            <td><span class="svc">240</span></td>
+            <td><code>save_quotation_questionnaire</code></td>
+            <td>service_quotation.php</td>
+          </tr>
+          <tr>
+            <td>Submit quotation</td>
+            <td><span class="svc">165</span></td>
+            <td><code>create_quotation</code></td>
+            <td>service_quotation.php</td>
+          </tr>
+          <tr>
+            <td>High Rate form</td>
+            <td><span class="svc">234</span></td>
+            <td><code>save_visit_high_rate_form</code></td>
+            <td>service_visit.php</td>
+          </tr>
+          <tr>
+            <td>Consultant form</td>
+            <td><span class="svc">233</span></td>
+            <td><code>save_visit_consultant_form</code></td>
+            <td>service_visit.php</td>
+          </tr>
+          <tr>
+            <td>High Rate products</td>
+            <td><span class="svc">235</span></td>
+            <td><code>get_visit_high_rate_products</code></td>
+            <td>service_visit.php</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 12. Testing Checklist -->
+    <section id="testing">
+      <h2>12. Testing Checklist (App / QA)</h2>
+
+      <h3>Punch IN</h3>
+      <ul class="checklist">
+        <li>Popup opens on Punch IN</li>
+        <li>Can submit with only 1 field filled</li>
+        <li>Customer dropdown hidden when only project detail filled</li>
+        <li>Customer dropdown shown when order filled</li>
+        <li>Customer search works</li>
+        <li>Only assigned customers shown</li>
+        <li>Display format: <code>CODE - Name</code></li>
+        <li>Punch IN succeeds after plan submit</li>
+      </ul>
+
+      <h3>Punch OUT</h3>
+      <ul class="checklist">
+        <li>Completion popup opens if not submitted</li>
+        <li>Morning targets shown read-only</li>
+        <li>Only relevant actual fields shown</li>
+        <li>Punch OUT blocked until completion submitted</li>
+        <li>Direct Punch OUT if already completed</li>
+      </ul>
+
+      <h3>Visit Start</h3>
+      <ul class="checklist">
+        <li>19 types loaded</li>
+        <li>Search/filter works</li>
+        <li>Cannot start without selection</li>
+        <li>Selected type sent in Add_visit</li>
+      </ul>
+
+      <h3>Visit Complete</h3>
+      <ul class="checklist">
+        <li>5 questions popup on stop visit</li>
+        <li>All 5 mandatory</li>
+        <li>Yes/No values sent correctly</li>
+        <li>Existing remark flow still works after popup</li>
+      </ul>
+
+      <h3>Quotation</h3>
+      <ul class="checklist">
+        <li>Popup opens on Submit (not before)</li>
+        <li>Yes → direct submit works</li>
+        <li>No + reason 1 → submit works</li>
+        <li>No + reason 2 → High Rate form opens</li>
+        <li>No + reason 3 → Consultant form opens</li>
+        <li>Submit blocked if form incomplete</li>
+      </ul>
+    </section>
+
+    <!-- 13. Implementation Order -->
+    <section id="implementation">
+      <h2>13. Implementation Order (Frontend)</h2>
+      <ol>
+        <li>Visit Start Type screen (simplest — standalone)</li>
+        <li>Visit Complete 5 questions popup</li>
+        <li>Daily Plan Punch IN popup + customer dropdown</li>
+        <li>Daily Completion Punch OUT popup</li>
+        <li>Quotation questionnaire popup + form integration</li>
+      </ol>
+      <div class="note info">
+        <strong>Document Version:</strong> 1.0<br>
+        <strong>Related:</strong>
+        <a href="backend.html">backend.html</a> ·
+        <code>APP_CRM_BACKEND_CHANGES.md</code> ·
+        <code>APP_CRM_DB_MIGRATION.sql</code>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div class="footer">
+  Armor CRM App Changes · Frontend / Android Developer Documentation v1.0 · Sep 2026
+</div>
+
+</body>
+</html>
