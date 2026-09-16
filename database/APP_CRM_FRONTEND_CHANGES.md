@@ -1,4 +1,4 @@
-# Armor CRM — App Side Changes (Frontend / Android Developer Document)
+﻿# Armor CRM — App Side Changes (Frontend / Android Developer Document)
 
 **Project:** Armor CRM Mobile App (Android)  
 **Date:** 16-Sep-2026  
@@ -16,11 +16,11 @@
 
 | # | Feature | Screen / Popup | APIs Used |
 |---|---------|----------------|-----------|
-| 1 | Morning Daily Plan | Punch IN popup | 236, 12, 20 |
-| 2 | Evening Completion | Punch OUT popup | 237, 238, 20 |
-| 3 | Visit Start Type | Visit Start screen | 239, 75 |
+| 1 | Morning Daily Plan | Punch IN popup | 271, 12, 20 |
+| 2 | Evening Completion | Punch OUT popup | 272, 273, 20 |
+| 3 | Visit Start Type | Visit Start screen | 274, 75 |
 | 4 | Visit Complete Q&A | Visit Stop popup | 122 |
-| 5 | PI/Quotation Popup | Submit popup | 240, 233/234, 165 |
+| 5 | PI/Quotation Popup | Submit popup | 275, 233/234, 165 |
 
 ---
 
@@ -37,7 +37,7 @@ Punch IN tap
     → User fills questions
     → Validate
     → If order/approval filled → show Customer dropdown
-    → Submit plan (API 236)
+    → Submit plan (API 271)
     → On success → call Punch IN (API 20)
     → Show success message
 ```
@@ -51,7 +51,7 @@ Punch IN tap
 | UI Element | Type | Field Key | Label (Gujarati) | Label (English) |
 |------------|------|-----------|------------------|-----------------|
 | Label | Text | — | શું આજે કેટલા રૂપિયાના ઓર્ડર આવશે? | How much order amount expected today? |
-| Input | Number (decimal) | `expected_order_amount` | Amount (₹) | Amount (₹) |
+| Input | Number (decimal) | `expected_order_amount` | Amount (â‚¹) | Amount (â‚¹) |
 | Button | OK | — | OK | OK |
 
 #### Question 2 — Expected Approvals
@@ -74,7 +74,7 @@ Punch IN tap
 
 | Button | Action |
 |--------|--------|
-| **Submit Plan** | Validate + call API 236 |
+| **Submit Plan** | Validate + call API 271 |
 | **Cancel** | Close popup (Punch IN not done) |
 
 ### 3.4 Validation Rules (App-side)
@@ -82,9 +82,9 @@ Punch IN tap
 | Rule | Error Message |
 |------|---------------|
 | At least 1 of 3 fields must be filled and > 0 | `કૃપા કરીને ઓછામાં ઓછું એક target ભરો` / `Please fill at least one target` |
-| Order amount must be numeric ≥ 0 | `Invalid amount` |
-| Approval count must be integer ≥ 0 | `Invalid count` |
-| Project detail count must be integer ≥ 0 | `Invalid count` |
+| Order amount must be numeric â‰¥ 0 | `Invalid amount` |
+| Approval count must be integer â‰¥ 0 | `Invalid count` |
+| Project detail count must be integer â‰¥ 0 | `Invalid count` |
 
 ### 3.5 Conditional — Customer Dropdown
 
@@ -117,7 +117,7 @@ Punch IN tap
 **Step 1 — Save Plan**
 ```
 POST service/service_sales_executive.php
-service=236 (save_daily_plan)
+service=271 (save_daily_plan)
 
 Params:
   sales_id
@@ -158,11 +158,11 @@ User taps **Punch OUT** button.
 
 ```
 Punch OUT tap
-    → Call get_daily_plan_status (237)
+    → Call get_daily_plan_status (272)
     → If completion_submitted=0 → open "Daily Completion" popup
     → Show morning targets (read-only)
     → User fills actual achieved values
-    → Submit completion (API 238)
+    → Submit completion (API 273)
     → On success → call Punch OUT (API 20)
     → If completion already done → directly Punch OUT
 ```
@@ -184,7 +184,7 @@ Punch OUT tap
 
 | UI Element | Type | Field Key | Label | Show When |
 |------------|------|-----------|-------|-----------|
-| Input | Number (decimal) | `actual_order_amount` | Actual Order Amount (₹) | Morning order amount was set |
+| Input | Number (decimal) | `actual_order_amount` | Actual Order Amount (â‚¹) | Morning order amount was set |
 | Input | Number (integer) | `actual_approval_count` | Actual Approvals | Morning approval count was set |
 | Input | Number (integer) | `actual_project_detail_count` | Actual Project Details | Morning project detail was set |
 
@@ -194,7 +194,7 @@ Punch OUT tap
 
 | Button | Action |
 |--------|--------|
-| **Submit & Punch Out** | API 238 → then API 20 |
+| **Submit & Punch Out** | API 273 → then API 20 |
 | **Cancel** | Close popup |
 
 ### 4.4 Validation Rules
@@ -202,7 +202,7 @@ Punch OUT tap
 | Rule | Error Message |
 |------|---------------|
 | All visible actual fields must be filled | `Please fill all completion fields` |
-| Values must be ≥ 0 | `Invalid value` |
+| Values must be â‰¥ 0 | `Invalid value` |
 | Cannot punch out if plan not submitted today | `Daily plan not found. Contact admin.` |
 
 ### 4.5 API Call Sequence
@@ -210,7 +210,7 @@ Punch OUT tap
 **Step 1 — Check Status**
 ```
 POST service/service_sales_executive.php
-service=237 (get_daily_plan_status)
+service=272 (get_daily_plan_status)
 
 Params:
   sales_id
@@ -220,7 +220,7 @@ Params:
 **Step 2 — Save Completion**
 ```
 POST service/service_sales_executive.php
-service=238 (save_daily_plan_completion)
+service=273 (save_daily_plan_completion)
 
 Params:
   sales_id
@@ -260,7 +260,7 @@ User taps **Start Visit** (before existing visit start form).
 
 ```
 Start Visit tap
-    → Call get_visit_start_types (239) — cache locally after first load
+    → Call get_visit_start_types (274) — cache locally after first load
     → Show "Select Visit Type" screen/dialog
     → User selects exactly 1 option (radio list or searchable dropdown)
     → Validate selection
@@ -316,7 +316,7 @@ Start Visit tap
 **Load types (once per session or daily cache):**
 ```
 POST service/service_visit.php
-service=239 (get_visit_start_types)
+service=274 (get_visit_start_types)
 ```
 
 **Start visit (existing — add new param):**
@@ -459,10 +459,10 @@ Submit tap (PI/Quotation)
 
 | Reason Selected | Next Screen | API |
 |----------------|-------------|-----|
-| 1 — No product info | Save questionnaire → Submit quotation | 240 → 165 |
-| 2 — Price high | Open **High Rate Form** (existing UI) | 234 → 240 → 165 |
-| 3 — Need approval | Open **Need Approval / Consultant Form** (existing UI) | 233 → 240 → 165 |
-| knows_full_range = Yes | Direct submit | 240 → 165 |
+| 1 — No product info | Save questionnaire → Submit quotation | 275 → 165 |
+| 2 — Price high | Open **High Rate Form** (existing UI) | 234 → 275 → 165 |
+| 3 — Need approval | Open **Need Approval / Consultant Form** (existing UI) | 233 → 275 → 165 |
+| knows_full_range = Yes | Direct submit | 275 → 165 |
 
 ### 7.5 High Rate Form (Existing — Reuse)
 
@@ -498,7 +498,7 @@ Submit tap (PI/Quotation)
 **Step 1 — Save Questionnaire**
 ```
 POST service/service_quotation.php
-service=240 (save_quotation_questionnaire)
+service=275 (save_quotation_questionnaire)
 
 Params:
   quotation_id / cart_id
@@ -540,15 +540,15 @@ Existing params:
 
 ```
 Attendance Screen
-├── Punch IN → [Daily Plan Popup] → Punch IN API
-└── Punch OUT → [Daily Completion Popup] → Punch OUT API
+â”œâ”€â”€ Punch IN → [Daily Plan Popup] → Punch IN API
+â””â”€â”€ Punch OUT → [Daily Completion Popup] → Punch OUT API
 
 Visit Module
-├── Start Visit → [Visit Type Selection] → Existing Start → Add_visit API
-└── Stop Visit → [5 Yes/No Popup] → Existing Remark Flow → update_visit API
+â”œâ”€â”€ Start Visit → [Visit Type Selection] → Existing Start → Add_visit API
+â””â”€â”€ Stop Visit → [5 Yes/No Popup] → Existing Remark Flow → update_visit API
 
 Quotation Module
-└── Submit → [Full Range Popup] → [High Rate / Consultant Form if needed] → create_quotation API
+â””â”€â”€ Submit → [Full Range Popup] → [High Rate / Consultant Form if needed] → create_quotation API
 ```
 
 ---
@@ -561,7 +561,7 @@ Quotation Module
 | `visit_start_type_id` | Visit session | Until visit ends |
 | `visit_start_type_name` | Visit session | Display on active visit |
 | `questionnaire_id` | Quotation draft session | Before final submit |
-| `visit_start_types_cache` | Local cache 24h | Avoid repeated API 239 calls |
+| `visit_start_types_cache` | Local cache 24h | Avoid repeated API 274 calls |
 
 ---
 
@@ -584,15 +584,15 @@ Quotation Module
 
 | Action | Service # | Service Name | File |
 |--------|-----------|--------------|------|
-| Save morning plan | 236 | save_daily_plan | service_sales_executive.php |
-| Get plan status | 237 | get_daily_plan_status | service_sales_executive.php |
-| Save evening completion | 238 | save_daily_plan_completion | service_sales_executive.php |
+| Save morning plan | 271 | save_daily_plan | service_sales_executive.php |
+| Get plan status | 272 | get_daily_plan_status | service_sales_executive.php |
+| Save evening completion | 273 | save_daily_plan_completion | service_sales_executive.php |
 | Punch IN/OUT | 20 | add_attendance | service_sales_executive.php |
 | Get customers | 12 | get_customer | service_sales_executive.php |
-| Get visit types | 239 | get_visit_start_types | service_visit.php |
+| Get visit types | 274 | get_visit_start_types | service_visit.php |
 | Start visit | 75 | Add_visit | service_visit.php |
 | Stop visit | 122 | update_visit | service_visit.php |
-| Save questionnaire | 240 | save_quotation_questionnaire | service_quotation.php |
+| Save questionnaire | 275 | save_quotation_questionnaire | service_quotation.php |
 | Submit quotation | 165 | create_quotation | service_quotation.php |
 | High Rate form | 234 | save_visit_high_rate_form | service_visit.php |
 | Consultant form | 233 | save_visit_consultant_form | service_visit.php |

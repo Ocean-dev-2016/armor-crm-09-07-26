@@ -74,6 +74,7 @@ if ($is_valid_api_key) {
 			$detail['start_date_time'] 	= date("Y-m-d H:i");
 
 			$detail['purpose_id'] 			= isset($_REQUEST['purpose_id']) ? $db->clean($_REQUEST['purpose_id']) : "";
+			$detail['visit_start_type_id'] 	= isset($_REQUEST['visit_start_type_id']) ? $db->clean($_REQUEST['visit_start_type_id']) : "";
 			$detail['flag'] 			= isset($_REQUEST['flag']) ? $db->clean($_REQUEST['flag']) : "";
 			$detail['type_of_company'] 			= isset($_REQUEST['company_id']) ? $db->clean($_REQUEST['company_id']) : "";
 
@@ -81,33 +82,48 @@ if ($is_valid_api_key) {
 			$pendingWhere = "user_id='" . $detail['user_id'] . "' AND isDelete=0 AND start_date_time IS NOT NULL AND start_date_time!='0000-00-00 00:00:00' AND (stop_date_time IS NULL OR stop_date_time='0000-00-00 00:00:00' OR stop_date_time='')";
 			$count = $db->rp_getTotalRecord("visit", $pendingWhere, 0);
 
-			if ($count == 0) {
-				if ($detail['flag'] != '1') {
-					$reply = $objVisit->AddVisit($detail, $_FILES);
-				} else {
-					$reply = array(
-						"ack" => 1,
-						"developer_msg" => "Visit start validation successful.",
-						"ack_msg" => "Visit start validation successful.",
-						"id" => "",
-					);
-				}
-			} else {
-				$pendingVisit = array();
-				$pending_r = $db->rp_getData("visit", "id,customer_id,inquiry_id,start_date_time,app_address,purpose_id,visit_type", $pendingWhere, "id DESC", 0, "1");
-				if ($pending_r) {
-					$pendingVisit = mysqli_fetch_assoc($pending_r);
-					if ($pendingVisit) {
-						$pendingVisit['is_pending'] = "1";
-					}
-				}
+			if ($detail['visit_start_type_id'] == "" || $detail['visit_start_type_id'] == "0") {
 				$reply = array(
 					"ack" => 0,
-					"developer_msg" => "Other visit already started",
-					"ack_msg" => "Your Other Visit Is Already Started Please Stop That First",
-					"pending_visit_id" => isset($pendingVisit['id']) ? (string) $pendingVisit['id'] : "",
-					"pending_visit" => $pendingVisit,
+					"developer_msg" => "visit_start_type_id missing or invalid",
+					"ack_msg" => "Please select visit start type.",
 				);
+			} else {
+				$typeOk = $db->rp_getTotalRecord("visit_start_type_master", "id='" . $detail['visit_start_type_id'] . "' AND isDelete=0 AND isActive=1", 0);
+				if ($typeOk <= 0) {
+					$reply = array(
+						"ack" => 0,
+						"developer_msg" => "visit_start_type_id missing or invalid",
+						"ack_msg" => "Please select visit start type.",
+					);
+				} else if ($count == 0) {
+					if ($detail['flag'] != '1') {
+						$reply = $objVisit->AddVisit($detail, $_FILES);
+					} else {
+						$reply = array(
+							"ack" => 1,
+							"developer_msg" => "Visit start validation successful.",
+							"ack_msg" => "Visit start validation successful.",
+							"id" => "",
+						);
+					}
+				} else {
+					$pendingVisit = array();
+					$pending_r = $db->rp_getData("visit", "id,customer_id,inquiry_id,start_date_time,app_address,purpose_id,visit_type,visit_start_type_id", $pendingWhere, "id DESC", 0, "1");
+					if ($pending_r) {
+						$pendingVisit = mysqli_fetch_assoc($pending_r);
+						if ($pendingVisit) {
+							$pendingVisit['is_pending'] = "1";
+						}
+					}
+					$reply = array(
+						"ack" => 0,
+						"developer_msg" => "Other visit already started",
+						"ack_msg" => "Your Other Visit Is Already Started Please Stop That First",
+						"pending_visit_id" => isset($pendingVisit['id']) ? (string) $pendingVisit['id'] : "",
+						"pending_visit" => $pendingVisit,
+					);
+				}
 			}
 			if (!is_array($reply)) {
 				$reply = array(
@@ -817,6 +833,13 @@ if ($is_valid_api_key) {
 			$detail['email_id'] 			= isset($_REQUEST['email_id']) ? $db->clean($_REQUEST['email_id']) : "";
 			$detail['designation_id'] 			= isset($_REQUEST['designation_id']) ? $db->clean($_REQUEST['designation_id']) : "";
 
+			/* Visit complete 5 Yes/No questions (App CRM changes) */
+			$detail['order_came'] = isset($_REQUEST['order_came']) ? $db->clean($_REQUEST['order_came']) : "";
+			$detail['approval_came'] = isset($_REQUEST['approval_came']) ? $db->clean($_REQUEST['approval_came']) : "";
+			$detail['project_detail_came'] = isset($_REQUEST['project_detail_came']) ? $db->clean($_REQUEST['project_detail_came']) : "";
+			$detail['contract_detail_came'] = isset($_REQUEST['contract_detail_came']) ? $db->clean($_REQUEST['contract_detail_came']) : "";
+			$detail['payment_came'] = isset($_REQUEST['payment_came']) ? $db->clean($_REQUEST['payment_came']) : "";
+
 			/* C1/C2 Private / Government Consultant Detail form fields */
 			$detail['consultant_firm_name'] = isset($_REQUEST['consultant_firm_name']) ? $db->clean($_REQUEST['consultant_firm_name']) : "";
 			$detail['consultant_address'] = isset($_REQUEST['consultant_address']) ? $db->clean($_REQUEST['consultant_address']) : "";
@@ -899,6 +922,9 @@ if ($is_valid_api_key) {
 
 			if (empty($detail['id']) || $detail['id'] == "0") {
 				$reply = ['ack' => 0, "ack_msg" => "Visit id is required.", "developer_msg" => "id / visit_id missing"];
+				echo json_encode($reply);
+			} else if ($detail['order_came'] === "" || $detail['approval_came'] === "" || $detail['project_detail_came'] === "" || $detail['contract_detail_came'] === "" || $detail['payment_came'] === "") {
+				$reply = ['ack' => 0, "ack_msg" => "Please answer all visit completion questions.", "developer_msg" => "visit completion answer missing"];
 				echo json_encode($reply);
 			} else if (empty($detail['name']) || empty($detail['mobile_no']) || empty($detail['email_id']) || empty($detail['designation_id'])) {
 				$reply = ['ack' => 0, "ack_msg" => "Customer Person Name, Customer Person Mobile No, Customer Person Email ID, Customer Person Designation are mandatory please fill up first. "];
@@ -1053,6 +1079,27 @@ if ($is_valid_api_key) {
 			} else {
 				$ack = ['ack' => 0, "ack_msg" => "No Data Found"];
 			}
+			$db->printJSON($ack);
+		} else if ($service == 'get_visit_start_types' || $service == 274) {
+			$result = array();
+			$type_r = $db->rp_getData(
+				"visit_start_type_master",
+				"id,code,name,display_name,sort_order",
+				"isDelete=0 AND isActive=1",
+				"sort_order ASC",
+				0
+			);
+			if ($type_r) {
+				while ($row = mysqli_fetch_assoc($type_r)) {
+					$result[] = $row;
+				}
+			}
+			$ack = array(
+				"ack" => 1,
+				"ack_msg" => "Visit start types fetched.",
+				"developer_msg" => "visit_start_type_master list",
+				"result" => $result,
+			);
 			$db->printJSON($ack);
 		}
 	} else {

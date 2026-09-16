@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -25,6 +25,7 @@
     <h3>Table of Contents</h3>
     <ul>
       <li><a href="#overview">1. Overview</a></li>
+      <li><a href="#who-sets-questions">Who Sets Questions?</a></li>
       <li><a href="#api-summary">2. API Summary</a></li>
       <li><a href="#api-new">2.1 New APIs</a></li>
       <li><a href="#api-modified">2.2 Modified APIs</a></li>
@@ -39,15 +40,15 @@
       <li><a href="#alter-tables">3.2 Alter Tables</a></li>
       <li><a href="#seed-data">3.3 Seed — 19 Types</a></li>
       <li><a href="#api-details">4. API Details</a></li>
-      <li><a href="#api-236">4.1 save_daily_plan (236)</a></li>
-      <li><a href="#api-237">4.2 get_daily_plan_status (237)</a></li>
-      <li><a href="#api-238">4.3 save_daily_plan_completion (238)</a></li>
+      <li><a href="#api-271">4.1 save_daily_plan)</a></li>
+      <li><a href="#api-272">4.2 get_daily_plan_status (272)</a></li>
+      <li><a href="#api-273">4.3 save_daily_plan_completion (273)</a></li>
       <li><a href="#api-20">4.4 add_attendance (20)</a></li>
       <li><a href="#api-12">4.5 get_customer (12)</a></li>
-      <li><a href="#api-239">4.6 get_visit_start_types (239)</a></li>
+      <li><a href="#api-274">4.6 get_visit_start_types (274)</a></li>
       <li><a href="#api-75">4.7 Add_visit (75)</a></li>
       <li><a href="#api-122">4.8 update_visit (122)</a></li>
-      <li><a href="#api-240">4.9 save_quotation_questionnaire (240)</a></li>
+      <li><a href="#api-275">4.9 save_quotation_questionnaire (275)</a></li>
       <li><a href="#api-165">4.10 create_quotation (165)</a></li>
       <li><a href="#api-234">4.11 High Rate Form (234)</a></li>
       <li><a href="#api-233">4.12 Consultant Form (233)</a></li>
@@ -97,6 +98,73 @@
       </table>
     </section>
 
+    <section id="who-sets-questions">
+      <h2>Who Sets the Questions? (Frontend vs Backend)</h2>
+      <div class="note success">
+        <strong>Short answer:</strong> Question <em>labels / wording</em> mostly = <strong>Frontend (Android)</strong>.<br>
+        Backend <strong>does not</strong> return question text for Daily Plan / Visit Complete / Quotation popup — only accepts + saves field values.<br>
+        Exception: lists that come from Backend APIs (Visit Start 19 types, customers, remark list, high-rate products).
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Question / Option Text</th>
+            <th>Who Sets?</th>
+            <th>Backend Job</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Punch IN — 3 daily plan questions</td>
+            <td>UI labels (EN/GU)</td>
+            <td><strong>Frontend</strong></td>
+            <td>API <span class="svc">271</span> save <code>expected_order_amount</code>, <code>expected_approval_count</code>, <code>expected_project_detail_count</code>, <code>customers</code></td>
+          </tr>
+          <tr>
+            <td>Punch OUT — completion fields</td>
+            <td>UI labels</td>
+            <td><strong>Frontend</strong></td>
+            <td>API <span class="svc">272</span>/<span class="svc">273</span> + block Punch OUT on API <span class="svc">20</span></td>
+          </tr>
+          <tr>
+            <td>Visit Start — 19 types</td>
+            <td>Dropdown options</td>
+            <td><strong>Backend</strong></td>
+            <td>Seed <code>visit_start_type_master</code> + API <span class="svc">274</span>; require <code>visit_start_type_id</code> on API <span class="svc">75</span></td>
+          </tr>
+          <tr>
+            <td>Visit Complete — 5 Yes/No</td>
+            <td>UI question text</td>
+            <td><strong>Frontend</strong></td>
+            <td>API <span class="svc">122</span> require + save <code>order_came</code>, <code>approval_came</code>, <code>project_detail_came</code>, <code>contract_detail_came</code>, <code>payment_came</code> (0/1)</td>
+          </tr>
+          <tr>
+            <td>PI/Quotation popup</td>
+            <td>UI question + reason options</td>
+            <td><strong>Frontend</strong></td>
+            <td>API <span class="svc">275</span> save answers; API <span class="svc">165</span> require <code>questionnaire_id</code></td>
+          </tr>
+          <tr>
+            <td>Customer dropdown</td>
+            <td><code>display_label</code></td>
+            <td><strong>Backend</strong></td>
+            <td>API <span class="svc">12</span> + <code>search</code></td>
+          </tr>
+          <tr>
+            <td>High Rate products / Remark A–G</td>
+            <td>Lists</td>
+            <td><strong>Backend</strong></td>
+            <td>Existing APIs <span class="svc">235</span>, <span class="svc">231</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="note info">
+        <strong>Backend developer:</strong> Do <em>not</em> hardcode Daily Plan / Visit Complete / Quotation question sentences in PHP APIs. Only validate field keys + store in DB.<br>
+        <strong>Frontend developer:</strong> Set all popup question wording in App (see <a href="frontend.html#who-sets-questions">frontend.html</a> for EN/GU labels).
+      </div>
+    </section>
+
     <!-- ========== 2. API SUMMARY ========== -->
     <section id="api-summary">
       <h2>2. API Summary</h2>
@@ -108,31 +176,31 @@
         </thead>
         <tbody>
           <tr>
-            <td><span class="svc">236</span></td>
+            <td><span class="svc">271</span></td>
             <td><code>save_daily_plan</code></td>
             <td><code>service_sales_executive.php</code></td>
             <td>POST</td>
           </tr>
           <tr>
-            <td><span class="svc">237</span></td>
+            <td><span class="svc">272</span></td>
             <td><code>get_daily_plan_status</code></td>
             <td><code>service_sales_executive.php</code></td>
             <td>GET/POST</td>
           </tr>
           <tr>
-            <td><span class="svc">238</span></td>
+            <td><span class="svc">273</span></td>
             <td><code>save_daily_plan_completion</code></td>
             <td><code>service_sales_executive.php</code></td>
             <td>POST</td>
           </tr>
           <tr>
-            <td><span class="svc">239</span></td>
+            <td><span class="svc">274</span></td>
             <td><code>get_visit_start_types</code></td>
             <td><code>service_visit.php</code></td>
             <td>GET/POST</td>
           </tr>
           <tr>
-            <td><span class="svc">240</span></td>
+            <td><span class="svc">275</span></td>
             <td><code>save_quotation_questionnaire</code></td>
             <td><code>service_quotation.php</code></td>
             <td>POST</td>
@@ -224,7 +292,7 @@
           <tr><td><code>id</code></td><td>INT(11) AUTO_INCREMENT</td><td>NO</td><td>Primary key</td></tr>
           <tr><td><code>sales_id</code></td><td>INT(11)</td><td>NO</td><td><code>sales_executive.id</code></td></tr>
           <tr><td><code>plan_date</code></td><td>DATE</td><td>NO</td><td>Business date (Y-m-d)</td></tr>
-          <tr><td><code>expected_order_amount</code></td><td>DECIMAL(15,2)</td><td>YES</td><td>Q1: Expected order amount (₹)</td></tr>
+          <tr><td><code>expected_order_amount</code></td><td>DECIMAL(15,2)</td><td>YES</td><td>Q1: Expected order amount (â‚¹)</td></tr>
           <tr><td><code>expected_approval_count</code></td><td>INT(11)</td><td>YES</td><td>Q2: Expected approval count</td></tr>
           <tr><td><code>expected_project_detail_count</code></td><td>INT(11)</td><td>YES</td><td>Q3: Expected project detail count</td></tr>
           <tr><td><code>attendance_in_id</code></td><td>INT(11)</td><td>YES</td><td>Link to <code>attendance.id</code> (Punch IN)</td></tr>
@@ -430,7 +498,7 @@
       </div>
 
       <!-- 4.1 -->
-      <h3 id="api-236">4.1 NEW — <code>save_daily_plan</code> <span class="svc">236</span></h3>
+      <h3 id="api-271">4.1 NEW — <code>save_daily_plan</code> <span class="svc">271</span></h3>
       <p><strong>File:</strong> <code>service/service_sales_executive.php</code></p>
       <p><strong>When:</strong> Before or with Punch IN</p>
       <p><strong>Request Parameters:</strong></p>
@@ -441,7 +509,7 @@
         <tbody>
           <tr><td><code>sales_id</code></td><td>int</td><td>YES</td><td>Sales executive ID</td></tr>
           <tr><td><code>plan_date</code></td><td>string</td><td>NO</td><td>Default: today (Y-m-d)</td></tr>
-          <tr><td><code>expected_order_amount</code></td><td>decimal</td><td>NO*</td><td>Expected order amount in ₹</td></tr>
+          <tr><td><code>expected_order_amount</code></td><td>decimal</td><td>NO*</td><td>Expected order amount in â‚¹</td></tr>
           <tr><td><code>expected_approval_count</code></td><td>int</td><td>NO*</td><td>Expected approval count</td></tr>
           <tr><td><code>expected_project_detail_count</code></td><td>int</td><td>NO*</td><td>Expected project detail count</td></tr>
           <tr><td><code>customers</code></td><td>JSON string</td><td>NO**</td><td>Array of <code>{customer_id, target_type}</code></td></tr>
@@ -498,7 +566,7 @@
       </ol>
 
       <!-- 4.2 -->
-      <h3 id="api-237">4.2 NEW — <code>get_daily_plan_status</code> <span class="svc">237</span></h3>
+      <h3 id="api-272">4.2 NEW — <code>get_daily_plan_status</code> <span class="svc">272</span></h3>
       <p><strong>File:</strong> <code>service/service_sales_executive.php</code></p>
       <p><strong>When:</strong> App open, before Punch OUT screen, after Punch IN</p>
       <p><strong>Request Parameters:</strong></p>
@@ -563,7 +631,7 @@
 }</code></pre>
 
       <!-- 4.3 -->
-      <h3 id="api-238">4.3 NEW — <code>save_daily_plan_completion</code> <span class="svc">238</span></h3>
+      <h3 id="api-273">4.3 NEW — <code>save_daily_plan_completion</code> <span class="svc">273</span></h3>
       <p><strong>File:</strong> <code>service/service_sales_executive.php</code></p>
       <p><strong>When:</strong> Before Punch OUT (mandatory)</p>
       <p><strong>Request Parameters:</strong></p>
@@ -621,7 +689,7 @@
 
       <h4>Punch IN (<code>type=In</code>)</h4>
       <ul>
-        <li><strong>Option A (recommended):</strong> App calls <code>save_daily_plan</code> <span class="svc">236</span> first, then <code>add_attendance</code> <span class="svc">20</span></li>
+        <li><strong>Option A (recommended):</strong> App calls <code>save_daily_plan</code> <span class="svc">271</span> first, then <code>add_attendance</code> <span class="svc">20</span></li>
         <li><strong>Option B:</strong> Accept plan fields in same request and save internally</li>
         <li>After successful IN insert → update <code>daily_plan.attendance_in_id = attendance.id</code></li>
       </ul>
@@ -699,7 +767,7 @@ if (!$completion) → ack=0, "Please submit daily completion before punch out"</
       </div>
 
       <!-- 4.6 -->
-      <h3 id="api-239">4.6 NEW — <code>get_visit_start_types</code> <span class="svc">239</span></h3>
+      <h3 id="api-274">4.6 NEW — <code>get_visit_start_types</code> <span class="svc">274</span></h3>
       <p><strong>File:</strong> <code>service/service_visit.php</code></p>
       <p><strong>Request:</strong> No extra params (optional <code>sales_id</code> for logging)</p>
       <p><strong>Success Response:</strong></p>
@@ -780,7 +848,7 @@ ORDER BY sort_order ASC</code></pre>
 }</code></pre>
 
       <!-- 4.9 -->
-      <h3 id="api-240">4.9 NEW — <code>save_quotation_questionnaire</code> <span class="svc">240</span></h3>
+      <h3 id="api-275">4.9 NEW — <code>save_quotation_questionnaire</code> <span class="svc">275</span></h3>
       <p><strong>File:</strong> <code>service/service_quotation.php</code></p>
       <p><strong>When:</strong> After PI/Quotation popup, before final <code>create_quotation</code> <span class="svc">165</span></p>
       <p><strong>Request Parameters:</strong></p>
@@ -823,7 +891,7 @@ ORDER BY sort_order ASC</code></pre>
           <tr><th>Param</th><th>Type</th><th>Required</th><th>Description</th></tr>
         </thead>
         <tbody>
-          <tr><td><code>questionnaire_id</code></td><td>int</td><td>YES</td><td>From save_quotation_questionnaire <span class="svc">240</span></td></tr>
+          <tr><td><code>questionnaire_id</code></td><td>int</td><td>YES</td><td>From save_quotation_questionnaire <span class="svc">275</span></td></tr>
         </tbody>
       </table>
       <p><strong>Validation before final submit:</strong></p>
@@ -893,9 +961,9 @@ ORDER BY sort_order ASC</code></pre>
           <tr><th>File</th><th>Changes</th></tr>
         </thead>
         <tbody>
-          <tr><td><code>service/service_sales_executive.php</code></td><td>APIs 236, 237, 238 + modify 12, 20</td></tr>
-          <tr><td><code>service/service_visit.php</code></td><td>API 239 + modify 75, 122</td></tr>
-          <tr><td><code>service/service_quotation.php</code></td><td>API 240 + modify 165</td></tr>
+          <tr><td><code>service/service_sales_executive.php</code></td><td>APIs 271, 272, 273 + modify 12, 20</td></tr>
+          <tr><td><code>service/service_visit.php</code></td><td>API 274 + modify 75, 122</td></tr>
+          <tr><td><code>service/service_quotation.php</code></td><td>API 275 + modify 165</td></tr>
           <tr><td><code>include/class.visit.php</code></td><td>AddVisit + UpdateVisit — new fields</td></tr>
           <tr><td><code>include/class.executive.php</code></td><td>getCustomer — search + display_label</td></tr>
           <tr><td><code>include/quotation.class.php</code></td><td>AddQuotationApi — questionnaire check</td></tr>
@@ -914,16 +982,16 @@ ORDER BY sort_order ASC</code></pre>
           <tr><th>Rule</th><th>Where Enforced</th></tr>
         </thead>
         <tbody>
-          <tr><td>Morning: min 1 of 3 targets required</td><td>save_daily_plan <span class="svc">236</span></td></tr>
-          <tr><td>Morning: customer required if order/approval target set</td><td>save_daily_plan <span class="svc">236</span></td></tr>
-          <tr><td>Customer must belong to logged-in sales person</td><td>save_daily_plan <span class="svc">236</span>, get_customer <span class="svc">12</span></td></tr>
+          <tr><td>Morning: min 1 of 3 targets required</td><td>save_daily_plan</code> <span class="svc">271</span></td></tr>
+          <tr><td>Morning: customer required if order/approval target set</td><td>save_daily_plan</code> <span class="svc">271</span></td></tr>
+          <tr><td>Customer must belong to logged-in sales person</td><td>save_daily_plan</code> <span class="svc">271</span>, get_customer <span class="svc">12</span></td></tr>
           <tr><td>One daily plan per sales person per day</td><td>DB UNIQUE + API check</td></tr>
           <tr><td>Punch OUT blocked without completion</td><td>add_attendance <span class="svc">20</span></td></tr>
           <tr><td>Visit start blocked without type selection</td><td>Add_visit <span class="svc">75</span></td></tr>
           <tr><td>Visit stop blocked without 5 answers</td><td>update_visit <span class="svc">122</span></td></tr>
           <tr><td>Quotation submit blocked without questionnaire</td><td>create_quotation <span class="svc">165</span></td></tr>
-          <tr><td>Price high → High Rate form required</td><td>save_quotation_questionnaire <span class="svc">240</span></td></tr>
-          <tr><td>Need approval → Consultant form required</td><td>save_quotation_questionnaire <span class="svc">240</span></td></tr>
+          <tr><td>Price high → High Rate form required</td><td>save_quotation_questionnaire <span class="svc">275</span></td></tr>
+          <tr><td>Need approval → Consultant form required</td><td>save_quotation_questionnaire <span class="svc">275</span></td></tr>
         </tbody>
       </table>
     </section>
@@ -934,12 +1002,12 @@ ORDER BY sort_order ASC</code></pre>
       <ol>
         <li>Run <code>APP_CRM_DB_MIGRATION.sql</code> on tenant DB</li>
         <li>Create <code>class.daily_plan.php</code></li>
-        <li>Implement APIs <span class="svc">236</span>, <span class="svc">237</span>, <span class="svc">238</span></li>
+        <li>Implement APIs <span class="svc">271</span>, <span class="svc">272</span>, <span class="svc">273</span></li>
         <li>Modify API <span class="svc">20</span> (attendance validation)</li>
         <li>Modify API <span class="svc">12</span> (customer search)</li>
-        <li>Implement API <span class="svc">239</span> + modify API <span class="svc">75</span></li>
+        <li>Implement API <span class="svc">274</span> + modify API <span class="svc">75</span></li>
         <li>Modify API <span class="svc">122</span> (visit completion)</li>
-        <li>Implement API <span class="svc">240</span> + modify API <span class="svc">165</span></li>
+        <li>Implement API <span class="svc">275</span> + modify API <span class="svc">165</span></li>
         <li>Extend APIs <span class="svc">233</span>, <span class="svc">234</span> for quotation_id (optional)</li>
         <li>Test all flows with Postman / App</li>
       </ol>

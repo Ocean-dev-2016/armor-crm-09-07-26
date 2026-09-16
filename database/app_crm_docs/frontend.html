@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -25,6 +25,7 @@
     <h3>Table of Contents</h3>
     <ul>
       <li><a href="#overview">1. Overview</a></li>
+      <li><a href="#who-sets-questions">Who Sets Questions?</a></li>
       <li><a href="#feature-summary">2. Feature Summary</a></li>
       <li><a href="#feature-1">3. Morning Daily Plan</a></li>
       <li><a href="#f1-trigger">3.1 Trigger</a></li>
@@ -78,6 +79,79 @@
       </div>
     </section>
 
+    <!-- Who sets questions -->
+    <section id="who-sets-questions">
+      <h2>Who Sets the Questions? (Frontend vs Backend)</h2>
+      <div class="note success">
+        <strong>Short answer:</strong> Most question <em>labels / wording</em> = <strong>Frontend (Android)</strong> set કરે.<br>
+        Backend only <strong>save answers</strong> (field keys). Exception: <strong>Visit Start 19 types</strong> list Backend API થી આવે.
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Question / Option Text</th>
+            <th>Who Sets?</th>
+            <th>Backend Responsibility</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1. Punch IN — Daily Plan (3 questions)</td>
+            <td>Order amount / Approvals / Project details labels</td>
+            <td><strong>Frontend</strong> (hardcode EN/GU in App UI)</td>
+            <td>API <span class="svc">271</span> — save values only (<code>expected_*</code>)</td>
+          </tr>
+          <tr>
+            <td>2. Punch OUT — Completion</td>
+            <td>Actual amount/count labels</td>
+            <td><strong>Frontend</strong></td>
+            <td>API <span class="svc">272</span>/<span class="svc">273</span> — status + save actuals; API <span class="svc">20</span> block OUT</td>
+          </tr>
+          <tr>
+            <td>3. Visit Start — 19 types</td>
+            <td>19 type names (dropdown list)</td>
+            <td><strong>Backend</strong> (master table + API <span class="svc">274</span>)</td>
+            <td>Return list; App shows <code>display_name</code>; save <code>visit_start_type_id</code> on API <span class="svc">75</span></td>
+          </tr>
+          <tr>
+            <td>4. Visit Complete — 5 Yes/No</td>
+            <td>Order/Approval/Project/Contract/Payment questions</td>
+            <td><strong>Frontend</strong> (hardcode EN/GU)</td>
+            <td>API <span class="svc">122</span> — save 0/1 answers only</td>
+          </tr>
+          <tr>
+            <td>5. PI/Quotation popup</td>
+            <td>Full range + reason options text</td>
+            <td><strong>Frontend</strong> (hardcode EN/GU)</td>
+            <td>API <span class="svc">275</span> — save answers; reuse <span class="svc">233</span>/<span class="svc">234</span> forms</td>
+          </tr>
+          <tr>
+            <td>Customer dropdown</td>
+            <td><code>code - name</code> display</td>
+            <td><strong>Backend</strong> API <span class="svc">12</span> (<code>display_label</code>)</td>
+            <td>Assigned customers + search</td>
+          </tr>
+          <tr>
+            <td>High Rate products</td>
+            <td>Product list for High Rate form</td>
+            <td><strong>Backend</strong> API <span class="svc">235</span></td>
+            <td>Existing product master list</td>
+          </tr>
+          <tr>
+            <td>Visit End Remark A–G</td>
+            <td>Remark / Reason list</td>
+            <td><strong>Backend</strong> API <span class="svc">231</span></td>
+            <td>Existing (already live)</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="note info">
+        <strong>Frontend developer:</strong> App UI ma question text, Yes/No buttons, validation messages set કરો (doc ma EN/GU wording આપેલ છે).<br>
+        <strong>Backend developer:</strong> Field keys accept કરો, validate કરો, DB ma save કરો. Question wording API response ma <em>નથી</em> મોકલવાની (except lists: 274, 12, 231, 235).
+      </div>
+    </section>
+
     <!-- 2. Feature Summary -->
     <section id="feature-summary">
       <h2>2. Feature Summary</h2>
@@ -95,19 +169,19 @@
             <td>1</td>
             <td>Morning Daily Plan</td>
             <td>Punch IN popup</td>
-            <td><span class="svc">236</span> <span class="svc">12</span> <span class="svc">20</span></td>
+            <td><span class="svc">271</span> <span class="svc">12</span> <span class="svc">20</span></td>
           </tr>
           <tr>
             <td>2</td>
             <td>Evening Completion</td>
             <td>Punch OUT popup</td>
-            <td><span class="svc">237</span> <span class="svc">238</span> <span class="svc">20</span></td>
+            <td><span class="svc">272</span> <span class="svc">273</span> <span class="svc">20</span></td>
           </tr>
           <tr>
             <td>3</td>
             <td>Visit Start Type</td>
             <td>Visit Start screen</td>
-            <td><span class="svc">239</span> <span class="svc">75</span></td>
+            <td><span class="svc">274</span> <span class="svc">75</span></td>
           </tr>
           <tr>
             <td>4</td>
@@ -119,7 +193,7 @@
             <td>5</td>
             <td>PI / Quotation Popup</td>
             <td>Submit popup</td>
-            <td><span class="svc">240</span> <span class="svc">233</span>/<span class="svc">234</span> <span class="svc">165</span></td>
+            <td><span class="svc">275</span> <span class="svc">233</span>/<span class="svc">234</span> <span class="svc">165</span></td>
           </tr>
         </tbody>
       </table>
@@ -138,7 +212,7 @@
     → User fills questions
     → Validate
     → If order/approval filled → show Customer dropdown
-    → Submit plan (API 236)
+    → Submit plan (API 271)
     → On success → call Punch IN (API 20)
     → Show success message</div>
 
@@ -168,8 +242,8 @@
             <td>Input</td>
             <td>Number (decimal)</td>
             <td><code>expected_order_amount</code></td>
-            <td>Amount (₹)</td>
-            <td>Amount (₹)</td>
+            <td>Amount (â‚¹)</td>
+            <td>Amount (â‚¹)</td>
           </tr>
           <tr>
             <td>Button</td>
@@ -259,7 +333,7 @@
           <tr><th>Button</th><th>Action</th></tr>
         </thead>
         <tbody>
-          <tr><td><strong>Submit Plan</strong></td><td>Validate + call API 236</td></tr>
+          <tr><td><strong>Submit Plan</strong></td><td>Validate + call API 271</td></tr>
           <tr><td><strong>Cancel</strong></td><td>Close popup (Punch IN not done)</td></tr>
         </tbody>
       </table>
@@ -275,15 +349,15 @@
             <td><code>કૃપા કરીને ઓછામાં ઓછું એક target ભરો</code> / <code>Please fill at least one target</code></td>
           </tr>
           <tr>
-            <td>Order amount must be numeric ≥ 0</td>
+            <td>Order amount must be numeric â‰¥ 0</td>
             <td><code>Invalid amount</code></td>
           </tr>
           <tr>
-            <td>Approval count must be integer ≥ 0</td>
+            <td>Approval count must be integer â‰¥ 0</td>
             <td><code>Invalid count</code></td>
           </tr>
           <tr>
-            <td>Project detail count must be integer ≥ 0</td>
+            <td>Project detail count must be integer â‰¥ 0</td>
             <td><code>Invalid count</code></td>
           </tr>
         </tbody>
@@ -347,7 +421,7 @@
       <h3 id="f1-api">3.6 API Call Sequence</h3>
       <h4>Step 1 — Save Plan</h4>
 <pre><code>POST service/service_sales_executive.php
-service=236 (save_daily_plan)
+service=271 (save_daily_plan)
 
 Params:
   sales_id
@@ -397,11 +471,11 @@ Params:
 
       <h3 id="f2-flow">4.2 UI Flow</h3>
       <div class="flow-box">Punch OUT tap
-    → Call get_daily_plan_status (237)
+    → Call get_daily_plan_status (272)
     → If completion_submitted=0 → open "Daily Completion" popup
     → Show morning targets (read-only)
     → User fills actual achieved values
-    → Submit completion (API 238)
+    → Submit completion (API 273)
     → On success → call Punch OUT (API 20)
     → If completion already done → directly Punch OUT</div>
 
@@ -437,7 +511,7 @@ Params:
             <td>Input</td>
             <td>Number (decimal)</td>
             <td><code>actual_order_amount</code></td>
-            <td>Actual Order Amount (₹)</td>
+            <td>Actual Order Amount (â‚¹)</td>
             <td>Morning order amount was set</td>
           </tr>
           <tr>
@@ -466,7 +540,7 @@ Params:
           <tr><th>Button</th><th>Action</th></tr>
         </thead>
         <tbody>
-          <tr><td><strong>Submit &amp; Punch Out</strong></td><td>API 238 → then API 20</td></tr>
+          <tr><td><strong>Submit &amp; Punch Out</strong></td><td>API 273 → then API 20</td></tr>
           <tr><td><strong>Cancel</strong></td><td>Close popup</td></tr>
         </tbody>
       </table>
@@ -482,7 +556,7 @@ Params:
             <td><code>Please fill all completion fields</code></td>
           </tr>
           <tr>
-            <td>Values must be ≥ 0</td>
+            <td>Values must be â‰¥ 0</td>
             <td><code>Invalid value</code></td>
           </tr>
           <tr>
@@ -495,7 +569,7 @@ Params:
       <h3 id="f2-api">4.5 API Call Sequence</h3>
       <h4>Step 1 — Check Status</h4>
 <pre><code>POST service/service_sales_executive.php
-service=237 (get_daily_plan_status)
+service=272 (get_daily_plan_status)
 
 Params:
   sales_id
@@ -503,7 +577,7 @@ Params:
 
       <h4>Step 2 — Save Completion</h4>
 <pre><code>POST service/service_sales_executive.php
-service=238 (save_daily_plan_completion)
+service=273 (save_daily_plan_completion)
 
 Params:
   sales_id
@@ -540,7 +614,7 @@ Params:
 
       <h3>5.2 UI Flow</h3>
       <div class="flow-box">Start Visit tap
-    → Call get_visit_start_types (239) — cache locally after first load
+    → Call get_visit_start_types (274) — cache locally after first load
     → Show "Select Visit Type" screen/dialog
     → User selects exactly 1 option (radio list or searchable dropdown)
     → Validate selection
@@ -629,7 +703,7 @@ Params:
       <h3>5.6 API Calls</h3>
       <p><strong>Load types (once per session or daily cache):</strong></p>
 <pre><code>POST service/service_visit.php
-service=239 (get_visit_start_types)</code></pre>
+service=274 (get_visit_start_types)</code></pre>
 
       <p><strong>Start visit (existing — add new param):</strong></p>
 <pre><code>POST service/service_visit.php
@@ -867,22 +941,22 @@ Existing params (unchanged):
           <tr>
             <td>1 — No product info</td>
             <td>Save questionnaire → Submit quotation</td>
-            <td><span class="svc">240</span> → <span class="svc">165</span></td>
+            <td><span class="svc">275</span> → <span class="svc">165</span></td>
           </tr>
           <tr>
             <td>2 — Price high</td>
             <td>Open <strong>High Rate Form</strong> (existing UI)</td>
-            <td><span class="svc">234</span> → <span class="svc">240</span> → <span class="svc">165</span></td>
+            <td><span class="svc">234</span> → <span class="svc">275</span> → <span class="svc">165</span></td>
           </tr>
           <tr>
             <td>3 — Need approval</td>
             <td>Open <strong>Need Approval / Consultant Form</strong> (existing UI)</td>
-            <td><span class="svc">233</span> → <span class="svc">240</span> → <span class="svc">165</span></td>
+            <td><span class="svc">233</span> → <span class="svc">275</span> → <span class="svc">165</span></td>
           </tr>
           <tr>
             <td>knows_full_range = Yes</td>
             <td>Direct submit</td>
-            <td><span class="svc">240</span> → <span class="svc">165</span></td>
+            <td><span class="svc">275</span> → <span class="svc">165</span></td>
           </tr>
         </tbody>
       </table>
@@ -920,7 +994,7 @@ Existing params (unchanged):
       <h3>7.7 API Call Sequence</h3>
       <h4>Step 1 — Save Questionnaire</h4>
 <pre><code>POST service/service_quotation.php
-service=240 (save_quotation_questionnaire)
+service=275 (save_quotation_questionnaire)
 
 Params:
   quotation_id / cart_id
@@ -974,15 +1048,15 @@ Existing params:
     <section id="screen-map">
       <h2>8. Screen Map (All New UI)</h2>
       <div class="flow-box">Attendance Screen
-├── Punch IN → [Daily Plan Popup] → Punch IN API
-└── Punch OUT → [Daily Completion Popup] → Punch OUT API
+â”œâ”€â”€ Punch IN → [Daily Plan Popup] → Punch IN API
+â””â”€â”€ Punch OUT → [Daily Completion Popup] → Punch OUT API
 
 Visit Module
-├── Start Visit → [Visit Type Selection] → Existing Start → Add_visit API
-└── Stop Visit → [5 Yes/No Popup] → Existing Remark Flow → update_visit API
+â”œâ”€â”€ Start Visit → [Visit Type Selection] → Existing Start → Add_visit API
+â””â”€â”€ Stop Visit → [5 Yes/No Popup] → Existing Remark Flow → update_visit API
 
 Quotation Module
-└── Submit → [Full Range Popup] → [High Rate / Consultant Form if needed] → create_quotation API</div>
+â””â”€â”€ Submit → [Full Range Popup] → [High Rate / Consultant Form if needed] → create_quotation API</div>
     </section>
 
     <!-- 9. Local State / Storage -->
@@ -1016,7 +1090,7 @@ Quotation Module
           <tr>
             <td><code>visit_start_types_cache</code></td>
             <td>Local cache 24h</td>
-            <td>Avoid repeated API 239 calls</td>
+            <td>Avoid repeated API 274 calls</td>
           </tr>
         </tbody>
       </table>
@@ -1089,19 +1163,19 @@ Quotation Module
         <tbody>
           <tr>
             <td>Save morning plan</td>
-            <td><span class="svc">236</span></td>
+            <td><span class="svc">271</span></td>
             <td><code>save_daily_plan</code></td>
             <td>service_sales_executive.php</td>
           </tr>
           <tr>
             <td>Get plan status</td>
-            <td><span class="svc">237</span></td>
+            <td><span class="svc">272</span></td>
             <td><code>get_daily_plan_status</code></td>
             <td>service_sales_executive.php</td>
           </tr>
           <tr>
             <td>Save evening completion</td>
-            <td><span class="svc">238</span></td>
+            <td><span class="svc">273</span></td>
             <td><code>save_daily_plan_completion</code></td>
             <td>service_sales_executive.php</td>
           </tr>
@@ -1119,7 +1193,7 @@ Quotation Module
           </tr>
           <tr>
             <td>Get visit types</td>
-            <td><span class="svc">239</span></td>
+            <td><span class="svc">274</span></td>
             <td><code>get_visit_start_types</code></td>
             <td>service_visit.php</td>
           </tr>
@@ -1137,7 +1211,7 @@ Quotation Module
           </tr>
           <tr>
             <td>Save questionnaire</td>
-            <td><span class="svc">240</span></td>
+            <td><span class="svc">275</span></td>
             <td><code>save_quotation_questionnaire</code></td>
             <td>service_quotation.php</td>
           </tr>

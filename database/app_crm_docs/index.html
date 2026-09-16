@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -49,16 +49,22 @@
     <section id="overview">
       <h2>Overview</h2>
       <p>Armor CRM mobile app ma 5 navi business flows implement karvana che. Aa documentation Backend (PHP/API/DB) ane Frontend (Android App UI) banne teams mate alag alag prepare karel che.</p>
+      <div class="note success">
+        <strong>Questions ownership:</strong> Most question labels = <strong>Frontend</strong> sets in App UI.
+        Backend saves answers only.
+        Exception: Visit Start 19 types / Customer list / Remark list = <strong>Backend API</strong>.
+        Detail: <a href="frontend.html#who-sets-questions">Frontend</a> · <a href="backend.html#who-sets-questions">Backend</a>
+      </div>
       <table>
         <thead>
           <tr><th>#</th><th>Feature</th><th>Trigger</th><th>Backend</th><th>Frontend</th></tr>
         </thead>
         <tbody>
-          <tr><td>1</td><td>Daily Plan (Morning)</td><td>Punch IN</td><td>API 236, modify 20</td><td>Daily Plan Popup</td></tr>
-          <tr><td>2</td><td>Daily Completion (Evening)</td><td>Punch OUT</td><td>API 237, 238, modify 20</td><td>Completion Popup</td></tr>
-          <tr><td>3</td><td>Visit Start Type (19 points)</td><td>Visit Start</td><td>API 239, modify 75</td><td>Type Selection Screen</td></tr>
+          <tr><td>1</td><td>Daily Plan (Morning)</td><td>Punch IN</td><td>API 271, modify 20</td><td>Daily Plan Popup</td></tr>
+          <tr><td>2</td><td>Daily Completion (Evening)</td><td>Punch OUT</td><td>API 272, 273, modify 20</td><td>Completion Popup</td></tr>
+          <tr><td>3</td><td>Visit Start Type (19 points)</td><td>Visit Start</td><td>API 274, modify 75</td><td>Type Selection Screen</td></tr>
           <tr><td>4</td><td>Visit Complete Questions</td><td>Visit Stop</td><td>Modify 122</td><td>5 Yes/No Popup</td></tr>
-          <tr><td>5</td><td>PI/Quotation Questionnaire</td><td>Quotation Submit</td><td>API 240, modify 165</td><td>Submit Popup + Forms</td></tr>
+          <tr><td>5</td><td>PI/Quotation Questionnaire</td><td>Quotation Submit</td><td>API 275, modify 165</td><td>Submit Popup + Forms</td></tr>
         </tbody>
       </table>
     </section>
@@ -67,12 +73,12 @@
       <h2>Developer Documents</h2>
       <div class="cards">
         <a href="backend.html" class="card-link backend">
-          <h3>🔧 Backend Developer Doc</h3>
+          <h3>ðŸ”§ Backend Developer Doc</h3>
           <p>PHP APIs, Database tables, Request/Response JSON, Validation rules, Files to modify, SQL migration</p>
           <span class="badge badge-blue">API · DB · PHP</span>
         </a>
         <a href="frontend.html" class="card-link frontend">
-          <h3>📱 Frontend Developer Doc</h3>
+          <h3>ðŸ“± Frontend Developer Doc</h3>
           <p>Android screens, Popups, Fields, Labels (EN/GU), Validation, API call sequence, UX flow</p>
           <span class="badge badge-green">Android · UI · UX</span>
         </a>
@@ -96,7 +102,7 @@
       <h2>5 Features — Quick View</h2>
 
       <h3>1. Punch IN — Morning Daily Plan</h3>
-      <p>3 questions: Order amount (₹), Approval count, Project detail count. Minimum 1 mandatory. Order/Approval fill kare to Customer dropdown (assigned only, search).</p>
+      <p>3 questions: Order amount (â‚¹), Approval count, Project detail count. Minimum 1 mandatory. Order/Approval fill kare to Customer dropdown (assigned only, search).</p>
 
       <h3>2. Punch OUT — Evening Completion</h3>
       <p>Savare je plan fill karyo ae completion submit kariye vagar Punch OUT block. Actual achieved values submit karvana.</p>
@@ -118,7 +124,7 @@
           <tr><th>Item</th><th>Count</th><th>Details</th></tr>
         </thead>
         <tbody>
-          <tr><td>New APIs</td><td><strong>5</strong></td><td>236, 237, 238, 239, 240</td></tr>
+          <tr><td>New APIs</td><td><strong>5</strong></td><td>271, 272, 273, 274, 275</td></tr>
           <tr><td>Modified APIs</td><td><strong>5</strong></td><td>12, 20, 75, 122, 165</td></tr>
           <tr><td>Reused APIs</td><td><strong>3</strong></td><td>233, 234, 235</td></tr>
           <tr><td>New DB Tables</td><td><strong>6</strong></td><td>daily_plan, daily_plan_customer, daily_plan_completion, visit_start_type_master, visit_completion_answer, quotation_submit_questionnaire</td></tr>
@@ -138,9 +144,9 @@
           <tr><td><code>database/APP_CRM_DB_MIGRATION.sql</code></td><td>Run on tenant DB — all tables + seed</td></tr>
           <tr><td><code>database/APP_CRM_BACKEND_CHANGES.md</code></td><td>Backend markdown source</td></tr>
           <tr><td><code>database/APP_CRM_FRONTEND_CHANGES.md</code></td><td>Frontend markdown source</td></tr>
-          <tr><td><code>service/service_sales_executive.php</code></td><td>APIs 12, 20, 236–238</td></tr>
-          <tr><td><code>service/service_visit.php</code></td><td>APIs 75, 122, 233–235, 239</td></tr>
-          <tr><td><code>service/service_quotation.php</code></td><td>APIs 165, 240</td></tr>
+          <tr><td><code>service/service_sales_executive.php</code></td><td>APIs 12, 20, 271–273</td></tr>
+          <tr><td><code>service/service_visit.php</code></td><td>APIs 75, 122, 233–235, 274</td></tr>
+          <tr><td><code>service/service_quotation.php</code></td><td>APIs 165, 275</td></tr>
         </tbody>
       </table>
     </section>

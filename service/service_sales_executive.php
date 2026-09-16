@@ -45,6 +45,9 @@ require_once('../include/notification.class.php');
 	32  add_sales_executive_tracking
 	33  get_notification
 	34  get_reject_expense
+	271 save_daily_plan
+	272 get_daily_plan_status
+	273 save_daily_plan_completion
 
 	COMMON LOGIN (#2) notes for App:
 	- Same screen / same API for Sales Executive and Channel Partner
@@ -901,8 +904,9 @@ if ($is_valid_api_key) {
 		} else if ($service == 'get_customer' || $service == 12) {
 			if (isset($_REQUEST['sales_executive_id'])) {
 				$sales_executive_id		= isset($_REQUEST['sales_executive_id']) ? $db->clean($_REQUEST['sales_executive_id']) : "";
+				$search					= isset($_REQUEST['search']) ? $db->clean($_REQUEST['search']) : "";
 				$executive = new Executive();
-				$get_customer = $executive->getCustomer($sales_executive_id);
+				$get_customer = $executive->getCustomer($sales_executive_id, $search);
 				if ($get_customer) {
 					$db->printJSON($get_customer);
 				} else {
@@ -1317,6 +1321,9 @@ if ($is_valid_api_key) {
 						);
 						$attendance_id = $db->rp_insert("attendance", $value, $row, 0);
 						if ($attendance_id) {
+							require_once('../include/class.daily_plan.php');
+							$objDailyPlan = new DailyPlan();
+							$objDailyPlan->linkAttendanceIn($sales_id, $attendance_id);
 							$ack = array("ack" => 1, "ack_msg" => "Welcome!! \n Attendance successfully submitted  !!", "developer_msg" => "attendance insert sucessfully!!", "tracking_local_time" => TRACKING_TIME_LOCAL_API, "tracking_live_time" => TRACKING_TIME_LIVE_API, "distance" => DISTANCE_API);
 							$db->printJSON($ack);
 						} else {
@@ -1466,6 +1473,20 @@ if ($is_valid_api_key) {
 						}
 					}
 				} else if ($type == "Out" && $OutStatuts != 0) {
+					/* Block Punch OUT until daily completion submitted */
+					require_once('../include/class.daily_plan.php');
+					$objDailyPlan = new DailyPlan();
+					$punchOutCheck = $objDailyPlan->canPunchOut($sales_id);
+					if (!isset($punchOutCheck['ok']) || $punchOutCheck['ok'] != 1) {
+						$ack = array(
+							"ack" => 0,
+							"ack_msg" => isset($punchOutCheck['ack_msg']) ? $punchOutCheck['ack_msg'] : "Please submit daily completion before punch out.",
+							"developer_msg" => isset($punchOutCheck['developer_msg']) ? $punchOutCheck['developer_msg'] : "daily_plan_completion missing",
+							"require_completion" => 1,
+							"daily_plan_id" => isset($punchOutCheck['daily_plan_id']) ? (string) $punchOutCheck['daily_plan_id'] : "",
+						);
+						$db->printJSON($ack);
+					} else {
 					$inout = 'Out';
 					$row 	= array(
 						"sales_id",
@@ -1491,11 +1512,13 @@ if ($is_valid_api_key) {
 					);
 					$attendance_id = $db->rp_insert("attendance", $value, $row, 0);
 					if ($attendance_id) {
+						$objDailyPlan->linkAttendanceOut($sales_id, $attendance_id);
 						$ack = array("ack" => 1, "ack_msg" => "Thank you!! Attendance submitted successfully", "developer_msg" => "attendance insert sucessfully!!", "tracking_local_time" => TRACKING_TIME_LOCAL_API, "tracking_live_time" => TRACKING_TIME_LIVE_API, "distance" => DISTANCE_API);
 						$db->printJSON($ack);
 					} else {
 						$ack = array("ack" => 0, "ack_msg" => "attendance insert failed !! Please Try Again Later!!", "developer_msg" => "not inserted!!");
 						$db->printJSON($ack);
+					}
 					}
 				} else {
 					/*in out update*/
@@ -2524,6 +2547,36 @@ if ($is_valid_api_key) {
 				$ack = array("ack" => 0, "ack_msg" => "sales_executive_id, category_id (or advance_expense_type) and total are required!! Sub Category is not required for Advance.", "developer_msg" => "Required params missing for add_advance_expense", "subcategory_required" => "0");
 				$db->printJSON($ack);
 			}
+		} else if ($service == "save_daily_plan" || $service == 271) {
+			require_once('../include/class.daily_plan.php');
+			$objDailyPlan = new DailyPlan();
+			$detail = array();
+			$detail['sales_id'] = isset($_REQUEST['sales_id']) ? $db->clean($_REQUEST['sales_id']) : "";
+			$detail['plan_date'] = isset($_REQUEST['plan_date']) ? $db->clean($_REQUEST['plan_date']) : "";
+			$detail['expected_order_amount'] = isset($_REQUEST['expected_order_amount']) ? $db->clean($_REQUEST['expected_order_amount']) : "";
+			$detail['expected_approval_count'] = isset($_REQUEST['expected_approval_count']) ? $db->clean($_REQUEST['expected_approval_count']) : "";
+			$detail['expected_project_detail_count'] = isset($_REQUEST['expected_project_detail_count']) ? $db->clean($_REQUEST['expected_project_detail_count']) : "";
+			$detail['customers'] = isset($_REQUEST['customers']) ? $_REQUEST['customers'] : "";
+			$ack = $objDailyPlan->saveDailyPlan($detail);
+			$db->printJSON($ack);
+		} else if ($service == "get_daily_plan_status" || $service == 272) {
+			require_once('../include/class.daily_plan.php');
+			$objDailyPlan = new DailyPlan();
+			$sales_id = isset($_REQUEST['sales_id']) ? $db->clean($_REQUEST['sales_id']) : "";
+			$plan_date = isset($_REQUEST['plan_date']) ? $db->clean($_REQUEST['plan_date']) : "";
+			$ack = $objDailyPlan->getDailyPlanStatus($sales_id, $plan_date);
+			$db->printJSON($ack);
+		} else if ($service == "save_daily_plan_completion" || $service == 273) {
+			require_once('../include/class.daily_plan.php');
+			$objDailyPlan = new DailyPlan();
+			$detail = array();
+			$detail['sales_id'] = isset($_REQUEST['sales_id']) ? $db->clean($_REQUEST['sales_id']) : "";
+			$detail['daily_plan_id'] = isset($_REQUEST['daily_plan_id']) ? $db->clean($_REQUEST['daily_plan_id']) : "";
+			$detail['actual_order_amount'] = isset($_REQUEST['actual_order_amount']) ? $db->clean($_REQUEST['actual_order_amount']) : "";
+			$detail['actual_approval_count'] = isset($_REQUEST['actual_approval_count']) ? $db->clean($_REQUEST['actual_approval_count']) : "";
+			$detail['actual_project_detail_count'] = isset($_REQUEST['actual_project_detail_count']) ? $db->clean($_REQUEST['actual_project_detail_count']) : "";
+			$ack = $objDailyPlan->saveDailyPlanCompletion($detail);
+			$db->printJSON($ack);
 		}
 	} else {
 		$ack = array("ack" => 0, "ack_msg" => "Internal error!!", "developer_msg" => "Check your API Key or contact Admin", "extra" => array("requested_params" => $_REQUEST, "other" => array()));

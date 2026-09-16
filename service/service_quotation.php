@@ -69,13 +69,38 @@ if ($is_valid_api_key) {
 			$detail['transport_charge'] = isset($_REQUEST['transport_charge']) ? $_REQUEST['transport_charge'] : "";
 			$detail['terms_comdition'] = isset($_REQUEST['terms_comdition']) ? $db->clean($_REQUEST['terms_comdition']) : "";
 			$detail['faithfully'] = isset($_REQUEST['faithfully']) ? $db->clean($_REQUEST['faithfully']) : "";
+			$detail['questionnaire_id'] = isset($_REQUEST['questionnaire_id']) ? $db->clean($_REQUEST['questionnaire_id']) : "";
 
-			if (isset($_REQUEST['customer_id']) && isset($_REQUEST['customer_id']) && isset($_REQUEST['sales_executive_id']) && isset($_REQUEST['sales_executive_id'])) {
-				include("../include/quotation.class.php");
-				$objQuotation = new Quotation();
-				$body = file_get_contents('php://input');
-				$ack = $objQuotation->AddQuotationApi($detail, $body);
+			if ($detail['questionnaire_id'] == "" || $detail['questionnaire_id'] == "0") {
+				$ack = array(
+					"ack" => 0,
+					"ack_msg" => "Please complete quotation questionnaire before submit.",
+					"developer_msg" => "questionnaire_id missing",
+					"require_questionnaire" => 1,
+				);
 				$db->printJSON($ack);
+			} else if (isset($_REQUEST['customer_id']) && isset($_REQUEST['customer_id']) && isset($_REQUEST['sales_executive_id']) && isset($_REQUEST['sales_executive_id'])) {
+				$qOk = $db->rp_getTotalRecord("quotation_submit_questionnaire", "id='" . $detail['questionnaire_id'] . "' AND isDelete=0", 0);
+				if ($qOk <= 0) {
+					$ack = array(
+						"ack" => 0,
+						"ack_msg" => "Please complete quotation questionnaire before submit.",
+						"developer_msg" => "questionnaire_id invalid",
+						"require_questionnaire" => 1,
+					);
+					$db->printJSON($ack);
+				} else {
+					include("../include/quotation.class.php");
+					$objQuotation = new Quotation();
+					$body = file_get_contents('php://input');
+					$ack = $objQuotation->AddQuotationApi($detail, $body);
+					if (isset($ack['ack']) && $ack['ack'] == 1 && isset($ack['result']['id'])) {
+						$db->rp_update("quotation_detail", array("questionnaire_id" => $detail['questionnaire_id']), "id='" . $ack['result']['id'] . "'", 0);
+					} else if (isset($ack['ack']) && $ack['ack'] == 1 && isset($ack['quotation_id'])) {
+						$db->rp_update("quotation_detail", array("questionnaire_id" => $detail['questionnaire_id']), "id='" . $ack['quotation_id'] . "'", 0);
+					}
+					$db->printJSON($ack);
+				}
 			} else {
 
 				$ack = array(
@@ -85,6 +110,21 @@ if ($is_valid_api_key) {
 				);
 				$db->printJSON($ack);
 			}
+		} else if ($service == "save_quotation_questionnaire" || $service == 275) {
+			require_once('../include/class.daily_plan.php');
+			$objDailyPlan = new DailyPlan();
+			$detail = array();
+			$detail['quotation_id'] = isset($_REQUEST['quotation_id']) ? $db->clean($_REQUEST['quotation_id']) : "";
+			$detail['cart_id'] = isset($_REQUEST['cart_id']) ? $db->clean($_REQUEST['cart_id']) : "";
+			$detail['sales_executive_id'] = isset($_REQUEST['sales_executive_id']) ? $db->clean($_REQUEST['sales_executive_id']) : "";
+			$detail['customer_id'] = isset($_REQUEST['customer_id']) ? $db->clean($_REQUEST['customer_id']) : "";
+			$detail['knows_full_range'] = isset($_REQUEST['knows_full_range']) ? $db->clean($_REQUEST['knows_full_range']) : "";
+			$detail['not_buying_reason'] = isset($_REQUEST['not_buying_reason']) ? $db->clean($_REQUEST['not_buying_reason']) : "";
+			$detail['high_rate_form_id'] = isset($_REQUEST['high_rate_form_id']) ? $db->clean($_REQUEST['high_rate_form_id']) : "";
+			$detail['consultant_form_id'] = isset($_REQUEST['consultant_form_id']) ? $db->clean($_REQUEST['consultant_form_id']) : "";
+			$detail['remark'] = isset($_REQUEST['remark']) ? $db->clean($_REQUEST['remark']) : "";
+			$ack = $objDailyPlan->saveQuotationQuestionnaire($detail);
+			$db->printJSON($ack);
 		}
 
 		/*else if($service == "update_cash_additional_discount_flag" || $service ==1667)

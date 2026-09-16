@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 define('DB_SYNC_KEY', 'armor_cp_sync_2026');
-define('DB_SYNC_VERSION', '2026.09.07.1');
+define('DB_SYNC_VERSION', '2026.09.16.1');
 
 if (!isset($_GET['key']) || $_GET['key'] !== DB_SYNC_KEY) {
 	header('HTTP/1.1 403 Forbidden');
@@ -1581,6 +1581,246 @@ foreach (array(241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 
 	mysqli_query($conn, "UPDATE `api_table` SET api_slug='" . $escSlug . "', api_url='" . $escUrl . "', isDelete=0 WHERE id='" . (int) $cpAppApiId . "'");
 }
 
+/* ------------------------------------------------------------------
+ * STEP 5k — App CRM Daily Plan / Visit Start Type / Visit Complete / Quotation Q
+ * APIs 271-275 (236-240 reserved for employee chat)
+ * ------------------------------------------------------------------ */
+db_sync_log('INFO', '--- App CRM Punch/Visit/Quotation DB Sync (271-275) ---');
+
+db_sync_run_query($conn, "CREATE TABLE IF NOT EXISTS `daily_plan` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`sales_id` int(11) NOT NULL COMMENT 'sales_executive.id',
+	`plan_date` date NOT NULL,
+	`expected_order_amount` decimal(15,2) DEFAULT NULL,
+	`expected_approval_count` int(11) DEFAULT NULL,
+	`expected_project_detail_count` int(11) DEFAULT NULL,
+	`attendance_in_id` int(11) DEFAULT NULL,
+	`created_date` datetime NOT NULL,
+	`isDelete` tinyint(1) NOT NULL DEFAULT 0,
+	`isActive` tinyint(1) NOT NULL DEFAULT 1,
+	PRIMARY KEY (`id`),
+	KEY `idx_daily_plan_sales_date` (`sales_id`,`plan_date`),
+	KEY `idx_daily_plan_date` (`plan_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Morning daily plan on punch in'", 'Create table daily_plan (if not exists)');
+
+db_sync_run_query($conn, "CREATE TABLE IF NOT EXISTS `daily_plan_customer` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`daily_plan_id` int(11) NOT NULL,
+	`customer_id` int(11) NOT NULL COMMENT 'executive.id',
+	`target_type` enum('order','approval') NOT NULL,
+	`created_date` datetime NOT NULL,
+	`isDelete` tinyint(1) NOT NULL DEFAULT 0,
+	PRIMARY KEY (`id`),
+	KEY `idx_dpc_plan` (`daily_plan_id`),
+	KEY `idx_dpc_customer` (`customer_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Customers linked to daily plan'", 'Create table daily_plan_customer (if not exists)');
+
+db_sync_run_query($conn, "CREATE TABLE IF NOT EXISTS `daily_plan_completion` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`daily_plan_id` int(11) NOT NULL,
+	`actual_order_amount` decimal(15,2) DEFAULT NULL,
+	`actual_approval_count` int(11) DEFAULT NULL,
+	`actual_project_detail_count` int(11) DEFAULT NULL,
+	`attendance_out_id` int(11) DEFAULT NULL,
+	`submitted_at` datetime NOT NULL,
+	`isDelete` tinyint(1) NOT NULL DEFAULT 0,
+	PRIMARY KEY (`id`),
+	KEY `idx_dpcmpl_plan` (`daily_plan_id`),
+	KEY `idx_dpcmpl_submitted` (`submitted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Evening daily completion before punch out'", 'Create table daily_plan_completion (if not exists)');
+
+db_sync_run_query($conn, "CREATE TABLE IF NOT EXISTS `visit_start_type_master` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`code` varchar(10) NOT NULL,
+	`name` varchar(255) NOT NULL,
+	`display_name` varchar(300) NOT NULL,
+	`sort_order` int(11) NOT NULL DEFAULT 0,
+	`isActive` tinyint(1) NOT NULL DEFAULT 1,
+	`isDelete` tinyint(1) NOT NULL DEFAULT 0,
+	PRIMARY KEY (`id`),
+	UNIQUE KEY `uk_vst_code` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Visit start type master (19 points)'", 'Create table visit_start_type_master (if not exists)');
+
+$visitStartTypes = array(
+	array('VST01', 'New Customer - Fresh Visit', '1. New Customer - Fresh Visit', 1),
+	array('VST02', 'Repeat Customer Order Visit', '2. Repeat Customer Order Visit', 2),
+	array('VST03', 'Old Customer Order Visit', '3. Old Customer Order Visit', 3),
+	array('VST04', 'Old Customer Payment Visit', '4. Old Customer Payment Visit', 4),
+	array('VST05', 'New MEP Approval Visit', '5. New MEP Approval Visit', 5),
+	array('VST06', 'Repeat MEP Approval Visit', '6. Repeat MEP Approval Visit', 6),
+	array('VST07', 'MEP - Add Project/Contractor Details', '7. MEP - Add Project/Contractor Details', 7),
+	array('VST08', 'New Government Approval Visit', '8. New Government Approval Visit', 8),
+	array('VST09', 'Repeat Government Approval - Tender Name Add', '9. Repeat Government Approval - Tender Name Add', 9),
+	array('VST10', 'Repeat Government Contractor Approval Visit', '10. Repeat Government Contractor Approval Visit', 10),
+	array('VST11', 'CPWD/PWD Approval Visit', '11. CPWD/PWD Approval Visit', 11),
+	array('VST12', 'CPWD/PWD Tender Name Add Visit', '12. CPWD/PWD Tender Name Add Visit', 12),
+	array('VST13', 'CPWD/PWD Contractor Details Add Visit', '13. CPWD/PWD Contractor Details Add Visit', 13),
+	array('VST14', 'New Corporate Approval Visit', '14. New Corporate Approval Visit', 14),
+	array('VST15', 'Repeat Corporate Approval', '15. Repeat Corporate Approval', 15),
+	array('VST16', 'Corporate Project/Contractor Detail Visit', '16. Corporate Project/Contractor Detail Visit', 16),
+	array('VST17', 'New Developer Approval', '17. New Developer Approval', 17),
+	array('VST18', 'Repeat Developer Approval', '18. Repeat Developer Approval', 18),
+	array('VST19', 'Repeat Developer Contract/Project Detail Visit', '19. Repeat Developer Contract/Project Detail Visit', 19),
+);
+if (db_sync_table_exists($conn, 'visit_start_type_master')) {
+	foreach ($visitStartTypes as $vst) {
+		$codeEsc = mysqli_real_escape_string($conn, $vst[0]);
+		$nameEsc = mysqli_real_escape_string($conn, $vst[1]);
+		$dispEsc = mysqli_real_escape_string($conn, $vst[2]);
+		$ord = (int) $vst[3];
+		$existsRes = mysqli_query($conn, "SELECT id FROM `visit_start_type_master` WHERE `code`='{$codeEsc}' LIMIT 1");
+		if ($existsRes && mysqli_num_rows($existsRes) > 0) {
+			db_sync_run_query(
+				$conn,
+				"UPDATE `visit_start_type_master` SET `name`='{$nameEsc}', `display_name`='{$dispEsc}', `sort_order`={$ord}, `isActive`=1, `isDelete`=0 WHERE `code`='{$codeEsc}'",
+				'Update visit_start_type ' . $vst[0]
+			);
+		} else {
+			db_sync_run_query(
+				$conn,
+				"INSERT INTO `visit_start_type_master` (`code`,`name`,`display_name`,`sort_order`,`isActive`,`isDelete`) VALUES ('{$codeEsc}','{$nameEsc}','{$dispEsc}',{$ord},1,0)",
+				'Seed visit_start_type ' . $vst[0]
+			);
+		}
+	}
+}
+
+db_sync_run_query($conn, "CREATE TABLE IF NOT EXISTS `visit_completion_answer` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`visit_id` int(11) NOT NULL,
+	`order_came` tinyint(1) NOT NULL DEFAULT 0,
+	`approval_came` tinyint(1) NOT NULL DEFAULT 0,
+	`project_detail_came` tinyint(1) NOT NULL DEFAULT 0,
+	`contract_detail_came` tinyint(1) NOT NULL DEFAULT 0,
+	`payment_came` tinyint(1) NOT NULL DEFAULT 0,
+	`created_date` datetime NOT NULL,
+	`isDelete` tinyint(1) NOT NULL DEFAULT 0,
+	PRIMARY KEY (`id`),
+	KEY `idx_vca_visit` (`visit_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Visit complete 5 question answers'", 'Create table visit_completion_answer (if not exists)');
+
+db_sync_run_query($conn, "CREATE TABLE IF NOT EXISTS `quotation_submit_questionnaire` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`quotation_id` int(11) NOT NULL,
+	`knows_full_range` tinyint(1) NOT NULL DEFAULT 0,
+	`not_buying_reason` tinyint(1) DEFAULT NULL COMMENT '1=No info, 2=Price high, 3=Need approval',
+	`high_rate_form_id` int(11) DEFAULT NULL,
+	`consultant_form_id` int(11) DEFAULT NULL,
+	`remark` text,
+	`created_date` datetime NOT NULL,
+	`isDelete` tinyint(1) NOT NULL DEFAULT 0,
+	PRIMARY KEY (`id`),
+	KEY `idx_qsq_quotation` (`quotation_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Quotation submit questionnaire answers'", 'Create table quotation_submit_questionnaire (if not exists)');
+
+db_sync_add_column_if_missing(
+	$conn,
+	'visit',
+	'visit_start_type_id',
+	"int(11) DEFAULT NULL COMMENT 'FK visit_start_type_master.id'",
+	array('purpose_id')
+);
+db_sync_add_column_if_missing(
+	$conn,
+	'quotation_detail',
+	'questionnaire_id',
+	"int(11) DEFAULT NULL COMMENT 'FK quotation_submit_questionnaire.id'",
+	array('status')
+);
+db_sync_add_column_if_missing(
+	$conn,
+	'visit_high_rate_form',
+	'quotation_id',
+	"int(11) DEFAULT NULL COMMENT 'Link to quotation when not from visit'",
+	array('visit_id')
+);
+db_sync_add_column_if_missing(
+	$conn,
+	'visit_consultant_form',
+	'quotation_id',
+	"int(11) DEFAULT NULL COMMENT 'Link to quotation when not from visit'",
+	array('visit_id')
+);
+
+if (!isset($seApiBase)) {
+	$seApiBase = 'service_sales_executive.php?key=1226';
+}
+if (!isset($visitApiBase)) {
+	$visitApiBase = 'service_visit.php?key=1226';
+}
+$quotationApiBase = 'service_quotation.php?key=1226';
+
+db_sync_register_api_if_missing($conn, 271, 'save_daily_plan', 'Save Daily Plan (Punch IN morning targets)', $seApiBase . '&s=271&sales_id=&expected_order_amount=&expected_approval_count=&expected_project_detail_count=&customers=');
+db_sync_register_api_if_missing($conn, 272, 'get_daily_plan_status', 'Get Daily Plan Status', $seApiBase . '&s=272&sales_id=');
+db_sync_register_api_if_missing($conn, 273, 'save_daily_plan_completion', 'Save Daily Plan Completion (before Punch OUT)', $seApiBase . '&s=273&sales_id=&daily_plan_id=&actual_order_amount=&actual_approval_count=&actual_project_detail_count=');
+db_sync_register_api_if_missing($conn, 274, 'get_visit_start_types', 'Get Visit Start Types (19 points)', $visitApiBase . '&s=274');
+db_sync_register_api_if_missing($conn, 275, 'save_quotation_questionnaire', 'Save Quotation Submit Questionnaire', $quotationApiBase . '&s=275&quotation_id=&knows_full_range=&not_buying_reason=');
+
+$requiredAppCrmApis = array(
+	271 => 'save_daily_plan',
+	272 => 'get_daily_plan_status',
+	273 => 'save_daily_plan_completion',
+	274 => 'get_visit_start_types',
+	275 => 'save_quotation_questionnaire',
+);
+
+db_sync_log('INFO', '--- App CRM Verification (tables + APIs 271-275) ---');
+foreach (array('daily_plan', 'daily_plan_customer', 'daily_plan_completion', 'visit_start_type_master', 'visit_completion_answer', 'quotation_submit_questionnaire') as $appCrmTable) {
+	if (db_sync_table_exists($conn, $appCrmTable)) {
+		db_sync_log('CHECK', 'READY: table ' . $appCrmTable);
+	} else {
+		$allReady = false;
+		db_sync_log('FAIL', 'MISSING: table ' . $appCrmTable);
+	}
+}
+if (db_sync_table_exists($conn, 'visit_start_type_master')) {
+	$vstCntRes = mysqli_query($conn, "SELECT COUNT(*) AS total FROM `visit_start_type_master` WHERE isDelete=0 AND isActive=1");
+	$vstCnt = ($vstCntRes && ($vstRow = mysqli_fetch_assoc($vstCntRes))) ? (int) $vstRow['total'] : 0;
+	if ($vstCnt >= 19) {
+		db_sync_log('CHECK', 'READY: visit_start_type_master seed count=' . $vstCnt);
+	} else {
+		$allReady = false;
+		db_sync_log('FAIL', 'MISSING: visit_start_type_master needs 19 rows (found ' . $vstCnt . ')');
+	}
+}
+foreach (array(
+	'visit' => 'visit_start_type_id',
+	'quotation_detail' => 'questionnaire_id',
+	'visit_high_rate_form' => 'quotation_id',
+	'visit_consultant_form' => 'quotation_id',
+) as $tbl => $col) {
+	if (db_sync_column_exists($conn, $tbl, $col)) {
+		db_sync_log('CHECK', 'READY: ' . $tbl . '.' . $col);
+	} else {
+		$allReady = false;
+		db_sync_log('FAIL', 'MISSING: ' . $tbl . '.' . $col);
+	}
+}
+if (db_sync_table_exists($conn, 'api_table')) {
+	foreach ($requiredAppCrmApis as $apiId => $apiSlug) {
+		$apiId = (int) $apiId;
+		$apiRes = mysqli_query($conn, "SELECT id, api_slug FROM `api_table` WHERE `id`={$apiId} AND `isDelete`=0 LIMIT 1");
+		if ($apiRes && mysqli_num_rows($apiRes) > 0) {
+			$apiRow = mysqli_fetch_assoc($apiRes);
+			if ($apiRow['api_slug'] === $apiSlug) {
+				db_sync_log('CHECK', 'READY: api_table id=' . $apiId . ' (' . $apiSlug . ')');
+			} else {
+				$allReady = false;
+				db_sync_log('FAIL', 'api_table id=' . $apiId . ' exists but slug mismatch (found: ' . $apiRow['api_slug'] . ')');
+			}
+		} else {
+			$allReady = false;
+			db_sync_log('FAIL', 'MISSING: api_table id=' . $apiId . ' (' . $apiSlug . ')');
+		}
+	}
+}
+if (file_exists(__DIR__ . '/include/class.daily_plan.php')) {
+	db_sync_log('CHECK', 'READY: include/class.daily_plan.php');
+} else {
+	$allReady = false;
+	db_sync_log('FAIL', 'MISSING: include/class.daily_plan.php — upload PHP code with DB sync');
+}
+
 $apiKeyCountRes = mysqli_query($conn, "SELECT COUNT(*) AS total FROM `api_key_table` WHERE api_key='1226' AND isDelete=0");
 if ($apiKeyCountRes) {
 	$apiKeyCountRow = mysqli_fetch_assoc($apiKeyCountRes);
@@ -1728,6 +1968,10 @@ $environment = isset($config['environment']) ? $config['environment'] : 'unknown
 			<li>Column <code>visit.note</code> + <code>visit.followup_date</code> (App stopVisit <code>note</code> / <code>date</code> → <code>followup_date</code>, format <code>Y-m-d H:i</code>)</li>
 			<li>Column <code>quotation_detail.approve_by_id</code> (Quotation Approve → Approved By in KRA)</li>
 			<li>Widen <code>sales_vs_consultant_approval_process.process_four_product_name</code> (+ project name/location) from <code>varchar(255)</code> → <code>TEXT</code> so all selected products show in Consultant Approval Process Report</li>
+			<li><strong>App CRM (2026-09-16):</strong> Daily Plan / Completion tables + Visit Start Type (19) + Visit Completion Answers + Quotation Questionnaire</li>
+			<li>APIs <code>#271 save_daily_plan</code>, <code>#272 get_daily_plan_status</code>, <code>#273 save_daily_plan_completion</code>, <code>#274 get_visit_start_types</code>, <code>#275 save_quotation_questionnaire</code></li>
+			<li>Columns <code>visit.visit_start_type_id</code>, <code>quotation_detail.questionnaire_id</code>, optional <code>quotation_id</code> on high-rate / consultant forms</li>
+			<li>Docs: <code>database/app_crm_docs/</code> (backend.html / frontend.html)</li>
 		</ul>
 		<p><strong>Safe:</strong> Idempotent — run multiple times; existing data is not deleted.</p>
 		<p><strong>Security:</strong> Delete <code>db_sync.php</code> from live after final READY confirmation.</p>

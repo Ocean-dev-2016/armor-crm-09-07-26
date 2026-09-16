@@ -1743,7 +1743,7 @@ class Executive extends Functions
 		}
 	}
 	//--------------------Get Customer List(API)--------------------------------------------//
-	function getCustomer($sales_executive_id = "")
+	function getCustomer($sales_executive_id = "", $search = "")
 	{
 
 		$result = array();
@@ -1766,14 +1766,23 @@ class Executive extends Functions
 			//print_r($customer_id);exit;
 			if (!empty($customer_id)) {
 				$ids = implode(",", $customer_id);
+				$searchWhere = "";
+				$search = trim($search);
+				if ($search != "") {
+					$searchEsc = mysqli_real_escape_string($this->db->myconn, $search);
+					$searchWhere = " AND (client_code LIKE '%" . $searchEsc . "%' OR cname LIKE '%" . $searchEsc . "%' OR company_name LIKE '%" . $searchEsc . "%')";
+				}
 				//
-				$data    = $this->db->rp_getData('executive', "*", "id IN (" . $ids . ") AND isDelete=0 AND isActive=1 AND IFNULL(channel_partner_flag,0)=0 AND seid='" . (int) $sales_executive_id . "'", "adate DESC", 0);
+				$data    = $this->db->rp_getData('executive', "*", "id IN (" . $ids . ") AND isDelete=0 AND isActive=1 AND IFNULL(channel_partner_flag,0)=0 AND seid='" . (int) $sales_executive_id . "'" . $searchWhere, "adate DESC", 0);
 				if ($data) {
 					while ($r = mysqli_fetch_assoc($data)) {
 						$r['other_contact'] = $r['mobile_no1'];
 
 						$r['cname'] 	= $r['cname'];
 						$r['phone'] 	= $r['phone'];
+						$codePart = isset($r['client_code']) ? trim($r['client_code']) : "";
+						$namePart = isset($r['cname']) && $r['cname'] != "" ? $r['cname'] : (isset($r['company_name']) ? $r['company_name'] : "");
+						$r['display_label'] = trim($codePart . ($codePart != "" && $namePart != "" ? " - " : "") . $namePart);
 						$r['adate'] = date('d-m-Y', strtotime($r['adate']));
 						$r['created_date'] = date('d-m-Y', strtotime($r['created_date']));
 						//$r['order_date']=array_key_exists('order_date',$r)?date('d-m-Y',strtotime($r['order_date'])):0;

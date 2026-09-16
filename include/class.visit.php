@@ -49,11 +49,13 @@ class Visit extends Functions
 			"isActive",
 			"entry_flag",
 			"purpose_id",
+			"visit_start_type_id",
 			"type_of_company",
 			"visit_type",
 			"product_name",
 			"inquiry_id",
 		);
+		$visit_start_type_id = isset($visit_start_type_id) ? $visit_start_type_id : "";
 		$values = array(
 			$user_id,
 			$customer_id,
@@ -65,6 +67,7 @@ class Visit extends Functions
 			1,
 			5,
 			$purpose_id,
+			$visit_start_type_id,
 			$type_of_company,
 			$visit_type,
 			$product_name1,
@@ -659,6 +662,19 @@ class Visit extends Functions
 			/* Link followup_id on high rate form */
 			if ($highRateFormId != "" && $highRateFormId != "0" && $followupId != "" && $followupId != "0") {
 				$this->db->rp_update("visit_high_rate_form", array("followup_id" => $followupId), "id='" . $highRateFormId . "'", 0);
+			}
+
+			/* Save visit completion 5 Yes/No answers */
+			if (isset($order_came) && $order_came !== "" && isset($approval_came) && $approval_came !== "") {
+				require_once("class.daily_plan.php");
+				$objDailyPlan = new DailyPlan();
+				$objDailyPlan->saveVisitCompletionAnswer($id, array(
+					"order_came" => $order_came,
+					"approval_came" => $approval_came,
+					"project_detail_came" => isset($project_detail_came) ? $project_detail_came : "",
+					"contract_detail_came" => isset($contract_detail_came) ? $contract_detail_came : "",
+					"payment_came" => isset($payment_came) ? $payment_came : "",
+				));
 			}
 
 			$reply = array(

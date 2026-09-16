@@ -1,4 +1,4 @@
-# Armor CRM — App Side Changes (Backend Developer Document)
+﻿# Armor CRM — App Side Changes (Backend Developer Document)
 
 **Project:** Armor CRM Mobile App  
 **Date:** 16-Sep-2026  
@@ -27,11 +27,11 @@
 
 | Service No. | Service Name | File | Method |
 |-------------|--------------|------|--------|
-| **236** | `save_daily_plan` | `service_sales_executive.php` | POST |
-| **237** | `get_daily_plan_status` | `service_sales_executive.php` | GET/POST |
-| **238** | `save_daily_plan_completion` | `service_sales_executive.php` | POST |
-| **239** | `get_visit_start_types` | `service_visit.php` | GET/POST |
-| **240** | `save_quotation_questionnaire` | `service_quotation.php` | POST |
+| **271** | `save_daily_plan` | `service_sales_executive.php` | POST |
+| **272** | `get_daily_plan_status` | `service_sales_executive.php` | GET/POST |
+| **273** | `save_daily_plan_completion` | `service_sales_executive.php` | POST |
+| **274** | `get_visit_start_types` | `service_visit.php` | GET/POST |
+| **275** | `save_quotation_questionnaire` | `service_quotation.php` | POST |
 
 ### 2.2 Modified APIs (5)
 
@@ -70,7 +70,7 @@ Morning punch-in targets (savare data).
 | `id` | INT(11) AUTO_INCREMENT | NO | Primary key |
 | `sales_id` | INT(11) | NO | `sales_executive.id` |
 | `plan_date` | DATE | NO | Business date (Y-m-d) |
-| `expected_order_amount` | DECIMAL(15,2) | YES | Q1: Expected order amount (₹) |
+| `expected_order_amount` | DECIMAL(15,2) | YES | Q1: Expected order amount (â‚¹) |
 | `expected_approval_count` | INT(11) | YES | Q2: Expected approval count |
 | `expected_project_detail_count` | INT(11) | YES | Q3: Expected project detail count |
 | `attendance_in_id` | INT(11) | YES | Link to `attendance.id` (Punch IN) |
@@ -246,7 +246,7 @@ Add after `purpose_id` or at end of table.
 
 ---
 
-### 4.1 NEW — `save_daily_plan` (236)
+### 4.1 NEW — `save_daily_plan)
 
 **File:** `service/service_sales_executive.php`
 
@@ -258,7 +258,7 @@ Add after `purpose_id` or at end of table.
 |-------|------|----------|-------------|
 | `sales_id` | int | YES | Sales executive ID |
 | `plan_date` | string | NO | Default: today (Y-m-d) |
-| `expected_order_amount` | decimal | NO* | Expected order amount in ₹ |
+| `expected_order_amount` | decimal | NO* | Expected order amount in â‚¹ |
 | `expected_approval_count` | int | NO* | Expected approval count |
 | `expected_project_detail_count` | int | NO* | Expected project detail count |
 | `customers` | JSON string | NO** | Array of `{customer_id, target_type}` |
@@ -311,7 +311,7 @@ Add after `purpose_id` or at end of table.
 
 ---
 
-### 4.2 NEW — `get_daily_plan_status` (237)
+### 4.2 NEW — `get_daily_plan_status` (272)
 
 **File:** `service/service_sales_executive.php`
 
@@ -382,7 +382,7 @@ Add after `purpose_id` or at end of table.
 
 ---
 
-### 4.3 NEW — `save_daily_plan_completion` (238)
+### 4.3 NEW — `save_daily_plan_completion` (273)
 
 **File:** `service/service_sales_executive.php`
 
@@ -436,7 +436,7 @@ Add after `purpose_id` or at end of table.
 **New behaviour:**
 
 #### Punch IN (`type=In`)
-- **Option A (recommended):** App calls `save_daily_plan` (236) first, then `add_attendance` (20)
+- **Option A (recommended):** App calls `save_daily_plan) first, then `add_attendance` (20)
 - **Option B:** Accept plan fields in same request and save internally
 - After successful IN insert → update `daily_plan.attendance_in_id = attendance.id`
 
@@ -511,7 +511,7 @@ Each customer in `result[]` should include:
 
 ---
 
-### 4.6 NEW — `get_visit_start_types` (239)
+### 4.6 NEW — `get_visit_start_types` (274)
 
 **File:** `service/service_visit.php`
 
@@ -598,7 +598,7 @@ Each customer in `result[]` should include:
 
 ---
 
-### 4.9 NEW — `save_quotation_questionnaire` (240)
+### 4.9 NEW — `save_quotation_questionnaire` (275)
 
 **File:** `service/service_quotation.php`
 
@@ -642,7 +642,7 @@ Each customer in `result[]` should include:
 
 | Param | Type | Required | Description |
 |-------|------|----------|-------------|
-| `questionnaire_id` | int | YES | From save_quotation_questionnaire (240) |
+| `questionnaire_id` | int | YES | From save_quotation_questionnaire (275) |
 
 **Validation before final submit:**
 - If `knows_full_range=0` and `not_buying_reason=2` → `high_rate_form_id` must exist
@@ -702,9 +702,9 @@ When PI popup reason = Need Approval (3), App opens existing Consultant form.
 
 | File | Changes |
 |------|---------|
-| `service/service_sales_executive.php` | APIs 236, 237, 238 + modify 12, 20 |
-| `service/service_visit.php` | API 239 + modify 75, 122 |
-| `service/service_quotation.php` | API 240 + modify 165 |
+| `service/service_sales_executive.php` | APIs 271, 272, 273 + modify 12, 20 |
+| `service/service_visit.php` | API 274 + modify 75, 122 |
+| `service/service_quotation.php` | API 275 + modify 165 |
 | `include/class.visit.php` | AddVisit + UpdateVisit — new fields |
 | `include/class.executive.php` | getCustomer — search + display_label |
 | `include/quotation.class.php` | AddQuotationApi — questionnaire check |
@@ -719,16 +719,16 @@ Add new service numbers in API config / service list comments at top of each ser
 
 | Rule | Where Enforced |
 |------|----------------|
-| Morning: min 1 of 3 targets required | save_daily_plan (236) |
-| Morning: customer required if order/approval target set | save_daily_plan (236) |
-| Customer must belong to logged-in sales person | save_daily_plan (236), get_customer (12) |
+| Morning: min 1 of 3 targets required | save_daily_plan) |
+| Morning: customer required if order/approval target set | save_daily_plan) |
+| Customer must belong to logged-in sales person | save_daily_plan), get_customer (12) |
 | One daily plan per sales person per day | DB UNIQUE + API check |
 | Punch OUT blocked without completion | add_attendance (20) |
 | Visit start blocked without type selection | Add_visit (75) |
 | Visit stop blocked without 5 answers | update_visit (122) |
 | Quotation submit blocked without questionnaire | create_quotation (165) |
-| Price high → High Rate form required | save_quotation_questionnaire (240) |
-| Need approval → Consultant form required | save_quotation_questionnaire (240) |
+| Price high → High Rate form required | save_quotation_questionnaire (275) |
+| Need approval → Consultant form required | save_quotation_questionnaire (275) |
 
 ---
 
@@ -736,12 +736,12 @@ Add new service numbers in API config / service list comments at top of each ser
 
 1. Run `APP_CRM_DB_MIGRATION.sql` on tenant DB
 2. Create `class.daily_plan.php`
-3. Implement APIs 236, 237, 238
+3. Implement APIs 271, 272, 273
 4. Modify API 20 (attendance validation)
 5. Modify API 12 (customer search)
-6. Implement API 239 + modify API 75
+6. Implement API 274 + modify API 75
 7. Modify API 122 (visit completion)
-8. Implement API 240 + modify API 165
+8. Implement API 275 + modify API 165
 9. Extend APIs 233, 234 for quotation_id (optional)
 10. Test all flows with Postman / App
 
