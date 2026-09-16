@@ -1,13 +1,838 @@
 {
     "info": {
         "name": "Armor Fire CRM - Full API Collection (Backend Verified)",
-        "description": "Complete API collection generated from live PHP service source code.\n\nGenerated: 2026-07-10 13:59:58\nUpdated: 2026-08-07 — CP Delete Order Item #268 + Order Status #267 + Cart #248-#256\nUpdated: 2026-08-16 — CP Partial Payment (#260 remaining / #261 accumulate) + CP Edit Order Item #270\nAll requests: POST multipart/form-data\nAuth: `key` (API key) + `s` (service id or slug)\n\nEnvironments:\n- Live: https://armor-crm.oceanhub.co.in\n- Local: http://localhost:8080/armor_crm_08_07/202526\n\nSet collection variable `base_url` before testing.\nAPI key: 1226\n\n**Common Login (#2):** `service_sales_executive.php` — result.user_type = sales_executive | channel_partner\n**CP Dashboard (#247):** Login #2 → result.cp_apis.dashboard = 247\nEmployee Chat folder: service_employee_chat.php (#236-#240)\nService #39 (sync_offline_customers) includes all CRM columns + channel_partner_flag.\n**CP My Stock:** #257-#258 in service_channel_partner.php\n**CP Receive Payment:** #259-#261 + Print PDF #265 in service_channel_partner.php\n**CP Party Ledger:** #262 in service_channel_partner.php\n**CP Cart:** ONE Add Cart API #250 (service_channel_partner.php). Folder: Channel Partner App — Customer Order + Cart. Demo values: CP 12229 / party 8 / pwp_id 2095.\n**CP Order Edit/Delete:** #263 delete, #264 update, #266 add item, #270 edit item, #268 delete item (Pending only) in service_channel_partner.php",
+        "description": "Complete API collection generated from live PHP service source code.\n\nGenerated: 2026-07-10 13:59:58\nUpdated: 2026-08-07 \u2014 CP Delete Order Item #268 + Order Status #267 + Cart #248-#256\nUpdated: 2026-08-16 \u2014 CP Partial Payment (#260 remaining / #261 accumulate) + CP Edit Order Item #270\nUpdated: 2026-09-16 \u2014 App CRM Daily Plan/Visit/Quotation (#271-#275) + patches #12/#20/#75/#122/#165\n\nAll requests: POST multipart/form-data\nAuth: `key` (API key) + `s` (service id or slug)\n\nEnvironments:\n- Live: https://armor-crm.oceanhub.co.in\n- Local: http://localhost:8080/armor_crm_08_07/202526\n\nSet collection variable `base_url` before testing.\nAPI key: 1226\n\n**App CRM folder:** App CRM \u2014 Daily Plan / Visit Start / Quotation Q (#271-#275)\n**Employee Chat:** #236-#240 (do not confuse with App CRM)\n**Common Login (#2):** service_sales_executive.php\n**CP APIs:** #241-#270 in service_channel_partner.php",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "item": [
         {
-            "name": "Channel Partner App — Dashboard + My Customers (#241-#247)",
-            "description": "CP Login Dashboard (#247) + My Customers (#241-#246).\n1) Login API #2 → result.channel_partner_id + result.cp_apis.dashboard\n2) Dashboard #247 (Web + Mobile same JSON)\n3) List #241 / Add #242\nEndpoint: service/service_channel_partner.php\nkey=1226",
+            "name": "App CRM \u2014 Daily Plan / Visit Start / Quotation Q (#271-#275)",
+            "description": "App CRM changes (2026-09-16)\n\n**NEW APIs:**\n#271 save_daily_plan \u2014 Punch IN morning targets\n#272 get_daily_plan_status\n#273 save_daily_plan_completion \u2014 before Punch OUT\n#274 get_visit_start_types \u2014 19 visit types\n#275 save_quotation_questionnaire \u2014 PI/Quotation popup\n\n**MODIFIED (also updated in existing folders):**\n#12 get_customer \u2014 search + display_label\n#20 add_attendance \u2014 Punch OUT blocked without completion\n#75 Add_visit \u2014 visit_start_type_id mandatory\n#122 update_visit \u2014 5 Yes/No completion answers\n#165 create_quotation \u2014 questionnaire_id required\n\n**Flow Punch IN:** #271 \u2192 #20 type=In\n**Flow Punch OUT:** #272 \u2192 #273 \u2192 #20 type=Out\n**Flow Visit:** #274 \u2192 #75 \u2192 \u2026 \u2192 #122\n**Flow Quotation:** #275 \u2192 (#233/#234 if needed) \u2192 #165\n\nNOTE: #236-#240 = Employee Chat (do NOT reuse)",
+            "item": [
+                {
+                    "name": "Save Daily Plan (#271)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "271",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "sales_id",
+                                    "value": "{{sales_id}}",
+                                    "type": "text",
+                                    "description": "Required. Login #2 result.id"
+                                },
+                                {
+                                    "key": "plan_date",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Optional. Default today Y-m-d",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "expected_order_amount",
+                                    "value": "50000",
+                                    "type": "text",
+                                    "description": "Q1 Order amount \u20b9 \u2014 at least 1 of 3 required"
+                                },
+                                {
+                                    "key": "expected_approval_count",
+                                    "value": "2",
+                                    "type": "text",
+                                    "description": "Q2 Approvals count"
+                                },
+                                {
+                                    "key": "expected_project_detail_count",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Q3 Project details count",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "customers",
+                                    "value": "[{\"customer_id\":\"101\",\"target_type\":\"order\"}]",
+                                    "type": "text",
+                                    "description": "JSON required if order OR approval > 0. target_type=order|approval"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_sales_executive.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_sales_executive.php"
+                            ]
+                        },
+                        "description": "**API:** 271 save_daily_plan\n\nMorning Punch IN plan.\nMin 1 of 3 targets required.\nIf order/approval filled \u2192 customers JSON required.\n\nSuccess: daily_plan_id\nThen call #20 type=In"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Daily Plan Status (#272)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "272",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "sales_id",
+                                    "value": "{{sales_id}}",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "plan_date",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Optional default today",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_sales_executive.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_sales_executive.php"
+                            ]
+                        },
+                        "description": "**API:** 272 get_daily_plan_status\n\nReturns plan_submitted, completion_submitted, can_punch_out, result (targets + customers).\nUse before Punch OUT screen."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Save Daily Plan Completion (#273)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "273",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "sales_id",
+                                    "value": "{{sales_id}}",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "daily_plan_id",
+                                    "value": "{{daily_plan_id}}",
+                                    "type": "text",
+                                    "description": "From #272 result.daily_plan_id"
+                                },
+                                {
+                                    "key": "actual_order_amount",
+                                    "value": "45000",
+                                    "type": "text",
+                                    "description": "Required if morning had expected_order_amount"
+                                },
+                                {
+                                    "key": "actual_approval_count",
+                                    "value": "1",
+                                    "type": "text",
+                                    "description": "Required if morning had expected_approval_count"
+                                },
+                                {
+                                    "key": "actual_project_detail_count",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Required if morning had expected_project_detail_count",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_sales_executive.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_sales_executive.php"
+                            ]
+                        },
+                        "description": "**API:** 273 save_daily_plan_completion\n\nMust submit before Punch OUT.\nSuccess: can_punch_out=1 \u2192 then #20 type=Out"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Punch IN (#20) \u2014 after Daily Plan",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "20",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "type",
+                                    "value": "In",
+                                    "type": "text",
+                                    "description": "In | Out. OUT blocked without daily completion (require_completion=1)"
+                                },
+                                {
+                                    "key": "sales_id",
+                                    "value": "{{sales_id}}",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "imei",
+                                    "value": "352929080782455",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "lat",
+                                    "value": "23.0225",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "lng",
+                                    "value": "72.5714",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "app_address",
+                                    "value": "Ahmedabad",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "auto_out_flag",
+                                    "value": "0",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "date_time",
+                                    "value": "2026-09-16 11:45:01",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_sales_executive.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_sales_executive.php"
+                            ]
+                        },
+                        "description": "**API Code:** 20 add_attendance\n\n**UPDATED 2026-09-16:**\n- Punch IN: call after #271; links attendance_in_id\n- Punch OUT: blocked if completion missing \u2192 require_completion=1, daily_plan_id\n\nParams: type, sales_id, imei, lat, lng, app_address, auto_out_flag, date_time"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Punch OUT (#20) \u2014 requires Completion",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "20",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "type",
+                                    "value": "In",
+                                    "type": "text",
+                                    "description": "In | Out. OUT blocked without daily completion (require_completion=1)"
+                                },
+                                {
+                                    "key": "sales_id",
+                                    "value": "{{sales_id}}",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "imei",
+                                    "value": "352929080782455",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "lat",
+                                    "value": "23.0225",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "lng",
+                                    "value": "72.5714",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "app_address",
+                                    "value": "Ahmedabad",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "auto_out_flag",
+                                    "value": "0",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "date_time",
+                                    "value": "2026-09-16 11:45:01",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_sales_executive.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_sales_executive.php"
+                            ]
+                        },
+                        "description": "**API Code:** 20 add_attendance\n\n**UPDATED 2026-09-16:**\n- Punch IN: call after #271; links attendance_in_id\n- Punch OUT: blocked if completion missing \u2192 require_completion=1, daily_plan_id\n\nParams: type, sales_id, imei, lat, lng, app_address, auto_out_flag, date_time"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Customer with Search (#12)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "12",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "sales_executive_id",
+                                    "value": "{{sales_id}}",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "search",
+                                    "value": "a",
+                                    "type": "text",
+                                    "description": "Optional. Filter client_code / cname / company_name"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_sales_executive.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_sales_executive.php"
+                            ]
+                        },
+                        "description": "**API Code:** 12\n\n**Slug:** get_customer\n\n**UPDATED 2026-09-16:** Optional `search` param. Response includes `display_label` = CODE - Name.\nOnly assigned customers."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Visit Start Types (#274)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "274",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_visit.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_visit.php"
+                            ]
+                        },
+                        "description": "**API:** 274 get_visit_start_types\n\nReturns 19 types from visit_start_type_master.\nUse before Visit Start. Cache locally."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Add Visit with Start Type (#75)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "75",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "user_id",
+                                    "value": "{{sales_id}}",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "customer_id",
+                                    "value": "1",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "inquiry_id",
+                                    "value": "0",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "latitude",
+                                    "value": "23.0225",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "longitude",
+                                    "value": "72.5714",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "remark",
+                                    "value": "test",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "app_address",
+                                    "value": "Ahmedabad",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "purpose_id",
+                                    "value": "1",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "visit_start_type_id",
+                                    "value": "{{visit_start_type_id}}",
+                                    "type": "text",
+                                    "description": "REQUIRED \u2014 from get_visit_start_types (#274)"
+                                },
+                                {
+                                    "key": "flag",
+                                    "value": "0",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "company_id",
+                                    "value": "1",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_visit.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_visit.php"
+                            ]
+                        },
+                        "description": "**API Code:** 75 Add_visit\n\n**UPDATED 2026-09-16:** `visit_start_type_id` mandatory.\nGet list from #274 first."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Visit + Completion Answers (#122)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "122",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "id",
+                                    "value": "{{visit_id}}",
+                                    "type": "text",
+                                    "description": "visit id"
+                                },
+                                {
+                                    "key": "user_id",
+                                    "value": "{{sales_id}}",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "customer_id",
+                                    "value": "1",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "stop_latitude",
+                                    "value": "23.0225",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "stop_longitude",
+                                    "value": "72.5714",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "stop_remark",
+                                    "value": "(A) OLD CUSTOMER VISIT",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "note",
+                                    "value": "",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "date",
+                                    "value": "2026-09-16 11:45",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "remark_code",
+                                    "value": "A",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "reason_code",
+                                    "value": "A1",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "stop_app_address",
+                                    "value": "Ahmedabad",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "inquiry_id",
+                                    "value": "0",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "visit_type",
+                                    "value": "1",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "visit_stop_flag",
+                                    "value": "0",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "name",
+                                    "value": "Test Person",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "mobile_no",
+                                    "value": "9876543210",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "email_id",
+                                    "value": "test@example.com",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "designation_id",
+                                    "value": "1",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "order_came",
+                                    "value": "1",
+                                    "type": "text",
+                                    "description": "NEW required 0|1"
+                                },
+                                {
+                                    "key": "approval_came",
+                                    "value": "0",
+                                    "type": "text",
+                                    "description": "NEW required 0|1"
+                                },
+                                {
+                                    "key": "project_detail_came",
+                                    "value": "0",
+                                    "type": "text",
+                                    "description": "NEW required 0|1"
+                                },
+                                {
+                                    "key": "contract_detail_came",
+                                    "value": "0",
+                                    "type": "text",
+                                    "description": "NEW required 0|1"
+                                },
+                                {
+                                    "key": "payment_came",
+                                    "value": "0",
+                                    "type": "text",
+                                    "description": "NEW required 0|1"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_visit.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_visit.php"
+                            ]
+                        },
+                        "description": "**API:** 122 update_visit (UPDATED)\n\nNEW mandatory: order_came, approval_came, project_detail_came, contract_detail_came, payment_came (0/1)\nSaves visit_completion_answer\n\n**UPDATED 2026-09-16:** Mandatory visit completion answers: order_came, approval_came, project_detail_came, contract_detail_came, payment_came (0/1)."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Save Quotation Questionnaire (#275)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "275",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "quotation_id",
+                                    "value": "{{quotation_id}}",
+                                    "type": "text",
+                                    "description": "Draft quotation / cart id"
+                                },
+                                {
+                                    "key": "cart_id",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Alt for quotation_id",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "sales_executive_id",
+                                    "value": "{{sales_id}}",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "customer_id",
+                                    "value": "1",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "knows_full_range",
+                                    "value": "0",
+                                    "type": "text",
+                                    "description": "1=Yes 0=No"
+                                },
+                                {
+                                    "key": "not_buying_reason",
+                                    "value": "1",
+                                    "type": "text",
+                                    "description": "Required if knows_full_range=0. 1=No info 2=Price high 3=Need approval"
+                                },
+                                {
+                                    "key": "high_rate_form_id",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Required if reason=2 (after #234)",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "consultant_form_id",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "Required if reason=3 (after #233)",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "remark",
+                                    "value": "",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_quotation.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_quotation.php"
+                            ]
+                        },
+                        "description": "**API:** 275 save_quotation_questionnaire\n\nCall on PI/Quotation Submit popup BEFORE #165.\nIf reason=2 \u2192 High Rate form #234 first.\nIf reason=3 \u2192 Consultant form #233 first.\nSuccess: questionnaire_id \u2192 pass to #165"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create Quotation with Questionnaire (#165)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "key",
+                                    "value": "1226",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "s",
+                                    "value": "165",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "customer_id",
+                                    "value": "1",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "sales_executive_id",
+                                    "value": "{{sales_id}}",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "questionnaire_id",
+                                    "value": "{{questionnaire_id}}",
+                                    "type": "text",
+                                    "description": "REQUIRED \u2014 from #275"
+                                },
+                                {
+                                    "key": "shipping_address",
+                                    "value": "Ahmedabad",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "billing_address",
+                                    "value": "Ahmedabad",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "quotation_date",
+                                    "value": "2026-09-16",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "terms_comdition",
+                                    "value": "As per company terms",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "faithfully",
+                                    "value": "Sales",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service/service_quotation.php",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service",
+                                "service_quotation.php"
+                            ]
+                        },
+                        "description": "**API Code:** 165 create_quotation\n\n**UPDATED 2026-09-16:** `questionnaire_id` required (from #275).\nWithout it: require_questionnaire=1"
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Channel Partner App \u2014 Dashboard + My Customers (#241-#247)",
+            "description": "CP Login Dashboard (#247) + My Customers (#241-#246).\n1) Login API #2 \u2192 result.channel_partner_id + result.cp_apis.dashboard\n2) Dashboard #247 (Web + Mobile same JSON)\n3) List #241 / Add #242\nEndpoint: service/service_channel_partner.php\nkey=1226",
             "item": [
                 {
                     "name": "CP Login Dashboard (#247)",
@@ -431,8 +1256,8 @@
             ]
         },
         {
-            "name": "Channel Partner App — Customer Order + Cart (#248-#256, #269)",
-            "description": "Channel Partner App — Customer Order + Cart (#248-#256) + Order PDF #269\nSAME as web CP login (Aarav / channel_partner_id) — App draft cart.\nWeb form has no cart; App uses #249-#253 draft order (status=-1).\n\n**Who:** Only Channel Partner login. Always send channel_partner_id from Login #2.\n**Stock products only for that CP** (My Stock #257).\n\nLIVE verified Aarav Safety Solutions (CP 12229):\nParty: channel_partner_customer_id=8 Orbit Electricals\npwp_id map (from #248):\n  CatNo 2301 → pwp_id 2095 (stock 27, rate 9300)\n  CatNo 2893 → pwp_id 2119 (stock 30, rate 975)\n  CatNo 2290 → pwp_id 2106 (stock 33, rate 5700)\n  CatNo 2293 → pwp_id 2096 (stock 22, rate 12009)\n\n**Add Cart #250 (ONLY ONE API):** key, s=250, channel_partner_id, channel_partner_customer_id, pwp_id, qty\nDo NOT send products field.\nFlow: #257 → #241 → #248 → #250 → #249 → #254\n\n**Order PDF (Pending / not dispatched):**\n#255/#256 → can_download_pdf=1 + download_pdf_api=269\n#269 → file_url in inquiry_documents/ (same as #265 Payment PDF)\n\n**Edit/Delete (Pending only):**\n#256 detail → can_edit / can_delete\n#264 update_cp_customer_order (party / products JSON / remark)\n#263 delete_cp_customer_order (soft delete + stock credit back)\n\n**Status update (#267):** Pending → Dispatched (same as web dropdown). Use when can_dispatch=1 from #255/#256.\n\n**Delete item (#268):** Edit Pending order → delete one line (item_id from #256). Last item not allowed — use #263.\n**Edit item (#270):** Edit Pending order → change qty / rate / discount on one line (item_id from #256). rate = GROSS original. Add new line still #266.",
+            "name": "Channel Partner App \u2014 Customer Order + Cart (#248-#256, #269)",
+            "description": "Channel Partner App \u2014 Customer Order + Cart (#248-#256) + Order PDF #269\nSAME as web CP login (Aarav / channel_partner_id) \u2014 App draft cart.\nWeb form has no cart; App uses #249-#253 draft order (status=-1).\n\n**Who:** Only Channel Partner login. Always send channel_partner_id from Login #2.\n**Stock products only for that CP** (My Stock #257).\n\nLIVE verified Aarav Safety Solutions (CP 12229):\nParty: channel_partner_customer_id=8 Orbit Electricals\npwp_id map (from #248):\n  CatNo 2301 \u2192 pwp_id 2095 (stock 27, rate 9300)\n  CatNo 2893 \u2192 pwp_id 2119 (stock 30, rate 975)\n  CatNo 2290 \u2192 pwp_id 2106 (stock 33, rate 5700)\n  CatNo 2293 \u2192 pwp_id 2096 (stock 22, rate 12009)\n\n**Add Cart #250 (ONLY ONE API):** key, s=250, channel_partner_id, channel_partner_customer_id, pwp_id, qty\nDo NOT send products field.\nFlow: #257 \u2192 #241 \u2192 #248 \u2192 #250 \u2192 #249 \u2192 #254\n\n**Order PDF (Pending / not dispatched):**\n#255/#256 \u2192 can_download_pdf=1 + download_pdf_api=269\n#269 \u2192 file_url in inquiry_documents/ (same as #265 Payment PDF)\n\n**Edit/Delete (Pending only):**\n#256 detail \u2192 can_edit / can_delete\n#264 update_cp_customer_order (party / products JSON / remark)\n#263 delete_cp_customer_order (soft delete + stock credit back)\n\n**Status update (#267):** Pending \u2192 Dispatched (same as web dropdown). Use when can_dispatch=1 from #255/#256.\n\n**Delete item (#268):** Edit Pending order \u2192 delete one line (item_id from #256). Last item not allowed \u2014 use #263.\n**Edit item (#270):** Edit Pending order \u2192 change qty / rate / discount on one line (item_id from #256). rate = GROSS original. Add new line still #266.",
             "item": [
                 {
                     "name": "CP Order Products (#248)",
@@ -456,7 +1281,7 @@
                                     "key": "channel_partner_id",
                                     "value": "12229",
                                     "type": "text",
-                                    "description": "From Login #2 — Aarav Safety Solutions (demo CP)"
+                                    "description": "From Login #2 \u2014 Aarav Safety Solutions (demo CP)"
                                 },
                                 {
                                     "key": "search_name",
@@ -508,13 +1333,13 @@
                                     "key": "channel_partner_id",
                                     "value": "12229",
                                     "type": "text",
-                                    "description": "From Login #2 — Aarav Safety Solutions (demo CP)"
+                                    "description": "From Login #2 \u2014 Aarav Safety Solutions (demo CP)"
                                 },
                                 {
                                     "key": "channel_partner_customer_id",
                                     "value": "8",
                                     "type": "text",
-                                    "description": "Orbit Electricals — binds party on cart"
+                                    "description": "Orbit Electricals \u2014 binds party on cart"
                                 },
                                 {
                                     "key": "party_id",
@@ -561,13 +1386,13 @@
                                     "key": "channel_partner_id",
                                     "value": "12229",
                                     "type": "text",
-                                    "description": "From Login #2 — Aarav Safety Solutions (demo CP)"
+                                    "description": "From Login #2 \u2014 Aarav Safety Solutions (demo CP)"
                                 },
                                 {
                                     "key": "channel_partner_customer_id",
                                     "value": "8",
                                     "type": "text",
-                                    "description": "From #241 — Orbit Electricals"
+                                    "description": "From #241 \u2014 Orbit Electricals"
                                 },
                                 {
                                     "key": "gst_apply_flag",
@@ -579,7 +1404,7 @@
                                     "key": "pwp_id",
                                     "value": "2095",
                                     "type": "text",
-                                    "description": "From #248 — CatNo 2301 (CP stock product)"
+                                    "description": "From #248 \u2014 CatNo 2301 (CP stock product)"
                                 },
                                 {
                                     "key": "qty",
@@ -602,7 +1427,7 @@
                                     "key": "products",
                                     "value": "",
                                     "type": "text",
-                                    "description": "LEAVE EMPTY — do not send",
+                                    "description": "LEAVE EMPTY \u2014 do not send",
                                     "disabled": true
                                 },
                                 {
@@ -645,7 +1470,7 @@
                                 "service_channel_partner.php"
                             ]
                         },
-                        "description": "ONE Add-Cart API for Channel Partner App.\nVerified live: CP 12229 + party 8 + pwp_id 2095 + qty 1 → ack=1.\nRequired: channel_partner_id, channel_partner_customer_id, pwp_id, qty\nLeave products EMPTY."
+                        "description": "ONE Add-Cart API for Channel Partner App.\nVerified live: CP 12229 + party 8 + pwp_id 2095 + qty 1 \u2192 ack=1.\nRequired: channel_partner_id, channel_partner_customer_id, pwp_id, qty\nLeave products EMPTY."
                     },
                     "response": []
                 },
@@ -671,7 +1496,7 @@
                                     "key": "channel_partner_id",
                                     "value": "12229",
                                     "type": "text",
-                                    "description": "From Login #2 — Aarav Safety Solutions (demo CP)"
+                                    "description": "From Login #2 \u2014 Aarav Safety Solutions (demo CP)"
                                 },
                                 {
                                     "key": "cart_item_id",
@@ -694,7 +1519,7 @@
                                     "key": "discount",
                                     "value": "",
                                     "type": "text",
-                                    "description": "Disc %. Rate stays original — disc is not applied on discounted net"
+                                    "description": "Disc %. Rate stays original \u2014 disc is not applied on discounted net"
                                 }
                             ]
                         },
@@ -708,7 +1533,7 @@
                                 "service_channel_partner.php"
                             ]
                         },
-                        "description": "Update cart line qty / rate / discount.\nrate = GROSS (original product rate, before discount). Optional — omit to keep existing original rate and only change discount.\nDo NOT send unitprice / discounted net as rate.\n#251/#249 items[].rate and items[].original_price are always before discount."
+                        "description": "Update cart line qty / rate / discount.\nrate = GROSS (original product rate, before discount). Optional \u2014 omit to keep existing original rate and only change discount.\nDo NOT send unitprice / discounted net as rate.\n#251/#249 items[].rate and items[].original_price are always before discount."
                     },
                     "response": []
                 },
@@ -734,7 +1559,7 @@
                                     "key": "channel_partner_id",
                                     "value": "12229",
                                     "type": "text",
-                                    "description": "From Login #2 — Aarav Safety Solutions (demo CP)"
+                                    "description": "From Login #2 \u2014 Aarav Safety Solutions (demo CP)"
                                 },
                                 {
                                     "key": "cart_item_id",
@@ -779,7 +1604,7 @@
                                     "key": "channel_partner_id",
                                     "value": "12229",
                                     "type": "text",
-                                    "description": "From Login #2 — Aarav Safety Solutions (demo CP)"
+                                    "description": "From Login #2 \u2014 Aarav Safety Solutions (demo CP)"
                                 }
                             ]
                         },
@@ -819,7 +1644,7 @@
                                     "key": "channel_partner_id",
                                     "value": "12229",
                                     "type": "text",
-                                    "description": "From Login #2 — Aarav Safety Solutions (demo CP)"
+                                    "description": "From Login #2 \u2014 Aarav Safety Solutions (demo CP)"
                                 },
                                 {
                                     "key": "channel_partner_customer_id",
@@ -887,7 +1712,7 @@
                                     "key": "channel_partner_id",
                                     "value": "12229",
                                     "type": "text",
-                                    "description": "From Login #2 — Aarav Safety Solutions (demo CP)"
+                                    "description": "From Login #2 \u2014 Aarav Safety Solutions (demo CP)"
                                 },
                                 {
                                     "key": "search_name",
@@ -917,7 +1742,7 @@
                                 "service_channel_partner.php"
                             ]
                         },
-                        "description": "Same as web Manage Customer Order list. Status: pending | pending_payment | completed.\nPayment: remaining_amount, is_partial, can_receive=1 while remaining>0, payment_label e.g. Partial 10,000 / Pending 6,000.\nPending rows include can_dispatch=1 + status_options. Use #267 to mark Dispatched.\n\n**PDF (Pending / not dispatched):**\n- can_download_pdf=1, can_print=1\n- print_url = absolute web print page\n- download_pdf_api=269 → call #269 with order_id → use response.file_url to download"
+                        "description": "Same as web Manage Customer Order list. Status: pending | pending_payment | completed.\nPayment: remaining_amount, is_partial, can_receive=1 while remaining>0, payment_label e.g. Partial 10,000 / Pending 6,000.\nPending rows include can_dispatch=1 + status_options. Use #267 to mark Dispatched.\n\n**PDF (Pending / not dispatched):**\n- can_download_pdf=1, can_print=1\n- print_url = absolute web print page\n- download_pdf_api=269 \u2192 call #269 with order_id \u2192 use response.file_url to download"
                     },
                     "response": []
                 },
@@ -943,7 +1768,7 @@
                                     "key": "channel_partner_id",
                                     "value": "12229",
                                     "type": "text",
-                                    "description": "From Login #2 — Aarav Safety Solutions (demo CP)"
+                                    "description": "From Login #2 \u2014 Aarav Safety Solutions (demo CP)"
                                 },
                                 {
                                     "key": "order_id",
@@ -962,7 +1787,7 @@
                                 "service_channel_partner.php"
                             ]
                         },
-                        "description": "Order header + items[] + print/PDF fields.\nPayment: remaining_amount, is_partial, can_receive, baki_amount.\nPending (not dispatched): can_download_pdf=1, print_url (absolute), download_pdf_api=269.\nApp: call #269 download_cp_customer_order_pdf → open/save result.file_url"
+                        "description": "Order header + items[] + print/PDF fields.\nPayment: remaining_amount, is_partial, can_receive, baki_amount.\nPending (not dispatched): can_download_pdf=1, print_url (absolute), download_pdf_api=269.\nApp: call #269 download_cp_customer_order_pdf \u2192 open/save result.file_url"
                     },
                     "response": []
                 },
@@ -988,13 +1813,13 @@
                                     "key": "channel_partner_id",
                                     "value": "12229",
                                     "type": "text",
-                                    "description": "From Login #2 — Aarav Safety Solutions (demo CP)"
+                                    "description": "From Login #2 \u2014 Aarav Safety Solutions (demo CP)"
                                 },
                                 {
                                     "key": "order_id",
                                     "value": "{{order_id}}",
                                     "type": "text",
-                                    "description": "From #255/#256 — use when can_download_pdf=1 (Pending / not dispatched)"
+                                    "description": "From #255/#256 \u2014 use when can_download_pdf=1 (Pending / not dispatched)"
                                 }
                             ]
                         },
@@ -1008,7 +1833,7 @@
                                 "service_channel_partner.php"
                             ]
                         },
-                        "description": "Generate Customer Order PDF — same as #265 Payment PDF / #262 Ledger PDF.\n\n**App flow:**\n1) #255/#256 → can_download_pdf=1 (Pending)\n2) Call #269 with channel_partner_id + order_id\n3) Open/download response.file_url (inquiry_documents direct PDF URL)\n\nExample file_url:\nhttps://armor-crm.oceanhub.co.in/bbsales_tracking/inquiry_documents/CP_Order_xxx.pdf\n\nParams: key=1226, s=269, channel_partner_id, order_id\nResponse: ack, file_url, file_name, order_no, pdf_ok=1"
+                        "description": "Generate Customer Order PDF \u2014 same as #265 Payment PDF / #262 Ledger PDF.\n\n**App flow:**\n1) #255/#256 \u2192 can_download_pdf=1 (Pending)\n2) Call #269 with channel_partner_id + order_id\n3) Open/download response.file_url (inquiry_documents direct PDF URL)\n\nExample file_url:\nhttps://armor-crm.oceanhub.co.in/bbsales_tracking/inquiry_documents/CP_Order_xxx.pdf\n\nParams: key=1226, s=269, channel_partner_id, order_id\nResponse: ack, file_url, file_name, order_no, pdf_ok=1"
                     },
                     "response": []
                 },
@@ -1040,13 +1865,13 @@
                                     "key": "order_id",
                                     "value": "{{order_id}}",
                                     "type": "text",
-                                    "description": "From #255 — Pending only (can_dispatch=1)"
+                                    "description": "From #255 \u2014 Pending only (can_dispatch=1)"
                                 },
                                 {
                                     "key": "status",
                                     "value": "dispatch",
                                     "type": "text",
-                                    "description": "dispatch | dispatched — same as web Status dropdown Pending → Dispatched"
+                                    "description": "dispatch | dispatched \u2014 same as web Status dropdown Pending \u2192 Dispatched"
                                 }
                             ]
                         },
@@ -1060,7 +1885,7 @@
                                 "service_channel_partner.php"
                             ]
                         },
-                        "description": "Same as web Manage Customer Order Status dropdown.\nPending → Dispatched. After success, status becomes pending_payment (Baki).\n\n**App:** Use only when #255/#256 return can_dispatch=1 (or can_dispatched=1).\nResponse always includes can_dispatch + can_dispatched (1|0).\nOmit status (or status=check) to only read can_dispatch without updating.\n\nParams: channel_partner_id, order_id, status=dispatch\nkey must be 1226 (not 1228).\norder_id must be a real Pending order id from #255 — do not leave {{order_id}} empty/old."
+                        "description": "Same as web Manage Customer Order Status dropdown.\nPending \u2192 Dispatched. After success, status becomes pending_payment (Baki).\n\n**App:** Use only when #255/#256 return can_dispatch=1 (or can_dispatched=1).\nResponse always includes can_dispatch + can_dispatched (1|0).\nOmit status (or status=check) to only read can_dispatch without updating.\n\nParams: channel_partner_id, order_id, status=dispatch\nkey must be 1226 (not 1228).\norder_id must be a real Pending order id from #255 \u2014 do not leave {{order_id}} empty/old."
                     },
                     "response": []
                 },
@@ -1092,7 +1917,7 @@
                                     "key": "order_id",
                                     "value": "",
                                     "type": "text",
-                                    "description": "From #255 — Pending only"
+                                    "description": "From #255 \u2014 Pending only"
                                 },
                                 {
                                     "key": "channel_partner_customer_id",
@@ -1133,12 +1958,12 @@
                                 "service_channel_partner.php"
                             ]
                         },
-                        "description": "Edit Pending CP customer order.\nIf products sent → replace lines + stock adjust.\nOnly status=Pending (not dispatched / not paid)."
+                        "description": "Edit Pending CP customer order.\nIf products sent \u2192 replace lines + stock adjust.\nOnly status=Pending (not dispatched / not paid)."
                     },
                     "response": []
                 },
                 {
-                    "name": "CP Add Order Item (#266) — Edit Order + Add Item",
+                    "name": "CP Add Order Item (#266) \u2014 Edit Order + Add Item",
                     "request": {
                         "method": "POST",
                         "header": [],
@@ -1165,7 +1990,7 @@
                                     "key": "order_id",
                                     "value": "",
                                     "type": "text",
-                                    "description": "From #256 — Pending only (can_edit=1)"
+                                    "description": "From #256 \u2014 Pending only (can_edit=1)"
                                 },
                                 {
                                     "key": "pwp_id",
@@ -1203,7 +2028,7 @@
                                 "service_channel_partner.php"
                             ]
                         },
-                        "description": "Edit Order screen → + Add Item.\nAppends one product line to pending order.\nSame product+weight merges qty on existing line.\nReturns updated order detail in result.\n\nFlow: #256 detail → product picker #248 → #266 add item → refresh items/totals.\nEdit existing line: #270 | Delete line: #268 | Save header: #264."
+                        "description": "Edit Order screen \u2192 + Add Item.\nAppends one product line to pending order.\nSame product+weight merges qty on existing line.\nReturns updated order detail in result.\n\nFlow: #256 detail \u2192 product picker #248 \u2192 #266 add item \u2192 refresh items/totals.\nEdit existing line: #270 | Delete line: #268 | Save header: #264."
                     },
                     "response": []
                 },
@@ -1235,7 +2060,7 @@
                                     "key": "order_id",
                                     "value": "{{order_id}}",
                                     "type": "text",
-                                    "description": "From #256 — Pending only (can_edit=1)"
+                                    "description": "From #256 \u2014 Pending only (can_edit=1)"
                                 },
                                 {
                                     "key": "item_id",
@@ -1259,7 +2084,7 @@
                                     "key": "discount",
                                     "value": "",
                                     "type": "text",
-                                    "description": "Disc %. Rate stays original — do not send net as rate"
+                                    "description": "Disc %. Rate stays original \u2014 do not send net as rate"
                                 }
                             ]
                         },
@@ -1273,12 +2098,12 @@
                                 "service_channel_partner.php"
                             ]
                         },
-                        "description": "Edit one existing product line on Pending CP customer order.\nRequired: key, s=270, channel_partner_id, order_id, item_id\nOptional: qty, rate (GROSS original), discount\n\nFlow: #256 → items[].item_id → #270 → result is updated order detail.\nRate = GROSS before discount (same as cart #251). Do not send discounted net.\nAdd new line → #266. Delete line → #268."
+                        "description": "Edit one existing product line on Pending CP customer order.\nRequired: key, s=270, channel_partner_id, order_id, item_id\nOptional: qty, rate (GROSS original), discount\n\nFlow: #256 \u2192 items[].item_id \u2192 #270 \u2192 result is updated order detail.\nRate = GROSS before discount (same as cart #251). Do not send discounted net.\nAdd new line \u2192 #266. Delete line \u2192 #268."
                     },
                     "response": []
                 },
                 {
-                    "name": "CP Delete Order Item (#268) — Edit Order Delete Item",
+                    "name": "CP Delete Order Item (#268) \u2014 Edit Order Delete Item",
                     "request": {
                         "method": "POST",
                         "header": [],
@@ -1305,7 +2130,7 @@
                                     "key": "order_id",
                                     "value": "{{order_id}}",
                                     "type": "text",
-                                    "description": "From #256 — Pending only (can_edit=1)"
+                                    "description": "From #256 \u2014 Pending only (can_edit=1)"
                                 },
                                 {
                                     "key": "item_id",
@@ -1325,7 +2150,7 @@
                                 "service_channel_partner.php"
                             ]
                         },
-                        "description": "Edit Order → delete one product line.\nPending orders only (can_edit=1).\nCredits stock back if order was stock-debited.\nCannot delete last item — use #263 for whole order delete.\nReturns updated order detail in result.\n\nFlow: #256 detail → item_id → #268 delete → refresh items/totals.\nAdd item: #266 | Edit item: #270 | Save header: #264"
+                        "description": "Edit Order \u2192 delete one product line.\nPending orders only (can_edit=1).\nCredits stock back if order was stock-debited.\nCannot delete last item \u2014 use #263 for whole order delete.\nReturns updated order detail in result.\n\nFlow: #256 detail \u2192 item_id \u2192 #268 delete \u2192 refresh items/totals.\nAdd item: #266 | Edit item: #270 | Save header: #264"
                     },
                     "response": []
                 },
@@ -1356,7 +2181,7 @@
                                     "key": "order_id",
                                     "value": "",
                                     "type": "text",
-                                    "description": "From #255 — Pending only (can_delete=1)"
+                                    "description": "From #255 \u2014 Pending only (can_delete=1)"
                                 }
                             ]
                         },
@@ -1377,8 +2202,8 @@
             ]
         },
         {
-            "name": "Channel Partner App — My Stock (#257-#258)",
-            "description": "Same as web My Stock (channel_partner_stock_manage.php).\n\n**#257 Main Stock** — Product Code + Name + Available Qty\n**#258 Inward/Outward** — Bill No, Date, In/Out, Balance\n\nEndpoint: service/service_channel_partner.php\nkey=1226",
+            "name": "Channel Partner App \u2014 My Stock (#257-#258)",
+            "description": "Same as web My Stock (channel_partner_stock_manage.php).\n\n**#257 Main Stock** \u2014 Product Code + Name + Available Qty\n**#258 Inward/Outward** \u2014 Bill No, Date, In/Out, Balance\n\nEndpoint: service/service_channel_partner.php\nkey=1226",
             "item": [
                 {
                     "name": "CP My Stock Main (#257)",
@@ -1422,7 +2247,7 @@
                                 "service_channel_partner.php"
                             ]
                         },
-                        "description": "Web tab: 1. Main Stock (Product & Code)\n\nReturns: product_code, product_name, product_label (code - name), available_qty\nSame data as Aarav Safety Solutions — Main Stock table."
+                        "description": "Web tab: 1. Main Stock (Product & Code)\n\nReturns: product_code, product_name, product_label (code - name), available_qty\nSame data as Aarav Safety Solutions \u2014 Main Stock table."
                     },
                     "response": []
                 },
@@ -1475,8 +2300,8 @@
             ]
         },
         {
-            "name": "Channel Partner App — Receive Payment (#259-#261, #265)",
-            "description": "Same as web Receive Payment — **partial payment allowed**.\nExample: order 16000, first #261 paid_amount=10000 → remaining_amount=6000, can_receive=1, is_partial=1. Second #261 paid_amount=6000 → remaining=0, payment_received_flag=1.\n\n**App list / set:**\n1) #259 party dropdown (no change)\n2) #260 list: show order_amount, payment_received_amount, remaining_amount, payment_status_label\n3) Receive button **if can_receive=1** (remaining > 0). Hide only when remaining=0\n4) Popup: suggested_amount = remaining_amount (not full order). User may type less\n5) #261 save this receipt only (do not send running total)\n6) After save: refresh #260. If remaining_amount>0 keep Receive button\n7) #265 PDF: total_received + total_pending\n8) #262 Ledger: order debit + each receipt credit; closing = pending\n\nPayment types: 1=Cash, 2=Cheque, 3=Online/NEFT/UPI, 4=Other\nEndpoint: service/service_channel_partner.php key=1226",
+            "name": "Channel Partner App \u2014 Receive Payment (#259-#261, #265)",
+            "description": "Same as web Receive Payment \u2014 **partial payment allowed**.\nExample: order 16000, first #261 paid_amount=10000 \u2192 remaining_amount=6000, can_receive=1, is_partial=1. Second #261 paid_amount=6000 \u2192 remaining=0, payment_received_flag=1.\n\n**App list / set:**\n1) #259 party dropdown (no change)\n2) #260 list: show order_amount, payment_received_amount, remaining_amount, payment_status_label\n3) Receive button **if can_receive=1** (remaining > 0). Hide only when remaining=0\n4) Popup: suggested_amount = remaining_amount (not full order). User may type less\n5) #261 save this receipt only (do not send running total)\n6) After save: refresh #260. If remaining_amount>0 keep Receive button\n7) #265 PDF: total_received + total_pending\n8) #262 Ledger: order debit + each receipt credit; closing = pending\n\nPayment types: 1=Cash, 2=Cheque, 3=Online/NEFT/UPI, 4=Other\nEndpoint: service/service_channel_partner.php key=1226",
             "item": [
                 {
                     "name": "CP Payment Parties (#259)",
@@ -1525,7 +2350,7 @@
                     "response": []
                 },
                 {
-                    "name": "CP Payment Orders (#260) — popup data",
+                    "name": "CP Payment Orders (#260) \u2014 popup data",
                     "request": {
                         "method": "POST",
                         "header": [],
@@ -1565,12 +2390,12 @@
                                 "service_channel_partner.php"
                             ]
                         },
-                        "description": "Orders for selected party. Partial payment fields:\n- order_amount (16000)\n- payment_received_amount (10000)\n- remaining_amount (6000) ← show as Pending\n- payment_status: pending | partial | received\n- payment_status_label e.g. Partial 10,000.00 / Pending 6,000.00\n- is_partial=1, can_receive=1 until remaining=0\n- suggested_amount = remaining_amount (popup default)\n- payment_received_flag=1 only when fully paid\n\nReceive button: can_receive=1 only.\nPopup: party_name, order_no, order_amount, suggested_amount, payment_types[]\nRemark default: Payment received from {party_name} against Order {order_no}"
+                        "description": "Orders for selected party. Partial payment fields:\n- order_amount (16000)\n- payment_received_amount (10000)\n- remaining_amount (6000) \u2190 show as Pending\n- payment_status: pending | partial | received\n- payment_status_label e.g. Partial 10,000.00 / Pending 6,000.00\n- is_partial=1, can_receive=1 until remaining=0\n- suggested_amount = remaining_amount (popup default)\n- payment_received_flag=1 only when fully paid\n\nReceive button: can_receive=1 only.\nPopup: party_name, order_no, order_amount, suggested_amount, payment_types[]\nRemark default: Payment received from {party_name} against Order {order_no}"
                     },
                     "response": []
                 },
                 {
-                    "name": "CP Save Receive Payment (#261) — popup Save",
+                    "name": "CP Save Receive Payment (#261) \u2014 popup Save",
                     "request": {
                         "method": "POST",
                         "header": [],
@@ -1680,11 +2505,11 @@
             ]
         },
         {
-            "name": "Channel Partner App — Party Ledger (#262)",
-            "description": "Same as web CP Customer Ledger (channel_partner_ledger.php) — Tally style.\nPartial payment: Sales Order debit 16000 + first receipt credit 10000 → closing 6000 Dr; second receipt 6000 → 0.\nEach #261 save is a separate credit row.\n\n**App flow:**\n1) Call #262 with channel_partner_id + party_id=0 (All Parties)\n2) Use response.parties[] for Party dropdown\n3) On party change, call #262 again with selected party_id\n4) Show result[]: date_display, particulars, voucher, debit_display, credit_display, balance_display\n5) Footer: closing_balance_display (pending remains Dr)\n6) Receive Payment button → API #259 (can_receive while remaining>0)\n7) PDF: response.file_url = full absolute PDF URL (same style as #265). Also print_url points to same PDF when pdf_ok=1.\n\nEndpoint: service/service_channel_partner.php\nkey=1226",
+            "name": "Channel Partner App \u2014 Party Ledger (#262)",
+            "description": "Same as web CP Customer Ledger (channel_partner_ledger.php) \u2014 Tally style.\nPartial payment: Sales Order debit 16000 + first receipt credit 10000 \u2192 closing 6000 Dr; second receipt 6000 \u2192 0.\nEach #261 save is a separate credit row.\n\n**App flow:**\n1) Call #262 with channel_partner_id + party_id=0 (All Parties)\n2) Use response.parties[] for Party dropdown\n3) On party change, call #262 again with selected party_id\n4) Show result[]: date_display, particulars, voucher, debit_display, credit_display, balance_display\n5) Footer: closing_balance_display (pending remains Dr)\n6) Receive Payment button \u2192 API #259 (can_receive while remaining>0)\n7) PDF: response.file_url = full absolute PDF URL (same style as #265). Also print_url points to same PDF when pdf_ok=1.\n\nEndpoint: service/service_channel_partner.php\nkey=1226",
             "item": [
                 {
-                    "name": "CP Party Ledger — All Parties (#262)",
+                    "name": "CP Party Ledger \u2014 All Parties (#262)",
                     "request": {
                         "method": "POST",
                         "header": [],
@@ -1730,7 +2555,7 @@
                     "response": []
                 },
                 {
-                    "name": "CP Party Ledger — One Party (#262)",
+                    "name": "CP Party Ledger \u2014 One Party (#262)",
                     "request": {
                         "method": "POST",
                         "header": [],
@@ -2586,7 +3411,7 @@
                                 "service_customer.php"
                             ]
                         },
-                        "description": "**API Code:** 65\n\n**Slug:** customer_change_new_password\n\n**Service (s):** 65\n\nChange New  Password Of Customer\n\n**Parameters from backend code:** id, password, new_password"
+                        "description": "**API Code:** 65\n\n**Slug:** customer_change_new_password\n\n**Service (s):** 65\n\nChange New\u00a0 Password Of Customer\n\n**Parameters from backend code:** id, password, new_password"
                     },
                     "response": []
                 },
@@ -3573,7 +4398,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 225\n\n**Slug:** add_channel_partner_customer\n\n**Service (s):** 225\n\nAdd Channel Partner Customer (web Channel Partner Customer module).\n\n**Required:** channel_partner_id, company_name, person_name, mobile_no, country, state, city\n\n**Optional:** email, gst, address, pincode\n\n**Get channel_partner_id from:** API #223\n\n**Flow:** #223 list CP → #225 add customer → #224 verify list"
+                        "description": "**API Code:** 225\n\n**Slug:** add_channel_partner_customer\n\n**Service (s):** 225\n\nAdd Channel Partner Customer (web Channel Partner Customer module).\n\n**Required:** channel_partner_id, company_name, person_name, mobile_no, country, state, city\n\n**Optional:** email, gst, address, pincode\n\n**Get channel_partner_id from:** API #223\n\n**Flow:** #223 list CP \u2192 #225 add customer \u2192 #224 verify list"
                     },
                     "response": []
                 },
@@ -4530,7 +5355,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 211\n\n**Slug:** change_inquiry_status\n\n**Service (s):** 211\n\nFor Change Inquiry Status\n\n**Parameters from backend code:** inquiry_id, sales_id"
+                        "description": "**API Code:** 211\n\n**Slug:** change_inquiry_status\n\n**Service (s):** 211\n\nFor\u00a0Change Inquiry Status\n\n**Parameters from backend code:** inquiry_id, sales_id"
                     },
                     "response": []
                 },
@@ -5409,7 +6234,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 223\n\n**Slug:** get_channel_partner_list\n\n**Service (s):** 223\n\nGet Channel Partner List\n\n**Channel Partner Customer APIs (223-228) — same as web CRM form:**\n| Web Field | API Parameter |\n|-----------|---------------|\n| Select Channel Partner | channel_partner_id |\n| Customer Name | company_name |\n| Person Name | person_name |\n| Mobile No | mobile_no |\n| Email | email |\n| GST | gst |\n| Address | address (optional) |\n| Country | country |\n| State | state |\n| City | city |\n| Pincode | pincode |\n| Edit/Delete id | id |\n"
+                        "description": "**API Code:** 223\n\n**Slug:** get_channel_partner_list\n\n**Service (s):** 223\n\nGet Channel Partner List\n\n**Channel Partner Customer APIs (223-228) \u2014 same as web CRM form:**\n| Web Field | API Parameter |\n|-----------|---------------|\n| Select Channel Partner | channel_partner_id |\n| Customer Name | company_name |\n| Person Name | person_name |\n| Mobile No | mobile_no |\n| Email | email |\n| GST | gst |\n| Address | address (optional) |\n| Country | country |\n| State | state |\n| City | city |\n| Pincode | pincode |\n| Edit/Delete id | id |\n"
                     },
                     "response": []
                 },
@@ -5455,7 +6280,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 38\n\n**Slug:** get_city\n\n**Service (s):** 38\n\nReturns cities for selected state (table `city` where state_id = class.id).\n\n**Required:** state_id (from #28 result.id) OR state name\n\n**Example:** Gujarat → state_id=12 → Ahmedabad, Rajkot, Surat...\n\n**Bug fixed:** Earlier this API used `area` + city_id. Passing Gujarat id=12 returned only Jhansi (city.id=12 in UP)."
+                        "description": "**API Code:** 38\n\n**Slug:** get_city\n\n**Service (s):** 38\n\nReturns cities for selected state (table `city` where state_id = class.id).\n\n**Required:** state_id (from #28 result.id) OR state name\n\n**Example:** Gujarat \u2192 state_id=12 \u2192 Ahmedabad, Rajkot, Surat...\n\n**Bug fixed:** Earlier this API used `area` + city_id. Passing Gujarat id=12 returned only Jhansi (city.id=12 in UP)."
                     },
                     "response": []
                 },
@@ -5571,6 +6396,12 @@
                                     "key": "ll",
                                     "value": "50",
                                     "type": "text"
+                                },
+                                {
+                                    "key": "search",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "NEW optional. Filter by client_code / cname / company_name"
                                 }
                             ]
                         },
@@ -5584,7 +6415,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 186\n\n**Slug:** get_customer_manual_stock\n\n**Service (s):** 186\n\n**Parameters from backend code:** sales_id, customer_id, ul, ll"
+                        "description": "**API Code:** 12\n\n**Slug:** get_customer\n\n**UPDATED 2026-09-16:** Optional `search` param. Response includes `display_label` = CODE - Name.\nOnly assigned customers."
                     },
                     "response": []
                 },
@@ -5621,6 +6452,12 @@
                                     "key": "ref_table",
                                     "value": "sample",
                                     "type": "text"
+                                },
+                                {
+                                    "key": "search",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "NEW optional. Filter by client_code / cname / company_name"
                                 }
                             ]
                         },
@@ -5634,7 +6471,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 209\n\n**Slug:** get_customer_phone_no\n\n**Service (s):** 209\n\nGet Customer Phone No\n\n**Parameters from backend code:** sales_id, customer_id, ref_table"
+                        "description": "**API Code:** 12\n\n**Slug:** get_customer\n\n**UPDATED 2026-09-16:** Optional `search` param. Response includes `display_label` = CODE - Name.\nOnly assigned customers."
                     },
                     "response": []
                 },
@@ -5670,6 +6507,12 @@
                                     "key": "searchName",
                                     "value": "product",
                                     "type": "text"
+                                },
+                                {
+                                    "key": "search",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "NEW optional. Filter by client_code / cname / company_name"
                                 }
                             ]
                         },
@@ -5683,7 +6526,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 106\n\n**Slug:** get_search_customer\n\n**Service (s):** 106\n\nGet Customer using Search\n\n**Parameters from backend code:** flag, term, searchName"
+                        "description": "**API Code:** 12\n\n**Slug:** get_customer\n\n**UPDATED 2026-09-16:** Optional `search` param. Response includes `display_label` = CODE - Name.\nOnly assigned customers."
                     },
                     "response": []
                 },
@@ -6275,7 +7118,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 52\n\n**Slug:** get_product\n\n**Service (s):** 51\n\nGet all product by ul (Upper Limit ) & ll (Lower Limit) \r\n\tGet all product of given cid (category id)\n\n**Parameters from backend code:** tcid, sales_id, uid, cid, ul, ll, search_name"
+                        "description": "**API Code:** 52\n\n**Slug:** get_product\n\n**Service (s):** 51\n\nGet all product by ul (Upper Limit ) & ll (Lower Limit)\u00a0\r\n\tGet all product of given cid (category id)\n\n**Parameters from backend code:** tcid, sales_id, uid, cid, ul, ll, search_name"
                     },
                     "response": []
                 },
@@ -6329,7 +7172,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 202\n\n**Slug:** get_product_varient\n\n**Service (s):** 202\n\nFor Get Product Varient\n\n**Parameters from backend code:** searchName, ul, ll, uid"
+                        "description": "**API Code:** 202\n\n**Slug:** get_product_varient\n\n**Service (s):** 202\n\nFor Get\u00a0Product Varient\n\n**Parameters from backend code:** searchName, ul, ll, uid"
                     },
                     "response": []
                 },
@@ -6437,7 +7280,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 200\n\n**Slug:** get_purpose_master\n\n**Service (s):** 200\n\nGet Purpose Master "
+                        "description": "**API Code:** 200\n\n**Slug:** get_purpose_master\n\n**Service (s):** 200\n\nGet Purpose Master\u00a0"
                     },
                     "response": []
                 },
@@ -6471,7 +7314,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 142\n\n**Slug:** get_source_of_inquiry\n\n**Service (s):** 142\n\nGet Source of Inquiry\r\n\r\n "
+                        "description": "**API Code:** 142\n\n**Slug:** get_source_of_inquiry\n\n**Service (s):** 142\n\nGet Source of Inquiry\r\n\r\n\u00a0"
                     },
                     "response": []
                 },
@@ -7285,7 +8128,7 @@
                                 "service_genral.php"
                             ]
                         },
-                        "description": "**API Code:** 206\n\n**Slug:** order_brand_item\n\n**Service (s):** 206\n\nOrder Item Wise Brand Add API "
+                        "description": "**API Code:** 206\n\n**Slug:** order_brand_item\n\n**Service (s):** 206\n\nOrder Item Wise Brand Add API\u00a0"
                     },
                     "response": []
                 },
@@ -10537,7 +11380,7 @@
                                 "service_meeting.php"
                             ]
                         },
-                        "description": "**API Code:** 103\n\n**Slug:** member_vs_meeting\n\n**Service (s):** 103\n\nadd/delete member in meeting\r\n\r\nmode = add_member\r\n\r\nmode = delete_member\r\n\r\n \n\n**Parameters from backend code:** mode, meeting_id, member_name, member_phone, member_id"
+                        "description": "**API Code:** 103\n\n**Slug:** member_vs_meeting\n\n**Service (s):** 103\n\nadd/delete member in meeting\r\n\r\nmode = add_member\r\n\r\nmode =\u00a0delete_member\r\n\r\n\u00a0\n\n**Parameters from backend code:** mode, meeting_id, member_name, member_phone, member_id"
                     },
                     "response": []
                 },
@@ -10657,7 +11500,7 @@
                                 "service_meeting.php"
                             ]
                         },
-                        "description": "**API Code:** 111\n\n**Slug:** customer_type\n\n**Service (s):** 111\n\nGet customer type"
+                        "description": "**API Code:** 111\n\n**Slug:** customer_type\n\n**Service (s):** 111\n\nGet customer\u00a0type"
                     },
                     "response": []
                 },
@@ -11324,6 +12167,12 @@
                                     "key": "cash_discount",
                                     "value": "sample",
                                     "type": "text"
+                                },
+                                {
+                                    "key": "questionnaire_id",
+                                    "value": "{{questionnaire_id}}",
+                                    "type": "text",
+                                    "description": "REQUIRED NEW \u2014 from save_quotation_questionnaire (#275)"
                                 }
                             ]
                         },
@@ -11337,7 +12186,7 @@
                                 "service_quotation.php"
                             ]
                         },
-                        "description": "**API Code:** 165\n\n**Slug:** create_quotation\n\n**Service (s):** 165\n\nCreate Quotation\n\n**Parameters from backend code:** customer_id, sales_executive_id, shipping_address, billing_address, vendor_code, tendor_code, tendor_no, transport_through, transport_name, quotation_date, packing_charge, transport_charge, terms_comdition, faithfully, gst_apply_flag, tcs_apply_flag, cart_type, sales_id, cid, additional_discount_flag, additional_discount, cash_discount_flag, cash_discount"
+                        "description": "**API Code:** 165 create_quotation\n\n**UPDATED 2026-09-16:** `questionnaire_id` required (from #275).\nWithout it: require_questionnaire=1"
                     },
                     "response": []
                 },
@@ -11620,7 +12469,7 @@
                     "response": []
                 },
                 {
-                    "name": "Add Attendence Inforamation  (#20)",
+                    "name": "Add Attendance (#20) \u2014 Punch IN/OUT [App CRM]",
                     "request": {
                         "method": "POST",
                         "header": [],
@@ -11639,8 +12488,9 @@
                                 },
                                 {
                                     "key": "type",
-                                    "value": "",
-                                    "type": "text"
+                                    "value": "In",
+                                    "type": "text",
+                                    "description": "In | Out. OUT blocked without daily completion (require_completion=1)"
                                 },
                                 {
                                     "key": "sales_id",
@@ -11696,7 +12546,7 @@
                                 "service_sales_executive.php"
                             ]
                         },
-                        "description": "**API Code:** 20\n\n**Slug:** add_attendance\n\n**Service (s):** 20\n\nAdd Attendence Inforamation\n\n**Parameters from backend code:** type, sales_id, imei, lat, lng, app_address, auto_out_flag, date_time"
+                        "description": "**API Code:** 20 add_attendance\n\n**UPDATED 2026-09-16:**\n- Punch IN: call after #271; links attendance_in_id\n- Punch OUT: blocked if completion missing \u2192 require_completion=1, daily_plan_id\n\nParams: type, sales_id, imei, lat, lng, app_address, auto_out_flag, date_time"
                     },
                     "response": []
                 },
@@ -12520,7 +13370,7 @@
                                 "service_sales_executive.php"
                             ]
                         },
-                        "description": "**API Code:** 193\n\n**Slug:** document_type_get\n\n**Service (s):** 193\n\ndocument Type add \n\n**Parameters from backend code:** document_type"
+                        "description": "**API Code:** 193\n\n**Slug:** document_type_get\n\n**Service (s):** 193\n\ndocument Type add\u00a0\n\n**Parameters from backend code:** document_type"
                     },
                     "response": []
                 },
@@ -12826,6 +13676,12 @@
                                     "key": "sales_executive_id",
                                     "value": "31",
                                     "type": "text"
+                                },
+                                {
+                                    "key": "search",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "NEW optional. Filter by client_code / cname / company_name"
                                 }
                             ]
                         },
@@ -12839,7 +13695,7 @@
                                 "service_sales_executive.php"
                             ]
                         },
-                        "description": "**API Code:** 12\n\n**Slug:** get_customer\n\n**Service (s):** 12\n\nGet Customer\n\n**Parameters from backend code:** sales_executive_id"
+                        "description": "**API Code:** 12\n\n**Slug:** get_customer\n\n**UPDATED 2026-09-16:** Optional `search` param. Response includes `display_label` = CODE - Name.\nOnly assigned customers."
                     },
                     "response": []
                 },
@@ -13737,7 +14593,7 @@
                                 "service_sales_executive.php"
                             ]
                         },
-                        "description": "**API Code:** 95\n\n**Slug:** get_today_followup\n\n**Service (s):** 95\n\nGet Todays Followup for Visitor\r\n\r\n \n\n**Parameters from backend code:** sales_id, visitor_id, todate, fromdate, user_id, project_id"
+                        "description": "**API Code:** 95\n\n**Slug:** get_today_followup\n\n**Service (s):** 95\n\nGet Todays Followup for Visitor\r\n\r\n\u00a0\n\n**Parameters from backend code:** sales_id, visitor_id, todate, fromdate, user_id, project_id"
                     },
                     "response": []
                 },
@@ -14177,7 +15033,7 @@
                     "response": []
                 },
                 {
-                    "name": "Common Login — SE + Channel Partner  (#2) *Updated*",
+                    "name": "Common Login \u2014 SE + Channel Partner  (#2) *Updated*",
                     "request": {
                         "method": "POST",
                         "header": [],
@@ -14338,7 +15194,7 @@
                                 "service_sales_executive.php"
                             ]
                         },
-                        "description": "**API Code:** 2\n\n**Slug:** customer_login / sales_executive_login\n\n**Endpoint:** `POST {{base_url}}/service/service_sales_executive.php`\n\n**Common Login (ONE App screen)** — same API for:\n1. Sales Executive (`sales_executive` table)\n2. Channel Partner (`dealer_distributor_network` type=3 + `executive.channel_partner_flag=1`)\n\n**Flow:**\n1. Try Sales Executive username+password\n2. If not found → try Channel Partner username/phone+password\n\n**Required params:** key, s=2, username, password, refreshToken\n\n**Response:**\n- `ack=1` success\n- `result.user_type` = `sales_executive` OR `channel_partner`  ← App must read this\n- SE: existing SE fields + user_type\n- CP: id/channel_partner_id, company_name, phone, cp_modules{...}\n\n**Demo CP:** username=`900000101` password=`Armor@123`\n\n**App note:** Keep one Login UI. After login, branch menus using `result.user_type`. CP module APIs (customers/orders/stock/payment) can be built next by App developer."
+                        "description": "**API Code:** 2\n\n**Slug:** customer_login / sales_executive_login\n\n**Endpoint:** `POST {{base_url}}/service/service_sales_executive.php`\n\n**Common Login (ONE App screen)** \u2014 same API for:\n1. Sales Executive (`sales_executive` table)\n2. Channel Partner (`dealer_distributor_network` type=3 + `executive.channel_partner_flag=1`)\n\n**Flow:**\n1. Try Sales Executive username+password\n2. If not found \u2192 try Channel Partner username/phone+password\n\n**Required params:** key, s=2, username, password, refreshToken\n\n**Response:**\n- `ack=1` success\n- `result.user_type` = `sales_executive` OR `channel_partner`  \u2190 App must read this\n- SE: existing SE fields + user_type\n- CP: id/channel_partner_id, company_name, phone, cp_modules{...}\n\n**Demo CP:** username=`900000101` password=`Armor@123`\n\n**App note:** Keep one Login UI. After login, branch menus using `result.user_type`. CP module APIs (customers/orders/stock/payment) can be built next by App developer."
                     },
                     "response": []
                 },
@@ -14775,7 +15631,7 @@
                                 "service_system.php"
                             ]
                         },
-                        "description": "**API Code:** 36\n\n**Slug:** get_area\n\n**Service (s):** 36\n\nFetch All Areas\r\n\r\n \r\n\r\n "
+                        "description": "**API Code:** 36\n\n**Slug:** get_area\n\n**Service (s):** 36\n\nFetch All Areas\r\n\r\n\u00a0\r\n\r\n\u00a0"
                     },
                     "response": []
                 },
@@ -14925,6 +15781,12 @@
                                     "type": "file",
                                     "src": [],
                                     "description": "Optional file upload ($_FILES passed to handler)"
+                                },
+                                {
+                                    "key": "visit_start_type_id",
+                                    "value": "{{visit_start_type_id}}",
+                                    "type": "text",
+                                    "description": "REQUIRED NEW \u2014 from #274"
                                 }
                             ]
                         },
@@ -14938,7 +15800,7 @@
                                 "service_visit.php"
                             ]
                         },
-                        "description": "**API Code:** 75\n\n**Slug:** Add_visit\n\n**Service (s):** 75\n\nimage_key = image_path\n\n**Parameters from backend code:** user_id, customer_id, inquiry_id, latitude, longitude, remark, app_address, purpose_id, flag, company_id"
+                        "description": "**API Code:** 75 Add_visit\n\n**UPDATED 2026-09-16:** `visit_start_type_id` mandatory.\nGet list from #274 first."
                     },
                     "response": []
                 },
@@ -15111,7 +15973,7 @@
                                 "service_visit.php"
                             ]
                         },
-                        "description": "**API Code:** 77\n\n**Slug:** get_expence_category\n\n**Service (s):** 77\n\nGet expense category list.\n\n**Parameters:** expense_claim_type (optional) — 1=Regular, 2=Advance"
+                        "description": "**API Code:** 77\n\n**Slug:** get_expence_category\n\n**Service (s):** 77\n\nGet expense category list.\n\n**Parameters:** expense_claim_type (optional) \u2014 1=Regular, 2=Advance"
                     },
                     "response": []
                 },
@@ -15281,7 +16143,7 @@
                                 "service_visit.php"
                             ]
                         },
-                        "description": "**API Code:** 76\n\n**Slug:** get_visit\n\n**Service (s):** 76\n\nGet visit list for sales user.\n\n**Important:**\n- Send only `user_id` to get list (old + new)\n- Leave `customer_id`, `visit_no`, `company_id`, dates empty unless filtering\n- `visit_no` must be numeric visit id — `sample` is ignored\n- Pending/open visits have `is_pending=1` (stop_date_time empty)\n\n**Parameters:** user_id (required), customer_id, visit_no, company_id, ToDate, FromDate, ul, ll"
+                        "description": "**API Code:** 76\n\n**Slug:** get_visit\n\n**Service (s):** 76\n\nGet visit list for sales user.\n\n**Important:**\n- Send only `user_id` to get list (old + new)\n- Leave `customer_id`, `visit_no`, `company_id`, dates empty unless filtering\n- `visit_no` must be numeric visit id \u2014 `sample` is ignored\n- Pending/open visits have `is_pending=1` (stop_date_time empty)\n\n**Parameters:** user_id (required), customer_id, visit_no, company_id, ToDate, FromDate, ul, ll"
                     },
                     "response": []
                 },
@@ -15377,7 +16239,7 @@
                                     "key": "stop_remark",
                                     "value": "",
                                     "type": "text",
-                                    "description": "Required ONLY when remark_code=F (Short Note). Free-text remark box. For other codes leave empty — server builds stop_remark from remark/reason."
+                                    "description": "Required ONLY when remark_code=F (Short Note). Free-text remark box. For other codes leave empty \u2014 server builds stop_remark from remark/reason."
                                 },
                                 {
                                     "key": "note",
@@ -15549,6 +16411,36 @@
                                     "type": "file",
                                     "src": [],
                                     "description": "Optional file upload ($_FILES passed to handler)"
+                                },
+                                {
+                                    "key": "order_came",
+                                    "value": "1",
+                                    "type": "text",
+                                    "description": "NEW required 0|1 \u2014 Visit complete question"
+                                },
+                                {
+                                    "key": "approval_came",
+                                    "value": "0",
+                                    "type": "text",
+                                    "description": "NEW required 0|1 \u2014 Visit complete question"
+                                },
+                                {
+                                    "key": "project_detail_came",
+                                    "value": "0",
+                                    "type": "text",
+                                    "description": "NEW required 0|1 \u2014 Visit complete question"
+                                },
+                                {
+                                    "key": "contract_detail_came",
+                                    "value": "0",
+                                    "type": "text",
+                                    "description": "NEW required 0|1 \u2014 Visit complete question"
+                                },
+                                {
+                                    "key": "payment_came",
+                                    "value": "0",
+                                    "type": "text",
+                                    "description": "NEW required 0|1 \u2014 Visit complete question"
                                 }
                             ]
                         },
@@ -15562,7 +16454,7 @@
                                 "service_visit.php"
                             ]
                         },
-                        "description": "**API Code:** 122\n\n**Slug:** update_visit\n\n**Service (s):** 122\n\nStop / update visit (Visit End).\n\n**Flow:**\n1. Call **#231 get_visit_remark_reason** for Select Remark/Reason list\n2. Sales person selects remark → backend creates **Follow-up** automatically\n3. For **C1/C2** open Consultant Detail form (APP), submit with visit end\n4. For **E1** open High Rate Analysis form (APP), submit with visit end\n5. For **F** open Remark Box and send text in `stop_remark`\n\n**C1 Private / C2 Government form fields:** consultant_firm_name, consultant_address, consultant_city, consultant_state, consultant_pincode, consultant_contact_person, consultant_mobile, consultant_email\n\n**E1 High Rate Form fields:** high_rate_customer_name, high_rate_items (JSON array)\n\n**Response extras:** followup_created, followup_id, consultant_form_id, high_rate_form_id\n\n**Parameters:** id, user_id, customer_id, stop_latitude, stop_longitude, remark_code (required), reason_code, approval_type (legacy optional), stop_remark (F only), note (optional), date (optional → stop_date_time), stop_app_address, inquiry_id, visit_type, visit_stop_flag, product_name, firm_name, client_name, contact_number, name, mobile_no, email_id, designation_id, consultant_*, high_rate_*, latitude, longitude, remark, image"
+                        "description": "**API Code:** 122\n\n**Slug:** update_visit\n\n**Service (s):** 122\n\nStop / update visit (Visit End).\n\n**Flow:**\n1. Call **#231 get_visit_remark_reason** for Select Remark/Reason list\n2. Sales person selects remark \u2192 backend creates **Follow-up** automatically\n3. For **C1/C2** open Consultant Detail form (APP), submit with visit end\n4. For **E1** open High Rate Analysis form (APP), submit with visit end\n5. For **F** open Remark Box and send text in `stop_remark`\n\n**C1 Private / C2 Government form fields:** consultant_firm_name, consultant_address, consultant_city, consultant_state, consultant_pincode, consultant_contact_person, consultant_mobile, consultant_email\n\n**E1 High Rate Form fields:** high_rate_customer_name, high_rate_items (JSON array)\n\n**Response extras:** followup_created, followup_id, consultant_form_id, high_rate_form_id\n\n**Parameters:** id, user_id, customer_id, stop_latitude, stop_longitude, remark_code (required), reason_code, approval_type (legacy optional), stop_remark (F only), note (optional), date (optional \u2192 stop_date_time), stop_app_address, inquiry_id, visit_type, visit_stop_flag, product_name, firm_name, client_name, contact_number, name, mobile_no, email_id, designation_id, consultant_*, high_rate_*, latitude, longitude, remark, image\n\n**UPDATED 2026-09-16:** Mandatory visit completion answers: order_came, approval_came, project_detail_came, contract_detail_came, payment_came (0/1)."
                     },
                     "response": []
                 },
@@ -15596,7 +16488,7 @@
                                 "service_visit.php"
                             ]
                         },
-                        "description": "**API Code:** 231\n\n**Slug:** get_visit_remark_reason\n\n**Service (s):** 231\n\nVisit End — Select Remark / Reason list (codes A–G) with child reasons.\n\n**Need Approval is direct in this response:**\n- `C1` = Private Consultant (`action_type=consultant_form`) — App designs form UI\n- `C2` = Government Consultant (`action_type=consultant_form`) — App designs form UI\n- No `form` schema for C1/C2 in this API\n\n**High Rate:**\n- `E1` = High Rate Form (`action_type=open_form`) — App designs form UI\n- No `form` schema for E1 in this API\n\n**Android action_type:**\n- `select_reason` → show child reasons (including C1/C2/E1)\n- `open_remark_box` → open free-text Remark Box — code F\n- `consultant_form` → open App-side consultant form — C1/C2\n- `open_form` → open App-side High Rate Form — E1\n- `none` → no further UI\n\n**On Visit End (#122):** every selected remark creates Follow-up; C1/C2/E1 also store form data.\n\n**No extra parameters.**"
+                        "description": "**API Code:** 231\n\n**Slug:** get_visit_remark_reason\n\n**Service (s):** 231\n\nVisit End \u2014 Select Remark / Reason list (codes A\u2013G) with child reasons.\n\n**Need Approval is direct in this response:**\n- `C1` = Private Consultant (`action_type=consultant_form`) \u2014 App designs form UI\n- `C2` = Government Consultant (`action_type=consultant_form`) \u2014 App designs form UI\n- No `form` schema for C1/C2 in this API\n\n**High Rate:**\n- `E1` = High Rate Form (`action_type=open_form`) \u2014 App designs form UI\n- No `form` schema for E1 in this API\n\n**Android action_type:**\n- `select_reason` \u2192 show child reasons (including C1/C2/E1)\n- `open_remark_box` \u2192 open free-text Remark Box \u2014 code F\n- `consultant_form` \u2192 open App-side consultant form \u2014 C1/C2\n- `open_form` \u2192 open App-side High Rate Form \u2014 E1\n- `none` \u2192 no further UI\n\n**On Visit End (#122):** every selected remark creates Follow-up; C1/C2/E1 also store form data.\n\n**No extra parameters.**"
                     },
                     "response": []
                 },
@@ -15714,13 +16606,13 @@
                                     "key": "mobile",
                                     "value": "",
                                     "type": "text",
-                                    "description": "Mo — also accepts key: mo"
+                                    "description": "Mo \u2014 also accepts key: mo"
                                 },
                                 {
                                     "key": "email",
                                     "value": "",
                                     "type": "text",
-                                    "description": "Mail ID — also accepts key: mail_id"
+                                    "description": "Mail ID \u2014 also accepts key: mail_id"
                                 }
                             ]
                         },
@@ -15734,7 +16626,7 @@
                                 "service_visit.php"
                             ]
                         },
-                        "description": "**API Code:** 233\n\n**Slug:** save_visit_consultant_form\n\n**Service (s):** 233\n\nSave Consultant Detail form (App SAVE AND NEXT).\n\n**App flow:**\n1. Types of Approval → Private / Government (`approval_type` 1 or 2, or `reason_code` C1/C2)\n2. Show Consultant Detail form (App UI)\n3. Call **#233** on SAVE AND NEXT\n4. Later call **#122 update_visit** to end visit (form already saved)\n\n**Required:** visit_id, user_id, approval_type OR reason_code, firm_name, address, city, state, pincode, contact_person, mobile\n\n**Optional:** customer_id, inquiry_id, email / mail_id\n\n**Aliases accepted:** mo→mobile, mail_id→email, consultant_* field names\n\n**Success response:** ack=1, consultant_form_id, reason_code, approval_type, result"
+                        "description": "**API Code:** 233\n\n**Slug:** save_visit_consultant_form\n\n**Service (s):** 233\n\nSave Consultant Detail form (App SAVE AND NEXT).\n\n**App flow:**\n1. Types of Approval \u2192 Private / Government (`approval_type` 1 or 2, or `reason_code` C1/C2)\n2. Show Consultant Detail form (App UI)\n3. Call **#233** on SAVE AND NEXT\n4. Later call **#122 update_visit** to end visit (form already saved)\n\n**Required:** visit_id, user_id, approval_type OR reason_code, firm_name, address, city, state, pincode, contact_person, mobile\n\n**Optional:** customer_id, inquiry_id, email / mail_id\n\n**Aliases accepted:** mo\u2192mobile, mail_id\u2192email, consultant_* field names\n\n**Success response:** ack=1, consultant_form_id, reason_code, approval_type, result"
                     },
                     "response": []
                 },
@@ -15792,7 +16684,7 @@
                                     "key": "items",
                                     "value": "[{\"productName\":\"BRANCH PIPE HEAVY\",\"givenRate\":\"100\",\"qty\":\"2\",\"customerRate\":\"90\",\"remark\":\"\"},{\"productName\":\"HYDRANT (SINGLE / DOUBLE)\",\"givenRate\":\"50\",\"qty\":\"1\",\"customerRate\":\"45\",\"remark\":\"\"}]",
                                     "type": "text",
-                                    "description": "JSON array — Android camelCase: productName, givenRate, qty, customerRate, remark. slug also accepted."
+                                    "description": "JSON array \u2014 Android camelCase: productName, givenRate, qty, customerRate, remark. slug also accepted."
                                 }
                             ]
                         },
@@ -15806,7 +16698,7 @@
                                 "service_visit.php"
                             ]
                         },
-                        "description": "**API Code:** 234\n\n**Slug:** save_visit_high_rate_form\n\n**Service (s):** 234\n\nSave High Rate Analysis (E1) — **ONE-SHOT submit by visit_id**.\n\n**Android does NOT send `high_rate_form_id`.** Backend creates/updates form from `visit_id`.\n\n**Required:** visit_id, user_id, items (JSON)\n**Optional:** customer_id, customer_name, payment_option (`0`=Advance, `1`=30 Days), payment_remark\n\n**items JSON (Android camelCase):**\n```json\n[\n  {\"productName\":\"BRANCH PIPE HEAVY\",\"givenRate\":\"100\",\"qty\":\"2\",\"customerRate\":\"90\",\"remark\":\"\"},\n  {\"productName\":\"HYDRANT (SINGLE / DOUBLE)\",\"givenRate\":\"50\",\"qty\":\"1\",\"customerRate\":\"45\",\"remark\":\"\"}\n]\n```\n\nAlso accepts `slug` or snake_case keys.\n\n**Success:** ack=1, high_rate_form_id, reason_code=E1, result"
+                        "description": "**API Code:** 234\n\n**Slug:** save_visit_high_rate_form\n\n**Service (s):** 234\n\nSave High Rate Analysis (E1) \u2014 **ONE-SHOT submit by visit_id**.\n\n**Android does NOT send `high_rate_form_id`.** Backend creates/updates form from `visit_id`.\n\n**Required:** visit_id, user_id, items (JSON)\n**Optional:** customer_id, customer_name, payment_option (`0`=Advance, `1`=30 Days), payment_remark\n\n**items JSON (Android camelCase):**\n```json\n[\n  {\"productName\":\"BRANCH PIPE HEAVY\",\"givenRate\":\"100\",\"qty\":\"2\",\"customerRate\":\"90\",\"remark\":\"\"},\n  {\"productName\":\"HYDRANT (SINGLE / DOUBLE)\",\"givenRate\":\"50\",\"qty\":\"1\",\"customerRate\":\"45\",\"remark\":\"\"}\n]\n```\n\nAlso accepts `slug` or snake_case keys.\n\n**Success:** ack=1, high_rate_form_id, reason_code=E1, result"
                     },
                     "response": []
                 },
@@ -15840,7 +16732,7 @@
                                 "service_visit.php"
                             ]
                         },
-                        "description": "**API Code:** 235\n\n**Slug:** get_visit_high_rate_products\n\n**Service (s):** 235\n\nFixed High Rate product list for Android UI.\n\n**No required params** (only `key` + `s=235`).\n\n**Response:**\n- `columns`: productName, givenRate, qty, customerRate, remark\n- `payment_options`: [{\"value\":\"0\",\"label\":\"Advance\"},{\"value\":\"1\",\"label\":\"30 Days\"}]\n- `result`: 18 products with slug, productName, empty rate fields\n\nFill rates in App → send all rows in **#234 items** JSON with same camelCase keys.\n\n**payment_option in #234:** send `0` or `1`"
+                        "description": "**API Code:** 235\n\n**Slug:** get_visit_high_rate_products\n\n**Service (s):** 235\n\nFixed High Rate product list for Android UI.\n\n**No required params** (only `key` + `s=235`).\n\n**Response:**\n- `columns`: productName, givenRate, qty, customerRate, remark\n- `payment_options`: [{\"value\":\"0\",\"label\":\"Advance\"},{\"value\":\"1\",\"label\":\"30 Days\"}]\n- `result`: 18 products with slug, productName, empty rate fields\n\nFill rates in App \u2192 send all rows in **#234 items** JSON with same camelCase keys.\n\n**payment_option in #234:** send `0` or `1`"
                     },
                     "response": []
                 },
@@ -16206,6 +17098,36 @@
         },
         {
             "key": "order_id",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "sales_id",
+            "value": "2",
+            "type": "string"
+        },
+        {
+            "key": "daily_plan_id",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "visit_start_type_id",
+            "value": "1",
+            "type": "string"
+        },
+        {
+            "key": "visit_id",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "questionnaire_id",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "quotation_id",
             "value": "",
             "type": "string"
         }
