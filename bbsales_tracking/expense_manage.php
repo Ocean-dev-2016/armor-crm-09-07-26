@@ -392,7 +392,7 @@ function genReport1(){
 					$(".transCover").fadeOut(100);
 					// alert("Report file generated!!");
 					$("#myModal").modal('hide');
-					window.location.href=result;
+					window.location.href=$.trim(result);
 					
 				// },1500);
 			}
@@ -468,7 +468,7 @@ function genReport1(){
 					$(".transCover").fadeOut(100);
 					// alert("Report file generated!!");
 					$("#myModal").modal('hide');
-					window.location.href=result;
+					window.location.href=$.trim(result);
 					
 				// },1500);
 			}

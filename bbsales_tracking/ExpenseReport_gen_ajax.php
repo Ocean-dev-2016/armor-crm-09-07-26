@@ -42,36 +42,31 @@ Downloaded On:-{DATE d-m-Y H:i:s}
 $mpdf->WriteHTML($d);
 
 $fileName = "EXPENSE_REPORT-".$cid;
+$dirPath = REPORT_EXPENSE_FILES.$fileName;
 
-if(!is_dir($fileName)){
-
-	mkdir(REPORT_EXPENSE_FILES.$fileName);
-
+if(!is_dir($dirPath)){
+	@mkdir($dirPath, 0777, true);
 }
 
-$pdf_file_path	= REPORT_EXPENSE_FILES.$fileName."/".$fileName.'.pdf';
-
-
+$pdf_file_path	= $dirPath."/".$fileName.'.pdf';
 
 if(file_exists($pdf_file_path)){
-
 	unlink($pdf_file_path);
-
 }
 
 $mpdf->Output($pdf_file_path);
 
-$xl_file_path	= REPORT_EXPENSE_FILES.$fileName."/".$fileName.'.xls';
+$xl_file_path	= $dirPath."/".$fileName.'.xls';
 
 if(file_exists($xl_file_path)){
-
 	unlink($xl_file_path);
-
 }
 
 file_put_contents($xl_file_path, $d);
 require_once("disconnect.php");
+if (ob_get_length()) {
+	ob_clean();
+}
 echo $xl_file_path;
-
-
+exit;
 ?>
