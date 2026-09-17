@@ -794,3 +794,52 @@ if (!function_exists('armor_pdf_apply_mpdf_image_vars')) {
 		}
 	}
 }
+
+if (!function_exists('armor_pdf_web_thumb_url')) {
+	/**
+	 * Browser print/PDF preview: return a tiny cached JPEG URL instead of multi-MB originals.
+	 * Huge product photos (10MB+) make Chrome print preview hang on "Loading preview...".
+	 */
+	function armor_pdf_web_thumb_url($src, $maxW = 80, $maxH = 80, $quality = 72, $isHeader = false)
+	{
+		$src = trim(html_entity_decode((string) $src));
+		if ($src === '' || strpos($src, 'data:image') === 0) {
+			return $src;
+		}
+
+		$local = armor_pdf_resolve_local_image_path($src);
+		if ($local !== '' && is_file($local)) {
+			$sz = (int) @filesize($local);
+			// Already small enough for print grid — keep original relative/absolute src.
+			if (!$isHeader && $sz > 0 && $sz < 28000) {
+				return $src;
+			}
+			// Without Imagick, decoding 5MB+ JPEGs during page render stalls print for minutes.
+			if (!$isHeader && $sz > 5000000 && !(extension_loaded('imagick') && class_exists('Imagick'))) {
+				$defaultSrc = (defined('SITEURL') ? SITEURL : '') . (defined('PRODUCT') ? PRODUCT : 'images/product/') . 'default.png';
+				$defaultLocal = armor_pdf_resolve_local_image_path($defaultSrc);
+				if ($defaultLocal !== '' && is_file($defaultLocal)) {
+					$src = $defaultSrc;
+				}
+			}
+		}
+
+		$cacheFile = armor_pdf_compress_image_src($src, (int) $maxW, (int) $maxH, (int) $quality, $isHeader);
+		if ($cacheFile === '' || !is_file($cacheFile) || filesize($cacheFile) < 20) {
+			return $src;
+		}
+
+		$cacheDir = realpath(dirname(__FILE__) . '/../bbsales_tracking/pdf/tmp_img_cache');
+		$real = realpath($cacheFile);
+		if ($cacheDir && $real && strpos($real, $cacheDir) === 0) {
+			return 'pdf/tmp_img_cache/' . basename($real);
+		}
+
+		$bytes = @file_get_contents($cacheFile);
+		if ($bytes !== false && $bytes !== '' && strlen($bytes) < 120000) {
+			return 'data:image/jpeg;base64,' . base64_encode($bytes);
+		}
+
+		return $src;
+	}
+}

@@ -1014,31 +1014,43 @@ if (!function_exists('armor_quotation_pi_product_image_url')) {
 
 		if ($imagePath === '') {
 
-			return $default;
+			$url = $default;
+
+		} elseif (preg_match('/^https?:\/\//i', $imagePath)) {
+
+			$url = $imagePath;
+
+		} elseif ($base !== '' && strpos($imagePath, $base) === 0) {
+
+			$url = $imagePath;
+
+		} else {
+
+			if (strpos($imagePath, PRODUCT) !== false) {
+
+				$parts = explode(PRODUCT, $imagePath);
+
+				$imagePath = end($parts);
+
+			}
+
+			$url = $base . PRODUCT . ltrim($imagePath, '/');
 
 		}
 
-		if (preg_match('/^https?:\/\//i', $imagePath)) {
-
-			return $imagePath;
-
+		// Browser print: never ship multi-MB originals into Chrome print preview.
+		if (function_exists('armor_quotation_pi_is_print_request') && armor_quotation_pi_is_print_request()) {
+			static $pdfHelperLoaded = false;
+			if (!$pdfHelperLoaded) {
+				require_once dirname(__FILE__) . '/quotation_pdf_image_helper.php';
+				$pdfHelperLoaded = true;
+			}
+			if (function_exists('armor_pdf_web_thumb_url')) {
+				return armor_pdf_web_thumb_url($url, 80, 80, 72, false);
+			}
 		}
 
-		if ($base !== '' && strpos($imagePath, $base) === 0) {
-
-			return $imagePath;
-
-		}
-
-		if (strpos($imagePath, PRODUCT) !== false) {
-
-			$parts = explode(PRODUCT, $imagePath);
-
-			$imagePath = end($parts);
-
-		}
-
-		return $base . PRODUCT . ltrim($imagePath, '/');
+		return $url;
 
 	}
 
@@ -1854,9 +1866,9 @@ if (!function_exists('armor_quotation_pi_suggest_styles')) {
 
 		overflow: hidden !important;
 
-		page-break-inside: avoid !important;
+		page-break-inside: auto !important;
 
-		break-inside: avoid-page !important;
+		break-inside: auto !important;
 
 	}
 
@@ -1870,9 +1882,9 @@ if (!function_exists('armor_quotation_pi_suggest_styles')) {
 
 		overflow: hidden !important;
 
-		page-break-inside: avoid !important;
+		page-break-inside: auto !important;
 
-		break-inside: avoid-page !important;
+		break-inside: auto !important;
 
 	}
 
@@ -2713,10 +2725,10 @@ if (!function_exists('armor_quotation_pi_render_print_block')) {
 		$html .= '<table class="qp-suggest-print-grid quote-table" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;table-layout:fixed;border-left:none;border-right:none;"><tbody>';
 
 		foreach ($groups as $group) {
-			$html .= '<tr style="page-break-inside:avoid !important;"><td colspan="' . $cols . '" class="qp-suggest-cat-header" style="background:#e8e8e8;font-weight:bold;text-align:center;font-size:9.5px;padding:3px;border:1px solid #595959;border-left:none;border-right:none;">' . htmlspecialchars($group['title'], ENT_QUOTES) . '</td></tr>';
+			$html .= '<tr style="page-break-inside:auto !important;"><td colspan="' . $cols . '" class="qp-suggest-cat-header" style="background:#e8e8e8;font-weight:bold;text-align:center;font-size:9.5px;padding:3px;border:1px solid #595959;border-left:none;border-right:none;">' . htmlspecialchars($group['title'], ENT_QUOTES) . '</td></tr>';
 			$chunks = array_chunk($group['items'], $cols);
 			foreach ($chunks as $row) {
-				$html .= '<tr class="qp-suggest-product-row" style="page-break-inside:avoid !important;">';
+				$html .= '<tr class="qp-suggest-product-row" style="page-break-inside:auto !important;">';
 				for ($i = 0; $i < $cols; $i++) {
 					if (!isset($row[$i])) {
 						$html .= '<td class="qp-suggest-print-cell qp-suggest-print-cell-empty" style="width:25%;border:1px solid #595959;padding:0;"></td>';
@@ -3387,9 +3399,9 @@ table.quote-table {
 
 		height: auto !important;
 
-		page-break-inside: avoid !important;
+		page-break-inside: auto !important;
 
-		break-inside: avoid-page !important;
+		break-inside: auto !important;
 
 	}
 
