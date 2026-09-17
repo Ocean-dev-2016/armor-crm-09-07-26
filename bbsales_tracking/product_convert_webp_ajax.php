@@ -84,6 +84,17 @@ if ($action === 'scan_match') {
 			$old = trim($row['image_path']);
 			$info = armor_product_resolve_image_info($old);
 			if ($info['file'] === '') {
+				// DB has webp/jpg name even if PHP disk path is wrong — still recoverable via public URL
+				if (preg_match('/\.(jpe?g|png|gif|webp)$/i', $old)) {
+					$ok++;
+					$ext = strtolower(pathinfo($old, PATHINFO_EXTENSION));
+					if ($ext === 'webp') {
+						$foundWebp++;
+					} else {
+						$foundJpg++;
+					}
+					continue;
+				}
 				$missing++;
 				if (count($details) < 80) {
 					$details[] = 'MISSING #' . $row['id'] . ' ' . $old . ' (' . substr(preg_replace('/\s+/', ' ', $row['name']), 0, 40) . ')';

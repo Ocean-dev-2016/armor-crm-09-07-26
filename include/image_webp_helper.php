@@ -127,7 +127,7 @@ if (!function_exists('armor_convert_file_to_webp')) {
 
 /**
  * Absolute product image directories (CWD-safe).
- * Live files live at /images/product/ and /images/product/thumb/
+ * Tries project root AND DOCUMENT_ROOT (live often serves /images from docroot).
  */
 if (!function_exists('armor_product_image_abs_dirs')) {
 	function armor_product_image_abs_dirs()
@@ -137,36 +137,54 @@ if (!function_exists('armor_product_image_abs_dirs')) {
 			return $dirs;
 		}
 
+		$candidates = array();
 		$root = realpath(dirname(__FILE__) . '/..');
-		$main = '';
-		$thumb = '';
 		if ($root) {
-			$mainCand = $root . DIRECTORY_SEPARATOR . 'images' . DIRECTORY_SEPARATOR . 'product';
-			if (is_dir($mainCand)) {
-				$main = $mainCand . DIRECTORY_SEPARATOR;
+			$candidates[] = $root;
+		}
+		// bbsales_tracking/../..
+		$root2 = realpath(dirname(__FILE__) . '/../..');
+		if ($root2) {
+			$candidates[] = $root2;
+		}
+		if (!empty($_SERVER['DOCUMENT_ROOT'])) {
+			$doc = realpath($_SERVER['DOCUMENT_ROOT']);
+			if ($doc) {
+				$candidates[] = $doc;
 			}
-			$thumbCand = $mainCand . DIRECTORY_SEPARATOR . 'thumb';
-			if (is_dir($thumbCand)) {
-				$thumb = $thumbCand . DIRECTORY_SEPARATOR;
+		}
+		if (defined('PRODUCT_A')) {
+			$rp = @realpath(PRODUCT_A);
+			if ($rp) {
+				$candidates[] = dirname($rp);
 			}
 		}
 
-		// Fallback to legacy relative defines if realpath failed
-		if ($main === '' && defined('PRODUCT_A')) {
-			$rp = realpath(PRODUCT_A);
-			if ($rp) {
-				$main = rtrim($rp, '/\\') . DIRECTORY_SEPARATOR;
-			} else {
-				$main = PRODUCT_A;
+		$main = '';
+		$thumb = '';
+		foreach ($candidates as $baseRoot) {
+			$mainCand = $baseRoot . DIRECTORY_SEPARATOR . 'images' . DIRECTORY_SEPARATOR . 'product';
+			if (is_dir($mainCand)) {
+				// Prefer a folder that actually contains image files
+				$hasFiles = (bool) glob($mainCand . DIRECTORY_SEPARATOR . '*.{jpg,jpeg,png,gif,webp,JPG,JPEG,PNG,WEBP}', GLOB_BRACE);
+				if ($main === '' || $hasFiles) {
+					$main = $mainCand . DIRECTORY_SEPARATOR;
+					$thumbCand = $mainCand . DIRECTORY_SEPARATOR . 'thumb';
+					$thumb = is_dir($thumbCand) ? ($thumbCand . DIRECTORY_SEPARATOR) : '';
+					if ($hasFiles) {
+						break;
+					}
+				}
 			}
 		}
+
+		if ($main === '' && defined('PRODUCT_A')) {
+			$rp = @realpath(PRODUCT_A);
+			$main = $rp ? (rtrim($rp, '/\\') . DIRECTORY_SEPARATOR) : PRODUCT_A;
+		}
 		if ($thumb === '' && defined('PRODUCT_THUMB_A')) {
-			$rp = realpath(PRODUCT_THUMB_A);
-			if ($rp) {
-				$thumb = rtrim($rp, '/\\') . DIRECTORY_SEPARATOR;
-			} else {
-				$thumb = PRODUCT_THUMB_A;
-			}
+			$rp = @realpath(PRODUCT_THUMB_A);
+			$thumb = $rp ? (rtrim($rp, '/\\') . DIRECTORY_SEPARATOR) : PRODUCT_THUMB_A;
 		}
 
 		$dirs = array(
@@ -256,15 +274,38 @@ if (!function_exists('armor_product_resolve_image_path')) {
 
 /**
  * Public URL for product list/detail images.
- * WebP missing → same-folder JPG/PNG; main missing → thumb/ copy.
+ * 1) Prefer real file found on disk (jpg/webp in product/ or thumb/)
+ * 2) If disk check fails (wrong PHP path / open_basedir) but DB has image_*.webp|jpg —
+ *    STILL return public URL so browser can load it (fixes "NO IMAGE FOUND" when WebP opens in new tab).
  */
 if (!function_exists('armor_product_public_image_url')) {
 	function armor_product_public_image_url($relativeName, $placeholder = '')
 	{
+		$relativeName = trim((string) $relativeName);
+		if ($relativeName === '') {
+			if ($placeholder !== '') {
+				return $placeholder;
+			}
+			return defined('SITEURL') ? (SITEURL . 'images/no_data_found.jpg') : '';
+		}
+
+		// Strip accidental folder prefixes stored in DB
+		$relativeName = str_replace('\\', '/', $relativeName);
+		if (strpos($relativeName, 'images/product/') !== false) {
+			$relativeName = substr($relativeName, strrpos($relativeName, '/') + 1);
+		}
+		$relativeName = ltrim($relativeName, '/');
+
 		$info = armor_product_resolve_image_info($relativeName);
 		if ($info['file'] !== '' && defined('SITEURL') && defined('PRODUCT')) {
 			return SITEURL . PRODUCT . $info['subdir'] . $info['file'];
 		}
+
+		// Disk not visible to PHP, but DB path looks like a product image → serve it anyway
+		if (defined('SITEURL') && defined('PRODUCT') && preg_match('/\.(jpe?g|png|gif|webp)$/i', $relativeName)) {
+			return SITEURL . PRODUCT . $relativeName;
+		}
+
 		if ($placeholder !== '') {
 			return $placeholder;
 		}

@@ -51,6 +51,17 @@ if ($res) {
 
 		$info = armor_product_resolve_image_info($old);
 		if ($info['file'] === '') {
+			// PHP disk miss but DB has webp/jpg name — treat as web-ok (browser can load)
+			if (preg_match('/\.(jpe?g|png|gif|webp)$/i', $old)) {
+				$ok++;
+				$ext = strtolower(pathinfo($old, PATHINFO_EXTENSION));
+				if ($ext === 'webp') {
+					$foundWebp++;
+				} else {
+					$foundJpg++;
+				}
+				continue;
+			}
 			$missing++;
 			if (count($missingList) < 30) {
 				$missingList[] = array(

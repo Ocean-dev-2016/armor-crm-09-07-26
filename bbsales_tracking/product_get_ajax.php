@@ -166,11 +166,12 @@ $ctable_r = $db->rp_getData($ctable,"*",$ctable_where,"display_order ASC, name A
 					require_once dirname(__FILE__) . '/../include/image_webp_helper.php';
 				}
 				$resolvedInfo = armor_product_resolve_image_info($ctable_d['image_path']);
-				// Auto-match DB to real file in product/ (jpg) when webp path is stale
+				// Auto-match DB only when another real file is found on disk
 				if ($resolvedInfo['file'] !== '' && $resolvedInfo['subdir'] === '' && $resolvedInfo['file'] !== $ctable_d['image_path']) {
 					$db->rp_update("product", array('image_path' => $db->clean($resolvedInfo['file'])), "id='" . (int) $ctable_d['id'] . "'", 0);
 					$ctable_d['image_path'] = $resolvedInfo['file'];
 				}
+				// Always prefer DB/web URL for webp|jpg — never blank to NO IMAGE when path is set
                 $img = armor_product_public_image_url($ctable_d['image_path'], SITEURL."images/no_data_found.jpg");
                 $br="";
             }
