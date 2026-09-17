@@ -55,10 +55,11 @@ if (!function_exists('armor_image_save_webp')) {
 
 /**
  * Convert a single image file to WebP.
+ * KEEP original by default (deleteOriginal=false) so JPG remains if WebP is later missing.
  * Returns array(ack, webp_filename, message, deleted_old)
  */
 if (!function_exists('armor_convert_file_to_webp')) {
-	function armor_convert_file_to_webp($absPath, $quality = 80, $deleteOriginal = true)
+	function armor_convert_file_to_webp($absPath, $quality = 80, $deleteOriginal = false)
 	{
 		$result = array(
 			'ack' => 0,
@@ -113,7 +114,9 @@ if (!function_exists('armor_convert_file_to_webp')) {
 		$result['webp_filename'] = $webpName;
 		$result['message'] = 'Converted';
 
-		if ($deleteOriginal && realpath($absPath) !== realpath($webpPath) && is_file($absPath)) {
+		// Only delete original when explicitly requested AND webp file is valid.
+		if ($deleteOriginal && is_file($webpPath) && filesize($webpPath) > 20
+			&& realpath($absPath) !== realpath($webpPath) && is_file($absPath)) {
 			@unlink($absPath);
 			$result['deleted_old'] = 1;
 		}
@@ -123,49 +126,136 @@ if (!function_exists('armor_convert_file_to_webp')) {
 }
 
 /**
- * Resolve a product image filename that actually exists under PRODUCT_A.
- * Handles DB pointing to .webp after convert while only .jpg/.png remains (or vice versa).
+ * Absolute product image directories (CWD-safe).
+ * Live files live at /images/product/ and /images/product/thumb/
  */
-if (!function_exists('armor_product_resolve_image_path')) {
-	function armor_product_resolve_image_path($relativeName)
+if (!function_exists('armor_product_image_abs_dirs')) {
+	function armor_product_image_abs_dirs()
 	{
-		$relativeName = trim((string) $relativeName);
-		if ($relativeName === '' || !defined('PRODUCT_A')) {
-			return '';
+		static $dirs = null;
+		if ($dirs !== null) {
+			return $dirs;
 		}
 
-		$direct = PRODUCT_A . $relativeName;
-		if (is_file($direct) && filesize($direct) > 20) {
-			return $relativeName;
-		}
-
-		$base = pathinfo($relativeName, PATHINFO_FILENAME);
-		if ($base === '') {
-			return '';
-		}
-
-		$exts = array('webp', 'jpg', 'jpeg', 'png', 'gif', 'JPG', 'JPEG', 'PNG', 'WEBP', 'GIF');
-		foreach ($exts as $ext) {
-			$candidate = $base . '.' . $ext;
-			$path = PRODUCT_A . $candidate;
-			if (is_file($path) && filesize($path) > 20) {
-				return $candidate;
+		$root = realpath(dirname(__FILE__) . '/..');
+		$main = '';
+		$thumb = '';
+		if ($root) {
+			$mainCand = $root . DIRECTORY_SEPARATOR . 'images' . DIRECTORY_SEPARATOR . 'product';
+			if (is_dir($mainCand)) {
+				$main = $mainCand . DIRECTORY_SEPARATOR;
+			}
+			$thumbCand = $mainCand . DIRECTORY_SEPARATOR . 'thumb';
+			if (is_dir($thumbCand)) {
+				$thumb = $thumbCand . DIRECTORY_SEPARATOR;
 			}
 		}
 
-		return '';
+		// Fallback to legacy relative defines if realpath failed
+		if ($main === '' && defined('PRODUCT_A')) {
+			$rp = realpath(PRODUCT_A);
+			if ($rp) {
+				$main = rtrim($rp, '/\\') . DIRECTORY_SEPARATOR;
+			} else {
+				$main = PRODUCT_A;
+			}
+		}
+		if ($thumb === '' && defined('PRODUCT_THUMB_A')) {
+			$rp = realpath(PRODUCT_THUMB_A);
+			if ($rp) {
+				$thumb = rtrim($rp, '/\\') . DIRECTORY_SEPARATOR;
+			} else {
+				$thumb = PRODUCT_THUMB_A;
+			}
+		}
+
+		$dirs = array(
+			'main' => $main,
+			'thumb' => $thumb,
+		);
+		return $dirs;
 	}
 }
 
 /**
- * Public URL for product list/detail images (falls back to placeholder when missing).
+ * Find an existing product image file for a DB filename.
+ * Prefer main/ then thumb/. Prefer JPG/PNG first (live folder is JPG), then webp.
+ * Returns array('file' => 'image_x.jpg', 'subdir' => ''|'thumb/') or empty file.
+ */
+if (!function_exists('armor_product_resolve_image_info')) {
+	function armor_product_resolve_image_info($relativeName)
+	{
+		$empty = array('file' => '', 'subdir' => '');
+		$relativeName = trim((string) $relativeName);
+		if ($relativeName === '') {
+			return $empty;
+		}
+
+		$base = pathinfo($relativeName, PATHINFO_FILENAME);
+		if ($base === '') {
+			return $empty;
+		}
+
+		// Live cPanel folder is JPG — prefer those so images show even when DB still says .webp
+		$exts = array('jpg', 'jpeg', 'png', 'gif', 'webp', 'JPG', 'JPEG', 'PNG', 'GIF', 'WEBP');
+		$abs = armor_product_image_abs_dirs();
+
+		$locations = array();
+		if ($abs['main'] !== '') {
+			$locations[] = array('dir' => $abs['main'], 'subdir' => '');
+		}
+		if ($abs['thumb'] !== '') {
+			$locations[] = array('dir' => $abs['thumb'], 'subdir' => 'thumb/');
+		}
+
+		// Exact DB name first (main, then thumb)
+		foreach ($locations as $loc) {
+			$path = $loc['dir'] . $relativeName;
+			if (is_file($path) && @filesize($path) > 20) {
+				return array('file' => $relativeName, 'subdir' => $loc['subdir']);
+			}
+		}
+
+		// Same basename, other extensions — JPG before WebP
+		foreach ($locations as $loc) {
+			foreach ($exts as $ext) {
+				$candidate = $base . '.' . $ext;
+				$path = $loc['dir'] . $candidate;
+				if (is_file($path) && @filesize($path) > 20) {
+					return array('file' => $candidate, 'subdir' => $loc['subdir']);
+				}
+			}
+		}
+
+		return $empty;
+	}
+}
+
+/**
+ * Resolve a product image filename that actually exists under PRODUCT_A (main only).
+ */
+if (!function_exists('armor_product_resolve_image_path')) {
+	function armor_product_resolve_image_path($relativeName)
+	{
+		$info = armor_product_resolve_image_info($relativeName);
+		if ($info['file'] === '') {
+			return '';
+		}
+		// If only thumb exists, still return filename (repair may copy it to main)
+		return $info['file'];
+	}
+}
+
+/**
+ * Public URL for product list/detail images.
+ * WebP missing → same-folder JPG/PNG; main missing → thumb/ copy.
  */
 if (!function_exists('armor_product_public_image_url')) {
 	function armor_product_public_image_url($relativeName, $placeholder = '')
 	{
-		$resolved = armor_product_resolve_image_path($relativeName);
-		if ($resolved !== '' && defined('SITEURL') && defined('PRODUCT')) {
-			return SITEURL . PRODUCT . $resolved;
+		$info = armor_product_resolve_image_info($relativeName);
+		if ($info['file'] !== '' && defined('SITEURL') && defined('PRODUCT')) {
+			return SITEURL . PRODUCT . $info['subdir'] . $info['file'];
 		}
 		if ($placeholder !== '') {
 			return $placeholder;
@@ -206,7 +296,8 @@ if (!function_exists('armor_product_image_to_webp')) {
 
 		$mainOk = false;
 		if (is_file($mainSrc)) {
-			$res = armor_convert_file_to_webp($mainSrc, $quality, true);
+			// Keep JPG/PNG original in folder — never delete after convert.
+			$res = armor_convert_file_to_webp($mainSrc, $quality, false);
 			$messages[] = 'main: ' . $res['message'];
 			if (!empty($res['ack']) && !empty($res['webp_filename']) && is_file(PRODUCT_A . $res['webp_filename']) && filesize(PRODUCT_A . $res['webp_filename']) > 20) {
 				$webpName = $res['webp_filename'];
@@ -243,7 +334,7 @@ if (!function_exists('armor_product_image_to_webp')) {
 				// also try converting already-renamed webp sibling nothing to do
 				continue;
 			}
-			$res = armor_convert_file_to_webp($path, $quality, true);
+			$res = armor_convert_file_to_webp($path, $quality, false);
 			$messages[] = basename(rtrim($dir, '/\\')) . ': ' . $res['message'];
 		}
 
@@ -348,14 +439,10 @@ if (!function_exists('armor_product_process_uploaded_image')) {
 
 		@imagedestroy($img);
 
-		// Remove original non-webp upload if different
-		if (realpath($absUploadedPath) !== realpath($webpPath) && is_file($absUploadedPath)) {
-			@unlink($absUploadedPath);
-		}
-
+		// Keep original JPG/PNG in same folder as safety fallback (do not delete).
 		$out['ack'] = 1;
 		$out['image_path'] = $webpName;
-		$out['message'] = 'Converted to WebP';
+		$out['message'] = 'Converted to WebP (original kept)';
 		return $out;
 	}
 }

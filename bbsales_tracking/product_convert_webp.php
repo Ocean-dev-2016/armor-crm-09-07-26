@@ -42,9 +42,11 @@ $webpOk = armor_image_webp_supported() ? 1 : 0;
 						<div class="alert alert-danger">This server PHP/GD does not support WebP. Conversion disabled.</div>
 					<?php } else { ?>
 						<div class="alert alert-info">
-							This will convert existing <b>jpg / jpeg / png / gif</b> product images to <b>.webp</b>,
+							This will convert existing <b>jpg / jpeg / png / gif</b> product images to <b>.webp</b>
+							(original JPG/PNG is <b>kept</b> in the same folder as fallback),
 							update DB <code>product.image_path</code>, and regenerate thumb/small copies.
 							Already-webp images are skipped.
+							Use <b>Repair Missing WebP Paths</b> if DB says .webp but file is missing — it will point back to JPG if still present.
 						</div>
 						<p>
 							<button type="button" id="btnScan" class="btn blue">Scan Pending Images</button>
@@ -144,7 +146,7 @@ $webpOk = armor_image_webp_supported() ? 1 : 0;
 					log('Repair failed: ' + (res && res.message ? res.message : 'unknown'));
 					return;
 				}
-				log('OK (file matches DB): ' + res.ok + ' | Fixed to existing ext: ' + res.fixed + ' | Still missing on disk: ' + res.missing);
+				log('OK (file matches DB): ' + res.ok + ' | Fixed to existing ext: ' + res.fixed + ' | Restored from thumb: ' + (res.restored_from_thumb || 0) + ' | Still missing on disk: ' + res.missing);
 				if (res.details && res.details.length) {
 					for (var i = 0; i < res.details.length; i++) {
 						log(res.details[i]);
