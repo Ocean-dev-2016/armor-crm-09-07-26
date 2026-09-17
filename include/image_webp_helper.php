@@ -355,11 +355,43 @@ if (!function_exists('armor_product_image_to_webp')) {
 }
 
 /**
- * After upload: convert source file to webp + write thumb webp.
- * Returns webp filename for DB.
+ * Resize GD image if larger than maxW/maxH. Returns (possibly new) GD resource.
+ */
+if (!function_exists('armor_gd_resize_max')) {
+	function armor_gd_resize_max($img, $maxW = 1600, $maxH = 1600)
+	{
+		if (!$img) {
+			return false;
+		}
+		$w = imagesx($img);
+		$h = imagesy($img);
+		if ($w < 1 || $h < 1) {
+			return $img;
+		}
+		$ratio = min($maxW / $w, $maxH / $h, 1);
+		if ($ratio >= 1) {
+			return $img;
+		}
+		$nw = max(1, (int) round($w * $ratio));
+		$nh = max(1, (int) round($h * $ratio));
+		$dst = imagecreatetruecolor($nw, $nh);
+		imagealphablending($dst, false);
+		imagesavealpha($dst, true);
+		$transparent = imagecolorallocatealpha($dst, 0, 0, 0, 127);
+		imagefilledrectangle($dst, 0, 0, $nw, $nh, $transparent);
+		imagecopyresampled($dst, $img, 0, 0, 0, 0, $nw, $nh, $w, $h);
+		@imagedestroy($img);
+		return $dst;
+	}
+}
+
+/**
+ * After upload: resize + compress + convert to WebP (DB stores .webp).
+ * Also keeps a compressed .jpg fallback in same folder for recovery.
+ * Default quality ~50 for noticeable compression.
  */
 if (!function_exists('armor_product_process_uploaded_image')) {
-	function armor_product_process_uploaded_image($absUploadedPath, $preferredBaseName = '', $quality = 80)
+	function armor_product_process_uploaded_image($absUploadedPath, $preferredBaseName = '', $quality = 50)
 	{
 		$out = array(
 			'ack' => 0,
@@ -372,7 +404,12 @@ if (!function_exists('armor_product_process_uploaded_image')) {
 			return $out;
 		}
 
+		$absDirs = function_exists('armor_product_image_abs_dirs') ? armor_product_image_abs_dirs() : array('main' => '', 'thumb' => '');
 		$dir = dirname($absUploadedPath);
+		if ($absDirs['main'] !== '') {
+			$dir = rtrim($absDirs['main'], '/\\');
+		}
+
 		$base = $preferredBaseName !== '' ? $preferredBaseName : pathinfo($absUploadedPath, PATHINFO_FILENAME);
 		$base = preg_replace('/[^a-zA-Z0-9_\-]/', '', $base);
 		if ($base === '') {
@@ -380,15 +417,9 @@ if (!function_exists('armor_product_process_uploaded_image')) {
 		}
 
 		$webpName = $base . '.webp';
+		$jpgName = $base . '.jpg';
 		$webpPath = $dir . DIRECTORY_SEPARATOR . $webpName;
-
-		if (!armor_image_webp_supported()) {
-			// Keep original if webp unavailable
-			$out['ack'] = 1;
-			$out['image_path'] = basename($absUploadedPath);
-			$out['message'] = 'WebP unavailable, kept original';
-			return $out;
-		}
+		$jpgPath = $dir . DIRECTORY_SEPARATOR . $jpgName;
 
 		$img = armor_image_load_gd($absUploadedPath);
 		if (!$img) {
@@ -398,21 +429,51 @@ if (!function_exists('armor_product_process_uploaded_image')) {
 			return $out;
 		}
 
-		if (!armor_image_save_webp($img, $webpPath, $quality)) {
-			@imagedestroy($img);
+		// Compress size: max 1600px on longest side
+		$img = armor_gd_resize_max($img, 1600, 1600);
+		if (!$img) {
 			$out['ack'] = 1;
 			$out['image_path'] = basename($absUploadedPath);
-			$out['message'] = 'WebP write failed, kept original';
+			$out['message'] = 'Resize failed, kept original';
 			return $out;
 		}
 
-		// Also create/overwrite thumb as webp
-		if (defined('PRODUCT_THUMB_A')) {
-			$thumbPath = PRODUCT_THUMB_A . $webpName;
-			$w = imagesx($img);
-			$h = imagesy($img);
-			$maxW = 400;
-			$maxH = 400;
+		$quality = (int) $quality;
+		if ($quality < 30) {
+			$quality = 30;
+		}
+		if ($quality > 85) {
+			$quality = 85;
+		}
+
+		$webpOk = false;
+		if (armor_image_webp_supported()) {
+			$webpOk = armor_image_save_webp($img, $webpPath, $quality);
+		}
+
+		// Always write compressed JPG fallback (recovery + servers without webp)
+		$jpgOk = false;
+		if (function_exists('imagejpeg')) {
+			$jpgOk = @imagejpeg($img, $jpgPath, max(40, min(75, $quality + 10)));
+		}
+
+		// Thumb / small as webp (or jpg if webp unavailable)
+		$thumbDir = ($absDirs['thumb'] !== '') ? rtrim($absDirs['thumb'], '/\\') : (defined('PRODUCT_THUMB_A') ? rtrim(PRODUCT_THUMB_A, '/\\') : '');
+		$smallDir = defined('PRODUCT_THUMB_SMALL_A') ? rtrim(PRODUCT_THUMB_SMALL_A, '/\\') : '';
+		if ($thumbDir === '' && defined('PRODUCT_THUMB_A')) {
+			$rp = @realpath(PRODUCT_THUMB_A);
+			$thumbDir = $rp ? $rp : rtrim(PRODUCT_THUMB_A, '/\\');
+		}
+
+		$makeThumb = function ($srcImg, $destDir, $fileName, $maxW, $maxH, $q) use ($webpOk) {
+			if ($destDir === '' || !$srcImg) {
+				return;
+			}
+			if (!is_dir($destDir)) {
+				@mkdir($destDir, 0777, true);
+			}
+			$w = imagesx($srcImg);
+			$h = imagesy($srcImg);
 			$ratio = min($maxW / max($w, 1), $maxH / max($h, 1), 1);
 			$nw = max(1, (int) round($w * $ratio));
 			$nh = max(1, (int) round($h * $ratio));
@@ -421,36 +482,60 @@ if (!function_exists('armor_product_process_uploaded_image')) {
 			imagesavealpha($thumb, true);
 			$transparent = imagecolorallocatealpha($thumb, 0, 0, 0, 127);
 			imagefilledrectangle($thumb, 0, 0, $nw, $nh, $transparent);
-			imagecopyresampled($thumb, $img, 0, 0, 0, 0, $nw, $nh, $w, $h);
-			armor_image_save_webp($thumb, $thumbPath, $quality);
+			imagecopyresampled($thumb, $srcImg, 0, 0, 0, 0, $nw, $nh, $w, $h);
+			$dest = $destDir . DIRECTORY_SEPARATOR . $fileName;
+			if (armor_image_webp_supported() && preg_match('/\.webp$/i', $fileName)) {
+				armor_image_save_webp($thumb, $dest, $q);
+			} else {
+				@imagejpeg($thumb, preg_replace('/\.webp$/i', '.jpg', $dest), max(40, min(75, $q + 10)));
+			}
 			@imagedestroy($thumb);
-		}
+		};
 
-		if (defined('PRODUCT_THUMB_SMALL_A')) {
-			$smallPath = PRODUCT_THUMB_SMALL_A . $webpName;
-			$w = imagesx($img);
-			$h = imagesy($img);
-			$maxW = 120;
-			$maxH = 120;
-			$ratio = min($maxW / max($w, 1), $maxH / max($h, 1), 1);
-			$nw = max(1, (int) round($w * $ratio));
-			$nh = max(1, (int) round($h * $ratio));
-			$small = imagecreatetruecolor($nw, $nh);
-			imagealphablending($small, false);
-			imagesavealpha($small, true);
-			$transparent = imagecolorallocatealpha($small, 0, 0, 0, 127);
-			imagefilledrectangle($small, 0, 0, $nw, $nh, $transparent);
-			imagecopyresampled($small, $img, 0, 0, 0, 0, $nw, $nh, $w, $h);
-			armor_image_save_webp($small, $smallPath, $quality);
-			@imagedestroy($small);
+		if ($webpOk) {
+			$makeThumb($img, $thumbDir, $webpName, 400, 400, $quality);
+			if ($smallDir !== '') {
+				$makeThumb($img, $smallDir, $webpName, 120, 120, $quality);
+			}
+		} elseif ($jpgOk) {
+			$makeThumb($img, $thumbDir, $jpgName, 400, 400, $quality);
+			if ($smallDir !== '') {
+				$makeThumb($img, $smallDir, $jpgName, 120, 120, $quality);
+			}
 		}
 
 		@imagedestroy($img);
 
-		// Keep original JPG/PNG in same folder as safety fallback (do not delete).
+		// Remove original upload if it was a different heavy file (e.g. huge png) and we have webp/jpg
+		$origReal = realpath($absUploadedPath);
+		$webpReal = is_file($webpPath) ? realpath($webpPath) : false;
+		$jpgReal = is_file($jpgPath) ? realpath($jpgPath) : false;
+		if ($origReal && (($webpOk && $webpReal && $origReal !== $webpReal) || ($jpgOk && $jpgReal && $origReal !== $jpgReal))) {
+			// Keep compressed jpg; delete only if original path differs from jpgPath
+			if ($jpgReal && $origReal !== $jpgReal) {
+				@unlink($absUploadedPath);
+			} elseif ($webpReal && $origReal !== $webpReal && !$jpgOk) {
+				@unlink($absUploadedPath);
+			}
+		}
+
+		if ($webpOk && is_file($webpPath) && filesize($webpPath) > 20) {
+			$out['ack'] = 1;
+			$out['image_path'] = $webpName;
+			$out['message'] = 'Compressed + converted to WebP (jpg fallback kept)';
+			return $out;
+		}
+
+		if ($jpgOk && is_file($jpgPath) && filesize($jpgPath) > 20) {
+			$out['ack'] = 1;
+			$out['image_path'] = $jpgName;
+			$out['message'] = 'WebP unavailable — saved compressed JPG';
+			return $out;
+		}
+
 		$out['ack'] = 1;
-		$out['image_path'] = $webpName;
-		$out['message'] = 'Converted to WebP (original kept)';
+		$out['image_path'] = basename($absUploadedPath);
+		$out['message'] = 'Compress/WebP failed, kept original upload';
 		return $out;
 	}
 }

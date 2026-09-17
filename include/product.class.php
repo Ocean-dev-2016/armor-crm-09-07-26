@@ -44,8 +44,8 @@ class Product extends Functions
 					$filePath 	= PRODUCT_A . $image_path;
 					move_uploaded_file($file['image_path']['tmp_name'], $filePath);
 
-					// Auto convert uploaded image to WebP
-					$webpRes = armor_product_process_uploaded_image($filePath, $baseName, 80);
+					// Auto compress + convert uploaded image to WebP (quality ~50)
+					$webpRes = armor_product_process_uploaded_image($filePath, $baseName, 50);
 					if (!empty($webpRes['ack']) && !empty($webpRes['image_path'])) {
 						$image_path = $webpRes['image_path'];
 					}
@@ -240,8 +240,8 @@ class Product extends Functions
 				$filePath 	= PRODUCT_A . $image_path;
 				move_uploaded_file($file['image_path']['tmp_name'], $filePath);
 
-				// Auto convert uploaded image to WebP
-				$webpRes = armor_product_process_uploaded_image($filePath, $baseName, 80);
+				// Auto compress + convert uploaded image to WebP (quality ~50)
+				$webpRes = armor_product_process_uploaded_image($filePath, $baseName, 50);
 				if (!empty($webpRes['ack']) && !empty($webpRes['image_path'])) {
 					$image_path = $webpRes['image_path'];
 				}
