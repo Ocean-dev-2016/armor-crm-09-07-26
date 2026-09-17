@@ -992,17 +992,12 @@ if ($isPrintMode || $isAppPdfMode || $isMpdfMode) {
 						<tr class="product-item-row">
 							<td class="text-center srno"><strong><?php echo $count; ?></strong></td>
 							<?php if ($item['image_path'] != "") {
-								$lineImg = SITEURL . PRODUCT . $item['image_path'];
-								if ($isPrintMode && function_exists('armor_pdf_web_thumb_url')) {
-									$lineImg = armor_pdf_web_thumb_url($lineImg, 80, 80, 72, false);
+								if (!function_exists('armor_product_img_tag')) {
+									require_once dirname(__FILE__) . '/../include/image_webp_helper.php';
 								}
-							?>
-								<td class="image-width text-center" style="padding:2px;"><img style="max-width:34px;max-height:34px;display:inline-block;" src="<?php echo $lineImg ?>"></td>
-							<?php } else {
+								echo '<td class="image-width text-center" style="padding:2px;">' . armor_product_img_tag($item['image_path'], 'max-width:34px;max-height:34px;display:inline-block;') . '</td>';
+							} else {
 								$lineImg = SITEURL . PRODUCT . 'default.png';
-								if ($isPrintMode && function_exists('armor_pdf_web_thumb_url')) {
-									$lineImg = armor_pdf_web_thumb_url($lineImg, 80, 80, 72, false);
-								}
 							?>
 								<td class="image-width text-center" style="padding:2px;"><img style="max-width:34px;max-height:34px;display:inline-block;" src="<?php echo $lineImg ?>"></td>
 							<?php } ?>

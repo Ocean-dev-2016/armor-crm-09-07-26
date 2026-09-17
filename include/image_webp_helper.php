@@ -273,10 +273,68 @@ if (!function_exists('armor_product_resolve_image_path')) {
 }
 
 /**
+ * Ordered public image URLs to try (JPG first — many live .webp 404; then webp).
+ */
+if (!function_exists('armor_product_image_candidate_urls')) {
+	function armor_product_image_candidate_urls($relativeName)
+	{
+		$urls = array();
+		$relativeName = trim((string) $relativeName);
+		if ($relativeName === '' || !defined('SITEURL') || !defined('PRODUCT')) {
+			return $urls;
+		}
+
+		$relativeName = str_replace('\\', '/', $relativeName);
+		if (strpos($relativeName, 'images/product/') !== false) {
+			$relativeName = substr($relativeName, strrpos($relativeName, '/') + 1);
+		}
+		$relativeName = ltrim($relativeName, '/');
+		$base = pathinfo($relativeName, PATHINFO_FILENAME);
+		if ($base === '') {
+			return $urls;
+		}
+
+		$push = function ($url) use (&$urls) {
+			if ($url !== '' && !in_array($url, $urls, true)) {
+				$urls[] = $url;
+			}
+		};
+
+		$info = armor_product_resolve_image_info($relativeName);
+
+		// 1) JPG/PNG FIRST (other PCs get WebP 404; folder still has JPG)
+		foreach (array('jpg', 'jpeg', 'png', 'gif') as $ext) {
+			$push(SITEURL . PRODUCT . $base . '.' . $ext);
+		}
+		foreach (array('jpg', 'jpeg', 'png', 'gif') as $ext) {
+			$push(SITEURL . PRODUCT . 'thumb/' . $base . '.' . $ext);
+		}
+
+		// 2) Disk-resolved non-webp (if PHP can see a jpg)
+		if ($info['file'] !== '' && isset($info['kind']) && $info['kind'] !== 'webp') {
+			$push(SITEURL . PRODUCT . $info['subdir'] . $info['file']);
+		}
+
+		// 3) WebP last among real images
+		$push(SITEURL . PRODUCT . $base . '.webp');
+		$push(SITEURL . PRODUCT . 'thumb/' . $base . '.webp');
+		if ($info['file'] !== '' && isset($info['kind']) && $info['kind'] === 'webp') {
+			$push(SITEURL . PRODUCT . $info['subdir'] . $info['file']);
+		}
+
+		// 4) Exact DB filename (may be webp)
+		$push(SITEURL . PRODUCT . $relativeName);
+
+		$push(SITEURL . 'images/no_image_found.jpg');
+		$push(SITEURL . 'images/no_data_found.jpg');
+
+		return $urls;
+	}
+}
+
+/**
  * Public URL for product list/detail images.
- * 1) Prefer real file found on disk (jpg/webp in product/ or thumb/)
- * 2) If disk check fails (wrong PHP path / open_basedir) but DB has image_*.webp|jpg —
- *    STILL return public URL so browser can load it (fixes "NO IMAGE FOUND" when WebP opens in new tab).
+ * Prefers JPG when available in candidate list; always returns a usable URL if DB has a path.
  */
 if (!function_exists('armor_product_public_image_url')) {
 	function armor_product_public_image_url($relativeName, $placeholder = '')
@@ -286,33 +344,46 @@ if (!function_exists('armor_product_public_image_url')) {
 			if ($placeholder !== '') {
 				return $placeholder;
 			}
-			return defined('SITEURL') ? (SITEURL . 'images/no_data_found.jpg') : '';
+			return defined('SITEURL') ? (SITEURL . 'images/no_image_found.jpg') : '';
 		}
 
-		// Strip accidental folder prefixes stored in DB
-		$relativeName = str_replace('\\', '/', $relativeName);
-		if (strpos($relativeName, 'images/product/') !== false) {
-			$relativeName = substr($relativeName, strrpos($relativeName, '/') + 1);
-		}
-		$relativeName = ltrim($relativeName, '/');
-
-		$info = armor_product_resolve_image_info($relativeName);
-		if ($info['file'] !== '' && defined('SITEURL') && defined('PRODUCT')) {
-			return SITEURL . PRODUCT . $info['subdir'] . $info['file'];
-		}
-
-		// Disk not visible to PHP, but DB path looks like a product image → serve it anyway
-		if (defined('SITEURL') && defined('PRODUCT') && preg_match('/\.(jpe?g|png|gif|webp)$/i', $relativeName)) {
-			return SITEURL . PRODUCT . $relativeName;
+		$cands = armor_product_image_candidate_urls($relativeName);
+		if (!empty($cands)) {
+			return $cands[0];
 		}
 
 		if ($placeholder !== '') {
 			return $placeholder;
 		}
-		if (defined('SITEURL')) {
-			return SITEURL . 'images/no_data_found.jpg';
+		if (defined('SITEURL') && defined('PRODUCT') && preg_match('/\.(jpe?g|png|gif|webp)$/i', $relativeName)) {
+			return SITEURL . PRODUCT . ltrim($relativeName, '/');
 		}
-		return '';
+		return defined('SITEURL') ? (SITEURL . 'images/no_image_found.jpg') : '';
+	}
+}
+
+/**
+ * <img> tag with automatic JPG/WebP/fallback chain (fixes client 404 on missing webp).
+ */
+if (!function_exists('armor_product_img_tag')) {
+	function armor_product_img_tag($relativeName, $style = 'width:80px;height:80px;object-fit:contain;', $extraAttr = '')
+	{
+		$cands = armor_product_image_candidate_urls($relativeName);
+		if (empty($cands)) {
+			$src = defined('SITEURL') ? (SITEURL . 'images/no_image_found.jpg') : '';
+			return '<img src="' . htmlspecialchars($src, ENT_QUOTES, 'UTF-8') . '" style="' . htmlspecialchars($style, ENT_QUOTES, 'UTF-8') . '" ' . $extraAttr . ' />';
+		}
+
+		$primary = array_shift($cands);
+		$json = htmlspecialchars(json_encode(array_values($cands)), ENT_QUOTES, 'UTF-8');
+		$onerror = 'var a=this.getAttribute(\'data-armor-fallbacks\');if(!a){this.onerror=null;return;}var L=[];try{L=JSON.parse(a);}catch(e){this.onerror=null;return;}var i=parseInt(this.getAttribute(\'data-armor-i\')||\'0\',10);if(i>=L.length){this.onerror=null;return;}this.setAttribute(\'data-armor-i\',String(i+1));this.src=L[i];';
+
+		return '<img src="' . htmlspecialchars($primary, ENT_QUOTES, 'UTF-8') . '"'
+			. ' style="' . htmlspecialchars($style, ENT_QUOTES, 'UTF-8') . '"'
+			. ' data-armor-fallbacks="' . $json . '"'
+			. ' data-armor-i="0"'
+			. ' onerror="' . $onerror . '"'
+			. ' ' . $extraAttr . ' />';
 	}
 }
 

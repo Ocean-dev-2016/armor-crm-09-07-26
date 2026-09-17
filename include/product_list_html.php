@@ -77,11 +77,11 @@ if($ctable_r && mysqli_num_rows($ctable_r) > 0)
 		$img_web = $no_image_web;
 		if($product['image_path'] != "")
 		{
-			$local_image = realpath(__DIR__."/../".PRODUCT.$product['image_path']);
-			if($local_image && file_exists($local_image))
-			{
-				$img_web = SITEURL.PRODUCT.$product['image_path'];
+			if (!function_exists('armor_product_public_image_url')) {
+				require_once __DIR__ . '/image_webp_helper.php';
 			}
+			// Prefer JPG/WebP public URL (with browser fallback chain on <img>)
+			$img_web = armor_product_public_image_url($product['image_path'], $no_image_web);
 		}
 
 		$variants_r = $db->rp_getData("product_weight_price","catno,price,weight_id","product_id='".$product['id']."' AND isDelete=0","catno ASC",0);
@@ -93,7 +93,12 @@ if($ctable_r && mysqli_num_rows($ctable_r) > 0)
 				?>
 				<tr>
 					<td class="center"><?= $cnt; ?></td>
-					<td class="center"><img class="product-photo" src="<?= $img_web; ?>" alt=""></td>
+					<td class="center"><?php
+						if (!function_exists('armor_product_img_tag')) {
+							require_once __DIR__ . '/image_webp_helper.php';
+						}
+						echo armor_product_img_tag($product['image_path'], 'width:70px;height:70px;object-fit:contain;', 'class="product-photo" alt=""');
+					?></td>
 					<td class="center"><?= htmlspecialchars(strtoupper($variant['catno'])); ?></td>
 					<td class="center">
 						<span class="product-name"><?= htmlspecialchars(stripslashes($product['name'])); ?></span>
@@ -113,7 +118,12 @@ if($ctable_r && mysqli_num_rows($ctable_r) > 0)
 			?>
 			<tr>
 				<td class="center"><?= $cnt; ?></td>
-				<td class="center"><img class="product-photo" src="<?= $img_web; ?>" alt=""></td>
+				<td class="center"><?php
+					if (!function_exists('armor_product_img_tag')) {
+						require_once __DIR__ . '/image_webp_helper.php';
+					}
+					echo armor_product_img_tag($product['image_path'], 'width:70px;height:70px;object-fit:contain;', 'class="product-photo" alt=""');
+				?></td>
 				<td class="center">-</td>
 				<td class="center"><span class="product-name"><?= htmlspecialchars(stripslashes($product['name'])); ?></span></td>
 				<?php if($with_price) { ?><td class="center">-</td><?php } ?>

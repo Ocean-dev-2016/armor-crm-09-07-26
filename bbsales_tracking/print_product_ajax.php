@@ -80,16 +80,12 @@ h2
 			$unit_arr = array("1"=>"Caret","2"=>"Big Box","100"=>"Nos","-1"=>"Box","-2"=>"Strip","-3"=>"Pallet");
 
 			$count++;
-			$file=PRODUCT.$ctable_d['image_path'];
-
             if($ctable_d['image_path']!="" )
             {
-                $img=SITEURL.PRODUCT.$ctable_d['image_path'];
                 $br="";
             }
             else
             {                               
-                $img=SITEURL."images/no_image_found.jpg";
                 $br="border:1px solid #000";
             }
 			$top_category_name=$db->rp_getValue("top_category_master","name","id='".$ctable_d['tcid']."'");
@@ -134,7 +130,12 @@ h2
 			</td> 
 			<!-- <td><?php echo $db->rp_getValue("unit","name","id='".$ctable_d['unit_id']."' AND isDelete=0","",0); ?></td> -->
 			<td><?php echo $ctable_d['hsn_code']; ?></td>
-			<td style="text-align: center;"><img src="<?= $img; ?>" style="<?= $br; ?>" width="80" height="80"></td>
+			<td style="text-align: center;"><?php
+				if (!function_exists('armor_product_img_tag')) {
+					require_once dirname(__FILE__) . '/../include/image_webp_helper.php';
+				}
+				echo armor_product_img_tag($ctable_d['image_path'], 'width:80px;height:80px;object-fit:contain;' . $br);
+			?></td>
 			<!-- <td align="center">
 				<input type="text" name="disp<?php echo $count; ?>" id="disp<?php echo $ctable_d['id']; ?>" value="<?php echo $ctable_d['display_order']; ?>" data-product_id="<?php echo $ctable_d['id'];?>" style="width:40px;text-align:center" onChange="CheckDispalyOrder('<?php echo $ctable_d['id'];?>');">
 				<input type="hidden" name="b_id<?php echo $count ?>" value="<?php echo $ctable_d['id']; ?>">

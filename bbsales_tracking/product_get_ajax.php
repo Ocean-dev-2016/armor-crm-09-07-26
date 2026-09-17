@@ -265,7 +265,12 @@ $ctable_r = $db->rp_getData($ctable,"*",$ctable_where,"display_order ASC, name A
 
 			 	?>
 			</td> 
-			<td style="text-align: center;"><img src="<?= $img; ?>" style="<?= $br; ?>" width="80" height="80"></td>
+			<td style="text-align: center;"><?php
+				if (!function_exists('armor_product_img_tag')) {
+					require_once dirname(__FILE__) . '/../include/image_webp_helper.php';
+				}
+				echo armor_product_img_tag($ctable_d['image_path'], 'width:80px;height:80px;object-fit:contain;' . $br);
+			?></td>
 
 
 			<!-- <td>

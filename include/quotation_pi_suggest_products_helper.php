@@ -1038,13 +1038,26 @@ if (!function_exists('armor_quotation_pi_product_image_url')) {
 
 		}
 
-		// Browser print: never ship multi-MB originals into Chrome print preview.
-		if (function_exists('armor_quotation_pi_is_print_request') && armor_quotation_pi_is_print_request()) {
-			static $pdfHelperLoaded = false;
-			if (!$pdfHelperLoaded) {
-				require_once dirname(__FILE__) . '/quotation_pdf_image_helper.php';
-				$pdfHelperLoaded = true;
+		// Prefer JPG-first public URL so other PCs don't break on missing WebP
+		static $pdfHelperLoaded = false;
+		if (!$pdfHelperLoaded) {
+			require_once dirname(__FILE__) . '/image_webp_helper.php';
+			$pdfHelperLoaded = true;
+		}
+		if (function_exists('armor_product_public_image_url')) {
+			$rel = $imagePath;
+			if (preg_match('/^https?:\/\//i', $rel) && defined('PRODUCT') && strpos($rel, PRODUCT) !== false) {
+				$parts = explode(PRODUCT, $rel);
+				$rel = end($parts);
 			}
+			$resolved = armor_product_public_image_url($rel, $default);
+			if ($resolved !== '') {
+				$url = $resolved;
+			}
+		}
+
+		// Browser print/PDF: tiny cached thumbs when possible
+		if (function_exists('armor_quotation_pi_is_print_request') && armor_quotation_pi_is_print_request()) {
 			if (function_exists('armor_pdf_web_thumb_url')) {
 				return armor_pdf_web_thumb_url($url, 80, 80, 72, false);
 			}
