@@ -946,9 +946,10 @@ if ($quotationViewStandalone && !$isPdfExportMode && !defined('ARMOR_PDF_EXPORT_
 							<td colspan="1" class="text-center srno"><strong><?php echo $count; ?></strong></td>
 							<?php
 							if ($item['image_path'] != "") {
-							?>
-								<td colspan="1" class="image-width text-center" style="padding:2px;"><img style="max-width:34px;max-height:34px;display:inline-block;" src="<?php echo SITEURL . PRODUCT . $item['image_path'] ?>"></td>
-							<?php
+								if (!function_exists('armor_product_img_tag')) {
+									require_once dirname(__FILE__) . '/../include/image_webp_helper.php';
+								}
+								echo '<td colspan="1" class="image-width text-center" style="padding:2px;">' . armor_product_img_tag($item['image_path'], 'max-width:34px;max-height:34px;display:inline-block;') . '</td>';
 							} else {
 							?>
 								<td colspan="1" class="image-width text-center" style="padding:2px;"><img style="max-width:34px;max-height:34px;display:inline-block;" src="<?php echo SITEURL . PRODUCT . 'default.png' ?>"></td>

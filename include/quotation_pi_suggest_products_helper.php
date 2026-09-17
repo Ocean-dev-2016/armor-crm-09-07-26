@@ -804,6 +804,8 @@ if (!function_exists('armor_quotation_pi_lookup_product_by_catno')) {
 
 			'image' => armor_quotation_pi_product_image_url($imagePath ? $imagePath : ''),
 
+			'image_file' => $imagePath ? ltrim(str_replace('\\', '/', (string) $imagePath), '/') : '',
+
 		);
 
 	}
@@ -2200,6 +2202,8 @@ if (!function_exists('armor_quotation_pi_build_suggest_item_from_pwp')) {
 
 			'image' => armor_quotation_pi_product_image_url($imagePath ? $imagePath : ''),
 
+			'image_file' => $imagePath ? ltrim(str_replace('\\', '/', (string) $imagePath), '/') : '',
+
 			'pro_id' => $proId,
 
 			'item_order_unit' => $itemOrderUnit,
@@ -2347,6 +2351,8 @@ if (!function_exists('armor_quotation_pi_get_suggest_products')) {
 						if (!empty($detail['image_path'])) {
 
 							$item['image'] = armor_quotation_pi_product_image_url($detail['image_path']);
+
+							$item['image_file'] = ltrim(str_replace('\\', '/', (string) $detail['image_path']), '/');
 
 						}
 
@@ -2532,7 +2538,9 @@ if (!function_exists('armor_quotation_pi_render_mpdf_item')) {
 
 		$html .= '<tr><td align="right" style="font-size:7px;">Discount <strong>' . $discountPer . '%</strong></td></tr>';
 
-		$html .= '<tr><td align="center"><img src="' . htmlspecialchars($item['image'], ENT_QUOTES) . '" style="width:42px;height:auto;max-height:42px;" alt=""></td></tr>';
+		$html .= '<tr><td align="center">' . (function_exists('armor_quotation_pi_suggest_img_html')
+			? armor_quotation_pi_suggest_img_html($item, 'width:42px;height:auto;max-height:42px;', true)
+			: ('<img src="' . htmlspecialchars($item['image'], ENT_QUOTES) . '" style="width:42px;height:auto;max-height:42px;" alt="">')) . '</td></tr>';
 
 		$html .= '<tr><td align="center" style="font-size:8px;color:#555;"><strong>' . $catno . '</strong></td></tr>';
 
@@ -2640,21 +2648,64 @@ if (!function_exists('armor_quotation_pi_render_mpdf_block')) {
 
 
 
+if (!function_exists('armor_quotation_pi_suggest_img_html')) {
+	/**
+	 * Suggested product <img> with JPG→WebP→default fallback (Quotation + Order viewers).
+	 * Pass $staticOnly=true for mPDF (no JS onerror).
+	 */
+	function armor_quotation_pi_suggest_img_html($item, $style = 'max-width:38px;max-height:30px;display:inline-block;vertical-align:middle;', $staticOnly = false)
+	{
+		if (!function_exists('armor_product_img_tag')) {
+			require_once dirname(__FILE__) . '/image_webp_helper.php';
+		}
+
+		$rel = '';
+		if (!empty($item['image_file'])) {
+			$rel = ltrim(str_replace('\\', '/', (string) $item['image_file']), '/');
+		} elseif (!empty($item['image']) && defined('PRODUCT') && preg_match('#images/product/(?:thumb/)?([^?\s\'"]+)#i', $item['image'], $m)) {
+			$rel = $m[1];
+		}
+		if ($rel !== '' && strpos($rel, 'images/product/') !== false) {
+			$rel = substr($rel, strrpos($rel, '/') + 1);
+		}
+
+		$default = defined('SITEURL') ? SITEURL . PRODUCT . 'default.png' : '';
+
+		if ($rel !== '' && $staticOnly && function_exists('armor_product_resolve_image_info') && defined('SITEURL') && defined('PRODUCT')) {
+			$info = armor_product_resolve_image_info($rel);
+			if (!empty($info['file'])) {
+				$src = SITEURL . PRODUCT . $info['subdir'] . $info['file'];
+			} elseif (function_exists('armor_product_public_image_url')) {
+				$src = armor_product_public_image_url($rel, $default);
+			} else {
+				$src = SITEURL . PRODUCT . $rel;
+			}
+			return '<img src="' . htmlspecialchars($src, ENT_QUOTES) . '" alt="" style="' . htmlspecialchars($style, ENT_QUOTES) . '">';
+		}
+
+		if ($rel !== '' && function_exists('armor_product_img_tag') && !$staticOnly) {
+			return armor_product_img_tag($rel, $style, 'alt=""');
+		}
+
+		$src = !empty($item['image']) ? $item['image'] : $default;
+		return '<img src="' . htmlspecialchars($src, ENT_QUOTES) . '" alt="" style="' . htmlspecialchars($style, ENT_QUOTES) . '" onerror="this.onerror=null;this.src=\'' . htmlspecialchars($default, ENT_QUOTES) . '\';">';
+	}
+}
+
 if (!function_exists('armor_quotation_pi_render_print_item')) {
 
 	function armor_quotation_pi_render_print_item($item)
 	{
-		$img = htmlspecialchars($item['image'], ENT_QUOTES);
 		$name = htmlspecialchars($item['name'], ENT_QUOTES);
 		$catno = htmlspecialchars($item['catno'], ENT_QUOTES);
 		$curr = defined('CURR') ? CURR : 'INR';
 		$unit = isset($item['unit_name']) ? htmlspecialchars($item['unit_name'], ENT_QUOTES) : 'Nos';
-		$defaultImg = htmlspecialchars(armor_quotation_pi_product_image_url(''), ENT_QUOTES);
 		$discountPer = armor_quotation_pi_suggest_display_discount_percent();
+		$imgHtml = armor_quotation_pi_suggest_img_html($item, 'max-width:38px;max-height:30px;display:inline-block;vertical-align:middle;');
 
 		$html = '<table class="qp-prod-card" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;border:none !important;margin:0;padding:0;">';
 		$html .= '<tr><td style="border:none !important;text-align:right;padding:1px 2px 0 0;line-height:1;"><span style="border:1px solid #d9534f;color:#d9534f;font-size:6.5px;padding:0 2px;border-radius:2px;display:inline-block;">Discount ' . (int) $discountPer . '%</span></td></tr>';
-		$html .= '<tr><td style="border:none !important;text-align:center;padding:1px 2px;vertical-align:middle;"><div class="qp-prod-img-box" style="border:1px solid #dcdcdc;background:#f9f9f9;padding:1px;height:34px;line-height:34px;text-align:center;border-radius:2px;"><img src="' . $img . '" alt="" style="max-width:38px;max-height:30px;display:inline-block;vertical-align:middle;" onerror="this.onerror=null;this.src=\'' . $defaultImg . '\';"></div></td></tr>';
+		$html .= '<tr><td style="border:none !important;text-align:center;padding:1px 2px;vertical-align:middle;"><div class="qp-prod-img-box" style="border:1px solid #dcdcdc;background:#f9f9f9;padding:1px;height:34px;line-height:34px;text-align:center;border-radius:2px;">' . $imgHtml . '</div></td></tr>';
 		$html .= '<tr><td style="border:none !important;text-align:left;padding:1px 2px 0 2px;font-size:7.5px;font-weight:bold;color:#444;line-height:1.1;">' . $catno . '</td></tr>';
 		$html .= '<tr><td style="border:none !important;text-align:left;padding:0 2px;font-size:6.5px;line-height:1.1;color:#111;">' . $name . '</td></tr>';
 		$html .= '<tr><td style="border:none !important;text-align:left;padding:1px 2px 2px 2px;line-height:1.2;"><span style="color:#0a5c24;font-size:7.5px;font-weight:bold;">' . $curr . ' ' . $item['rate_label'] . '</span> <span style="color:#555;font-size:6.5px;">/ ' . $unit . '</span></td></tr>';
@@ -2684,7 +2735,6 @@ if (!function_exists('armor_quotation_pi_render_suggest_grid')) {
 			$html .= '<div class="qp-suggest-cat-title">' . htmlspecialchars($group['title'], ENT_QUOTES) . '</div>';
 			$html .= '<div class="qp-suggest-grid clearfix">';
 			foreach ($group['items'] as $item) {
-				$img = htmlspecialchars($item['image'], ENT_QUOTES);
 				$name = htmlspecialchars($item['name'], ENT_QUOTES);
 				$unit = isset($item['unit_name']) ? htmlspecialchars($item['unit_name'], ENT_QUOTES) : 'Nos';
 				$discountPer = armor_quotation_pi_suggest_display_discount_percent();
@@ -2693,7 +2743,7 @@ if (!function_exists('armor_quotation_pi_render_suggest_grid')) {
 				if ($clickable) {
 					$html .= '<a href="javascript:void(0)" class="qp-suggest-add" data-product-id="' . (int) $item['product_id'] . '" data-weight-id="' . (int) $item['weight_id'] . '" data-catno="' . htmlspecialchars($item['catno'], ENT_QUOTES) . '" style="display:block;color:inherit;text-decoration:none;">';
 				}
-				$html .= '<div class="qp-suggest-img-wrap"><img src="' . $img . '" alt="" onerror="this.onerror=null;this.src=\'' . htmlspecialchars(armor_quotation_pi_product_image_url(''), ENT_QUOTES) . '\';"></div>';
+				$html .= '<div class="qp-suggest-img-wrap">' . armor_quotation_pi_suggest_img_html($item, 'max-width:100%;max-height:80px;display:block;margin:0 auto;') . '</div>';
 				$html .= '<div class="qp-suggest-info">';
 				$html .= '<span class="qp-suggest-code-side">' . htmlspecialchars($item['catno'], ENT_QUOTES) . '</span>';
 				$html .= '<div class="qp-suggest-name">' . $name . '</div>';
