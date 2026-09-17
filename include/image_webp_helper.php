@@ -179,13 +179,15 @@ if (!function_exists('armor_product_image_abs_dirs')) {
 
 /**
  * Find an existing product image file for a DB filename.
- * Prefer main/ then thumb/. Prefer JPG/PNG first (live folder is JPG), then webp.
- * Returns array('file' => 'image_x.jpg', 'subdir' => ''|'thumb/') or empty file.
+ * Searches BOTH formats: jpg/jpeg/png/gif AND webp
+ * in BOTH folders: images/product/ and images/product/thumb/
+ * Returns first match found (main preferred, then thumb; jpg preferred, then webp).
+ * Returns array('file' => 'image_x.jpg', 'subdir' => ''|'thumb/', 'kind' => 'jpg'|'webp'|...)
  */
 if (!function_exists('armor_product_resolve_image_info')) {
 	function armor_product_resolve_image_info($relativeName)
 	{
-		$empty = array('file' => '', 'subdir' => '');
+		$empty = array('file' => '', 'subdir' => '', 'kind' => '');
 		$relativeName = trim((string) $relativeName);
 		if ($relativeName === '') {
 			return $empty;
@@ -196,7 +198,7 @@ if (!function_exists('armor_product_resolve_image_info')) {
 			return $empty;
 		}
 
-		// Live cPanel folder is JPG — prefer those so images show even when DB still says .webp
+		// Both JPG family + WebP — whichever exists can be recovered
 		$exts = array('jpg', 'jpeg', 'png', 'gif', 'webp', 'JPG', 'JPEG', 'PNG', 'GIF', 'WEBP');
 		$abs = armor_product_image_abs_dirs();
 
@@ -208,21 +210,27 @@ if (!function_exists('armor_product_resolve_image_info')) {
 			$locations[] = array('dir' => $abs['thumb'], 'subdir' => 'thumb/');
 		}
 
-		// Exact DB name first (main, then thumb)
+		$makeResult = function ($file, $subdir) {
+			$ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+			$kind = ($ext === 'jpeg') ? 'jpg' : $ext;
+			return array('file' => $file, 'subdir' => $subdir, 'kind' => $kind);
+		};
+
+		// 1) Exact DB filename (webp OR jpg) in main, then thumb
 		foreach ($locations as $loc) {
 			$path = $loc['dir'] . $relativeName;
 			if (is_file($path) && @filesize($path) > 20) {
-				return array('file' => $relativeName, 'subdir' => $loc['subdir']);
+				return $makeResult($relativeName, $loc['subdir']);
 			}
 		}
 
-		// Same basename, other extensions — JPG before WebP
+		// 2) Same basename — try JPG first, then WebP, in main then thumb
 		foreach ($locations as $loc) {
 			foreach ($exts as $ext) {
 				$candidate = $base . '.' . $ext;
 				$path = $loc['dir'] . $candidate;
 				if (is_file($path) && @filesize($path) > 20) {
-					return array('file' => $candidate, 'subdir' => $loc['subdir']);
+					return $makeResult($candidate, $loc['subdir']);
 				}
 			}
 		}

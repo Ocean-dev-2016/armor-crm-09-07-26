@@ -111,6 +111,7 @@ include("connect.php");
 										?>	
 
 										<a class="btn btn-primary" href='#addProductUnit' data-toggle='modal'><i class="fa fa-pencil"></i> Add Order Unit</a>
+										<a class="btn red" href="product_repair_images.php" title="Match DB image paths to JPG files on disk"><i class="fa fa-wrench"></i> Repair Images</a>
 									 </div>
 	                            	  <div class="col-md-7 col-xs-7 col-sm-7 pull-right">
                              <div class="form-inline" role="form">

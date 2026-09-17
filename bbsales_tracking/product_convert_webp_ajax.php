@@ -63,6 +63,71 @@ if ($action === 'scan') {
 	exit;
 }
 
+/**
+ * Diagnostic: how many DB image paths match disk / are fixable / are truly missing.
+ * Finds BOTH .jpg and .webp (main + thumb).
+ */
+if ($action === 'scan_match') {
+	$total = 0;
+	$ok = 0;
+	$fixable = 0;
+	$missing = 0;
+	$foundJpg = 0;
+	$foundWebp = 0;
+	$foundOther = 0;
+	$details = array();
+
+	$res = $db->rp_getData("product", "id,image_path,name", "isDelete=0 AND image_path IS NOT NULL AND image_path!=''", "id ASC", 0);
+	if ($res) {
+		while ($row = mysqli_fetch_assoc($res)) {
+			$total++;
+			$old = trim($row['image_path']);
+			$info = armor_product_resolve_image_info($old);
+			if ($info['file'] === '') {
+				$missing++;
+				if (count($details) < 80) {
+					$details[] = 'MISSING #' . $row['id'] . ' ' . $old . ' (' . substr(preg_replace('/\s+/', ' ', $row['name']), 0, 40) . ')';
+				}
+				continue;
+			}
+
+			$kind = isset($info['kind']) ? $info['kind'] : strtolower(pathinfo($info['file'], PATHINFO_EXTENSION));
+			if ($kind === 'jpg' || $kind === 'jpeg' || $kind === 'png' || $kind === 'gif') {
+				$foundJpg++;
+			} elseif ($kind === 'webp') {
+				$foundWebp++;
+			} else {
+				$foundOther++;
+			}
+
+			if ($info['subdir'] === '' && $info['file'] === $old) {
+				$ok++;
+				continue;
+			}
+
+			$fixable++;
+			if (count($details) < 50) {
+				$where = ($info['subdir'] === '') ? 'product/' : 'thumb/';
+				$details[] = 'RECOVER #' . $row['id'] . ' ' . $old . ' => ' . $info['file'] . ' [' . strtoupper($kind) . ' in ' . $where . ']';
+			}
+		}
+	}
+
+	echo json_encode(array(
+		'ack' => 1,
+		'total' => $total,
+		'ok' => $ok,
+		'fixable' => $fixable,
+		'missing' => $missing,
+		'found_jpg' => $foundJpg,
+		'found_webp' => $foundWebp,
+		'found_other' => $foundOther,
+		'details' => $details,
+		'message' => 'Match scan complete (JPG + WebP)',
+	));
+	exit;
+}
+
 if ($action === 'convert') {
 	$limit = isset($_REQUEST['limit']) ? (int) $_REQUEST['limit'] : 0;
 	if ($limit < 0) {
@@ -150,16 +215,18 @@ if ($action === 'repair_missing') {
 				continue;
 			}
 
-			// Main folder has matching basename with real extension (usually .jpg)
+			// Main folder has matching basename (JPG or WebP)
 			if ($info['file'] !== '' && $info['subdir'] === '' && $info['file'] !== $old) {
+				$kind = isset($info['kind']) ? strtoupper($info['kind']) : '';
 				$db->rp_update("product", array('image_path' => $db->clean($info['file'])), "id='" . (int) $row['id'] . "'", 0);
 				$fixed++;
-				$details[] = '#' . $row['id'] . ' ' . $old . ' => ' . $info['file'] . ' (product/)';
+				$details[] = '#' . $row['id'] . ' ' . $old . ' => ' . $info['file'] . ' [' . $kind . ' in product/]';
 				continue;
 			}
 
-			// Only thumb has the file — copy back to main product/ so path is stable
+			// Only thumb has JPG or WebP — copy to main product/
 			if ($info['file'] !== '' && $info['subdir'] === 'thumb/' && $abs['main'] !== '' && $abs['thumb'] !== '') {
+				$kind = isset($info['kind']) ? strtoupper($info['kind']) : '';
 				$src = $abs['thumb'] . $info['file'];
 				$dest = $abs['main'] . $info['file'];
 				if (is_file($src) && (!is_file($dest) || @filesize($dest) < 20)) {
@@ -168,13 +235,12 @@ if ($action === 'repair_missing') {
 				if (is_file($dest) && @filesize($dest) > 20) {
 					$db->rp_update("product", array('image_path' => $db->clean($info['file'])), "id='" . (int) $row['id'] . "'", 0);
 					$restoredFromThumb++;
-					$details[] = '#' . $row['id'] . ' ' . $old . ' => ' . $info['file'] . ' (from thumb/)';
+					$details[] = '#' . $row['id'] . ' ' . $old . ' => ' . $info['file'] . ' [' . $kind . ' from thumb/]';
 					continue;
 				}
-				// Still show via thumb URL path in DB if copy failed — keep thumb filename
 				$db->rp_update("product", array('image_path' => $db->clean($info['file'])), "id='" . (int) $row['id'] . "'", 0);
 				$restoredFromThumb++;
-				$details[] = '#' . $row['id'] . ' ' . $old . ' => ' . $info['file'] . ' (thumb only)';
+				$details[] = '#' . $row['id'] . ' ' . $old . ' => ' . $info['file'] . ' [' . $kind . ' thumb only]';
 				continue;
 			}
 
