@@ -123,8 +123,63 @@ if (!function_exists('armor_convert_file_to_webp')) {
 }
 
 /**
+ * Resolve a product image filename that actually exists under PRODUCT_A.
+ * Handles DB pointing to .webp after convert while only .jpg/.png remains (or vice versa).
+ */
+if (!function_exists('armor_product_resolve_image_path')) {
+	function armor_product_resolve_image_path($relativeName)
+	{
+		$relativeName = trim((string) $relativeName);
+		if ($relativeName === '' || !defined('PRODUCT_A')) {
+			return '';
+		}
+
+		$direct = PRODUCT_A . $relativeName;
+		if (is_file($direct) && filesize($direct) > 20) {
+			return $relativeName;
+		}
+
+		$base = pathinfo($relativeName, PATHINFO_FILENAME);
+		if ($base === '') {
+			return '';
+		}
+
+		$exts = array('webp', 'jpg', 'jpeg', 'png', 'gif', 'JPG', 'JPEG', 'PNG', 'WEBP', 'GIF');
+		foreach ($exts as $ext) {
+			$candidate = $base . '.' . $ext;
+			$path = PRODUCT_A . $candidate;
+			if (is_file($path) && filesize($path) > 20) {
+				return $candidate;
+			}
+		}
+
+		return '';
+	}
+}
+
+/**
+ * Public URL for product list/detail images (falls back to placeholder when missing).
+ */
+if (!function_exists('armor_product_public_image_url')) {
+	function armor_product_public_image_url($relativeName, $placeholder = '')
+	{
+		$resolved = armor_product_resolve_image_path($relativeName);
+		if ($resolved !== '' && defined('SITEURL') && defined('PRODUCT')) {
+			return SITEURL . PRODUCT . $resolved;
+		}
+		if ($placeholder !== '') {
+			return $placeholder;
+		}
+		if (defined('SITEURL')) {
+			return SITEURL . 'images/no_data_found.jpg';
+		}
+		return '';
+	}
+}
+
+/**
  * Convert product main/thumb/small images for one filename stored in DB.
- * $relativeName e.g. image_abc123.jpg
+ * DB may only change when the MAIN product file is successfully available as .webp.
  * Returns new filename (webp) or original on failure.
  */
 if (!function_exists('armor_product_image_to_webp')) {
@@ -134,39 +189,67 @@ if (!function_exists('armor_product_image_to_webp')) {
 		if ($relativeName === '') {
 			return array('ack' => 0, 'image_path' => '', 'message' => 'Empty image path');
 		}
-
-		$baseDirs = array();
-		if (defined('PRODUCT_A')) {
-			$baseDirs[] = PRODUCT_A;
-		}
-		if (defined('PRODUCT_THUMB_A')) {
-			$baseDirs[] = PRODUCT_THUMB_A;
-		}
-		if (defined('PRODUCT_THUMB_SMALL_A')) {
-			$baseDirs[] = PRODUCT_THUMB_SMALL_A;
+		if (!defined('PRODUCT_A')) {
+			return array('ack' => 0, 'image_path' => $relativeName, 'message' => 'PRODUCT_A not defined');
 		}
 
-		$finalName = $relativeName;
-		$convertedAny = false;
+		$base = pathinfo($relativeName, PATHINFO_FILENAME);
+		$webpName = $base . '.webp';
+		$mainSrc = PRODUCT_A . $relativeName;
+		$mainWebp = PRODUCT_A . $webpName;
 		$messages = array();
 
-		foreach ($baseDirs as $dir) {
+		// Already webp on main disk
+		if (strtolower(pathinfo($relativeName, PATHINFO_EXTENSION)) === 'webp' && is_file($mainSrc) && filesize($mainSrc) > 20) {
+			return array('ack' => 1, 'image_path' => $relativeName, 'message' => 'Already WebP', 'skipped' => 1);
+		}
+
+		$mainOk = false;
+		if (is_file($mainSrc)) {
+			$res = armor_convert_file_to_webp($mainSrc, $quality, true);
+			$messages[] = 'main: ' . $res['message'];
+			if (!empty($res['ack']) && !empty($res['webp_filename']) && is_file(PRODUCT_A . $res['webp_filename']) && filesize(PRODUCT_A . $res['webp_filename']) > 20) {
+				$webpName = $res['webp_filename'];
+				$mainWebp = PRODUCT_A . $webpName;
+				$mainOk = true;
+			}
+		} elseif (is_file($mainWebp) && filesize($mainWebp) > 20) {
+			$mainOk = true;
+			$messages[] = 'main: already had webp file';
+		} else {
+			$messages[] = 'main: source file missing';
+		}
+
+		// Never report success (for DB update) unless MAIN webp exists.
+		if (!$mainOk || !is_file($mainWebp) || filesize($mainWebp) <= 20) {
+			return array(
+				'ack' => 0,
+				'image_path' => $relativeName,
+				'message' => implode(' | ', $messages) . ' | refused DB update (main webp missing)',
+			);
+		}
+
+		// Sync thumb/small when present (best-effort; does not affect DB ack)
+		$extraDirs = array();
+		if (defined('PRODUCT_THUMB_A')) {
+			$extraDirs[] = PRODUCT_THUMB_A;
+		}
+		if (defined('PRODUCT_THUMB_SMALL_A')) {
+			$extraDirs[] = PRODUCT_THUMB_SMALL_A;
+		}
+		foreach ($extraDirs as $dir) {
 			$path = $dir . $relativeName;
 			if (!is_file($path)) {
+				// also try converting already-renamed webp sibling nothing to do
 				continue;
 			}
 			$res = armor_convert_file_to_webp($path, $quality, true);
-			$messages[] = basename($dir) . ': ' . $res['message'];
-			if (!empty($res['ack']) && !empty($res['webp_filename'])) {
-				$finalName = $res['webp_filename'];
-				$convertedAny = true;
-			}
+			$messages[] = basename(rtrim($dir, '/\\')) . ': ' . $res['message'];
 		}
 
-		// If only main exists and converted, also ensure thumb path name consistency when thumb missing
 		return array(
-			'ack' => $convertedAny ? 1 : 0,
-			'image_path' => $finalName,
+			'ack' => 1,
+			'image_path' => $webpName,
 			'message' => implode(' | ', $messages),
 		);
 	}

@@ -50,6 +50,7 @@ $webpOk = armor_image_webp_supported() ? 1 : 0;
 							<button type="button" id="btnScan" class="btn blue">Scan Pending Images</button>
 							<button type="button" id="btnConvert" class="btn green" disabled>Convert All Pending</button>
 							<button type="button" id="btnConvertBatch" class="btn yellow" disabled>Convert Next 25</button>
+							<button type="button" id="btnRepair" class="btn red">Repair Missing WebP Paths</button>
 						</p>
 						<div id="statsBox" style="margin:10px 0;font-weight:600;"></div>
 						<pre id="logBox" style="max-height:360px;overflow:auto;background:#111;color:#0f0;padding:12px;border-radius:4px;"></pre>
@@ -130,6 +131,31 @@ $webpOk = armor_image_webp_supported() ? 1 : 0;
 
 	document.getElementById('btnConvert').onclick = function() { runConvert(0); };
 	document.getElementById('btnConvertBatch').onclick = function() { runConvert(25); };
+
+	document.getElementById('btnRepair').onclick = function() {
+		log('Repairing missing webp DB paths...');
+		$.ajax({
+			url: 'product_convert_webp_ajax.php',
+			type: 'POST',
+			dataType: 'json',
+			data: { action: 'repair_missing' },
+			success: function(res) {
+				if (!res || !res.ack) {
+					log('Repair failed: ' + (res && res.message ? res.message : 'unknown'));
+					return;
+				}
+				log('OK (file matches DB): ' + res.ok + ' | Fixed to existing ext: ' + res.fixed + ' | Still missing on disk: ' + res.missing);
+				if (res.details && res.details.length) {
+					for (var i = 0; i < res.details.length; i++) {
+						log(res.details[i]);
+					}
+				}
+			},
+			error: function() {
+				log('Repair AJAX failed');
+			}
+		});
+	};
 })();
 </script>
 </body>

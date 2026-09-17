@@ -162,7 +162,10 @@ $ctable_r = $db->rp_getData($ctable,"*",$ctable_where,"display_order ASC, name A
 
             if($ctable_d['image_path']!="" )
             {
-                $img=SITEURL.PRODUCT.$ctable_d['image_path'];
+				if (!function_exists('armor_product_public_image_url')) {
+					require_once dirname(__FILE__) . '/../include/image_webp_helper.php';
+				}
+                $img = armor_product_public_image_url($ctable_d['image_path'], SITEURL."images/no_data_found.jpg");
                 $br="";
             }
             else

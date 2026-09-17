@@ -127,6 +127,49 @@ if ($action === 'convert') {
 	exit;
 }
 
+/**
+ * Fix DB rows where image_path points to a missing file but same basename exists
+ * as jpg/jpeg/png/webp on disk. Does NOT clear paths (re-upload may restore files).
+ */
+if ($action === 'repair_missing') {
+	$fixed = 0;
+	$missing = 0;
+	$ok = 0;
+	$details = array();
+
+	$res = $db->rp_getData("product", "id,image_path,name", "isDelete=0 AND image_path IS NOT NULL AND image_path!=''", "id ASC", 0);
+	if ($res) {
+		while ($row = mysqli_fetch_assoc($res)) {
+			$old = trim($row['image_path']);
+			$resolved = armor_product_resolve_image_path($old);
+			if ($resolved !== '' && $resolved === $old) {
+				$ok++;
+				continue;
+			}
+			if ($resolved !== '' && $resolved !== $old) {
+				$db->rp_update("product", array('image_path' => $db->clean($resolved)), "id='" . (int) $row['id'] . "'", 0);
+				$fixed++;
+				$details[] = '#' . $row['id'] . ' ' . $old . ' => ' . $resolved;
+				continue;
+			}
+			$missing++;
+			if (count($details) < 40) {
+				$details[] = '#' . $row['id'] . ' MISSING on disk: ' . $old;
+			}
+		}
+	}
+
+	echo json_encode(array(
+		'ack' => 1,
+		'ok' => $ok,
+		'fixed' => $fixed,
+		'missing' => $missing,
+		'details' => $details,
+		'message' => 'Repair complete',
+	));
+	exit;
+}
+
 echo json_encode(array('ack' => 0, 'message' => 'Invalid action'));
 exit;
 ?>
