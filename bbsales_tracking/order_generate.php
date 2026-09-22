@@ -18,6 +18,13 @@ $file_path = '';
 if ($order_id > 0) {
 	require_once dirname(__FILE__) . '/../include/armor_pdf_export_helper.php';
 
+	if (isset($db) && is_object($db)) {
+		$GLOBALS['db'] = $db;
+	}
+	if (isset($system) && is_object($system)) {
+		$GLOBALS['system'] = $system;
+	}
+
 	if ($staic == 2 && isset($db)) {
 		$uname = str_replace(" ", "-", stripslashes($db->rp_getValue("orders", "company_name", "id='" . $order_id . "'", 0)));
 		$uname = str_replace("/", "-", $uname);

@@ -592,17 +592,17 @@ if (!function_exists('armor_pdf_guess_image_limits')) {
 	function armor_pdf_guess_image_limits($imgTag)
 	{
 		$tag = strtolower($imgTag);
-		if (strpos($tag, 'quote-header') !== false || strpos($tag, 'craftbox_header') !== false || strpos($tag, 'view_logo') !== false || strpos($tag, 'quote-footer') !== false || strpos($tag, 'images/header') !== false) {
-			// Match web print header (~933x184)
-			return array(900, 170, 78);
+		// Balanced: clear images, Quotation PDF typically ~300–500KB.
+		if (strpos($tag, 'quote-header') !== false || strpos($tag, 'craftbox_header') !== false || strpos($tag, 'view_logo') !== false || strpos($tag, 'quote-footer') !== false || strpos($tag, 'images/header') !== false || strpos($tag, 'craftbox_testing_footer') !== false || strpos($tag, 'white_footer') !== false) {
+			return array(1280, 230, 92);
 		}
-		if (strpos($tag, 'qp-prod') !== false || strpos($tag, '42px') !== false) {
-			return array(42, 34, 70);
+		if (strpos($tag, 'qp-prod') !== false || strpos($tag, '42px') !== false || strpos($tag, 'qp-suggest') !== false) {
+			return array(100, 80, 90);
 		}
 		if (strpos($tag, 'image-width') !== false || strpos($tag, 'product') !== false || strpos($tag, 'width: 50px') !== false || strpos($tag, 'width:50px') !== false || strpos($tag, 'width: 80px') !== false || strpos($tag, 'width:80px') !== false) {
-			return array(48, 48, 72);
+			return array(110, 110, 90);
 		}
-		return array(48, 48, 70);
+		return array(96, 96, 88);
 	}
 }
 
@@ -768,7 +768,7 @@ if (!function_exists('armor_pdf_compress_images_in_html')) {
 			$newTag = preg_replace('/\bsrc=(["\'])([^"\']+)\1/i', 'src="' . $imgSrc . '"', $tag, 1);
 			$newTag = preg_replace('/\sstyle=(["\'])[^"\']*\1/i', '', $newTag);
 			if ($isHeader) {
-				$newTag = preg_replace('/<img/i', '<img style="width:100%;max-width:100%;height:auto;max-height:170px;display:block;"', $newTag, 1);
+				$newTag = preg_replace('/<img/i', '<img style="width:100%;max-width:100%;height:auto;max-height:190px;display:block;"', $newTag, 1);
 			} else {
 				$newTag = preg_replace('/<img/i', '<img style="max-width:' . $maxW . 'px;max-height:' . $maxH . 'px;"', $newTag, 1);
 			}

@@ -18,6 +18,13 @@ $file_path = '';
 if ($quotation_id > 0) {
 	require_once dirname(__FILE__) . '/../include/armor_pdf_export_helper.php';
 
+	if (isset($db) && is_object($db)) {
+		$GLOBALS['db'] = $db;
+	}
+	if (isset($system) && is_object($system)) {
+		$GLOBALS['system'] = $system;
+	}
+
 	if ($staic == 2 && isset($db)) {
 		$quotation_no = str_replace("/", "-", stripslashes($db->rp_getValue("quotation_detail", "quotation_no", "id='" . $quotation_id . "'", 0)));
 	} else {

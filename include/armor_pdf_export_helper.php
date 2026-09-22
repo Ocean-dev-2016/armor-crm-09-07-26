@@ -58,7 +58,7 @@ if (!function_exists('armor_pdf_export_mpdf_css')) {
 				width: 100% !important;
 				max-width: 100% !important;
 				height: auto !important;
-				max-height: 170px !important;
+				max-height: 190px !important;
 				display: block !important;
 				margin: 0 auto !important;
 				padding: 0 !important;
@@ -66,7 +66,7 @@ if (!function_exists('armor_pdf_export_mpdf_css')) {
 			img.quote-header-img, img.quote-footer-img {
 				width: 100% !important;
 				max-width: 100% !important;
-				max-height: 170px !important;
+				max-height: 190px !important;
 			}
 
 			.text-center { text-align: center !important; }
@@ -74,7 +74,7 @@ if (!function_exists('armor_pdf_export_mpdf_css')) {
 			.text-left { text-align: left !important; }
 			.srno { width: 4% !important; }
 			.image-width { width: 8% !important; text-align: center !important; padding: 2px !important; }
-			.image-width img { max-width: 48px; max-height: 48px; display: inline-block; }
+			.image-width img { max-width: 110px; max-height: 110px; display: inline-block; }
 			.box_qty { text-align: center !important; }
 			.quote-table { width: 100% !important; border-collapse: collapse !important; }
 			.product-items-table { width: 100% !important; table-layout: fixed !important; }
@@ -91,7 +91,7 @@ if (!function_exists('armor_pdf_export_mpdf_css')) {
 			.qp-suggest-print-cell { width: 25%; vertical-align: top; border: 1px solid #595959; padding: 2px; background: #fff; }
 			.qp-prod-card { width: 100%; text-align: center; padding: 2px; }
 			.qp-prod-disc-label { border: 1px solid #d9534f; color: #d9534f; font-size: 7.5px; padding: 1px 3px; border-radius: 2px; }
-			.qp-prod-img { max-width: 44px; max-height: 34px; display: inline-block; }
+			.qp-prod-img { max-width: 100px; max-height: 80px; display: inline-block; }
 			.qp-prod-code-cell { font-size: 8px; font-weight: bold; color: #555; }
 			.qp-prod-name-cell { font-size: 7.5px; line-height: 1.1; color: #000; height: 18px; overflow: hidden; }
 			.qp-prod-price-line { color: #0a5c24; font-size: 8.5px; font-weight: bold; }
@@ -142,6 +142,34 @@ if (!function_exists('armor_pdf_export_fetch_view_html')) {
 		$cwd = getcwd();
 		$html = '';
 		$embedAttempted = false;
+
+		// Include runs in this function scope — pull globals so connect_in.php
+		// (already loaded) does not leave $db null for the view.
+		if (empty($GLOBALS['db']) && isset($GLOBALS['db']) === false) {
+			// no-op guard for older PHP
+		}
+		if (isset($GLOBALS['db']) && is_object($GLOBALS['db'])) {
+			$db = $GLOBALS['db'];
+		} elseif (isset($db) && is_object($db)) {
+			$GLOBALS['db'] = $db;
+		}
+		if (isset($GLOBALS['system']) && is_object($GLOBALS['system'])) {
+			$system = $GLOBALS['system'];
+		} elseif (isset($system) && is_object($system)) {
+			$GLOBALS['system'] = $system;
+		}
+		if (!isset($db) || !is_object($db)) {
+			// Last resort: bootstrap from connect_in inside this scope
+			$page_id = isset($GLOBALS['page_id']) ? $GLOBALS['page_id'] : 420;
+			$page_slug = isset($GLOBALS['page_slug']) ? $GLOBALS['page_slug'] : 'page_customer';
+			require $bbsDir . 'connect_in.php';
+			if (isset($db) && is_object($db)) {
+				$GLOBALS['db'] = $db;
+			}
+			if (isset($system) && is_object($system)) {
+				$GLOBALS['system'] = $system;
+			}
+		}
 
 		foreach ($requestParams as $k => $v) {
 			$_GET[$k] = $v;
@@ -206,7 +234,7 @@ if (!function_exists('armor_pdf_export_create_mpdf')) {
 			$mpdf->showImageErrors = false;
 		}
 		if (property_exists($mpdf, 'img_dpi')) {
-			$mpdf->img_dpi = 96;
+			$mpdf->img_dpi = 144;
 		}
 		if (method_exists($mpdf, 'SetCompression')) {
 			$mpdf->SetCompression(true);
