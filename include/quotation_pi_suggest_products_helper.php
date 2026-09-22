@@ -2651,6 +2651,7 @@ if (!function_exists('armor_quotation_pi_render_mpdf_block')) {
 if (!function_exists('armor_quotation_pi_suggest_img_html')) {
 	/**
 	 * Suggested product <img> with JPG→WebP→default fallback (Quotation + Order viewers).
+	 * Print/Save-as-PDF: tiny cached thumbs (avoids 100MB+ Chrome print).
 	 * Pass $staticOnly=true for mPDF (no JS onerror).
 	 */
 	function armor_quotation_pi_suggest_img_html($item, $style = 'max-width:38px;max-height:30px;display:inline-block;vertical-align:middle;', $staticOnly = false)
@@ -2670,6 +2671,28 @@ if (!function_exists('armor_quotation_pi_suggest_img_html')) {
 		}
 
 		$default = defined('SITEURL') ? SITEURL . PRODUCT . 'default.png' : '';
+
+		// Browser print / Save as PDF — never embed full product images.
+		$forcePrintThumb = $staticOnly
+			|| (function_exists('armor_quotation_pi_is_print_request') && armor_quotation_pi_is_print_request())
+			|| (!empty($_REQUEST['print']) && (string) $_REQUEST['print'] === '1')
+			|| (!empty($_REQUEST['p']) && (string) $_REQUEST['p'] === '1');
+
+		if ($rel !== '' && $forcePrintThumb && defined('SITEURL') && defined('PRODUCT')) {
+			if (!function_exists('armor_pdf_web_thumb_url')) {
+				require_once dirname(__FILE__) . '/quotation_pdf_image_helper.php';
+			}
+			$full = SITEURL . PRODUCT . $rel;
+			if (function_exists('armor_pdf_web_thumb_url')) {
+				$src = armor_pdf_web_thumb_url($full, 72, 60, 70, false);
+			} else {
+				$src = $full;
+			}
+			if ($src === '' || $src === null) {
+				$src = $default;
+			}
+			return '<img src="' . htmlspecialchars($src, ENT_QUOTES) . '" alt="" style="' . htmlspecialchars($style, ENT_QUOTES) . '" onerror="this.onerror=null;this.src=\'' . htmlspecialchars($default, ENT_QUOTES) . '\';">';
+		}
 
 		if ($rel !== '' && $staticOnly && function_exists('armor_product_resolve_image_info') && defined('SITEURL') && defined('PRODUCT')) {
 			$info = armor_product_resolve_image_info($rel);

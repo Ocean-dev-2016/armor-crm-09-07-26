@@ -992,10 +992,18 @@ if ($isPrintMode || $isAppPdfMode || $isMpdfMode) {
 						<tr class="product-item-row">
 							<td class="text-center srno"><strong><?php echo $count; ?></strong></td>
 							<?php if ($item['image_path'] != "") {
-								if (!function_exists('armor_product_img_tag')) {
-									require_once dirname(__FILE__) . '/../include/image_webp_helper.php';
+								if ($isPrintMode || $isPdfExportMode) {
+									if (!function_exists('armor_pdf_web_thumb_url')) {
+										require_once dirname(__FILE__) . '/../include/quotation_pdf_image_helper.php';
+									}
+									$lineSrc = armor_pdf_web_thumb_url(SITEURL . PRODUCT . $item['image_path'], 72, 72, 70, false);
+									echo '<td class="image-width text-center" style="padding:2px;"><img style="max-width:34px;max-height:34px;display:inline-block;" src="' . htmlspecialchars($lineSrc, ENT_QUOTES, 'UTF-8') . '" alt=""></td>';
+								} else {
+									if (!function_exists('armor_product_img_tag')) {
+										require_once dirname(__FILE__) . '/../include/image_webp_helper.php';
+									}
+									echo '<td class="image-width text-center" style="padding:2px;">' . armor_product_img_tag($item['image_path'], 'max-width:34px;max-height:34px;display:inline-block;') . '</td>';
 								}
-								echo '<td class="image-width text-center" style="padding:2px;">' . armor_product_img_tag($item['image_path'], 'max-width:34px;max-height:34px;display:inline-block;') . '</td>';
 							} else {
 								$lineImg = SITEURL . PRODUCT . 'default.png';
 							?>

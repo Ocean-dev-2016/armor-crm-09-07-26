@@ -795,12 +795,20 @@ if ($quotationViewStandalone && !$isPdfExportMode && !defined('ARMOR_PDF_EXPORT_
 					<td class="quote-header-cell" colspan="16">
 						<?php
 						if (isset($company_detail_d['image_path']) && $company_detail_d['image_path'] != "") {
+							$headerSrc = SITEURL . HEADER . $company_detail_d['image_path'];
+							if (($isPrintMode || $isPdfExportMode) && function_exists('armor_pdf_web_thumb_url')) {
+								$headerSrc = armor_pdf_web_thumb_url($headerSrc, 1100, 200, 85, true);
+							}
 						?>
-							<img class="quote-header-img" src="<?= SITEURL . HEADER . $company_detail_d['image_path'] ?>" alt="Header">
+							<img class="quote-header-img" src="<?= htmlspecialchars($headerSrc, ENT_QUOTES, 'UTF-8') ?>" alt="Header">
 						<?php
 						} else {
+							$headerSrc = SITEURL . 'images/craftbox_header.jpg';
+							if (($isPrintMode || $isPdfExportMode) && function_exists('armor_pdf_web_thumb_url')) {
+								$headerSrc = armor_pdf_web_thumb_url($headerSrc, 1100, 200, 85, true);
+							}
 						?>
-							<img class="quote-header-img" src="<?= SITEURL ?>images/craftbox_header.jpg" alt="Header">
+							<img class="quote-header-img" src="<?= htmlspecialchars($headerSrc, ENT_QUOTES, 'UTF-8') ?>" alt="Header">
 						<?php
 						}
 						?>
@@ -946,10 +954,18 @@ if ($quotationViewStandalone && !$isPdfExportMode && !defined('ARMOR_PDF_EXPORT_
 							<td colspan="1" class="text-center srno"><strong><?php echo $count; ?></strong></td>
 							<?php
 							if ($item['image_path'] != "") {
-								if (!function_exists('armor_product_img_tag')) {
-									require_once dirname(__FILE__) . '/../include/image_webp_helper.php';
+								if ($isPrintMode || $isPdfExportMode) {
+									if (!function_exists('armor_pdf_web_thumb_url')) {
+										require_once dirname(__FILE__) . '/../include/quotation_pdf_image_helper.php';
+									}
+									$lineSrc = armor_pdf_web_thumb_url(SITEURL . PRODUCT . $item['image_path'], 72, 72, 70, false);
+									echo '<td colspan="1" class="image-width text-center" style="padding:2px;"><img style="max-width:34px;max-height:34px;display:inline-block;" src="' . htmlspecialchars($lineSrc, ENT_QUOTES, 'UTF-8') . '" alt=""></td>';
+								} else {
+									if (!function_exists('armor_product_img_tag')) {
+										require_once dirname(__FILE__) . '/../include/image_webp_helper.php';
+									}
+									echo '<td colspan="1" class="image-width text-center" style="padding:2px;">' . armor_product_img_tag($item['image_path'], 'max-width:34px;max-height:34px;display:inline-block;') . '</td>';
 								}
-								echo '<td colspan="1" class="image-width text-center" style="padding:2px;">' . armor_product_img_tag($item['image_path'], 'max-width:34px;max-height:34px;display:inline-block;') . '</td>';
 							} else {
 							?>
 								<td colspan="1" class="image-width text-center" style="padding:2px;"><img style="max-width:34px;max-height:34px;display:inline-block;" src="<?php echo SITEURL . PRODUCT . 'default.png' ?>"></td>
@@ -1355,12 +1371,20 @@ if ($quotationViewStandalone && !$isPdfExportMode && !defined('ARMOR_PDF_EXPORT_
 					<td class="quote-footer-cell" colspan="16">
 						<?php
 						if (isset($company_detail_d['footer_image_path']) && $company_detail_d['footer_image_path'] != "") {
+							$footerSrc = SITEURL . FOOTER . $company_detail_d['footer_image_path'];
+							if (($isPrintMode || $isPdfExportMode) && function_exists('armor_pdf_web_thumb_url')) {
+								$footerSrc = armor_pdf_web_thumb_url($footerSrc, 1100, 200, 85, true);
+							}
 						?>
-							<img class="quote-footer-img" src="<?= SITEURL . FOOTER . $company_detail_d['footer_image_path'] ?>" alt="Footer">
+							<img class="quote-footer-img" src="<?= htmlspecialchars($footerSrc, ENT_QUOTES, 'UTF-8') ?>" alt="Footer">
 						<?php
 						} else {
+							$footerSrc = SITEURL . 'images/craftbox_header.jpg';
+							if (($isPrintMode || $isPdfExportMode) && function_exists('armor_pdf_web_thumb_url')) {
+								$footerSrc = armor_pdf_web_thumb_url($footerSrc, 1100, 200, 85, true);
+							}
 						?>
-							<img class="quote-footer-img" src="<?= SITEURL ?>images/craftbox_header.jpg" alt="Footer">
+							<img class="quote-footer-img" src="<?= htmlspecialchars($footerSrc, ENT_QUOTES, 'UTF-8') ?>" alt="Footer">
 						<?php
 						}
 						?>
