@@ -5,6 +5,10 @@ if ($mode === 'assign') {
 	$page_id = 672;
 	$page_slug = 'assign_kra';
 	include('connect.php');
+} elseif ($mode === 'reassign') {
+	$page_id = 672;
+	$page_slug = 'assign_kra';
+	include('connect.php');
 } else {
 	include('connect_in.php');
 }
@@ -274,6 +278,137 @@ if ($mode === 'assign') {
 		));
 	} else {
 		echo json_encode(array('ack' => 0, 'ack_msg' => 'Assignment failed. Please try again.'));
+	}
+	include 'disconnect.php';
+	exit;
+}
+
+if ($mode === 'get_employee_customers') {
+	$sales_person_id = isset($_REQUEST['sales_person_id']) ? (int) $_REQUEST['sales_person_id'] : 0;
+	if ($sales_person_id <= 0) {
+		echo json_encode(array('ack' => 0, 'ack_msg' => 'Invalid employee.', 'results' => array()));
+		include 'disconnect.php';
+		exit;
+	}
+
+	$spCheck = $db->rp_getTotalRecord('sales_executive', 'id=' . $sales_person_id . ' AND ' . assign_kra_app_sales_where(), 0);
+	if ($spCheck <= 0) {
+		echo json_encode(array('ack' => 0, 'ack_msg' => 'Employee not found.', 'results' => array()));
+		include 'disconnect.php';
+		exit;
+	}
+
+	$rows = array();
+	$where = "isDelete=0 AND isActive=1 AND company_name!='' AND seid='" . $sales_person_id . "' AND seid!=0 AND seid IS NOT NULL AND seid!=''";
+	$r = $db->rp_getData('executive', 'id, company_name, state, client_code', $where, 'company_name ASC', 0);
+	if ($r) {
+		while ($d = mysqli_fetch_assoc($r)) {
+			$firm = trim($d['company_name']);
+			$state = trim($d['state']);
+			$code = trim($d['client_code']);
+			$parts = array();
+			if ($code !== '') {
+				$parts[] = $code;
+			}
+			if ($firm !== '') {
+				$parts[] = $firm;
+			}
+			if ($state !== '') {
+				$parts[] = $state;
+			}
+			$rows[] = array(
+				'id' => (int) $d['id'],
+				'text' => implode(' - ', $parts),
+				'state' => $state,
+				'company_name' => $firm,
+				'client_code' => $code,
+			);
+		}
+	}
+	echo json_encode(array('ack' => 1, 'results' => $rows, 'count' => count($rows)));
+	include 'disconnect.php';
+	exit;
+}
+
+if ($mode === 'reassign') {
+	if (
+		!isset($rights)
+		|| (
+			(!isset($rights['insert_flag']) || $rights['insert_flag'] != 1)
+			&& (!isset($rights['update_flag']) || $rights['update_flag'] != 1)
+			&& $_SESSION[SITE_SESS . '_ADMIN_TYPE'] != 0
+		)
+	) {
+		echo json_encode(array('ack' => 0, 'ack_msg' => 'You do not have permission to reassign customers.'));
+		include 'disconnect.php';
+		exit;
+	}
+
+	$from_id = isset($_REQUEST['from_sales_person_id']) ? (int) $_REQUEST['from_sales_person_id'] : 0;
+	$to_id = isset($_REQUEST['to_sales_person_id']) ? (int) $_REQUEST['to_sales_person_id'] : 0;
+	$customer_ids = isset($_REQUEST['customer_ids']) ? $_REQUEST['customer_ids'] : '';
+
+	if ($from_id <= 0 || $to_id <= 0 || $customer_ids === '') {
+		echo json_encode(array('ack' => 0, 'ack_msg' => 'Please select From Employee, customer(s) and To Employee.'));
+		include 'disconnect.php';
+		exit;
+	}
+	if ($from_id === $to_id) {
+		echo json_encode(array('ack' => 0, 'ack_msg' => 'From and To Employee must be different.'));
+		include 'disconnect.php';
+		exit;
+	}
+
+	$idArr = array();
+	foreach (explode(',', $customer_ids) as $cid) {
+		$cid = (int) trim($cid);
+		if ($cid > 0) {
+			$idArr[] = $cid;
+		}
+	}
+	$idArr = array_unique($idArr);
+	if (empty($idArr)) {
+		echo json_encode(array('ack' => 0, 'ack_msg' => 'Please select at least one customer.'));
+		include 'disconnect.php';
+		exit;
+	}
+
+	$fromOk = $db->rp_getTotalRecord('sales_executive', 'id=' . $from_id . ' AND ' . assign_kra_app_sales_where(), 0);
+	$toOk = $db->rp_getTotalRecord('sales_executive', 'id=' . $to_id . ' AND ' . assign_kra_app_sales_where(), 0);
+	if ($fromOk <= 0 || $toOk <= 0) {
+		echo json_encode(array('ack' => 0, 'ack_msg' => 'Invalid From/To employee selected.'));
+		include 'disconnect.php';
+		exit;
+	}
+
+	$updated = 0;
+	$now = date('Y-m-d H:i:s');
+	foreach ($idArr as $cid) {
+		// Only move customers currently assigned to From Employee
+		$ok = $db->rp_update(
+			'executive',
+			array(
+				'seid' => $to_id,
+				'modify_date' => $now,
+			),
+			"id=" . $cid . " AND isDelete=0 AND seid='" . $from_id . "'",
+			0
+		);
+		if ($ok) {
+			$updated++;
+		}
+	}
+
+	if ($updated > 0) {
+		$fromName = $db->rp_getValue('sales_executive', 'name', 'id=' . $from_id . ' AND isDelete=0', 0);
+		$toName = $db->rp_getValue('sales_executive', 'name', 'id=' . $to_id . ' AND isDelete=0', 0);
+		echo json_encode(array(
+			'ack' => 1,
+			'ack_msg' => $updated . ' customer(s) reassigned from ' . $fromName . ' to ' . $toName . '.',
+			'updated' => $updated,
+		));
+	} else {
+		echo json_encode(array('ack' => 0, 'ack_msg' => 'Reassign failed. Selected customers may not belong to From Employee.'));
 	}
 	include 'disconnect.php';
 	exit;

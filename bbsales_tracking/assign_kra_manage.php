@@ -215,6 +215,69 @@ if ($state_r) {
 				flex: 1 1 100%;
 			}
 		}
+		.reassign-kra-col.from-col { width: 24%; min-width: 180px; flex: 0 0 24%; }
+		.reassign-kra-col.cust-col { width: 36%; min-width: 260px; flex: 1 1 36%; max-width: 42%; }
+		.reassign-kra-col.to-col { width: 24%; min-width: 180px; flex: 0 0 24%; }
+		.reassign-kra-col.action-col { width: 12%; min-width: 120px; flex: 0 0 12%; }
+		.reassign-kra-col {
+			padding: 0 10px 15px;
+			box-sizing: border-box;
+		}
+		.reassign-kra-col label {
+			display: block;
+			font-weight: 600;
+			margin-bottom: 6px;
+			color: #333;
+		}
+		.reassign-kra-col.cust-col .fs-wrap {
+			width: 100% !important;
+			max-width: 100%;
+			position: relative;
+			box-sizing: border-box;
+		}
+		.reassign-kra-col.cust-col .fs-label-wrap {
+			min-height: 34px;
+			line-height: 22px;
+			border: 1px solid #e5e5e5;
+			background: #fff;
+			box-sizing: border-box;
+		}
+		.reassign-kra-col.cust-col .fs-dropdown {
+			left: 0 !important;
+			right: auto !important;
+			width: 100% !important;
+			min-width: 100% !important;
+			max-width: 100% !important;
+			box-sizing: border-box;
+			z-index: 1050;
+		}
+		.reassign-kra-col.cust-col .fs-option {
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+		.reassign-kra-col.cust-col .fs-option .fs-label {
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			display: block;
+			line-height: 1.35;
+		}
+		.reassign-kra-col .btn-reassign {
+			width: 100%;
+			height: 34px;
+		}
+		@media (max-width: 991px) {
+			.reassign-kra-col.from-col,
+			.reassign-kra-col.cust-col,
+			.reassign-kra-col.to-col,
+			.reassign-kra-col.action-col {
+				width: 100%;
+				min-width: 0;
+				max-width: 100%;
+				flex: 1 1 100%;
+			}
+		}
 	</style>
 </head>
 <body class="page-md">
@@ -243,9 +306,9 @@ if ($state_r) {
 			<div class="portlet box blue">
 				<div class="portlet-title">
 					<div class="caption"><i class="fa fa-filter"></i> Assign Customer to Sales Person</div>
-					<div class="tools"><a href="javascript:;" class="collapse"></a></div>
+					<div class="tools"><a href="javascript:;" class="expand"></a></div>
 				</div>
-				<div class="portlet-body">
+				<div class="portlet-body" style="display:none;">
 					<div class="alert alert-info" style="margin-bottom:15px;padding:10px 15px;">
 						<i class="fa fa-info-circle"></i>
 						Customer: <strong>Code - Customer Name - State</strong> &nbsp;|&nbsp;
@@ -339,6 +402,52 @@ if ($state_r) {
 				</div>
 			</div>
 
+			<!-- Reassign Form: Employee A → selected customers → Employee B -->
+			<div class="portlet box green">
+				<div class="portlet-title">
+					<div class="caption"><i class="fa fa-exchange"></i> Reassign Customer (Employee to Employee)</div>
+					<div class="tools"><a href="javascript:;" class="expand"></a></div>
+				</div>
+				<div class="portlet-body" style="display:none;">
+					<div class="alert alert-info" style="margin-bottom:15px;padding:10px 15px;">
+						<i class="fa fa-info-circle"></i>
+						Select <strong>From Employee</strong> → choose that employee's customer(s) (multi) →
+						select <strong>To Employee</strong> → click <strong>Reassign</strong>.
+						Existing Assign form above remains unchanged.
+					</div>
+					<div class="assign-kra-wrap">
+						<div class="assign-kra-row">
+							<div class="reassign-kra-col from-col">
+								<label>From Employee <span class="text-danger">*</span></label>
+								<select class="form-control noSelect2" id="reassign_from_seid">
+									<option value="">Select Employee</option>
+								</select>
+							</div>
+							<div class="reassign-kra-col cust-col">
+								<label>
+									Customer(s) of From Employee <span class="text-danger">*</span>
+									<span class="kra-badge" id="reassign_cust_count">0</span>
+								</label>
+								<select class="form-control noSelect2" id="reassign_customer_ids" name="reassign_customer_ids[]" multiple="multiple">
+								</select>
+							</div>
+							<div class="reassign-kra-col to-col">
+								<label>To Employee <span class="text-danger">*</span></label>
+								<select class="form-control noSelect2" id="reassign_to_seid">
+									<option value="">Select Employee</option>
+								</select>
+							</div>
+							<div class="reassign-kra-col action-col">
+								<label>&nbsp;</label>
+								<button type="button" class="btn btn-warning btn-reassign" id="btn_reassign_kra">
+									<i class="fa fa-exchange"></i> Reassign
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
 			<!-- Assigned List -->
 			<div class="portlet box blue">
 				<div class="portlet-title">
@@ -397,12 +506,43 @@ if ($state_r) {
 var kraPage = 1;
 var kraShow = 25;
 
+function destroyFSelect($sel) {
+	$sel = $($sel);
+	if (!$sel.length) {
+		return;
+	}
+	if ($sel.data('fSelect')) {
+		try {
+			$sel.fSelect('destroy');
+		} catch (e) {}
+		$sel.removeData('fSelect');
+	}
+	// Safety cleanup if wrap still around
+	if ($sel.parent().hasClass('fs-wrap')) {
+		$sel.siblings('.fs-label-wrap, .fs-dropdown').remove();
+		$sel.unwrap();
+	}
+	$sel.removeClass('hidden').show();
+}
+
+function initReassignCustomerFSelect(placeholder) {
+	var $sel = $('#reassign_customer_ids');
+	destroyFSelect($sel);
+	$sel.attr('multiple', 'multiple');
+	$sel.fSelect({
+		placeholder: placeholder || 'Select customer(s)',
+		showSearch: true,
+		numDisplayed: 2,
+		overflowText: '{n} customers selected'
+	});
+}
+
 function initAssignKraSelects() {
 	var $customer = $('#customer_ids');
-	if ($customer.closest('.fs-wrap').length) {
-		$customer.fSelect('destroy');
-	}
-	['#sales_person_id', '#filter_state', '#filter_seid', '#customer_state_filter'].forEach(function(sel) {
+	destroyFSelect($customer);
+	destroyFSelect($('#reassign_customer_ids'));
+
+	['#sales_person_id', '#filter_state', '#filter_seid', '#customer_state_filter', '#reassign_from_seid', '#reassign_to_seid'].forEach(function(sel) {
 		if ($(sel).data('select2')) {
 			$(sel).select2('destroy');
 		}
@@ -411,6 +551,7 @@ function initAssignKraSelects() {
 	$('#customer_state_filter').select2({ allowClear: true, width: '100%' });
 	$('#filter_state, #filter_seid').select2({ allowClear: true, width: '100%' });
 
+	$customer.attr('multiple', 'multiple');
 	$customer.fSelect({
 		placeholder: 'Search and select customer(s)',
 		showSearch: true,
@@ -418,10 +559,17 @@ function initAssignKraSelects() {
 		overflowText: '{n} customers selected'
 	});
 
+	initReassignCustomerFSelect('Select from employee first');
+
 	$('#sales_person_id').select2({
 		allowClear: true,
 		width: '100%',
 		placeholder: 'Select Sales Person'
+	});
+	$('#reassign_from_seid, #reassign_to_seid').select2({
+		allowClear: true,
+		width: '100%',
+		placeholder: 'Select Employee'
 	});
 }
 
@@ -548,8 +696,79 @@ function loadSalesPersonSummary(spId) {
 	});
 }
 
+function fillEmployeeDropdown($sel, rows, placeholder) {
+	var html = '<option value="">' + (placeholder || 'Select Employee') + '</option>';
+	if (rows && rows.length) {
+		$.each(rows, function(i, row) {
+			html += '<option value="' + row.id + '">' + $('<div>').text(row.text).html() + '</option>';
+		});
+	}
+	$sel.html(html).trigger('change');
+}
+
+function loadReassignEmployees() {
+	$.ajax({
+		url: 'assign_kra_ajax.php',
+		type: 'POST',
+		dataType: 'json',
+		data: { mode: 'get_sales_persons', states: '' },
+		success: function(res) {
+			var rows = (res && res.ack == 1 && res.results) ? res.results : [];
+			fillEmployeeDropdown($('#reassign_from_seid'), rows, 'Select Employee');
+			fillEmployeeDropdown($('#reassign_to_seid'), rows, 'Select Employee');
+		},
+		error: function() {
+			toastr.error('Failed to load employees for reassign.');
+		}
+	});
+}
+
+function clearReassignCustomers() {
+	var $sel = $('#reassign_customer_ids');
+	destroyFSelect($sel);
+	$sel.html('');
+	$('#reassign_cust_count').text('0');
+	initReassignCustomerFSelect('Select from employee first');
+}
+
+function loadCustomersOfEmployee(fromSeid) {
+	var $sel = $('#reassign_customer_ids');
+	if (!fromSeid) {
+		clearReassignCustomers();
+		return;
+	}
+	destroyFSelect($sel);
+	$sel.html('');
+	$('#reassign_cust_count').text('...');
+	$.ajax({
+		url: 'assign_kra_ajax.php',
+		type: 'POST',
+		dataType: 'json',
+		data: { mode: 'get_employee_customers', sales_person_id: fromSeid },
+		success: function(res) {
+			var html = '';
+			var count = 0;
+			if (res && res.ack == 1 && res.results && res.results.length) {
+				count = res.results.length;
+				$.each(res.results, function(i, row) {
+					html += '<option value="' + row.id + '" title="' + $('<div>').text(row.text).html() + '">'
+						+ $('<div>').text(row.text).html() + '</option>';
+				});
+			}
+			$sel.html(html);
+			$('#reassign_cust_count').text(count);
+			initReassignCustomerFSelect(count ? 'Search and select customer(s)' : 'No customers assigned');
+		},
+		error: function() {
+			clearReassignCustomers();
+			toastr.error('Failed to load customers of selected employee.');
+		}
+	});
+}
+
 jQuery(document).ready(function() {
 	setTimeout(initAssignKraSelects, 150);
+	setTimeout(loadReassignEmployees, 200);
 
 	$('#customer_state_filter').on('change', function() {
 		var st = $(this).val();
@@ -562,6 +781,15 @@ jQuery(document).ready(function() {
 
 	$('#sales_person_id').on('change', function() {
 		loadSalesPersonSummary($(this).val());
+	});
+
+	$('#reassign_from_seid').on('change', function() {
+		var fromId = $(this).val();
+		var toId = $('#reassign_to_seid').val();
+		if (toId && fromId && String(toId) === String(fromId)) {
+			$('#reassign_to_seid').select2('val', '');
+		}
+		loadCustomersOfEmployee(fromId);
 	});
 
 	$('#btn_assign_kra').on('click', function() {
@@ -591,6 +819,9 @@ jQuery(document).ready(function() {
 					clearCustomerSelection();
 					loadSalesPersonSummary(spId);
 					loadAssignedGrid(1);
+					if ($('#reassign_from_seid').val()) {
+						loadCustomersOfEmployee($('#reassign_from_seid').val());
+					}
 				} else {
 					toastr.error((res && res.ack_msg) ? res.ack_msg : 'Assignment failed.');
 				}
@@ -598,6 +829,60 @@ jQuery(document).ready(function() {
 			error: function() {
 				$btn.prop('disabled', false);
 				toastr.error('Assignment request failed.');
+			}
+		});
+	});
+
+	$('#btn_reassign_kra').on('click', function() {
+		var fromId = $('#reassign_from_seid').val();
+		var toId = $('#reassign_to_seid').val();
+		var ids = $('#reassign_customer_ids').val();
+		if (!fromId) {
+			toastr.error('Please select From Employee.');
+			return;
+		}
+		if (!ids || !ids.length) {
+			toastr.error('Please select at least one customer of From Employee.');
+			return;
+		}
+		if (!toId) {
+			toastr.error('Please select To Employee.');
+			return;
+		}
+		if (String(fromId) === String(toId)) {
+			toastr.error('From and To Employee must be different.');
+			return;
+		}
+		if (!confirm('Reassign ' + ids.length + ' customer(s) from selected employee to the other employee?')) {
+			return;
+		}
+		var $btn = $(this).prop('disabled', true);
+		$.ajax({
+			url: 'assign_kra_ajax.php',
+			type: 'POST',
+			dataType: 'json',
+			data: {
+				mode: 'reassign',
+				from_sales_person_id: fromId,
+				to_sales_person_id: toId,
+				customer_ids: ids.join(',')
+			},
+			success: function(res) {
+				$btn.prop('disabled', false);
+				if (res && res.ack == 1) {
+					toastr.success(res.ack_msg);
+					loadCustomersOfEmployee(fromId);
+					loadAssignedGrid(1);
+					if ($('#sales_person_id').val()) {
+						loadSalesPersonSummary($('#sales_person_id').val());
+					}
+				} else {
+					toastr.error((res && res.ack_msg) ? res.ack_msg : 'Reassign failed.');
+				}
+			},
+			error: function() {
+				$btn.prop('disabled', false);
+				toastr.error('Reassign request failed.');
 			}
 		});
 	});
