@@ -45,6 +45,32 @@ function rp_removeImage(c,f,i,l,d=''){
 <script>
 <?php if (isset($_SESSION[SITE_SESS . '_ADMIN_TYPE']) && $_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0) { ?>
 aj.getNotifications(".notification-container");
+/* Approval: fire due reminders (Due Date + 1 Year - 2 Months) into notification bell */
+(function () {
+	$.post("approval_ajax.php", { action: "fire_due_reminders" }, function (res) {
+		if (!res || !res.success || !res.count) {
+			return;
+		}
+		if (typeof toastr !== "undefined") {
+			for (var i = 0; i < res.reminders.length; i++) {
+				var r = res.reminders[i];
+				toastr.warning(
+					"Approval 1-Year reminder for " + (r.company_name || "Company"),
+					"Approval Reminder",
+					{ timeOut: 8000 }
+				);
+			}
+		}
+		if (typeof aj.getNotifications === "function") {
+			aj.getNotifications(".notification-container");
+		}
+		var $badge = $(".notification-count");
+		if ($badge.length) {
+			var cur = parseInt($badge.text(), 10) || 0;
+			$badge.text(cur + parseInt(res.count, 10));
+		}
+	}, "json");
+})();
 <?php
 	$__current_page = basename(isset($_SERVER['PHP_SELF']) ? $_SERVER['PHP_SELF'] : '');
 	$__dashboard_pages = array('main_dashboard.php', 'dashboard.php', 'customer_dashboard.php', 'dashbordd_sheetal.php');

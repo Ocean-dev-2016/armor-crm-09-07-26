@@ -1433,6 +1433,90 @@ if ($adminTypesResQpSuggest) {
 	}
 }
 
+// page_table id=674 — Approval Entry
+$apprPageCheck = mysqli_query($conn, "SELECT id FROM page_table WHERE id=674 LIMIT 1");
+if ($apprPageCheck && mysqli_num_rows($apprPageCheck) > 0) {
+	db_sync_append_page_urls($conn, 674, array(
+		'approval_manage.php',
+		'approval_crud.php',
+		'approval_get_ajax.php',
+		'approval_ajax.php',
+		'approval_unlock.php',
+		'approval_visit_ajax.php',
+	));
+	db_sync_run_query($conn, "UPDATE page_table SET page_title='Approval', page_slug='approval_entry', isDelete=0, isActive=1 WHERE id=674", 'Update page_table id=674 Approval');
+} else {
+	$now = date('Y-m-d H:i:s');
+	$urls = 'approval_manage.php,approval_crud.php,approval_get_ajax.php,approval_ajax.php,approval_unlock.php,approval_visit_ajax.php';
+	db_sync_run_query($conn, "INSERT INTO page_table (id, page_title, page_slug, page_count, page_urls, isActive, isDelete, adate, created_date)
+		VALUES (674, 'Approval', 'approval_entry', 0, '{$urls}', 1, 0, '{$now}', '{$now}')", 'Insert page_table id=674 Approval');
+}
+
+$adminTypesResAppr = mysqli_query($conn, "SELECT id FROM admin_type WHERE isDelete=0");
+if ($adminTypesResAppr) {
+	while ($at = mysqli_fetch_assoc($adminTypesResAppr)) {
+		$aid = (int) $at['id'];
+		if ($aid === 0) {
+			continue;
+		}
+		$chk = mysqli_query($conn, "SELECT id FROM page_admin_right WHERE admin_id='{$aid}' AND page_id=674 AND isDelete=0 LIMIT 1");
+		if ($chk && mysqli_num_rows($chk) > 0) {
+			$rid = (int) mysqli_fetch_assoc($chk)['id'];
+			db_sync_run_query($conn, "UPDATE page_admin_right SET view_flag=1, insert_flag=1, update_flag=1, delete_flag=1, all_data_flag=1 WHERE id='{$rid}'", "Approval rights update admin_type {$aid}");
+		} else {
+			$now = date('Y-m-d H:i:s');
+			db_sync_run_query($conn, "INSERT INTO page_admin_right (page_id, admin_id, view_flag, insert_flag, update_flag, delete_flag, all_data_flag, personal_flag, chain_vise_flag, isDelete, created_by, created_by_type, created_date)
+				VALUES (674, {$aid}, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, '{$now}')", "Approval rights insert admin_type {$aid}");
+		}
+	}
+}
+
+db_sync_run_query($conn, "CREATE TABLE IF NOT EXISTS `approval_entry` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`entry_date` date DEFAULT NULL,
+	`customer_id` int(11) DEFAULT NULL,
+	`company_name` varchar(255) DEFAULT NULL,
+	`type_of_company` varchar(255) DEFAULT NULL,
+	`person_name` varchar(255) DEFAULT NULL,
+	`designation` varchar(255) DEFAULT NULL,
+	`mobile` varchar(50) DEFAULT NULL,
+	`email` varchar(255) DEFAULT NULL,
+	`amount` decimal(15,2) DEFAULT NULL,
+	`given_by` varchar(255) DEFAULT NULL,
+	`payment_mode` varchar(50) DEFAULT NULL,
+	`payment_status` varchar(50) DEFAULT 'Not Done',
+	`reminder_date` date DEFAULT NULL,
+	`reminder_notified` tinyint(1) NOT NULL DEFAULT 0,
+	`approval_status` varchar(50) DEFAULT 'Pending',
+	`attachment` varchar(255) DEFAULT NULL,
+	`project_name` text,
+	`project_builder` varchar(255) DEFAULT NULL,
+	`contractor` varchar(255) DEFAULT NULL,
+	`isDelete` tinyint(1) NOT NULL DEFAULT 0,
+	`created_by` int(11) DEFAULT NULL,
+	`created_date` datetime DEFAULT NULL,
+	`modified_date` datetime DEFAULT NULL,
+	PRIMARY KEY (`id`),
+	KEY `idx_customer` (`customer_id`),
+	KEY `idx_entry_date` (`entry_date`),
+	KEY `idx_delete` (`isDelete`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8", 'Create table approval_entry');
+
+db_sync_run_query($conn, "CREATE TABLE IF NOT EXISTS `approval_module_setting` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`setting_key` varchar(100) NOT NULL,
+	`setting_value` text,
+	`modified_date` datetime DEFAULT NULL,
+	PRIMARY KEY (`id`),
+	UNIQUE KEY `uk_setting_key` (`setting_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8", 'Create table approval_module_setting');
+
+if (db_sync_table_exists($conn, 'approval_entry')) {
+	db_sync_add_column_if_missing($conn, 'approval_entry', 'payment_status', "ALTER TABLE `approval_entry` ADD COLUMN `payment_status` varchar(50) DEFAULT 'Not Done' AFTER `payment_mode`");
+	db_sync_add_column_if_missing($conn, 'approval_entry', 'reminder_date', "ALTER TABLE `approval_entry` ADD COLUMN `reminder_date` date DEFAULT NULL AFTER `payment_status`");
+	db_sync_add_column_if_missing($conn, 'approval_entry', 'reminder_notified', "ALTER TABLE `approval_entry` ADD COLUMN `reminder_notified` tinyint(1) NOT NULL DEFAULT 0 AFTER `reminder_date`");
+	db_sync_add_column_if_missing($conn, 'approval_entry', 'attachment', "ALTER TABLE `approval_entry` ADD COLUMN `attachment` varchar(255) DEFAULT NULL AFTER `approval_status`");
+}
 db_sync_run_query($conn, "CREATE TABLE IF NOT EXISTS `quotation_pi_suggest_product` (
 	`id` int(11) NOT NULL AUTO_INCREMENT,
 	`catno` varchar(50) NOT NULL DEFAULT '',
