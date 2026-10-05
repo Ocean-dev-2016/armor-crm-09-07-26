@@ -428,7 +428,7 @@ function fireDueReminders() {
 			var company = r.company_name || 'Company';
 			var remDate = r.reminder_date || '';
 			toastr.warning(
-				'1-Year reminder (2 months before) for ' + company + (remDate ? ' — ' + remDate : ''),
+				'Reminder (2 months before Due Date) for ' + company + (remDate ? ' — ' + remDate : ''),
 				'Approval Reminder',
 				{ timeOut: 8000 }
 			);

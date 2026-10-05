@@ -389,7 +389,7 @@ $customers = $db->rp_getData(
 										</div>
 										<div class="col-md-4 col-sm-6">
 											<div class="form-group">
-												<label>Reminder Date <small class="text-muted">(from Due Date: 1 Year − 2 Months)</small></label>
+												<label>Reminder Date <small class="text-muted">(2 Months before Due Date)</small></label>
 												<?php
 												$remDisp = armor_approval_calc_reminder_date($entry_date);
 												$remDisp = $remDisp ? date('d/M/Y', strtotime($remDisp)) : '—';
@@ -508,7 +508,6 @@ $(document).ready(function () {
 			return;
 		}
 		var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-		d.setFullYear(d.getFullYear() + 1);
 		d.setMonth(d.getMonth() - 2);
 		var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 		var dd = ('0' + d.getDate()).slice(-2);

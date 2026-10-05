@@ -143,8 +143,7 @@ if (!function_exists('armor_approval_handle_attachment_upload')) {
 
 if (!function_exists('armor_approval_calc_reminder_date')) {
 	/**
-	 * Reminder = 2 months before entry date completes 1 year
-	 * (entry_date + 1 year - 2 months).
+	 * Reminder = 2 months before Due Date.
 	 */
 	function armor_approval_calc_reminder_date($entry_date)
 	{
@@ -152,7 +151,7 @@ if (!function_exists('armor_approval_calc_reminder_date')) {
 		if ($entry_date === '' || $entry_date === '0000-00-00') {
 			return null;
 		}
-		$ts = strtotime($entry_date . ' +1 year -2 months');
+		$ts = strtotime($entry_date . ' -2 months');
 		if ($ts === false) {
 			return null;
 		}
@@ -196,9 +195,8 @@ if (!function_exists('armor_approval_create_reminder_notification')) {
 		$amount = ($row['amount'] !== null && $row['amount'] !== '') ? number_format((float)$row['amount'], 2) : '-';
 		$entryDisp = !empty($row['entry_date']) ? date('d/M/Y', strtotime($row['entry_date'])) : '-';
 		$reminderDate = !empty($row['reminder_date']) ? date('d/M/Y', strtotime($row['reminder_date'])) : date('d/M/Y');
-		$yearDue = !empty($row['entry_date']) ? date('d/M/Y', strtotime($row['entry_date'] . ' +1 year')) : '-';
 		$title = 'Approval Due Date Reminder — ' . $company;
-		$desc = 'Due Date: ' . $entryDisp . ' | 1 Year completes on: ' . $yearDue . ' | Reminder (2 months before): ' . $reminderDate . ' | Amount: ' . $amount;
+		$desc = 'Due Date: ' . $entryDisp . ' | Reminder (2 months before Due Date): ' . $reminderDate . ' | Amount: ' . $amount;
 		if (!empty($row['person_name'])) {
 			$desc .= ' | Person: ' . $row['person_name'];
 		}
@@ -247,7 +245,21 @@ if (!function_exists('armor_approval_fire_due_reminders')) {
 		$today = date('Y-m-d');
 		$fired = array();
 
-		/* Fill missing reminder_date from entry_date (1 year - 2 months) */
+		/* Recalc reminder_date = Due Date - 2 months for pending reminders */
+		$pending = $db->rp_getData(
+			'approval_entry',
+			'id, entry_date, reminder_date',
+			"isDelete=0 AND reminder_notified=0 AND entry_date IS NOT NULL AND entry_date!='0000-00-00'",
+			'',
+			0
+		);
+		if ($pending) {
+			while ($m = mysqli_fetch_assoc($pending)) {
+				armor_approval_sync_reminder_date($db, (int)$m['id'], $m['entry_date'], false);
+			}
+		}
+
+		/* Fill any still-missing reminder_date */
 		$missing = $db->rp_getData(
 			'approval_entry',
 			'id, entry_date',

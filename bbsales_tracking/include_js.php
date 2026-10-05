@@ -45,7 +45,7 @@ function rp_removeImage(c,f,i,l,d=''){
 <script>
 <?php if (isset($_SESSION[SITE_SESS . '_ADMIN_TYPE']) && $_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0) { ?>
 aj.getNotifications(".notification-container");
-/* Approval: fire due reminders (Due Date + 1 Year - 2 Months) into notification bell */
+/* Approval: fire due reminders (2 months before Due Date) into notification bell */
 (function () {
 	$.post("approval_ajax.php", { action: "fire_due_reminders" }, function (res) {
 		if (!res || !res.success || !res.count) {
@@ -55,7 +55,7 @@ aj.getNotifications(".notification-container");
 			for (var i = 0; i < res.reminders.length; i++) {
 				var r = res.reminders[i];
 				toastr.warning(
-					"Approval 1-Year reminder for " + (r.company_name || "Company"),
+					"Approval reminder for " + (r.company_name || "Company"),
 					"Approval Reminder",
 					{ timeOut: 8000 }
 				);

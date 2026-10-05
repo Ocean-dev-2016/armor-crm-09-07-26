@@ -1,4 +1,4 @@
-<?php
+image.png<?php
 $page_id = 674;
 $page_slug = 'approval_entry';
 include('connect.php');
