@@ -1720,6 +1720,20 @@ db_sync_add_column_if_missing(
 	"int(11) DEFAULT NULL COMMENT 'FK visit_start_type_master.id'",
 	array('purpose_id')
 );
+/* Old Add flow creates visit before type is chosen — column must stay nullable. */
+if (db_sync_column_exists($conn, 'visit', 'visit_start_type_id')) {
+	$nullCheck = mysqli_query($conn, "SHOW COLUMNS FROM `visit` LIKE 'visit_start_type_id'");
+	$nullRow = ($nullCheck && mysqli_num_rows($nullCheck) > 0) ? mysqli_fetch_assoc($nullCheck) : null;
+	if ($nullRow && isset($nullRow['Null']) && strtoupper($nullRow['Null']) === 'NO') {
+		db_sync_run_query(
+			$conn,
+			"ALTER TABLE `visit` MODIFY COLUMN `visit_start_type_id` int(11) DEFAULT NULL COMMENT 'FK visit_start_type_master.id'",
+			'Make visit.visit_start_type_id nullable'
+		);
+	} else {
+		db_sync_log('SKIP', 'visit.visit_start_type_id already nullable');
+	}
+}
 db_sync_add_column_if_missing(
 	$conn,
 	'quotation_detail',

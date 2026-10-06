@@ -38,6 +38,7 @@ class Visit extends Functions
 			$product_name1 = "";
 		}
 
+		$visit_start_type_id = isset($visit_start_type_id) ? $visit_start_type_id : "";
 		$rows 	= array(
 			"user_id",
 			"customer_id",
@@ -49,13 +50,11 @@ class Visit extends Functions
 			"isActive",
 			"entry_flag",
 			"purpose_id",
-			"visit_start_type_id",
 			"type_of_company",
 			"visit_type",
 			"product_name",
 			"inquiry_id",
 		);
-		$visit_start_type_id = isset($visit_start_type_id) ? $visit_start_type_id : "";
 		$values = array(
 			$user_id,
 			$customer_id,
@@ -67,12 +66,22 @@ class Visit extends Functions
 			1,
 			5,
 			$purpose_id,
-			$visit_start_type_id,
 			$type_of_company,
 			$visit_type,
 			$product_name1,
 			$inquiry_id,
 		);
+		/* Omit column when empty so DB DEFAULT NULL applies (old Add flow). */
+		if ($visit_start_type_id != "" && $visit_start_type_id != "0") {
+			$purposeIdx = array_search("purpose_id", $rows);
+			if ($purposeIdx !== false) {
+				array_splice($rows, $purposeIdx + 1, 0, array("visit_start_type_id"));
+				array_splice($values, $purposeIdx + 1, 0, array($visit_start_type_id));
+			} else {
+				$rows[] = "visit_start_type_id";
+				$values[] = $visit_start_type_id;
+			}
+		}
 		$eid = $this->db->rp_insert($this->ctable, $values, $rows, 0);
 		$image_path = array();
 		/*

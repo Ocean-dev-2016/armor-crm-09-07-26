@@ -82,13 +82,13 @@ if ($is_valid_api_key) {
 			$pendingWhere = "user_id='" . $detail['user_id'] . "' AND isDelete=0 AND start_date_time IS NOT NULL AND start_date_time!='0000-00-00 00:00:00' AND (stop_date_time IS NULL OR stop_date_time='0000-00-00 00:00:00' OR stop_date_time='')";
 			$count = $db->rp_getTotalRecord("visit", $pendingWhere, 0);
 
-			if ($detail['visit_start_type_id'] == "" || $detail['visit_start_type_id'] == "0") {
-				$reply = array(
-					"ack" => 0,
-					"developer_msg" => "visit_start_type_id missing or invalid",
-					"ack_msg" => "Please select visit start type.",
-				);
-			} else {
+			/*
+			 * visit_start_type_id is OPTIONAL on create (old Add flow auto-creates
+			 * visit before Start Visit screen). App enforces compulsory on UI.
+			 * If sent, must be a valid active master id.
+			 */
+			$reply = null;
+			if ($detail['visit_start_type_id'] != "" && $detail['visit_start_type_id'] != "0") {
 				$typeOk = $db->rp_getTotalRecord("visit_start_type_master", "id='" . $detail['visit_start_type_id'] . "' AND isDelete=0 AND isActive=1", 0);
 				if ($typeOk <= 0) {
 					$reply = array(
@@ -96,7 +96,13 @@ if ($is_valid_api_key) {
 						"developer_msg" => "visit_start_type_id missing or invalid",
 						"ack_msg" => "Please select visit start type.",
 					);
-				} else if ($count == 0) {
+				}
+			} else {
+				$detail['visit_start_type_id'] = "";
+			}
+
+			if ($reply === null) {
+				if ($count == 0) {
 					if ($detail['flag'] != '1') {
 						$reply = $objVisit->AddVisit($detail, $_FILES);
 					} else {
@@ -1080,7 +1086,7 @@ if ($is_valid_api_key) {
 				$ack = ['ack' => 0, "ack_msg" => "No Data Found"];
 			}
 			$db->printJSON($ack);
-		} else if ($service == 'get_visit_start_types' || $service == 274) {
+		} else if ($service == 'get_visit_start_types' || $service == 274 || $service == 239) {
 			$result = array();
 			$type_r = $db->rp_getData(
 				"visit_start_type_master",
