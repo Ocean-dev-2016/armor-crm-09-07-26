@@ -65,6 +65,7 @@ $isPdfExportMode = ($isMpdfMode || $isAppPdfMode);
 if ($isPrintMode || $isAppPdfMode || $isMpdfMode) {
 	@ini_set('memory_limit', '1024M');
 	@set_time_limit(180);
+	require_once dirname(__FILE__) . '/../include/quotation_pdf_image_helper.php';
 }
 ?>
 <?php if ($orderViewStandalone) { ?><html>
@@ -460,8 +461,8 @@ if ($isPrintMode || $isAppPdfMode || $isMpdfMode) {
 				min-height: 0 !important;
 				height: auto !important;
 				overflow: hidden !important;
-				page-break-inside: avoid !important;
-				break-inside: avoid-page !important;
+				page-break-inside: auto !important;
+				break-inside: auto !important;
 			}
 
 			.quote-suggest-body .qp-prod-badge-row {
@@ -808,8 +809,12 @@ if ($isPrintMode || $isAppPdfMode || $isMpdfMode) {
 
 				<?php
 				if (isset($company_detail_d['image_path']) && $company_detail_d['image_path'] != "") {
-				?>
-					<img class="quote-header-img" src="<?= HEADER_A . $company_detail_d['image_path'] ?>" alt="Header">
+					$headerSrc = HEADER_A . $company_detail_d['image_path'];
+					if ($isPrintMode && function_exists('armor_pdf_web_thumb_url')) {
+						$headerSrc = armor_pdf_web_thumb_url($headerSrc, 900, 170, 78, true);
+					}
+					?>
+					<img class="quote-header-img" src="<?= $headerSrc ?>" alt="Header">
 				<?php
 				} else {
 				?>
@@ -986,10 +991,20 @@ if ($isPrintMode || $isAppPdfMode || $isMpdfMode) {
 				?>
 						<tr class="product-item-row">
 							<td class="text-center srno"><strong><?php echo $count; ?></strong></td>
-							<?php if ($item['image_path'] != "") { ?>
-								<td class="image-width text-center" style="padding:2px;"><img style="max-width:34px;max-height:34px;display:inline-block;" src="<?php echo SITEURL . PRODUCT . $item['image_path'] ?>"></td>
-							<?php } else { ?>
-								<td class="image-width text-center" style="padding:2px;"><img style="max-width:34px;max-height:34px;display:inline-block;" src="<?php echo SITEURL . PRODUCT . 'default.png' ?>"></td>
+							<?php if ($item['image_path'] != "") {
+								$lineImg = SITEURL . PRODUCT . $item['image_path'];
+								if ($isPrintMode && function_exists('armor_pdf_web_thumb_url')) {
+									$lineImg = armor_pdf_web_thumb_url($lineImg, 80, 80, 72, false);
+								}
+							?>
+								<td class="image-width text-center" style="padding:2px;"><img style="max-width:34px;max-height:34px;display:inline-block;" src="<?php echo $lineImg ?>"></td>
+							<?php } else {
+								$lineImg = SITEURL . PRODUCT . 'default.png';
+								if ($isPrintMode && function_exists('armor_pdf_web_thumb_url')) {
+									$lineImg = armor_pdf_web_thumb_url($lineImg, 80, 80, 72, false);
+								}
+							?>
+								<td class="image-width text-center" style="padding:2px;"><img style="max-width:34px;max-height:34px;display:inline-block;" src="<?php echo $lineImg ?>"></td>
 							<?php } ?>
 							<td colspan="3" class="model" style="position: relative;">
 								<?php
@@ -1416,8 +1431,12 @@ if ($isPrintMode || $isAppPdfMode || $isMpdfMode) {
 					<td class="quote-footer-cell" colspan="16">
 						<?php
 						if (isset($company_detail_d['footer_image_path']) && $company_detail_d['footer_image_path'] != "") {
+							$footerSrc = FOOTER_A . $company_detail_d['footer_image_path'];
+							if ($isPrintMode && function_exists('armor_pdf_web_thumb_url')) {
+								$footerSrc = armor_pdf_web_thumb_url($footerSrc, 900, 170, 78, true);
+							}
 						?>
-							<img class="quote-footer-img" src="<?= FOOTER_A . $company_detail_d['footer_image_path'] ?>" alt="Footer">
+							<img class="quote-footer-img" src="<?= $footerSrc ?>" alt="Footer">
 						<?php
 						} else {
 						?>
@@ -1479,14 +1498,29 @@ if ($isPrintMode || $isAppPdfMode || $isMpdfMode) {
 		orderWaitForImages(function() {
 			setTimeout(function() {
 				window.print();
-			}, 300);
-		});
+			}, 150);
+		}, 4000);
 	};
 
-	function orderWaitForImages(callback) {
+	function orderWaitForImages(callback, timeoutMs) {
 		var imgs = document.images;
-		if (!imgs || !imgs.length) {
+		var finished = false;
+		var timer = null;
+		timeoutMs = timeoutMs || 4000;
+
+		function finish() {
+			if (finished) {
+				return;
+			}
+			finished = true;
+			if (timer) {
+				clearTimeout(timer);
+			}
 			callback();
+		}
+
+		if (!imgs || !imgs.length) {
+			finish();
 			return;
 		}
 		var pending = 0;
@@ -1497,13 +1531,13 @@ if ($isPrintMode || $isAppPdfMode || $isMpdfMode) {
 			}
 		}
 		if (!pending) {
-			callback();
+			finish();
 			return;
 		}
 		function done() {
 			pending--;
 			if (pending <= 0) {
-				callback();
+				finish();
 			}
 		}
 		for (i = 0; i < imgs.length; i++) {
@@ -1512,6 +1546,7 @@ if ($isPrintMode || $isAppPdfMode || $isMpdfMode) {
 				imgs[i].addEventListener('error', done);
 			}
 		}
+		timer = setTimeout(finish, timeoutMs);
 	}
 
 	<?php if ($isPrintMode && !$isAppPdfMode && !$isMpdfMode) { ?>
@@ -1520,8 +1555,8 @@ if ($isPrintMode || $isAppPdfMode || $isMpdfMode) {
 		orderWaitForImages(function() {
 			setTimeout(function() {
 				window.print();
-			}, 1200);
-		});
+			}, 250);
+		}, 4000);
 	});
 	<?php } ?>
 })();
