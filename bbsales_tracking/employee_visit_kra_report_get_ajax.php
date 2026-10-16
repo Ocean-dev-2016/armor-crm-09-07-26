@@ -132,7 +132,7 @@ $fixedColCount = 10; // Sr .. Total Visit + Visit Duration
 </style>
 
 <?php if ($data['range']['was_limited']) { ?>
-	<div class="alert alert-warning">The selected period was limited to 62 days for report performance.</div>
+	<div class="alert alert-warning">The selected period was limited to 1 year (366 days) for report performance.</div>
 <?php } ?>
 
 <?php if (!empty($data['require_employee'])) { ?>

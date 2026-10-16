@@ -41,7 +41,7 @@ class EmployeeVisitKraReport
 		return $this->reasonLabels;
 	}
 
-	public function normalizeDateRange($fromDate, $toDate, $maxDays = 62)
+	public function normalizeDateRange($fromDate, $toDate, $maxDays = 366)
 	{
 		$today = date("Y-m-d");
 		$from = $this->normalizeDate($fromDate);
