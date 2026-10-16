@@ -357,7 +357,7 @@ include("connect.php");
                         closeButton: true,
                         newestOnTop: true,
                         progressBar: true,
-                        positionClass: "toast-top-center",
+                        positionClass: "toast-top-right",
                         timeOut: 15000,
                         extendedTimeOut: 5000,
                         showDuration: 300,
@@ -384,7 +384,7 @@ include("connect.php");
                         toastr.info(
                             (items.length - maxToast) + " more purchase reminder(s) — see yellow banner below Filters.",
                             "More Reminders",
-                            { timeOut: 12000, positionClass: "toast-top-center", closeButton: true, progressBar: true }
+                            { timeOut: 12000, positionClass: "toast-top-right", closeButton: true, progressBar: true }
                         );
                     }
                     if (typeof aj.getNotifications === "function") {
