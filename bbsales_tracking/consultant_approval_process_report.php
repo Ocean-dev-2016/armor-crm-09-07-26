@@ -77,11 +77,12 @@ include("connect.php");
                                             <label>Select Sales Person</label>
                                             <div class="form-group" role="form">
                                                 <select class="form-control" name="sales_executive" id="sales_executive">
-                                                    <option value="">--- Select Sales Person ---</option>
+                                                    <option value="">--- All Sales Person ---</option>
 
                                                     <?php
+                                                    $isAdminUser = (isset($_SESSION[SITE_SESS . '_ADMIN_TYPE']) && $_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0);
                                                     $whereCustom = " isDelete=0 AND isActive=1 ";
-                                                    if ($_SESSION[SITE_SESS . '_ADMIN_TYPE'] != 0) {
+                                                    if (!$isAdminUser) {
 
                                                         if ($rights['personal_flag'] == 1) {
                                                             $check_id = $_SESSION[SITE_SESS . 'REFERANCE_ID'];
@@ -134,8 +135,9 @@ include("connect.php");
                                                     }
                                                     $sales_executive_r = $db->rp_getData('sales_executive', "*", $whereCustom, "", 0);
                                                     while ($sales_executive_d = mysqli_fetch_assoc($sales_executive_r)) {
+                                                        $selectedSales = (!$isAdminUser && $sales_executive_d['id'] == $_SESSION[SITE_SESS . 'REFERANCE_ID']) ? 'selected' : '';
                                                     ?>
-                                                        <option <?= ($sales_executive_d['id'] == $_SESSION[SITE_SESS . 'REFERANCE_ID']) ? "selected" : ""; ?> <?php echo ($sales_executive_d == $sales_executive_d['id']) ? "selected" : ""; ?> value="<?php echo $sales_executive_d['id'] ?>"><?php echo $sales_executive_d['name']; ?></option>
+                                                        <option <?php echo $selectedSales; ?> value="<?php echo $sales_executive_d['id'] ?>"><?php echo $sales_executive_d['name']; ?></option>
                                                     <?php
                                                     }
                                                     ?>
@@ -274,13 +276,9 @@ include("connect.php");
                 ToDate = "";
                 $("#searchName").val("");
                 $("#approval_type").val("");
-
-                $("#sales_executive").select2('destroy');
-                $("#sales_executive").val();
-                $("#sales_executive").select2();
-                 
-                  $("#ToDate").val("");
-                  $("#FromDate").val("");
+                $("#sales_executive").val("");
+                $("#ToDate").val("");
+                $("#FromDate").val("");
 
                 displayRecords(10, 1);
             }
@@ -327,8 +325,78 @@ include("connect.php");
                 );
             }
 
+            function showPurchaseReminderToasters() {
+                $.post("consultant_common_ajax.php", { mode: "list_active_purchase_reminders" }, function(res) {
+                    if (!res || !res.success || !res.count || !res.reminders || !res.reminders.length) {
+                        $("#purchase-reminder-banner").hide().empty();
+                        return;
+                    }
+                    var items = res.reminders;
+                    var bannerHtml = '<div class="alert alert-warning" style="margin:0 0 15px 0;border-left:5px solid #e67e22;">'
+                        + '<strong><i class="fa fa-bell"></i> Purchase Date Reminder (15 days before)</strong>'
+                        + '<ul style="margin:8px 0 0 18px;padding:0;">';
+                    for (var b = 0; b < items.length; b++) {
+                        var bi = items[b];
+                        bannerHtml += '<li style="margin-bottom:4px;"><strong>' + (bi.customer_name || 'Customer') + '</strong>'
+                            + ' — Purchase Date: <strong>' + (bi.purchase_date || '-') + '</strong>'
+                            + (bi.days_left !== undefined ? (' (' + bi.days_left + ' day' + (bi.days_left == 1 ? '' : 's') + ' left)') : '')
+                            + (bi.sales_name ? (' | Sales: ' + bi.sales_name) : '')
+                            + '</li>';
+                    }
+                    bannerHtml += '</ul></div>';
+                    if (!$("#purchase-reminder-banner").length) {
+                        $("#results").before('<div id="purchase-reminder-banner"></div>');
+                    }
+                    $("#purchase-reminder-banner").html(bannerHtml).show();
+
+                    if (typeof toastr === "undefined") {
+                        return;
+                    }
+                    var prevOpts = $.extend({}, toastr.options || {});
+                    toastr.options = {
+                        closeButton: true,
+                        newestOnTop: true,
+                        progressBar: true,
+                        positionClass: "toast-top-center",
+                        timeOut: 15000,
+                        extendedTimeOut: 5000,
+                        showDuration: 300,
+                        hideDuration: 300,
+                        preventDuplicates: true
+                    };
+                    var maxToast = Math.min(items.length, 5);
+                    for (var i = 0; i < maxToast; i++) {
+                        var r = items[i];
+                        var msg = "Customer: " + (r.customer_name || "Customer")
+                            + "<br/>Purchase Date: <strong>" + (r.purchase_date || "-") + "</strong>";
+                        if (r.days_left !== undefined) {
+                            msg += "<br/>Days left: <strong>" + r.days_left + "</strong>";
+                        }
+                        if (r.sales_name) {
+                            msg += "<br/>Sales Person: " + r.sales_name;
+                        }
+                        if (r.consultant_name) {
+                            msg += "<br/>Consultant: " + r.consultant_name;
+                        }
+                        toastr.warning(msg, "Purchase Date Reminder (15 days before)");
+                    }
+                    if (items.length > maxToast) {
+                        toastr.info(
+                            (items.length - maxToast) + " more purchase reminder(s) — see yellow banner below Filters.",
+                            "More Reminders",
+                            { timeOut: 12000, positionClass: "toast-top-center", closeButton: true, progressBar: true }
+                        );
+                    }
+                    if (typeof aj.getNotifications === "function") {
+                        aj.getNotifications(".notification-container");
+                    }
+                    toastr.options = prevOpts;
+                }, "json");
+            }
+
             $(document).ready(function() {
                 displayRecords(10, 1);
+                showPurchaseReminderToasters();
                 $("#approval_type").on("change", function() {
                     displayRecords(10, 1);
                 });
@@ -403,10 +471,6 @@ include("connect.php");
         <script type="text/javascript">
             function genConsultantApprovalExcel() {
                 var sales_executive = String($("#sales_executive").val() || "");
-                if (!sales_executive || sales_executive === "null") {
-                    toastr.error("Please select Sales Person first.", "Filter Required");
-                    return;
-                }
                 var searchName = ($("#searchName").val() || "").trim();
                 var approval_type = String($("#approval_type").val() || "");
 
@@ -444,10 +508,6 @@ include("connect.php");
 
             function genSalesPlanPrint() {
                 var sales_executive = String($("#sales_executive").val() || "");
-                if (!sales_executive || sales_executive === "null") {
-                    toastr.error("Please select Sales Person first.", "Filter Required");
-                    return;
-                }
                 var searchName = encodeURIComponent(($("#searchName").val() || "").trim());
                 var approval_type = encodeURIComponent(String($("#approval_type").val() || ""));
                 var printUrl = 'consultant_approval_process_print.php?searchName=' + searchName +

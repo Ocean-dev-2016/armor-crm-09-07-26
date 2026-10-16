@@ -1038,6 +1038,24 @@ db_sync_widen_column_to_text_if_varchar($conn, 'sales_vs_consultant_approval_pro
 db_sync_widen_column_to_text_if_varchar($conn, 'sales_vs_consultant_approval_process', 'process_three_project_name');
 db_sync_widen_column_to_text_if_varchar($conn, 'sales_vs_consultant_approval_process', 'process_three_project_location');
 
+/* Purchase Date reminder: notify admin 15 days before process_four_purchase_date */
+if (db_sync_table_exists($conn, 'sales_vs_consultant_approval_process')) {
+	db_sync_add_column_if_missing(
+		$conn,
+		'sales_vs_consultant_approval_process',
+		'purchase_reminder_date',
+		"date DEFAULT NULL COMMENT 'Purchase Date minus 15 days'",
+		array('process_four_purchase_date')
+	);
+	db_sync_add_column_if_missing(
+		$conn,
+		'sales_vs_consultant_approval_process',
+		'purchase_reminder_notified',
+		"tinyint(1) NOT NULL DEFAULT 0 COMMENT '1=admin notified for purchase reminder'",
+		array('purchase_reminder_date')
+	);
+}
+
 /* ------------------------------------------------------------------
  * STEP 6 — Final verification (every run)
  * ------------------------------------------------------------------ */
@@ -1471,6 +1489,72 @@ if ($adminTypesResAppr) {
 	}
 }
 
+// page_table id=675 — Customer Order Report (Sales Team Reports)
+$corPageCheck = mysqli_query($conn, "SELECT id FROM page_table WHERE id=675 LIMIT 1");
+if ($corPageCheck && mysqli_num_rows($corPageCheck) > 0) {
+	db_sync_append_page_urls($conn, 675, array(
+		'customer_order_report.php',
+		'customer_order_report_ajax.php',
+	));
+	db_sync_run_query($conn, "UPDATE page_table SET page_title='Customer Order Report', page_slug='customer_order_report', isDelete=0, isActive=1 WHERE id=675", 'Update page_table id=675 Customer Order Report');
+} else {
+	$now = date('Y-m-d H:i:s');
+	$urls = 'customer_order_report.php,customer_order_report_ajax.php';
+	db_sync_run_query($conn, "INSERT INTO page_table (id, page_title, page_slug, page_count, page_urls, isActive, isDelete, adate, created_date)
+		VALUES (675, 'Customer Order Report', 'customer_order_report', 0, '{$urls}', 1, 0, '{$now}', '{$now}')", 'Insert page_table id=675 Customer Order Report');
+}
+
+$adminTypesResCor = mysqli_query($conn, "SELECT id FROM admin_type WHERE isDelete=0");
+if ($adminTypesResCor) {
+	while ($at = mysqli_fetch_assoc($adminTypesResCor)) {
+		$aid = (int) $at['id'];
+		if ($aid === 0) {
+			continue;
+		}
+		$chk = mysqli_query($conn, "SELECT id FROM page_admin_right WHERE admin_id='{$aid}' AND page_id=675 AND isDelete=0 LIMIT 1");
+		if ($chk && mysqli_num_rows($chk) > 0) {
+			db_sync_log('SKIP', "Customer Order Report rights already exist for admin_type {$aid}");
+		} else {
+			$now = date('Y-m-d H:i:s');
+			db_sync_run_query($conn, "INSERT INTO page_admin_right (page_id, admin_id, view_flag, insert_flag, update_flag, delete_flag, all_data_flag, personal_flag, chain_vise_flag, isDelete, created_by, created_by_type, created_date)
+				VALUES (675, {$aid}, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, '{$now}')", "Customer Order Report rights insert admin_type {$aid}");
+		}
+	}
+}
+
+// page_table id=676 — Pincode / State Wise Order Report (Sales Team Reports)
+$porPageCheck = mysqli_query($conn, "SELECT id FROM page_table WHERE id=676 LIMIT 1");
+if ($porPageCheck && mysqli_num_rows($porPageCheck) > 0) {
+	db_sync_append_page_urls($conn, 676, array(
+		'pincode_order_report.php',
+		'pincode_order_report_ajax.php',
+	));
+	db_sync_run_query($conn, "UPDATE page_table SET page_title='Pincode Wise Order Report', page_slug='pincode_order_report', isDelete=0, isActive=1 WHERE id=676", 'Update page_table id=676 Pincode Wise Order Report');
+} else {
+	$now = date('Y-m-d H:i:s');
+	$urls = 'pincode_order_report.php,pincode_order_report_ajax.php';
+	db_sync_run_query($conn, "INSERT INTO page_table (id, page_title, page_slug, page_count, page_urls, isActive, isDelete, adate, created_date)
+		VALUES (676, 'Pincode Wise Order Report', 'pincode_order_report', 0, '{$urls}', 1, 0, '{$now}', '{$now}')", 'Insert page_table id=676 Pincode Wise Order Report');
+}
+
+$adminTypesResPor = mysqli_query($conn, "SELECT id FROM admin_type WHERE isDelete=0");
+if ($adminTypesResPor) {
+	while ($at = mysqli_fetch_assoc($adminTypesResPor)) {
+		$aid = (int) $at['id'];
+		if ($aid === 0) {
+			continue;
+		}
+		$chk = mysqli_query($conn, "SELECT id FROM page_admin_right WHERE admin_id='{$aid}' AND page_id=676 AND isDelete=0 LIMIT 1");
+		if ($chk && mysqli_num_rows($chk) > 0) {
+			db_sync_log('SKIP', "Pincode Wise Order Report rights already exist for admin_type {$aid}");
+		} else {
+			$now = date('Y-m-d H:i:s');
+			db_sync_run_query($conn, "INSERT INTO page_admin_right (page_id, admin_id, view_flag, insert_flag, update_flag, delete_flag, all_data_flag, personal_flag, chain_vise_flag, isDelete, created_by, created_by_type, created_date)
+				VALUES (676, {$aid}, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, '{$now}')", "Pincode Wise Order Report rights insert admin_type {$aid}");
+		}
+	}
+}
+
 db_sync_run_query($conn, "CREATE TABLE IF NOT EXISTS `approval_entry` (
 	`id` int(11) NOT NULL AUTO_INCREMENT,
 	`entry_date` date DEFAULT NULL,
@@ -1812,6 +1896,7 @@ $environment = isset($config['environment']) ? $config['environment'] : 'unknown
 			<li>Column <code>visit.note</code> + <code>visit.followup_date</code> (App stopVisit <code>note</code> / <code>date</code> → <code>followup_date</code>, format <code>Y-m-d H:i</code>)</li>
 			<li>Column <code>quotation_detail.approve_by_id</code> (Quotation Approve → Approved By in KRA)</li>
 			<li>Widen <code>sales_vs_consultant_approval_process.process_four_product_name</code> (+ project name/location) from <code>varchar(255)</code> → <code>TEXT</code> so all selected products show in Consultant Approval Process Report</li>
+			<li>Columns <code>sales_vs_consultant_approval_process.purchase_reminder_date</code>, <code>purchase_reminder_notified</code> (admin notification 15 days before Purchase Date)</li>
 		</ul>
 		<p><strong>Safe:</strong> Idempotent — run multiple times; existing data is not deleted.</p>
 		<p><strong>Security:</strong> Delete <code>db_sync.php</code> from live after final READY confirmation.</p>

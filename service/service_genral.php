@@ -4299,6 +4299,10 @@ if ($is_valid_api_key) {
 					$isUpdated = $db->rp_update("sales_vs_consultant_approval_process", $rows, $where, 0);
 
 					if ($isUpdated) {
+						if ($process_four_purchase_date != "") {
+							require_once dirname(__DIR__) . '/include/consultant_approval_process_helper.php';
+							consultant_approval_sync_purchase_reminder($db, (int) $id, $process_four_purchase_date, true);
+						}
 						$ack = array(
 							"ack" => 1,
 							"ack_msg" => "Consultant process Updated Successfully",

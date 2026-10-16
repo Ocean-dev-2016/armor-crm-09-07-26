@@ -43,16 +43,6 @@ if (isset($_REQUEST['approval_type']) && $_REQUEST['approval_type'] != "" && $_R
 	}
 }
 
-if (
-	(empty($_REQUEST['sales_executive']) || $_REQUEST['sales_executive'] == "null") &&
-	(empty($_REQUEST['FromDate']) || empty($_REQUEST['ToDate']))
-) {
-	header('Content-Type: application/json; charset=utf-8');
-	echo json_encode(array('ack' => 0, 'ack_msg' => 'Please select Sales Person filter first.'));
-	include("disconnect.php");
-	exit();
-}
-
 if ($_SESSION[SITE_SESS . '_ADMIN_TYPE'] != 0) {
 	if ($_SESSION[SITE_SESS . 'REFERANCE_TYPE'] == 2) {
 		if ($rights['personal_flag'] == 1) {
@@ -89,9 +79,12 @@ if ($_SESSION[SITE_SESS . '_ADMIN_TYPE'] != 0) {
 	}
 }
 
-$sales_name_get = '';
+$sales_name_get = 'All';
 if (!empty($_REQUEST['sales_executive']) && $_REQUEST['sales_executive'] != "null") {
 	$sales_name_get = $db->rp_getValue("sales_executive", "name", "id='" . (int) $_REQUEST['sales_executive'] . "'", 0);
+	if ($sales_name_get == '') {
+		$sales_name_get = 'All';
+	}
 }
 
 $book = new PHPExcel();

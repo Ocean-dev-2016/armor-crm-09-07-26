@@ -46,18 +46,6 @@ if (isset($_REQUEST['approval_type']) && $_REQUEST['approval_type'] != "" && $_R
 }
 
 
-if (
-    (empty($_REQUEST['sales_executive']) || $_REQUEST['sales_executive'] == "null") &&
-    (empty($_REQUEST['FromDate']) || empty($_REQUEST['ToDate']))
-) {
-    echo '<div style="text-align: center; padding: 20px; font-size: 18px; color: red;">';
-    echo 'Please select all filters';
-    echo '</div>';
-    include("disconnect.php");
-    exit();
-}
-
-
 if ($_SESSION[SITE_SESS . '_ADMIN_TYPE'] != 0) {
     if ($_SESSION[SITE_SESS . 'REFERANCE_TYPE'] == 2) //sales executive and its chain wise order
     {
@@ -140,9 +128,12 @@ if ($page_number > $total_pages) {
 $page_position = ($page_number - 1) * $item_per_page;
 $limit = $page_position . "," . $item_per_page;
 
-$sales_name_get = '';
+$sales_name_get = 'All';
 if (!empty($_REQUEST['sales_executive']) && $_REQUEST['sales_executive'] != "null") {
     $sales_name_get = $db->rp_getValue("sales_executive", "name", "isDelete=0 AND isActive=1 AND id='" . (int) $_REQUEST['sales_executive'] . "'", 0);
+    if ($sales_name_get == '') {
+        $sales_name_get = 'All';
+    }
 }
 
 if ($get_total_rows >= 0) {

@@ -71,6 +71,33 @@ aj.getNotifications(".notification-container");
 		}
 	}, "json");
 })();
+/* Consultant Approval: Purchase Date reminder (15 days before) into admin notification bell */
+(function () {
+	$.post("consultant_common_ajax.php", { mode: "fire_purchase_reminders" }, function (res) {
+		if (!res || !res.success || !res.count) {
+			return;
+		}
+		if (typeof toastr !== "undefined") {
+			for (var i = 0; i < res.reminders.length; i++) {
+				var r = res.reminders[i];
+				toastr.warning(
+					"Purchase Date reminder for " + (r.customer_name || "Customer") +
+					(r.purchase_date ? (" — " + r.purchase_date) : ""),
+					"Consultant Purchase Reminder",
+					{ timeOut: 8000 }
+				);
+			}
+		}
+		if (typeof aj.getNotifications === "function") {
+			aj.getNotifications(".notification-container");
+		}
+		var $badge = $(".notification-count");
+		if ($badge.length) {
+			var cur = parseInt($badge.text(), 10) || 0;
+			$badge.text(cur + parseInt(res.count, 10));
+		}
+	}, "json");
+})();
 <?php
 	$__current_page = basename(isset($_SERVER['PHP_SELF']) ? $_SERVER['PHP_SELF'] : '');
 	$__dashboard_pages = array('main_dashboard.php', 'dashboard.php', 'customer_dashboard.php', 'dashbordd_sheetal.php');

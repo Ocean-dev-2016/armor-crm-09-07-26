@@ -427,6 +427,8 @@ $left_pages_Sales_Team_reports_array21 = array("1"=>array("Sales Vs Plan Reports
 $left_pages_Sales_Team_reports_array22 = array("1"=>array("Consultant Approval Process Report","Consultant Approval Process Report","consultant_approval_process_report.php",668),);
 $left_pages_Sales_Team_reports_array24 = array("1"=>array("Employee Visit KRA Report","Employee Visit KRA Report","employee_visit_kra_report.php",599),);
 $left_pages_Sales_Team_reports_array25 = array("1"=>array("Assign KRA","Assign KRA","assign_kra_manage.php",672),);
+$left_pages_Sales_Team_reports_array26 = array("1"=>array("Customer Order Report","Customer Order Report","customer_order_report.php",675),);
+$left_pages_Sales_Team_reports_array27 = array("1"=>array("Pincode Wise Order Report","Pincode Wise Order Report","pincode_order_report.php",676),);
 
 /*------------------------------- Remark Analysis Report -------------------------------------*/
 $left_pages_Remark_Analysis_array0 = array("1"=>array("Remark Wise Report","Remark Wise Report","remark_wise_report.php",671),);
@@ -847,6 +849,8 @@ $left_head_Sales_Team_reports_array = array(
 	22=>array("Consultant Approval Process Report","Consultant Approval Process Report",$left_pages_Sales_Team_reports_array22,668),
 	24=>array("Employee Visit KRA Report","Employee Visit KRA Report",$left_pages_Sales_Team_reports_array24,599),
 	25=>array("Assign KRA","Assign KRA",$left_pages_Sales_Team_reports_array25,672),
+	26=>array("Customer Order Report","Customer Order Report",$left_pages_Sales_Team_reports_array26,675),
+	27=>array("Pincode Wise Order Report","Pincode Wise Order Report",$left_pages_Sales_Team_reports_array27,676),
 
 	
 );
@@ -1175,6 +1179,8 @@ $left_Sales_Team_reports_array = array(
 				8=>$left_head_Sales_Team_reports_array[23],
 				9=>$left_head_Sales_Team_reports_array[24],
 				10=>$left_head_Sales_Team_reports_array[25],
+				11=>$left_head_Sales_Team_reports_array[26],
+				12=>$left_head_Sales_Team_reports_array[27],
 				// 19=>$left_head_Sales_Team_reports_array[19],
 				// 20=>$left_head_Sales_Team_reports_array[20],
 				//6=>$left_head_Sales_Team_reports_array[18],
