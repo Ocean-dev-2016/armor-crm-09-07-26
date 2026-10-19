@@ -68,6 +68,13 @@ span.ror-badge-gray { cursor: default; }
 .ror-view-tabs .ror-tab.active { background:#2f353b; color:#fff; border-color:#2f353b; }
 .ror-view-tabs .ror-tab.ror-tab-quo.active { background:#E67E22; border-color:#E67E22; }
 .ror-view-note { margin:0 0 10px; color:#666; font-size:12px; }
+.ror-quo-amt {
+	margin-top: 4px; font-size: 12px; font-weight: 700; color: #c0392b; white-space: nowrap;
+}
+.ror-value-bar {
+	margin: 0 0 10px; padding: 8px 12px; background: #fff7ed; border: 1px solid #f0d2b0;
+	border-radius: 4px; font-size: 13px; color: #7a4a12;
+}
 </style>
 <?php
 if (!isset($ror_view) || ($ror_view !== 'quotation' && $ror_view !== 'reorder')) {
@@ -87,6 +94,17 @@ $is_quo_view = ($ror_view === 'quotation');
 			Showing Admin <b>Re-Order</b> followups already sent to BRM. Due date = Created + 20 days.
 		<?php } ?>
 	</p>
+	<?php if ($is_quo_view) {
+		if (!isset($ror_quo_value_total)) {
+			$ror_quo_value_total = 0;
+		}
+	?>
+	<div class="ror-value-bar">
+		<b>Quotation Value Total (All filtered):</b>
+		&#8377; <?php echo number_format((float) $ror_quo_value_total, 2); ?>
+		&nbsp;|&nbsp; <b>Customers:</b> <?php echo (int) $get_total_rows; ?>
+	</div>
+	<?php } ?>
 
 	<div class="ror-toolbar">
 		<div class="ror-field" style="min-width:220px;max-width:280px;">
@@ -162,7 +180,7 @@ $is_quo_view = ($ror_view === 'quotation');
 					<?php } ?>
 					<th>Sales Person Visit</th>
 					<th>Sales Person Follow-up</th>
-					<th>Quotation<br><small style="font-weight:400;opacity:.85;">Not converted to Order</small></th>
+					<th>Quotation<br><small style="font-weight:400;opacity:.85;">Count + Value (Not converted)</small></th>
 				</tr>
 			</thead>
 			<tbody>
@@ -262,12 +280,14 @@ $is_quo_view = ($ror_view === 'quotation');
 					$app_visit_total = 0;
 					$app_fu_total = 0;
 					$quo_total = 0;
+					$quo_value = 0;
 					if ($linked_customer_id > 0) {
 						$app_visit_total = (int) $db->rp_getTotalRecord("visit", "isDelete=0 AND customer_id='" . $linked_customer_id . "' AND entry_flag IN (2,5)", 0);
 						$app_fu_where = "isDelete=0 AND entry_type IN (2,5) AND (visitor_id='" . $linked_customer_id . "' OR (reference_table='executive' AND reference_id='" . $linked_customer_id . "'))";
 						$app_fu_total = (int) $db->rp_getTotalRecord("followup", $app_fu_where, 0);
 						$quo_where = "isDelete=0 AND customer_id='" . $linked_customer_id . "' AND status!=-1 AND status!=4";
 						$quo_total = (int) $db->rp_getTotalRecord("quotation_detail", $quo_where, 0);
+						$quo_value = (float) $db->rp_getValue("quotation_detail", "SUM(grand_total)", $quo_where, 0);
 					}
 					if ($linked_customer_id > 0) {
 						$vCls = $app_visit_total > 0 ? 'ror-badge-blue' : 'ror-badge-gray';
@@ -275,11 +295,13 @@ $is_quo_view = ($ror_view === 'quotation');
 						$qCls = $quo_total > 0 ? 'ror-badge-orange' : 'ror-badge-gray';
 						$app_visit_html = '<a href="javascript:;" class="ror-badge ' . $vCls . ' ror-detail-btn" data-type="visit" data-cid="' . (int) $linked_customer_id . '" data-cname="' . $custAttr . '" data-title="Sales Person Visit">Total ' . $app_visit_total . '</a>';
 						$app_followup_html = '<a href="javascript:;" class="ror-badge ' . $fCls . ' ror-detail-btn" data-type="followup" data-cid="' . (int) $linked_customer_id . '" data-cname="' . $custAttr . '" data-title="Sales Person Follow-up">Total ' . $app_fu_total . '</a>';
-						$quo_html = '<a href="javascript:;" class="ror-badge ' . $qCls . ' ror-detail-btn" data-type="quotation" data-cid="' . (int) $linked_customer_id . '" data-cname="' . $custAttr . '" data-title="Quotation (Not converted to Order)">Total ' . $quo_total . '</a>';
+						$quo_val_txt = number_format($quo_value, 2);
+						$quo_html = '<a href="javascript:;" class="ror-badge ' . $qCls . ' ror-detail-btn" data-type="quotation" data-cid="' . (int) $linked_customer_id . '" data-cname="' . $custAttr . '" data-title="Quotation (Not converted to Order)">Total ' . $quo_total . '</a>'
+							. '<div class="ror-quo-amt" title="Quotation Value Total">&#8377; ' . htmlspecialchars($quo_val_txt) . '</div>';
 					} else {
 						$app_visit_html = '<span class="ror-badge ror-badge-gray">Total 0</span>';
 						$app_followup_html = '<span class="ror-badge ror-badge-gray">Total 0</span>';
-						$quo_html = '<span class="ror-badge ror-badge-gray">Total 0</span>';
+						$quo_html = '<span class="ror-badge ror-badge-gray">Total 0</span><div class="ror-quo-amt">&#8377; 0.00</div>';
 					}
 			?>
 				<tr>

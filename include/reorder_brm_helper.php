@@ -288,3 +288,24 @@ if (!function_exists('reorder_report_quotation_only_count')) {
 		return (int) $row['c'];
 	}
 }
+
+if (!function_exists('reorder_report_quotation_only_value_total')) {
+	/**
+	 * Sum of grand_total for all open quotations in Quotation Pending (No Re-Order) view.
+	 */
+	function reorder_report_quotation_only_value_total($db, $opts = array())
+	{
+		$conn = reorder_brm_conn($db);
+		if (!$conn) {
+			return 0.0;
+		}
+		$where = reorder_report_quo_only_where($db, $opts);
+		$sql = "SELECT IFNULL(SUM(q.grand_total),0) AS amt FROM quotation_detail q WHERE {$where}";
+		$res = @mysqli_query($conn, $sql);
+		if (!$res) {
+			return 0.0;
+		}
+		$row = mysqli_fetch_assoc($res);
+		return (float) $row['amt'];
+	}
+}

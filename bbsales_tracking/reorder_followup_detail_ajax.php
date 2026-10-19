@@ -131,10 +131,15 @@ if ($type === 'visit') {
 } else if ($type === 'quotation') {
 	$where = "isDelete=0 AND customer_id='" . $customerId . "' AND status!=-1 AND status!=4";
 	$total = (int) $db->rp_getTotalRecord("quotation_detail", $where, 0);
+	$valueTotal = (float) $db->rp_getValue("quotation_detail", "SUM(grand_total)", $where, 0);
 	$r = $db->rp_getData("quotation_detail", "id,quotation_no,quotation_date,status,grand_total", $where, "id DESC", 0);
 	$statusLbl = array("0" => "Pending", "1" => "Approved", "3" => "Cancelled", "5" => "Lost", "-2" => "Disapproved");
 	?>
-	<div style="margin-bottom:8px;"><span class="label label-warning">Total Quotations (Not converted): <?php echo $total; ?></span></div>
+	<div style="margin-bottom:8px;">
+		<span class="label label-warning">Total Quotations (Not converted): <?php echo $total; ?></span>
+		&nbsp;
+		<span class="label label-danger">Value Total: &#8377; <?php echo number_format($valueTotal, 2); ?></span>
+	</div>
 	<div class="table-responsive" style="max-height:420px;overflow:auto;">
 		<table class="table table-striped table-bordered ror-pop-table">
 			<thead>

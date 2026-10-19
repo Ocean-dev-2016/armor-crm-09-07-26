@@ -335,8 +335,10 @@ if ($isFillter) {
 
         $page_position = (($page_number - 1) * $item_per_page);
 
+        $ror_quo_value_total = 0;
         if ($ror_view === 'quotation') {
             $get_total_rows = reorder_report_quotation_only_count($db, $quoOpts);
+            $ror_quo_value_total = reorder_report_quotation_only_value_total($db, $quoOpts);
             $total_pages = ($item_per_page > 0) ? (int) ceil($get_total_rows / $item_per_page) : 1;
             $quoOpts['offset'] = $page_position;
             $quoOpts['limit'] = $item_per_page;
