@@ -233,33 +233,6 @@ $SEID=$db->rp_getvalue("dealer_distributor_network","sales_executive_id","id='".
 		</div>
 	</div>
 </div>
-<script type="text/javascript">
-$(document).off("click.rorDetail").on("click.rorDetail", ".ror-detail-btn", function (e) {
-	e.preventDefault();
-	var $btn = $(this);
-	var type = $btn.data("type") || "";
-	var cid = $btn.data("cid") || 0;
-	var title = $btn.data("title") || "Details";
-	var cname = $btn.data("cname") || "";
-	if (!cid || !type) {
-		return;
-	}
-	$("#rorDetailModalLabel").text(title);
-	$("#rorDetailModalBody").html('<div class="text-center" style="padding:30px;"><i class="fa fa-spinner fa-spin"></i> Loading...</div>');
-	$("#rorDetailModal").modal("show");
-	$.ajax({
-		url: "reorder_followup_detail_ajax.php",
-		type: "GET",
-		data: { type: type, customer_id: cid, customer_name: cname },
-		success: function (html) {
-			$("#rorDetailModalBody").html(html);
-		},
-		error: function () {
-			$("#rorDetailModalBody").html('<div class="alert alert-danger" style="margin:0;">Failed to load details.</div>');
-		}
-	});
-});
-</script>
 <?php } ?>
 
 <div class="modal" id="createFollowup" role="dialog" aria-labelledby="myModalLabel1" >
@@ -731,6 +704,33 @@ function sendToBrm(followupId) {
 
 $(document).ready(function() {
 	displayRecords(50,1);
+<?php if (!empty($__reorder_followup_report)) { ?>
+	$(document).off("click.rorDetail").on("click.rorDetail", ".ror-detail-btn", function (e) {
+		e.preventDefault();
+		var $btn = $(this);
+		var type = $btn.attr("data-type") || "";
+		var cid = parseInt($btn.attr("data-cid"), 10) || 0;
+		var title = $btn.attr("data-title") || "Details";
+		var cname = $btn.attr("data-cname") || "";
+		if (!cid || !type) {
+			return;
+		}
+		$("#rorDetailModalLabel").text(title);
+		$("#rorDetailModalBody").html('<div class="text-center" style="padding:30px;"><i class="fa fa-spinner fa-spin"></i> Loading...</div>');
+		$("#rorDetailModal").modal("show");
+		$.ajax({
+			url: "reorder_followup_detail_ajax.php",
+			type: "GET",
+			data: { type: type, customer_id: cid, customer_name: cname },
+			success: function (html) {
+				$("#rorDetailModalBody").html(html);
+			},
+			error: function () {
+				$("#rorDetailModalBody").html('<div class="alert alert-danger" style="margin:0;">Failed to load details. Please try again.</div>');
+			}
+		});
+	});
+<?php } ?>
 });
 
 </script>
