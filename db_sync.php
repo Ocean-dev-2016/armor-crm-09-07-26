@@ -1594,11 +1594,12 @@ if ($rorPageCheck && mysqli_num_rows($rorPageCheck) > 0) {
 	db_sync_append_page_urls($conn, 677, array(
 		'reorder_followup_report.php',
 		'reorder_followup_report_get_ajax.php',
+		'reorder_followup_detail_ajax.php',
 	));
 	db_sync_run_query($conn, "UPDATE page_table SET page_title='Re-Order Followup Report', page_slug='reorder_followup_report', isDelete=0, isActive=1 WHERE id=677", 'Update page_table id=677 Re-Order Followup Report');
 } else {
 	$now = date('Y-m-d H:i:s');
-	$urls = 'reorder_followup_report.php,reorder_followup_report_get_ajax.php';
+	$urls = 'reorder_followup_report.php,reorder_followup_report_get_ajax.php,reorder_followup_detail_ajax.php';
 	db_sync_run_query($conn, "INSERT INTO page_table (id, page_title, page_slug, page_count, page_urls, isActive, isDelete, adate, created_date)
 		VALUES (677, 'Re-Order Followup Report', 'reorder_followup_report', 0, '{$urls}', 1, 0, '{$now}', '{$now}')", 'Insert page_table id=677 Re-Order Followup Report');
 }

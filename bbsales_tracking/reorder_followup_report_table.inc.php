@@ -26,7 +26,7 @@ $total_pages = isset($total_pages) ? $total_pages : 0;
 	width: 100%; max-height: 62vh; overflow: auto;
 	border: 1px solid #d9dee4; background: #fff;
 }
-.ror-table { width: 100%; min-width: 1400px; margin: 0 !important; border-collapse: separate; border-spacing: 0; }
+.ror-table { width: 100%; min-width: 1200px; margin: 0 !important; border-collapse: separate; border-spacing: 0; }
 .ror-table thead th {
 	position: sticky; top: 0; z-index: 2;
 	background: #2f353b !important; color: #fff !important;
@@ -45,29 +45,21 @@ $total_pages = isset($total_pages) ? $total_pages : 0;
 .ror-table .ror-cust { min-width: 160px; max-width: 220px; font-weight: 600; }
 .ror-table .ror-person { min-width: 120px; max-width: 160px; }
 .ror-badge {
-	display: inline-block; padding: 2px 8px; border-radius: 10px;
-	font-size: 11px; font-weight: 700; color: #fff; line-height: 1.4;
+	display: inline-block; padding: 4px 10px; border-radius: 12px;
+	font-size: 12px; font-weight: 700; color: #fff; line-height: 1.4;
+	text-decoration: none !important; cursor: pointer;
 }
+a.ror-badge:hover { opacity: .9; color: #fff !important; box-shadow: 0 1px 4px rgba(0,0,0,.2); }
 .ror-badge-blue { background: #3598dc; }
 .ror-badge-green { background: #26C281; }
 .ror-badge-orange { background: #E67E22; }
 .ror-badge-gray { background: #95A5A6; }
-.ror-app-box {
-	min-width: 230px; max-width: 280px; max-height: 96px;
-	overflow-y: auto; overflow-x: hidden;
-	border: 1px solid #e5e9ef; border-radius: 4px;
-	background: #fcfdff; padding: 6px 8px;
-}
-.ror-app-item {
-	padding: 4px 0; border-bottom: 1px dashed #e6eaf0;
-	line-height: 1.35; font-size: 11px;
-}
-.ror-app-item:last-child { border-bottom: 0; }
-.ror-app-item b { color: #2f353b; }
-.ror-app-item .muted { color: #888; }
+a.ror-badge-gray { cursor: pointer; }
+span.ror-badge-gray { cursor: default; }
 .ror-due { font-weight: 700; color: #c0392b; white-space: nowrap; }
 .ror-empty { text-align: center; padding: 40px 10px !important; color: #888; }
 .ror-footer { margin-top: 10px; }
+.ror-table tbody td { vertical-align: middle !important; }
 </style>
 
 <div class="ror-wrap">
@@ -219,107 +211,29 @@ $total_pages = isset($total_pages) ? $total_pages : 0;
 
 					$sales_name = $db->rp_getValue("sales_executive", "name", "id='" . $ctable_d['user_id'] . "'");
 
-					/* App Visit compact */
-					$app_visit_html = '<span class="ror-badge ror-badge-gray">0</span>';
-					$app_followup_html = '<span class="ror-badge ror-badge-gray">0</span>';
+					/* Counts only — click opens popup with full list */
+					$custAttr = htmlspecialchars($company_name . $customer_flag_text, ENT_QUOTES, 'UTF-8');
+					$app_visit_total = 0;
+					$app_fu_total = 0;
+					$quo_total = 0;
 					if ($linked_customer_id > 0) {
 						$app_visit_total = (int) $db->rp_getTotalRecord("visit", "isDelete=0 AND customer_id='" . $linked_customer_id . "' AND entry_flag IN (2,5)", 0);
-						$app_visit_r = $db->rp_getData("visit", "id,start_date_time,remark,user_id", "isDelete=0 AND customer_id='" . $linked_customer_id . "' AND entry_flag IN (2,5)", "id DESC", 0, "0,3");
-						$lines = array();
-						if ($app_visit_r && mysqli_num_rows($app_visit_r) > 0) {
-							while ($av = mysqli_fetch_assoc($app_visit_r)) {
-								$av_date = (!empty($av['start_date_time']) && $av['start_date_time'] != "0000-00-00 00:00:00")
-									? date('d-m-Y h:i A', strtotime($av['start_date_time'])) : "-";
-								$av_by = $db->rp_getValue("sales_executive", "name", "id='" . $av['user_id'] . "'", 0);
-								$lines[] = '<div class="ror-app-item"><b>' . htmlspecialchars($av_date) . '</b>'
-									. ($av_by ? ' <span class="muted">(' . htmlspecialchars($av_by) . ')</span>' : '')
-									. '</div>';
-							}
-						}
-						$app_visit_html = '<div><span class="ror-badge ror-badge-blue">Total ' . $app_visit_total . '</span></div>';
-						if (!empty($lines)) {
-							$app_visit_html .= '<div class="ror-app-box" style="margin-top:6px;">' . implode('', $lines)
-								. ($app_visit_total > 3 ? '<div class="ror-app-item muted">+' . ($app_visit_total - 3) . ' more</div>' : '')
-								. '</div>';
-						}
-
 						$app_fu_where = "isDelete=0 AND entry_type IN (2,5) AND (visitor_id='" . $linked_customer_id . "' OR (reference_table='executive' AND reference_id='" . $linked_customer_id . "'))";
 						$app_fu_total = (int) $db->rp_getTotalRecord("followup", $app_fu_where, 0);
-						$app_fu_r = $db->rp_getData("followup", "id,followup_date,description,through,user_id", $app_fu_where, "followup_date DESC", 0, "0,3");
-						$lines = array();
-						if ($app_fu_r && mysqli_num_rows($app_fu_r) > 0) {
-							while ($af = mysqli_fetch_assoc($app_fu_r)) {
-								$af_date = (!empty($af['followup_date']) && $af['followup_date'] != "0000-00-00 00:00:00")
-									? date('d-m-Y h:i A', strtotime($af['followup_date'])) : "-";
-								$af_by = $db->rp_getValue("sales_executive", "name", "id='" . $af['user_id'] . "'", 0);
-								$af_through = "";
-								if ($af['through'] == '1') $af_through = "Call";
-								else if ($af['through'] == '2') $af_through = "Sms";
-								else if ($af['through'] == '3') $af_through = "Email";
-								else if ($af['through'] == '4') $af_through = "Whatsapp";
-								else if ($af['through'] == '5') $af_through = "Visit";
-								$af_desc = trim(strip_tags((string) $af['description']));
-								if (strlen($af_desc) > 40) $af_desc = substr($af_desc, 0, 40) . "...";
-								$lines[] = '<div class="ror-app-item"><b>' . htmlspecialchars($af_date) . '</b>'
-									. ($af_through ? ' · ' . htmlspecialchars($af_through) : '')
-									. ($af_by ? ' <span class="muted">(' . htmlspecialchars($af_by) . ')</span>' : '')
-									. ($af_desc !== '' ? '<br><span class="muted">' . htmlspecialchars($af_desc) . '</span>' : '')
-									. '</div>';
-							}
-						}
-						$app_followup_html = '<div><span class="ror-badge ror-badge-green">Total ' . $app_fu_total . '</span></div>';
-						if (!empty($lines)) {
-							$app_followup_html .= '<div class="ror-app-box" style="margin-top:6px;">' . implode('', $lines)
-								. ($app_fu_total > 3 ? '<div class="ror-app-item muted">+' . ($app_fu_total - 3) . ' more</div>' : '')
-								. '</div>';
-						}
-					}
-
-					/* Same customer: quotations not converted to order (status 4 = Order Generated, -1 = cart) */
-					$quo_html = '<span class="ror-badge ror-badge-gray">0</span>';
-					if ($linked_customer_id > 0) {
 						$quo_where = "isDelete=0 AND customer_id='" . $linked_customer_id . "' AND status!=-1 AND status!=4";
 						$quo_total = (int) $db->rp_getTotalRecord("quotation_detail", $quo_where, 0);
-						$quo_r = $db->rp_getData(
-							"quotation_detail",
-							"id,quotation_no,quotation_date,status,grand_total",
-							$quo_where,
-							"id DESC",
-							0,
-							"0,5"
-						);
-						$quo_status_lbl = array(
-							"0" => "Pending",
-							"1" => "Approved",
-							"3" => "Cancelled",
-							"5" => "Lost",
-							"-2" => "Disapproved",
-						);
-						$qLines = array();
-						if ($quo_r && mysqli_num_rows($quo_r) > 0) {
-							while ($qq = mysqli_fetch_assoc($quo_r)) {
-								$qNo = !empty($qq['quotation_no']) ? $qq['quotation_no'] : ("QT/" . $qq['id']);
-								$qDate = (!empty($qq['quotation_date']) && $qq['quotation_date'] != "0000-00-00")
-									? date('d-m-Y', strtotime($qq['quotation_date'])) : "-";
-								$qSt = isset($quo_status_lbl[(string) $qq['status']])
-									? $quo_status_lbl[(string) $qq['status']]
-									: ("Status " . $qq['status']);
-								$qAmt = isset($qq['grand_total']) ? number_format((float) $qq['grand_total'], 2) : "0.00";
-								$qLines[] = '<div class="ror-app-item"><b>'
-									. htmlspecialchars($qNo) . '</b> · ' . htmlspecialchars($qDate)
-									. '<br><span class="muted">' . htmlspecialchars($qSt) . ' · ' . htmlspecialchars($qAmt) . '</span>'
-									. ' <a href="quotation_viewer.php?quotation_id=' . (int) $qq['id'] . '" target="_blank" title="Open">View</a>'
-									. '</div>';
-							}
-						}
-						$quo_html = '<div><span class="ror-badge ror-badge-orange">Total ' . $quo_total . '</span></div>';
-						if (!empty($qLines)) {
-							$quo_html .= '<div class="ror-app-box" style="margin-top:6px;">' . implode('', $qLines)
-								. ($quo_total > 5 ? '<div class="ror-app-item muted">+' . ($quo_total - 5) . ' more</div>' : '')
-								. '</div>';
-						} else if ($quo_total == 0) {
-							$quo_html .= '<div class="muted" style="margin-top:4px;font-size:11px;">None pending</div>';
-						}
+					}
+					if ($linked_customer_id > 0) {
+						$vCls = $app_visit_total > 0 ? 'ror-badge-blue' : 'ror-badge-gray';
+						$fCls = $app_fu_total > 0 ? 'ror-badge-green' : 'ror-badge-gray';
+						$qCls = $quo_total > 0 ? 'ror-badge-orange' : 'ror-badge-gray';
+						$app_visit_html = '<a href="javascript:;" class="ror-badge ' . $vCls . ' ror-detail-btn" data-type="visit" data-cid="' . (int) $linked_customer_id . '" data-cname="' . $custAttr . '" data-title="Sales Person Visit">Total ' . $app_visit_total . '</a>';
+						$app_followup_html = '<a href="javascript:;" class="ror-badge ' . $fCls . ' ror-detail-btn" data-type="followup" data-cid="' . (int) $linked_customer_id . '" data-cname="' . $custAttr . '" data-title="Sales Person Follow-up">Total ' . $app_fu_total . '</a>';
+						$quo_html = '<a href="javascript:;" class="ror-badge ' . $qCls . ' ror-detail-btn" data-type="quotation" data-cid="' . (int) $linked_customer_id . '" data-cname="' . $custAttr . '" data-title="Quotation (Not converted to Order)">Total ' . $quo_total . '</a>';
+					} else {
+						$app_visit_html = '<span class="ror-badge ror-badge-gray">Total 0</span>';
+						$app_followup_html = '<span class="ror-badge ror-badge-gray">Total 0</span>';
+						$quo_html = '<span class="ror-badge ror-badge-gray">Total 0</span>';
 					}
 			?>
 				<tr>

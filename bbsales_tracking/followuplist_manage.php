@@ -216,6 +216,52 @@ $SEID=$db->rp_getvalue("dealer_distributor_network","sales_executive_id","id='".
 
 </div>	
 
+<?php if (!empty($__reorder_followup_report)) { ?>
+<div class="modal fade" id="rorDetailModal" tabindex="-1" role="dialog" aria-labelledby="rorDetailModalLabel">
+	<div class="modal-dialog modal-lg" role="document" style="width:90%;max-width:960px;">
+		<div class="modal-content">
+			<div class="modal-header" style="background:#2f353b;color:#fff;">
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color:#fff;opacity:.9;"><span aria-hidden="true">&times;</span></button>
+				<h4 class="modal-title" id="rorDetailModalLabel">Details</h4>
+			</div>
+			<div class="modal-body" id="rorDetailModalBody" style="min-height:180px;">
+				<div class="text-center" style="padding:30px;"><i class="fa fa-spinner fa-spin"></i> Loading...</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn default" data-dismiss="modal">Close</button>
+			</div>
+		</div>
+	</div>
+</div>
+<script type="text/javascript">
+$(document).off("click.rorDetail").on("click.rorDetail", ".ror-detail-btn", function (e) {
+	e.preventDefault();
+	var $btn = $(this);
+	var type = $btn.data("type") || "";
+	var cid = $btn.data("cid") || 0;
+	var title = $btn.data("title") || "Details";
+	var cname = $btn.data("cname") || "";
+	if (!cid || !type) {
+		return;
+	}
+	$("#rorDetailModalLabel").text(title);
+	$("#rorDetailModalBody").html('<div class="text-center" style="padding:30px;"><i class="fa fa-spinner fa-spin"></i> Loading...</div>');
+	$("#rorDetailModal").modal("show");
+	$.ajax({
+		url: "reorder_followup_detail_ajax.php",
+		type: "GET",
+		data: { type: type, customer_id: cid, customer_name: cname },
+		success: function (html) {
+			$("#rorDetailModalBody").html(html);
+		},
+		error: function () {
+			$("#rorDetailModalBody").html('<div class="alert alert-danger" style="margin:0;">Failed to load details.</div>');
+		}
+	});
+});
+</script>
+<?php } ?>
+
 <div class="modal" id="createFollowup" role="dialog" aria-labelledby="myModalLabel1" >
 <div class="modal-dialog" role="document">
   <div class="modal-content">
