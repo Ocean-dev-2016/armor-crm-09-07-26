@@ -4,6 +4,9 @@ if (empty($__followuplist_ajax_embedded)) {
     $page_slug = 'page_followup';
     include("connect.php");
 }
+require_once dirname(__DIR__) . '/include/reorder_brm_helper.php';
+reorder_brm_ensure_columns($db);
+
 $ctable     = "followup";
 $ctable1    = "followup";
 $isFillter = filter_var($_REQUEST['isFillter'], FILTER_VALIDATE_BOOLEAN);
@@ -11,14 +14,21 @@ $isFillter = filter_var($_REQUEST['isFillter'], FILTER_VALIDATE_BOOLEAN);
 $ctable_where = "";
 // Get the total number of rows in the table
 
+/* Today's / list view: auto-send Admin Re-Order rows to BRM (idempotent) */
+if (empty($_REQUEST['reorder_only'])) {
+    $adminIdAuto = isset($_SESSION[SITE_SESS . '_ADMIN_SESS_ID']) ? (int) $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'] : 0;
+    reorder_brm_auto_send_pending($db, $adminIdAuto);
+}
+
 /* Re-Order Followup Report:
  * - Admin Panel created only (entry_type=1)
+ * - Already sent to BRM only (send_to_brm=1)
  * - Description contains Re-Order / RE ORDER / etc.
  * - Due date = created_date + 20 days (used for today/future/pending & Followup Date filter)
  */
 $reorderDueExpr = "DATE_ADD(DATE(created_date), INTERVAL 20 DAY)";
 if (!empty($_REQUEST['reorder_only'])) {
-    /* Only followups sent to BRM from Today's Followup (Send to BRM) */
+    /* ONLY already sent to BRM */
     $ctable_where .= " entry_type='1' AND IFNULL(send_to_brm,0)='1' AND REPLACE(REPLACE(LOWER(IFNULL(description,'')), '-', ''), ' ', '') LIKE '%reorder%' AND ";
     $isFillter = true;
 }
@@ -707,6 +717,7 @@ if (!empty($_REQUEST['reorder_only'])) {
                                     $__descNorm = strtolower(str_replace(array('-', ' ', '_'), '', (string) $ctable_d['description']));
                                     $__isReorderDesc = ($__descNorm !== '' && strpos($__descNorm, 'reorder') !== false);
                                     if ($__isReorderDesc) {
+                                        /* Auto-sent on create/list; button only if somehow not flagged yet */
                                         if (!empty($ctable_d['send_to_brm'])) {
                                             echo '<span class="label label-success">Sent to BRM</span>';
                                         } else {

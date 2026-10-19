@@ -9,9 +9,9 @@ $page_slug = 'reorder_followup_report';
 $__reorder_followup_report = true;
 
 if (!isset($_REQUEST['followup_type']) || $_REQUEST['followup_type'] === '') {
-	/* Due today (created+20) + overdue pending — actionable BRM list */
-	$_REQUEST['followup_type'] = 'today,pending';
-	$_GET['followup_type'] = 'today,pending';
+	/* Show all already-sent-to-BRM Re-Order followups by default */
+	$_REQUEST['followup_type'] = 'all';
+	$_GET['followup_type'] = 'all';
 }
 
 include __DIR__ . '/followuplist_manage.php';

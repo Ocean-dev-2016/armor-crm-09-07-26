@@ -2,7 +2,9 @@
 $page_id=583;$page_slug='future_followup_manage';
 include("connect.php");
 include('../include/followup.class.php');
+require_once('../include/reorder_brm_helper.php');
 $ObjFollowup=new Followup();
+reorder_brm_ensure_columns($db);
 if(isset($_GET['m']) && $_GET['m']!="")
 {
 	$m=$_GET['m'];
@@ -40,9 +42,9 @@ if(isset($_GET['m']) && $_GET['m']!="")
 		//echo $inquiry_id; exit;
 
 		$entry_type = "1";
-		/* Re-Order: Admin Panel create → followup_date = today + 20 days (report due date) */
-		$descNorm = strtolower(str_replace(array("-", " ", "_"), "", (string) $description));
-		if ($descNorm !== "" && strpos($descNorm, "reorder") !== false) {
+		/* Re-Order: Admin Panel create → followup_date = today + 20 days + auto Send to BRM */
+		$isReorderDesc = reorder_brm_is_reorder_desc($description);
+		if ($isReorderDesc) {
 			$followup_date = date("Y-m-d H:i:s", strtotime("+20 days"));
 		}
 		if($through!="" && $followup_date!="")
@@ -100,6 +102,12 @@ if(isset($_GET['m']) && $_GET['m']!="")
 			// added by shivani 
 			//echo $inquiry_id; exit;
 			$data=$ObjFollowup->CreateFollowup($user_id,$visitor_id,$description,$through,$followup_date,$followup_flag,$inquiry_id,$entry_type,$entry_flag);
+
+			/* Auto Send to BRM when Description is Re-Order */
+			if ($isReorderDesc && is_array($data) && !empty($data['a']) && !empty($data['followup_id'])) {
+				$adminId = isset($_SESSION[SITE_SESS . '_ADMIN_SESS_ID']) ? (int) $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'] : 0;
+				reorder_brm_mark_sent($db, (int) $data['followup_id'], $adminId);
+			}
  
 			// $getStatus = $db->rp_getValue("no_order_inquiry")
 
@@ -151,7 +159,7 @@ if(isset($_GET['m']) && $_GET['m']!="")
 	}
 	else if ($m == 'send_to_brm')
 	{
-		/* HR Today's Followup → Send Re-Order followup to BRM report */
+		/* HR Today's Followup → Send Re-Order followup to BRM report (manual fallback) */
 		$followup_id = isset($_REQUEST['followup_id']) ? (int) $_REQUEST['followup_id'] : 0;
 		if ($followup_id <= 0) {
 			echo json_encode(array("a" => 0, "mg" => "Invalid followup.", "dmg" => "followup_id missing"));
@@ -160,23 +168,17 @@ if(isset($_GET['m']) && $_GET['m']!="")
 			$fd = $row ? mysqli_fetch_assoc($row) : null;
 			if (!$fd) {
 				echo json_encode(array("a" => 0, "mg" => "Followup not found.", "dmg" => "not found"));
+			} else if (!reorder_brm_is_reorder_desc($fd['description'])) {
+				echo json_encode(array("a" => 0, "mg" => "Only Re-Order followup can be sent to BRM.", "dmg" => "not reorder"));
+			} else if (!empty($fd['send_to_brm'])) {
+				echo json_encode(array("a" => 1, "mg" => "Already sent to BRM.", "dmg" => "already sent"));
 			} else {
-				$descNorm = strtolower(str_replace(array("-", " ", "_"), "", (string) $fd['description']));
-				if ($descNorm === "" || strpos($descNorm, "reorder") === false) {
-					echo json_encode(array("a" => 0, "mg" => "Only Re-Order followup can be sent to BRM.", "dmg" => "not reorder"));
-				} else if (!empty($fd['send_to_brm'])) {
-					echo json_encode(array("a" => 1, "mg" => "Already sent to BRM.", "dmg" => "already sent"));
+				$adminId = isset($_SESSION[SITE_SESS . '_ADMIN_SESS_ID']) ? (int) $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'] : 0;
+				$ok = reorder_brm_mark_sent($db, $followup_id, $adminId);
+				if ($ok) {
+					echo json_encode(array("a" => 1, "mg" => "Sent to BRM successfully. It will show in Re-Order Followup Report.", "dmg" => "ok"));
 				} else {
-					$ok = $db->rp_update("followup", array(
-						"send_to_brm" => 1,
-						"send_to_brm_date" => date("Y-m-d H:i:s"),
-						"send_to_brm_by" => isset($_SESSION[SITE_SESS . '_ADMIN_SESS_ID']) ? $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'] : 0,
-					), "id='" . $followup_id . "'", 0);
-					if ($ok) {
-						echo json_encode(array("a" => 1, "mg" => "Sent to BRM successfully. It will show in Re-Order Followup Report.", "dmg" => "ok"));
-					} else {
-						echo json_encode(array("a" => 0, "mg" => "Failed to send to BRM.", "dmg" => "update failed"));
-					}
+					echo json_encode(array("a" => 0, "mg" => "Failed to send to BRM.", "dmg" => "update failed"));
 				}
 			}
 		}

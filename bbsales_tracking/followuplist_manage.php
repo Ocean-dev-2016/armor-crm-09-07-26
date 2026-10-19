@@ -539,7 +539,7 @@ function clearSearchByName(){
 	reference_media_id="";
 	executive="";
 	sales_executive="";
-	followup_type=<?php echo !empty($__reorder_followup_report) ? '"today,pending"' : '""'; ?>;
+	followup_type=<?php echo !empty($__reorder_followup_report) ? '"all"' : '""'; ?>;
 	todate="";
 	fromdate="";
 	df="";
@@ -556,7 +556,7 @@ function clearSearchByName(){
 	$("#sales_executive").select2("val","");
 	<?php if (!empty($__reorder_followup_report)) { ?>
 	$("#followup_type").fSelect("destroy");
-	$("#followup_type").val(["today","pending"]);
+	$("#followup_type").val("all");
 	$("#followup_type").fSelect("create");
 	<?php } ?>
 	// $("#followup_type").select2("val","");
