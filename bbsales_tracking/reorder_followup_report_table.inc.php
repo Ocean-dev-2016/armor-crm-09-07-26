@@ -131,9 +131,9 @@ $total_pages = isset($total_pages) ? $total_pages : 0;
 					<th>Due Date<br><small style="font-weight:400;opacity:.85;">Created + 20 days</small></th>
 					<th>Description</th>
 					<th>Through</th>
-					<th>Response</th>
-					<th>App Visit</th>
-					<th>App Follow-up</th>
+					<th>BRM Response</th>
+					<th>Sales Person Visit</th>
+					<th>Sales Person Follow-up</th>
 				</tr>
 			</thead>
 			<tbody>
