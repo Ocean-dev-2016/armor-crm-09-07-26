@@ -18,7 +18,8 @@ $ctable_where = "";
  */
 $reorderDueExpr = "DATE_ADD(DATE(created_date), INTERVAL 20 DAY)";
 if (!empty($_REQUEST['reorder_only'])) {
-    $ctable_where .= " entry_type='1' AND REPLACE(REPLACE(LOWER(IFNULL(description,'')), '-', ''), ' ', '') LIKE '%reorder%' AND ";
+    /* Only followups sent to BRM from Today's Followup (Send to BRM) */
+    $ctable_where .= " entry_type='1' AND IFNULL(send_to_brm,0)='1' AND REPLACE(REPLACE(LOWER(IFNULL(description,'')), '-', ''), ' ', '') LIKE '%reorder%' AND ";
     $isFillter = true;
 }
 
@@ -701,10 +702,26 @@ if (!empty($_REQUEST['reorder_only'])) {
                             <?php } ?>
                             <!-- responsedate-->
                             <td><?php echo $ctable_d['response']; ?>
-                                <?php if ($ctable_d['status'] == 0) {
+                                <?php
+                                if ($ctable_d['status'] == 0) {
+                                    $__descNorm = strtolower(str_replace(array('-', ' ', '_'), '', (string) $ctable_d['description']));
+                                    $__isReorderDesc = ($__descNorm !== '' && strpos($__descNorm, 'reorder') !== false);
+                                    if ($__isReorderDesc) {
+                                        if (!empty($ctable_d['send_to_brm'])) {
+                                            echo '<span class="label label-success">Sent to BRM</span>';
+                                        } else {
+                                ?>
+                                    <a href="javascript:;" class="btn btn-circle btn-sm green" title="Send to BRM"
+                                       onclick="sendToBrm('<?php echo (int) $ctable_d['id']; ?>');">Send to BRM</a>
+                                <?php
+                                        }
+                                    } else {
                                 ?>
                                     <a type="button" href="#FollowupResponse" data-toggle="modal" target="#FollowupResponse" class="btn btn-circle btn-sm yellow" data-mode="add" data-followup-flag="<?= $followup_flag; ?>" data-sales-id="<?= $ctable_d['user_id']; ?>" data-visitor_id="<?= $ctable_d['visitor_id'] ?>" data-date="<?php echo date('d-m-Y H:i:s', strtotime($ctable_d['followup_date'])); ?>" data-id="<?php echo $ctable_d['id']; ?>" data-ref_id="<?php echo $ctable_d['reference_id']; ?>" data-next_action="<?php echo $ctable_d['next_action']; ?>">Response</a>
-                                <?php } ?>
+                                <?php
+                                    }
+                                }
+                                ?>
                             </td>
 
                             <?php if (!empty($_REQUEST['reorder_only'])) {

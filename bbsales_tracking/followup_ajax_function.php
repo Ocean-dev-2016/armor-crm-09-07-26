@@ -149,6 +149,38 @@ if(isset($_GET['m']) && $_GET['m']!="")
 		}
 		
 	}
+	else if ($m == 'send_to_brm')
+	{
+		/* HR Today's Followup → Send Re-Order followup to BRM report */
+		$followup_id = isset($_REQUEST['followup_id']) ? (int) $_REQUEST['followup_id'] : 0;
+		if ($followup_id <= 0) {
+			echo json_encode(array("a" => 0, "mg" => "Invalid followup.", "dmg" => "followup_id missing"));
+		} else {
+			$row = $db->rp_getData("followup", "id,description,send_to_brm,isDelete,status", "id='" . $followup_id . "' AND isDelete=0", "", 0);
+			$fd = $row ? mysqli_fetch_assoc($row) : null;
+			if (!$fd) {
+				echo json_encode(array("a" => 0, "mg" => "Followup not found.", "dmg" => "not found"));
+			} else {
+				$descNorm = strtolower(str_replace(array("-", " ", "_"), "", (string) $fd['description']));
+				if ($descNorm === "" || strpos($descNorm, "reorder") === false) {
+					echo json_encode(array("a" => 0, "mg" => "Only Re-Order followup can be sent to BRM.", "dmg" => "not reorder"));
+				} else if (!empty($fd['send_to_brm'])) {
+					echo json_encode(array("a" => 1, "mg" => "Already sent to BRM.", "dmg" => "already sent"));
+				} else {
+					$ok = $db->rp_update("followup", array(
+						"send_to_brm" => 1,
+						"send_to_brm_date" => date("Y-m-d H:i:s"),
+						"send_to_brm_by" => isset($_SESSION[SITE_SESS . '_ADMIN_SESS_ID']) ? $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'] : 0,
+					), "id='" . $followup_id . "'", 0);
+					if ($ok) {
+						echo json_encode(array("a" => 1, "mg" => "Sent to BRM successfully. It will show in Re-Order Followup Report.", "dmg" => "ok"));
+					} else {
+						echo json_encode(array("a" => 0, "mg" => "Failed to send to BRM.", "dmg" => "update failed"));
+					}
+				}
+			}
+		}
+	}
 	else if($m=='add_rating')
 	{
 		$rating=isset($_REQUEST['rating'])?$_REQUEST['rating']:"";

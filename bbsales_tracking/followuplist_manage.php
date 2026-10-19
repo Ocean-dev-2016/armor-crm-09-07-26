@@ -645,6 +645,44 @@ function changeDisplayRowCount(numRecords) {
 	displayRecords(numRecords, 1);
 }
 
+function sendToBrm(followupId) {
+	if (!followupId) {
+		return;
+	}
+	if (!confirm("Send this Re-Order followup to BRM?\nIt will appear in Re-Order Followup Report for BRM Response.")) {
+		return;
+	}
+	$.ajax({
+		url: "followup_ajax_function.php",
+		type: "POST",
+		dataType: "json",
+		data: { m: "send_to_brm", followup_id: followupId },
+		success: function (res) {
+			if (res && (res.a == 1 || res.ack == 1)) {
+				if (typeof toastr !== "undefined") {
+					toastr.success(res.mg || "Sent to BRM successfully.");
+				} else {
+					alert(res.mg || "Sent to BRM successfully.");
+				}
+				displayRecords($("#numRecords").val() || 50, 1);
+			} else {
+				if (typeof toastr !== "undefined") {
+					toastr.error((res && res.mg) ? res.mg : "Failed to send to BRM.");
+				} else {
+					alert((res && res.mg) ? res.mg : "Failed to send to BRM.");
+				}
+			}
+		},
+		error: function () {
+			if (typeof toastr !== "undefined") {
+				toastr.error("Failed to send to BRM.");
+			} else {
+				alert("Failed to send to BRM.");
+			}
+		}
+	});
+}
+
 $(document).ready(function() {
 	displayRecords(50,1);
 });
