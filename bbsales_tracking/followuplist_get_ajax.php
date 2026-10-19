@@ -377,6 +377,10 @@ if ($isFillter) {
                     <button class="btn btn-success filterBtn_2" type="submit" value="search">Filter</button>
                 </th>
                 <th></th>
+                <?php if (!empty($_REQUEST['reorder_only'])) { ?>
+                    <th></th>
+                    <th></th>
+                <?php } ?>
                 <!-- <th></th> -->
                 <!-- <th></th> -->
                 <!-- <th></th> -->
@@ -404,6 +408,10 @@ if ($isFillter) {
                 <th class="fix-th1">Entry Type</th>
                 <th class="fix-th1">Response Date</th>
                 <th class="fix-th1">Response</th>
+                <?php if (!empty($_REQUEST['reorder_only'])) { ?>
+                    <th class="fix-th1">App Visit<br /><small>(same customer)</small></th>
+                    <th class="fix-th1">App Follow-up<br /><small>(same customer)</small></th>
+                <?php } ?>
                 <!-- <th>Response Entry Type</th> -->
                 <!-- <th>Response Entry Update Type</th> -->
 
@@ -471,6 +479,7 @@ if ($isFillter) {
                                 $mobile_no = "";
                                 $client_code = "";
                                 $customer_flag_text = "";
+                                $linked_customer_id = 0;
                                 if ($ctable_d['reference_table'] == "sales_executive") {
                                     $get_customer_r = $db->rp_getData("executive", "company_name,cname,mobile_no1,client_code,customer_flag", "id='" . $ctable_d['visitor_id'] . "'");
                                     $get_customer_d = mysqli_fetch_assoc($get_customer_r);
@@ -485,6 +494,7 @@ if ($isFillter) {
                                     $person_name = $get_customer_d['cname'];
                                     $client_code = $get_customer_d['client_code'];
                                     $mobile_no = $get_customer_d['mobile_no1'];
+                                    $linked_customer_id = (int) $ctable_d['visitor_id'];
                                 } else if ($ctable_d['reference_table'] == "quotation_detail") {
                                     $get_customer_r = $db->rp_getData("quotation_detail", "company_name,customer_name,client_code,customer_id,customer_flag", "id='" . $ctable_d['reference_id'] . "'");
                                     $get_customer_d = mysqli_fetch_assoc($get_customer_r);
@@ -498,6 +508,7 @@ if ($isFillter) {
                                     $person_name = $get_customer_d['customer_name'];
                                     $client_code = $get_customer_d['client_code'];
                                     $mobile_no = $db->rp_getValue("executive", "mobile_no1", "isDelete=0 AND id = '" . $get_customer_d['customer_id'] . "'  ");
+                                    $linked_customer_id = (int) $get_customer_d['customer_id'];
                                 } else if ($ctable_d['reference_table'] == "manual_invoice_import") {
                                     $followup_flag = "manual_invoice_import";
                                     $customer_id = $db->rp_getValue("manually_invoice_outstanding_import", "customer_id", "id='" . $ctable_d['reference_id'] . "'");
@@ -515,15 +526,18 @@ if ($isFillter) {
                                     $person_name = $get_customer_d['cname'];
                                     $client_code = $get_customer_d['client_code'];
                                     $mobile_no = $get_customer_d['mobile_no1'];
+                                    $linked_customer_id = (int) $customer_id;
                                 } else if ($ctable_d['reference_table'] == "no_order_inquiry") {
                                     $followup_flag = "inquiry_followup";
                                     $company_name = $db->rp_getValue("no_order_inquiry", "company_name", "id='" . $ctable_d['reference_id'] . "'");
                                     $person_name = $db->rp_getValue("no_order_inquiry", "person_name", "id='" . $ctable_d['reference_id'] . "'");
                                     $mobile_no = $db->rp_getValue("no_order_inquiry", "mobile_number", "id='" . $ctable_d['reference_id'] . "'");
+                                    $linked_customer_id = (int) $ctable_d['visitor_id'];
                                 } else if ($ctable_d['reference_table'] == "customer_inquiry") {
                                     $followup_flag = "leads_followup";
                                     $company_name = $db->rp_getValue("customer_inquiry", "company_name", "id='" . $ctable_d['reference_id'] . "'");
                                     $person_name = $db->rp_getValue("no_order_inquiry", "person_name", "id='" . $ctable_d['reference_id'] . "'");
+                                    $linked_customer_id = (int) $ctable_d['visitor_id'];
                                 } else if ($ctable_d['reference_table'] == "executive") {
                                     $get_customer_r = $db->rp_getData("executive", "company_name,cname,mobile_no1,client_code,customer_flag", "id='" . $ctable_d['reference_id'] . "'");
                                     $get_customer_d = mysqli_fetch_assoc($get_customer_r);
@@ -539,6 +553,7 @@ if ($isFillter) {
                                     $person_name = $get_customer_d['cname'];
                                     $client_code = $get_customer_d['client_code'];
                                     $mobile_no = $get_customer_d['mobile_no1'];
+                                    $linked_customer_id = (int) $ctable_d['reference_id'];
                                 }
                                 echo $company_name . $customer_flag_text;
                                 ?>
@@ -619,6 +634,67 @@ if ($isFillter) {
                                     <a type="button" href="#FollowupResponse" data-toggle="modal" target="#FollowupResponse" class="btn btn-circle btn-sm yellow" data-mode="add" data-followup-flag="<?= $followup_flag; ?>" data-sales-id="<?= $ctable_d['user_id']; ?>" data-visitor_id="<?= $ctable_d['visitor_id'] ?>" data-date="<?php echo date('d-m-Y H:i:s', strtotime($ctable_d['followup_date'])); ?>" data-id="<?php echo $ctable_d['id']; ?>" data-ref_id="<?php echo $ctable_d['reference_id']; ?>" data-next_action="<?php echo $ctable_d['next_action']; ?>">Response</a>
                                 <?php } ?>
                             </td>
+
+                            <?php if (!empty($_REQUEST['reorder_only'])) {
+                                $app_visit_html = "<span class='text-muted'>—</span>";
+                                $app_followup_html = "<span class='text-muted'>—</span>";
+                                if ($linked_customer_id > 0) {
+                                    $app_visit_total = (int) $db->rp_getTotalRecord("visit", "isDelete=0 AND customer_id='" . $linked_customer_id . "' AND entry_flag IN (2,5)", 0);
+                                    $app_visit_r = $db->rp_getData("visit", "id,start_date_time,remark,user_id", "isDelete=0 AND customer_id='" . $linked_customer_id . "' AND entry_flag IN (2,5)", "id DESC", 0, "0,5");
+                                    $app_visit_lines = array();
+                                    if ($app_visit_r && mysqli_num_rows($app_visit_r) > 0) {
+                                        while ($av = mysqli_fetch_assoc($app_visit_r)) {
+                                            $av_date = (!empty($av['start_date_time']) && $av['start_date_time'] != "0000-00-00 00:00:00")
+                                                ? date('d-m-Y h:i A', strtotime($av['start_date_time']))
+                                                : "-";
+                                            $av_by = $db->rp_getValue("sales_executive", "name", "id='" . $av['user_id'] . "'", 0);
+                                            $av_remark = trim(strip_tags((string) $av['remark']));
+                                            if (strlen($av_remark) > 60) {
+                                                $av_remark = substr($av_remark, 0, 60) . "...";
+                                            }
+                                            $app_visit_lines[] = "<div style='margin-bottom:4px;border-bottom:1px solid #eee;padding-bottom:3px;'><b>" . htmlspecialchars($av_date) . "</b>"
+                                                . ($av_by ? " <small>(" . htmlspecialchars($av_by) . ")</small>" : "")
+                                                . ($av_remark !== "" ? "<br/><span class='text-muted'>" . htmlspecialchars($av_remark) . "</span>" : "")
+                                                . "</div>";
+                                        }
+                                    }
+                                    $app_visit_html = "<div><span class='badge badge-info' style='background:#3598dc;'>Total: " . $app_visit_total . "</span></div>"
+                                        . (!empty($app_visit_lines) ? "<div style='margin-top:6px;max-width:260px;'>" . implode("", $app_visit_lines) . "</div>" : "<div class='text-muted'>No App visit</div>");
+
+                                    $app_fu_where = "isDelete=0 AND entry_type IN (2,5) AND (visitor_id='" . $linked_customer_id . "' OR (reference_table='executive' AND reference_id='" . $linked_customer_id . "'))";
+                                    $app_fu_total = (int) $db->rp_getTotalRecord("followup", $app_fu_where, 0);
+                                    $app_fu_r = $db->rp_getData("followup", "id,followup_date,description,through,user_id,response", $app_fu_where, "followup_date DESC", 0, "0,5");
+                                    $app_fu_lines = array();
+                                    if ($app_fu_r && mysqli_num_rows($app_fu_r) > 0) {
+                                        while ($af = mysqli_fetch_assoc($app_fu_r)) {
+                                            $af_date = (!empty($af['followup_date']) && $af['followup_date'] != "0000-00-00 00:00:00")
+                                                ? date('d-m-Y h:i A', strtotime($af['followup_date']))
+                                                : "-";
+                                            $af_by = $db->rp_getValue("sales_executive", "name", "id='" . $af['user_id'] . "'", 0);
+                                            $af_desc = trim(strip_tags((string) $af['description']));
+                                            if (strlen($af_desc) > 60) {
+                                                $af_desc = substr($af_desc, 0, 60) . "...";
+                                            }
+                                            $af_through = "";
+                                            if ($af['through'] == '1') $af_through = "Call";
+                                            else if ($af['through'] == '2') $af_through = "Sms";
+                                            else if ($af['through'] == '3') $af_through = "Email";
+                                            else if ($af['through'] == '4') $af_through = "Whatsapp";
+                                            else if ($af['through'] == '5') $af_through = "Visit";
+                                            $app_fu_lines[] = "<div style='margin-bottom:4px;border-bottom:1px solid #eee;padding-bottom:3px;'><b>" . htmlspecialchars($af_date) . "</b>"
+                                                . ($af_through ? " · " . htmlspecialchars($af_through) : "")
+                                                . ($af_by ? " <small>(" . htmlspecialchars($af_by) . ")</small>" : "")
+                                                . ($af_desc !== "" ? "<br/><span class='text-muted'>" . htmlspecialchars($af_desc) . "</span>" : "")
+                                                . "</div>";
+                                        }
+                                    }
+                                    $app_followup_html = "<div><span class='badge badge-success' style='background:#26C281;'>Total: " . $app_fu_total . "</span></div>"
+                                        . (!empty($app_fu_lines) ? "<div style='margin-top:6px;max-width:260px;'>" . implode("", $app_fu_lines) . "</div>" : "<div class='text-muted'>No App follow-up</div>");
+                                }
+                            ?>
+                                <td><?php echo $app_visit_html; ?></td>
+                                <td><?php echo $app_followup_html; ?></td>
+                            <?php } ?>
 
                             <!-- <td><?php echo $response_entry_type_status[$ctable_d['response_entry_flag']]; ?></td>  -->
                             <!-- <td><?php echo $response_entry_type_status[$ctable_d['response_update_flag']]; ?></td>  -->
