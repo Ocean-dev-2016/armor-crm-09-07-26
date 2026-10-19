@@ -307,15 +307,17 @@ if (isset($_REQUEST["page"])) {
 }
 
 $ror_report_rows = array();
+$ror_view = 'reorder';
+if (!empty($_REQUEST['reorder_only'])) {
+    $ror_view = (isset($_REQUEST['ror_view']) && $_REQUEST['ror_view'] === 'quotation') ? 'quotation' : 'reorder';
+}
 if ($isFillter) {
     if (!empty($_REQUEST['reorder_only'])) {
         /*
-         * Combined list:
-         *  1) Re-Order followups (send_to_brm=1)
-         *  2) Customers with open quotations (not converted) who have NO Re-Order followup
+         * Separate views (same page):
+         *  - reorder   = Admin Re-Order followups sent to BRM
+         *  - quotation = Open quotations (not converted) WITHOUT any Re-Order followup
          */
-        $fu_total = (int) $db->rp_getTotalRecord($ctable, $ctable_where, 0);
-
         $quoOpts = array(
             'sales_executive' => (isset($_REQUEST['sales_executive']) && $_REQUEST['sales_executive'] !== '' && $_REQUEST['sales_executive'] !== 'undefined')
                 ? (int) $_REQUEST['sales_executive'] : 0,
@@ -323,7 +325,6 @@ if ($isFillter) {
             'created_from' => '',
             'created_to' => '',
         );
-        /* Created-date filter applies to quotation_date for quotation-only rows */
         if (!empty($_REQUEST['df1']) && $_REQUEST['df1'] !== 'undefined') {
             $df1ex = explode(" to ", urldecode($_REQUEST['df1']));
             if (count($df1ex) >= 2) {
@@ -332,53 +333,26 @@ if ($isFillter) {
             }
         }
 
-        /*
-         * Skip quotation-only when filters that only apply to followups are active:
-         * due-date (df), through, or today/future/pending type windows.
-         */
-        $includeQuoOnly = true;
-        if (!empty($_REQUEST['df']) && $_REQUEST['df'] !== 'undefined') {
-            $includeQuoOnly = false;
-        }
-        if (!empty($_REQUEST['through']) && $_REQUEST['through'] !== 'undefined') {
-            $includeQuoOnly = false;
-        }
-        $ft = isset($_REQUEST['followup_type']) ? (string) $_REQUEST['followup_type'] : 'all';
-        if ($ft !== '' && $ft !== 'all' && $ft !== 'undefined') {
-            $includeQuoOnly = false;
-        }
-
-        $quo_total = $includeQuoOnly ? reorder_report_quotation_only_count($db, $quoOpts) : 0;
-        $get_total_rows = $fu_total + $quo_total;
-        $total_pages = ($item_per_page > 0) ? (int) ceil($get_total_rows / $item_per_page) : 1;
         $page_position = (($page_number - 1) * $item_per_page);
 
-        $need = $item_per_page;
-        if ($page_position < $fu_total) {
-            $fu_limit = min($need, $fu_total - $page_position);
-            $fu_r = $db->rp_getData($ctable, "*", $ctable_where, "id DESC limit {$page_position}, {$fu_limit}", 0);
+        if ($ror_view === 'quotation') {
+            $get_total_rows = reorder_report_quotation_only_count($db, $quoOpts);
+            $total_pages = ($item_per_page > 0) ? (int) ceil($get_total_rows / $item_per_page) : 1;
+            $quoOpts['offset'] = $page_position;
+            $quoOpts['limit'] = $item_per_page;
+            $ror_report_rows = reorder_report_quotation_only_customers($db, $quoOpts);
+            $ctable_r = false;
+        } else {
+            $get_total_rows = (int) $db->rp_getTotalRecord($ctable, $ctable_where, 0);
+            $total_pages = ($item_per_page > 0) ? (int) ceil($get_total_rows / $item_per_page) : 1;
+            $fu_r = $db->rp_getData($ctable, "*", $ctable_where, "id DESC limit {$page_position}, {$item_per_page}", 0);
             if ($fu_r) {
                 while ($fu_row = mysqli_fetch_assoc($fu_r)) {
                     $ror_report_rows[] = $fu_row;
                 }
             }
-            $need -= count($ror_report_rows);
-            $quo_offset = 0;
-        } else {
-            $quo_offset = $page_position - $fu_total;
+            $ctable_r = false;
         }
-
-        if ($includeQuoOnly && $need > 0 && $quo_total > 0) {
-            $quoOpts['offset'] = $quo_offset;
-            $quoOpts['limit'] = $need;
-            $quoRows = reorder_report_quotation_only_customers($db, $quoOpts);
-            foreach ($quoRows as $qr) {
-                $ror_report_rows[] = $qr;
-            }
-        }
-
-        /* Keep $ctable_r for any legacy checks (empty result set ok) */
-        $ctable_r = false;
     } else {
         $get_total_rows = $db->rp_getTotalRecord($ctable, $ctable_where, 0); //hold total records in variable
         //break records into pages

@@ -60,9 +60,34 @@ span.ror-badge-gray { cursor: default; }
 .ror-empty { text-align: center; padding: 40px 10px !important; color: #888; }
 .ror-footer { margin-top: 10px; }
 .ror-table tbody td { vertical-align: middle !important; }
+.ror-view-tabs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+.ror-view-tabs .ror-tab {
+	display:inline-block; padding:8px 14px; border-radius:4px; border:1px solid #cfd6de;
+	background:#fff; color:#333; font-weight:600; font-size:13px; text-decoration:none !important; cursor:pointer;
+}
+.ror-view-tabs .ror-tab.active { background:#2f353b; color:#fff; border-color:#2f353b; }
+.ror-view-tabs .ror-tab.ror-tab-quo.active { background:#E67E22; border-color:#E67E22; }
+.ror-view-note { margin:0 0 10px; color:#666; font-size:12px; }
 </style>
-
+<?php
+if (!isset($ror_view) || ($ror_view !== 'quotation' && $ror_view !== 'reorder')) {
+	$ror_view = (isset($_REQUEST['ror_view']) && $_REQUEST['ror_view'] === 'quotation') ? 'quotation' : 'reorder';
+}
+$is_quo_view = ($ror_view === 'quotation');
+?>
 <div class="ror-wrap">
+	<div class="ror-view-tabs">
+		<a href="javascript:;" class="ror-tab <?php echo !$is_quo_view ? 'active' : ''; ?>" data-ror-view="reorder">Re-Order Followup</a>
+		<a href="javascript:;" class="ror-tab ror-tab-quo <?php echo $is_quo_view ? 'active' : ''; ?>" data-ror-view="quotation">Quotation Pending <small>(No Re-Order)</small></a>
+	</div>
+	<p class="ror-view-note">
+		<?php if ($is_quo_view) { ?>
+			Showing customers who have <b>quotation not converted to order</b>, and do <b>not</b> have any Re-Order followup sent to BRM.
+		<?php } else { ?>
+			Showing Admin <b>Re-Order</b> followups already sent to BRM. Due date = Created + 20 days.
+		<?php } ?>
+	</p>
+
 	<div class="ror-toolbar">
 		<div class="ror-field" style="min-width:220px;max-width:280px;">
 			<label>Sales Person</label>
@@ -79,6 +104,7 @@ span.ror-badge-gray { cursor: default; }
 				?>
 			</select>
 		</div>
+		<?php if (!$is_quo_view) { ?>
 		<div class="ror-field" style="min-width:240px;max-width:300px;">
 			<label>Due Date (Created + 20 days)</label>
 			<div class="input-group">
@@ -86,13 +112,15 @@ span.ror-badge-gray { cursor: default; }
 				<span class="input-group-addon datetimerange-picker-btn"><i class="fa fa-calendar"></i></span>
 			</div>
 		</div>
+		<?php } ?>
 		<div class="ror-field" style="min-width:240px;max-width:300px;">
-			<label>Created Date</label>
+			<label><?php echo $is_quo_view ? 'Quotation Date' : 'Created Date'; ?></label>
 			<div class="input-group">
-				<input class="form-control datetimerange-picker-input-1" id="material_request_filter_input_1" value="<?php echo htmlspecialchars($date_filter_query_1); ?>" name="df1" placeholder="Select Created Date Range" type="text" style="border-radius:0;height:34px!important;">
+				<input class="form-control datetimerange-picker-input-1" id="material_request_filter_input_1" value="<?php echo htmlspecialchars($date_filter_query_1); ?>" name="df1" placeholder="<?php echo $is_quo_view ? 'Select Quotation Date Range' : 'Select Created Date Range'; ?>" type="text" style="border-radius:0;height:34px!important;">
 				<span class="input-group-addon datetimerange-picker-btn-1"><i class="fa fa-calendar"></i></span>
 			</div>
 		</div>
+		<?php if (!$is_quo_view) { ?>
 		<div class="ror-field" style="min-width:140px;max-width:180px;">
 			<label>Through</label>
 			<select class="form-control" id="through" name="through" onchange="searchByName();">
@@ -104,9 +132,12 @@ span.ror-badge-gray { cursor: default; }
 				<option value="5" <?= ("5" == $_REQUEST['through']) ? "selected" : ""; ?>>Visit</option>
 			</select>
 		</div>
+		<?php } ?>
 		<div>
+			<?php if (!$is_quo_view) { ?>
 			<button class="btn btn-success filterBtn" type="button">Filter Due Date</button>
-			<button class="btn btn-success filterBtn_1" type="button">Filter Created</button>
+			<?php } ?>
+			<button class="btn btn-success filterBtn_1" type="button"><?php echo $is_quo_view ? 'Filter Quotation Date' : 'Filter Created'; ?></button>
 		</div>
 	</div>
 
@@ -120,11 +151,15 @@ span.ror-badge-gray { cursor: default; }
 					<th>Client Code</th>
 					<th>Mobile</th>
 					<th>Sales Person</th>
-					<th>Created</th>
+					<th><?php echo $is_quo_view ? 'Quotation Date' : 'Created'; ?></th>
+					<?php if (!$is_quo_view) { ?>
 					<th>Due Date<br><small style="font-weight:400;opacity:.85;">Created + 20 days</small></th>
+					<?php } ?>
 					<th>Description</th>
+					<?php if (!$is_quo_view) { ?>
 					<th>Through</th>
 					<th>BRM Response</th>
+					<?php } ?>
 					<th>Sales Person Visit</th>
 					<th>Sales Person Follow-up</th>
 					<th>Quotation<br><small style="font-weight:400;opacity:.85;">Not converted to Order</small></th>
@@ -255,31 +290,29 @@ span.ror-badge-gray { cursor: default; }
 					<td class="ror-nowrap"><?php echo htmlspecialchars($mobile_no); ?></td>
 					<td class="ror-nowrap"><?php echo htmlspecialchars($sales_name); ?></td>
 					<td class="ror-nowrap"><?php echo htmlspecialchars($created_txt); ?></td>
+					<?php if (!$is_quo_view) { ?>
 					<td class="ror-due"><?php echo htmlspecialchars($due_txt); ?></td>
+					<?php } ?>
 					<td class="ror-nowrap">
-						<?php if ($is_quo_only) { ?>
+						<?php if ($is_quo_only || $is_quo_view) { ?>
 							<span class="ror-badge ror-badge-orange"><?php echo htmlspecialchars($ctable_d['description']); ?></span>
 						<?php } else { ?>
 							<span class="ror-badge ror-badge-blue"><?php echo htmlspecialchars($ctable_d['description']); ?></span>
 						<?php } ?>
 					</td>
-					<td class="ror-nowrap"><?php echo $is_quo_only ? '-' : htmlspecialchars($slug); ?></td>
+					<?php if (!$is_quo_view) { ?>
+					<td class="ror-nowrap"><?php echo htmlspecialchars($slug); ?></td>
 					<td class="ror-nowrap">
 						<?php
-						if (!$is_quo_only) {
-							if (!empty($ctable_d['response'])) {
-								echo htmlspecialchars($ctable_d['response']);
-							}
-							if ($ctable_d['status'] == 0) {
+						if (!empty($ctable_d['response'])) {
+							echo htmlspecialchars($ctable_d['response']);
+						}
+						if ($ctable_d['status'] == 0) {
 						?>
 							<a type="button" href="#FollowupResponse" data-toggle="modal" class="btn btn-circle btn-sm yellow" data-mode="add" data-followup-flag="<?= $followup_flag; ?>" data-sales-id="<?= $ctable_d['user_id']; ?>" data-visitor_id="<?= $ctable_d['visitor_id'] ?>" data-date="<?php echo date('d-m-Y H:i:s', strtotime($ctable_d['followup_date'])); ?>" data-id="<?php echo $ctable_d['id']; ?>" data-ref_id="<?php echo $ctable_d['reference_id']; ?>" data-next_action="<?php echo $ctable_d['next_action']; ?>">Response</a>
-						<?php
-							}
-						} else {
-							echo '<span class="text-muted">-</span>';
-						}
-						?>
+						<?php } ?>
 					</td>
+					<?php } ?>
 					<td><?php echo $app_visit_html; ?></td>
 					<td><?php echo $app_followup_html; ?></td>
 					<td><?php echo $quo_html; ?></td>
@@ -287,10 +320,19 @@ span.ror-badge-gray { cursor: default; }
 			<?php
 				}
 			} else {
+				$colspan = $is_quo_view ? 11 : 14;
 			?>
 				<tr>
-					<td colspan="14" class="ror-empty">
-						<?php echo $isFillter ? "No Re-Order followup / pending quotation found for selected filters." : FILTER_INFO; ?>
+					<td colspan="<?php echo (int) $colspan; ?>" class="ror-empty">
+						<?php
+						if ($isFillter) {
+							echo $is_quo_view
+								? "No Quotation Pending (without Re-Order) found for selected filters."
+								: "No Re-Order followup found for selected filters.";
+						} else {
+							echo FILTER_INFO;
+						}
+						?>
 					</td>
 				</tr>
 			<?php } ?>
@@ -308,6 +350,11 @@ span.ror-badge-gray { cursor: default; }
 					<option value="1000" <?php if ($_REQUEST["show"] == 1000) echo ' selected="selected"'; ?>>1000</option>
 				</select>
 				&nbsp; <span class="text-muted">Total: <?php echo (int) $get_total_rows; ?></span>
+				<?php if ($is_quo_view) { ?>
+					&nbsp; <span class="label label-warning">Quotation Pending view</span>
+				<?php } else { ?>
+					&nbsp; <span class="label label-default">Re-Order Followup view</span>
+				<?php } ?>
 			</div>
 		</div>
 		<div class="col-md-6">
@@ -321,8 +368,22 @@ span.ror-badge-gray { cursor: default; }
 </div>
 
 <script type="text/javascript">
+	if (typeof ror_view === "undefined") { var ror_view = "reorder"; }
+	ror_view = "<?php echo $is_quo_view ? 'quotation' : 'reorder'; ?>";
+
 	$("#sales_executive").select2({ width: "100%" });
-	$("#through").select2({ width: "100%" });
+	if ($("#through").length) {
+		$("#through").select2({ width: "100%" });
+	}
+
+	$(".ror-view-tabs").off("click.rorTab").on("click.rorTab", ".ror-tab", function (e) {
+		e.preventDefault();
+		ror_view = $(this).attr("data-ror-view") || "reorder";
+		df = "";
+		df1 = "";
+		through = "";
+		displayRecords($("#numRecords").val() || 50, 1);
+	});
 
 	$(".filterBtn").on("click", function () {
 		df = $("#material_request_filter_input").val();

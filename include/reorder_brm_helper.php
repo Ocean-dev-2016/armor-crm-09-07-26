@@ -172,7 +172,13 @@ if (!function_exists('reorder_report_quo_only_where')) {
 			AND q.customer_id NOT IN ({$notIn})";
 
 		if ($salesId > 0) {
-			$where .= " AND q.sales_id='" . $salesId . "'";
+			/* Match quotation.sales_id, or customer.seid when quotation has no sales */
+			$where .= " AND (
+				q.sales_id='" . $salesId . "'
+				OR (IFNULL(q.sales_id,0)=0 AND q.customer_id IN (
+					SELECT e.id FROM executive e WHERE e.isDelete=0 AND e.seid='" . $salesId . "'
+				))
+			)";
 		}
 		if ($createdFrom !== '' && $createdTo !== '' && $conn) {
 			$where .= " AND DATE(q.quotation_date) >= '" . mysqli_real_escape_string($conn, $createdFrom) . "'
@@ -238,6 +244,10 @@ if (!function_exists('reorder_report_quotation_only_customers')) {
 			if ($cid <= 0) {
 				continue;
 			}
+			$salesId = (int) $r['sales_id'];
+			if ($salesId <= 0) {
+				$salesId = (int) $db->rp_getValue("executive", "seid", "id='" . $cid . "'", 0);
+			}
 			$dt = !empty($r['last_quo_date']) && $r['last_quo_date'] != '0000-00-00'
 				? $r['last_quo_date'] . ' 00:00:00' : '';
 			$rows[] = array(
@@ -246,7 +256,7 @@ if (!function_exists('reorder_report_quotation_only_customers')) {
 				'visitor_id' => $cid,
 				'reference_table' => 'executive',
 				'reference_id' => $cid,
-				'user_id' => (int) $r['sales_id'],
+				'user_id' => $salesId,
 				'created_date' => $dt,
 				'followup_date' => $dt,
 				'description' => 'Quotation Pending',

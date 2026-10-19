@@ -441,6 +441,7 @@ var reference_media_id="";
 var executive="<?php echo $_REQUEST['customer_id']; ?>";
 var sales_executive="<?php echo $_REQUEST['sales_id'] ?>";
 var followup_type = "";
+var ror_view = "reorder";
 var isFillter=<?php echo !empty($__reorder_followup_report) ? 'true' : 'false'; ?>;
 var todate="<?= date('d-m-Y',strtotime($_REQUEST['todate'])); ?>";
 var fromdate="<?=date('d-m-Y',strtotime($_REQUEST['fromdate'])); ?>";
@@ -627,21 +628,31 @@ function displayRecords(numRecords) {
 		followup_type = $("#followup_type").val() || followup_type;
 	}
 	
+	var rorViewQ = "";
+	<?php if (!empty($__reorder_followup_report)) { ?>
+	if (typeof ror_view === "undefined" || !ror_view) { ror_view = "reorder"; }
+	rorViewQ = "&ror_view=" + encodeURIComponent(ror_view);
+	<?php } ?>
 	$('.preloader').fadeIn('slow');
 	$("#results" ).html("");
-	$("#results" ).load( data_url+"?show=" + numRecords + "&ToDate=" + df + "&reference_media_id=" + reference_media_id + "&searchName=" + searchName + "&executive=" + executive + "&sales_executive=" + sales_executive + "&followup_type=" + followup_type + "&df=" + df+ "&df1=" + df1 + "&df2=" + df2 + "&through=" + through+ "&todate=" + todate+ "&fromdate=" + fromdate + "&isFillter="+isFillter,function(){
+	$("#results" ).load( data_url+"?show=" + numRecords + "&ToDate=" + df + "&reference_media_id=" + reference_media_id + "&searchName=" + searchName + "&executive=" + executive + "&sales_executive=" + sales_executive + "&followup_type=" + followup_type + "&df=" + df+ "&df1=" + df1 + "&df2=" + df2 + "&through=" + through+ "&todate=" + todate+ "&fromdate=" + fromdate + "&isFillter="+isFillter + rorViewQ,function(){
 		$('.preloader').fadeOut('slow');
 		loadDataTable();
 	}); //load initial records
 	
 	//executes code below when user click on pagination links
-	$("#results").on( "click", ".paging_simple_numbers a", function (e){
+	$("#results").off("click.rorPaging").on( "click.rorPaging", ".paging_simple_numbers a", function (e){
 		e.preventDefault();
 		// alert("hello");
 		var numRecords  = $("#numRecords").val();
 		$(".loading-div").show(); //show loading element
 		var page = $(this).attr("data-page"); //get page number from link
-		$("#results").load(data_url+"?show=" + numRecords + "&ToDate=" + df + "&reference_media_id=" + reference_media_id + "&searchName=" + searchName + "&executive=" + executive + "&sales_executive=" + sales_executive + "&df=" + df+ "&df1=" + df1 + "&df2=" + df2 +"&through=" + through+ "&todate=" + todate+ "&fromdate=" + fromdate + "&isFillter=" + true ,{"page":page}, function(){ //get content from PHP page
+		var rorViewQ2 = "";
+		<?php if (!empty($__reorder_followup_report)) { ?>
+		if (typeof ror_view === "undefined" || !ror_view) { ror_view = "reorder"; }
+		rorViewQ2 = "&ror_view=" + encodeURIComponent(ror_view);
+		<?php } ?>
+		$("#results").load(data_url+"?show=" + numRecords + "&ToDate=" + df + "&reference_media_id=" + reference_media_id + "&searchName=" + searchName + "&executive=" + executive + "&sales_executive=" + sales_executive + "&followup_type=" + followup_type + "&df=" + df+ "&df1=" + df1 + "&df2=" + df2 +"&through=" + through+ "&todate=" + todate+ "&fromdate=" + fromdate + "&isFillter=" + true + rorViewQ2 ,{"page":page}, function(){ //get content from PHP page
 			$(".loading-div").hide(); //once done, hide loading element
 			loadDataTable();
 		});
