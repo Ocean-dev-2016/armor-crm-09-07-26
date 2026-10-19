@@ -50,6 +50,7 @@ $total_pages = isset($total_pages) ? $total_pages : 0;
 }
 .ror-badge-blue { background: #3598dc; }
 .ror-badge-green { background: #26C281; }
+.ror-badge-orange { background: #E67E22; }
 .ror-badge-gray { background: #95A5A6; }
 .ror-app-box {
 	min-width: 230px; max-width: 280px; max-height: 96px;
@@ -134,6 +135,7 @@ $total_pages = isset($total_pages) ? $total_pages : 0;
 					<th>BRM Response</th>
 					<th>Sales Person Visit</th>
 					<th>Sales Person Follow-up</th>
+					<th>Quotation<br><small style="font-weight:400;opacity:.85;">Not converted to Order</small></th>
 				</tr>
 			</thead>
 			<tbody>
@@ -272,6 +274,53 @@ $total_pages = isset($total_pages) ? $total_pages : 0;
 								. '</div>';
 						}
 					}
+
+					/* Same customer: quotations not converted to order (status 4 = Order Generated, -1 = cart) */
+					$quo_html = '<span class="ror-badge ror-badge-gray">0</span>';
+					if ($linked_customer_id > 0) {
+						$quo_where = "isDelete=0 AND customer_id='" . $linked_customer_id . "' AND status!=-1 AND status!=4";
+						$quo_total = (int) $db->rp_getTotalRecord("quotation_detail", $quo_where, 0);
+						$quo_r = $db->rp_getData(
+							"quotation_detail",
+							"id,quotation_no,quotation_date,status,grand_total",
+							$quo_where,
+							"id DESC",
+							0,
+							"0,5"
+						);
+						$quo_status_lbl = array(
+							"0" => "Pending",
+							"1" => "Approved",
+							"3" => "Cancelled",
+							"5" => "Lost",
+							"-2" => "Disapproved",
+						);
+						$qLines = array();
+						if ($quo_r && mysqli_num_rows($quo_r) > 0) {
+							while ($qq = mysqli_fetch_assoc($quo_r)) {
+								$qNo = !empty($qq['quotation_no']) ? $qq['quotation_no'] : ("QT/" . $qq['id']);
+								$qDate = (!empty($qq['quotation_date']) && $qq['quotation_date'] != "0000-00-00")
+									? date('d-m-Y', strtotime($qq['quotation_date'])) : "-";
+								$qSt = isset($quo_status_lbl[(string) $qq['status']])
+									? $quo_status_lbl[(string) $qq['status']]
+									: ("Status " . $qq['status']);
+								$qAmt = isset($qq['grand_total']) ? number_format((float) $qq['grand_total'], 2) : "0.00";
+								$qLines[] = '<div class="ror-app-item"><b>'
+									. htmlspecialchars($qNo) . '</b> · ' . htmlspecialchars($qDate)
+									. '<br><span class="muted">' . htmlspecialchars($qSt) . ' · ' . htmlspecialchars($qAmt) . '</span>'
+									. ' <a href="quotation_viewer.php?quotation_id=' . (int) $qq['id'] . '" target="_blank" title="Open">View</a>'
+									. '</div>';
+							}
+						}
+						$quo_html = '<div><span class="ror-badge ror-badge-orange">Total ' . $quo_total . '</span></div>';
+						if (!empty($qLines)) {
+							$quo_html .= '<div class="ror-app-box" style="margin-top:6px;">' . implode('', $qLines)
+								. ($quo_total > 5 ? '<div class="ror-app-item muted">+' . ($quo_total - 5) . ' more</div>' : '')
+								. '</div>';
+						} else if ($quo_total == 0) {
+							$quo_html .= '<div class="muted" style="margin-top:4px;font-size:11px;">None pending</div>';
+						}
+					}
 			?>
 				<tr>
 					<td class="ror-nowrap"><?php echo ++$count; ?></td>
@@ -296,13 +345,14 @@ $total_pages = isset($total_pages) ? $total_pages : 0;
 					</td>
 					<td><?php echo $app_visit_html; ?></td>
 					<td><?php echo $app_followup_html; ?></td>
+					<td><?php echo $quo_html; ?></td>
 				</tr>
 			<?php
 				}
 			} else {
 			?>
 				<tr>
-					<td colspan="13" class="ror-empty">
+					<td colspan="14" class="ror-empty">
 						<?php echo $isFillter ? "No Re-Order followup found for selected filters." : FILTER_INFO; ?>
 					</td>
 				</tr>
