@@ -1588,7 +1588,9 @@ if (db_sync_table_exists($conn, 'followup')) {
 	);
 }
 
-// page_table id=677 — Re-Order Followup Report (Customer Reports) — BRM + all roles view
+// page_table id=677 — Re-Order Followup Report (Customer Reports)
+// Access: only roles with page rights (default BRM1 + BRM2). Super Admin always allowed.
+// Other roles (incl. CRM Admin) can be given rights from Admin Type → Page Rights.
 $rorPageCheck = mysqli_query($conn, "SELECT id FROM page_table WHERE id=677 LIMIT 1");
 if ($rorPageCheck && mysqli_num_rows($rorPageCheck) > 0) {
 	db_sync_append_page_urls($conn, 677, array(
@@ -1604,26 +1606,76 @@ if ($rorPageCheck && mysqli_num_rows($rorPageCheck) > 0) {
 		VALUES (677, 'Re-Order Followup Report', 'reorder_followup_report', 0, '{$urls}', 1, 0, '{$now}', '{$now}')", 'Insert page_table id=677 Re-Order Followup Report');
 }
 
-$adminTypesResRor = mysqli_query($conn, "SELECT id FROM admin_type WHERE isDelete=0");
-if ($adminTypesResRor) {
-	while ($at = mysqli_fetch_assoc($adminTypesResRor)) {
-		$aid = (int) $at['id'];
-		if ($aid === 0) {
-			continue;
-		}
-		$chk = mysqli_query($conn, "SELECT id FROM page_admin_right WHERE admin_id='{$aid}' AND page_id=677 AND isDelete=0 LIMIT 1");
-		if ($chk && mysqli_num_rows($chk) > 0) {
-			/* Ensure BRM (23) keeps view access even if row already existed */
-			if ($aid === 23) {
-				db_sync_run_query($conn, "UPDATE page_admin_right SET view_flag=1, all_data_flag=1, isDelete=0 WHERE admin_id=23 AND page_id=677", "Re-Order Followup Report ensure BRM view");
-			} else {
-				db_sync_log('SKIP', "Re-Order Followup Report rights already exist for admin_type {$aid}");
-			}
-		} else {
-			$now = date('Y-m-d H:i:s');
-			db_sync_run_query($conn, "INSERT INTO page_admin_right (page_id, admin_id, view_flag, insert_flag, update_flag, delete_flag, all_data_flag, personal_flag, chain_vise_flag, isDelete, created_by, created_by_type, created_date)
-				VALUES (677, {$aid}, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, '{$now}')", "Re-Order Followup Report rights insert admin_type {$aid}");
-		}
+/* Ensure admin types BRM1 (id 23) + BRM2 */
+$nowRor = date('Y-m-d H:i:s');
+$brm1Check = mysqli_query($conn, "SELECT id FROM admin_type WHERE id=23 LIMIT 1");
+if ($brm1Check && mysqli_num_rows($brm1Check) > 0) {
+	db_sync_run_query($conn, "UPDATE admin_type SET name='BRM1', slug='brm1', isDelete=0 WHERE id=23", 'Rename admin_type 23 to BRM1');
+} else {
+	db_sync_run_query($conn, "INSERT INTO admin_type (id, parent_id, name, slug, department_id, isDelete, adate, created_by, created_by_type, created_date)
+		VALUES (23, 0, 'BRM1', 'brm1', 0, 0, '{$nowRor}', 1, 0, '{$nowRor}')", 'Insert admin_type BRM1 id=23');
+}
+
+$brm2Id = 0;
+$brm2Res = mysqli_query($conn, "SELECT id FROM admin_type WHERE isDelete=0 AND (slug='brm2' OR name='BRM2') ORDER BY id ASC LIMIT 1");
+if ($brm2Res && ($brm2Row = mysqli_fetch_assoc($brm2Res))) {
+	$brm2Id = (int) $brm2Row['id'];
+	db_sync_run_query($conn, "UPDATE admin_type SET name='BRM2', slug='brm2', isDelete=0 WHERE id='{$brm2Id}'", 'Ensure admin_type BRM2');
+} else {
+	$maxAt = mysqli_query($conn, "SELECT MAX(id) AS m FROM admin_type");
+	$maxRow = $maxAt ? mysqli_fetch_assoc($maxAt) : null;
+	$brm2Id = ((int) (isset($maxRow['m']) ? $maxRow['m'] : 0)) + 1;
+	if ($brm2Id < 32) {
+		$brm2Id = 32;
+	}
+	db_sync_run_query($conn, "INSERT INTO admin_type (id, parent_id, name, slug, department_id, isDelete, adate, created_by, created_by_type, created_date)
+		VALUES ({$brm2Id}, 0, 'BRM2', 'brm2', 0, 0, '{$nowRor}', 1, 0, '{$nowRor}')", "Insert admin_type BRM2 id={$brm2Id}");
+}
+
+/* Dedicated CRM logins: BRM1 / BRM2 (Admin Login) */
+foreach (array(
+	array('BRM1', 'BRM1', 'Brm1@123', 23),
+	array('BRM2', 'BRM2', 'Brm2@123', $brm2Id),
+) as $brmLogin) {
+	list($brmName, $brmUser, $brmPass, $brmTypeId) = $brmLogin;
+	$brmTypeId = (int) $brmTypeId;
+	if ($brmTypeId <= 0) {
+		continue;
+	}
+	$passMd5 = md5($brmPass);
+	$existU = mysqli_query($conn, "SELECT id FROM dealer_distributor_network WHERE username='" . mysqli_real_escape_string($conn, $brmUser) . "' AND isDelete=0 LIMIT 1");
+	if ($existU && mysqli_num_rows($existU) > 0) {
+		$uid = (int) mysqli_fetch_assoc($existU)['id'];
+		db_sync_run_query($conn, "UPDATE dealer_distributor_network SET name='" . mysqli_real_escape_string($conn, $brmName) . "', admin_type='{$brmTypeId}', type=0, isDelete=0 WHERE id='{$uid}'", "Ensure login {$brmUser} admin_type={$brmTypeId}");
+	} else {
+		db_sync_run_query($conn, "INSERT INTO dealer_distributor_network
+			(name, username, password, admin_type, type, sales_executive_id, customer_id, user_id, email_password, adate, file_path, price_list_path, bank_detail_path, scheme_path, dealer_discount_path, distributor_discount_path, refresh_token_web, refresh_token_mobile_web, refresh_token_android_app, refresh_token_ios_app, isDelete, created_date, created_by, created_by_type)
+			VALUES (
+				'" . mysqli_real_escape_string($conn, $brmName) . "',
+				'" . mysqli_real_escape_string($conn, $brmUser) . "',
+				'{$passMd5}',
+				'{$brmTypeId}',
+				0, 0, 0, 0, '', '{$nowRor}', '', '', '', '', '', '', '', '', '', '', 0, '{$nowRor}', 1, 0
+			)", "Create CRM login {$brmUser}");
+	}
+}
+
+/* Rights for page 677: default ON only for BRM1 + BRM2; others OFF (can enable from rights screen) */
+$rorAllowTypes = array(23, (int) $brm2Id);
+db_sync_run_query($conn, "UPDATE page_admin_right SET view_flag=0, insert_flag=0, update_flag=0, delete_flag=0, all_data_flag=0
+	WHERE page_id=677 AND isDelete=0 AND admin_id NOT IN (" . implode(',', $rorAllowTypes) . ")", 'Re-Order Report revoke view for non-BRM roles');
+
+foreach ($rorAllowTypes as $aid) {
+	$aid = (int) $aid;
+	if ($aid <= 0) {
+		continue;
+	}
+	$chk = mysqli_query($conn, "SELECT id FROM page_admin_right WHERE admin_id='{$aid}' AND page_id=677 AND isDelete=0 LIMIT 1");
+	if ($chk && mysqli_num_rows($chk) > 0) {
+		db_sync_run_query($conn, "UPDATE page_admin_right SET view_flag=1, insert_flag=0, update_flag=1, delete_flag=0, all_data_flag=1, isDelete=0 WHERE admin_id='{$aid}' AND page_id=677", "Re-Order Report ensure view for admin_type {$aid}");
+	} else {
+		db_sync_run_query($conn, "INSERT INTO page_admin_right (page_id, admin_id, view_flag, insert_flag, update_flag, delete_flag, all_data_flag, personal_flag, chain_vise_flag, isDelete, created_by, created_by_type, created_date)
+			VALUES (677, {$aid}, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, '{$nowRor}')", "Re-Order Report rights insert admin_type {$aid}");
 	}
 }
 
