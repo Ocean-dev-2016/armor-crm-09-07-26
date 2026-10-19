@@ -132,9 +132,17 @@ span.ror-badge-gray { cursor: default; }
 			</thead>
 			<tbody>
 			<?php
-			if ($isFillter && $ctable_r && mysqli_num_rows($ctable_r) > 0) {
+			if (!isset($ror_report_rows) || !is_array($ror_report_rows)) {
+				$ror_report_rows = array();
+				if ($isFillter && $ctable_r && mysqli_num_rows($ctable_r) > 0) {
+					while ($_ror_tmp = mysqli_fetch_assoc($ctable_r)) {
+						$ror_report_rows[] = $_ror_tmp;
+					}
+				}
+			}
+			if ($isFillter && !empty($ror_report_rows)) {
 				$count = 0;
-				while ($ctable_d = mysqli_fetch_array($ctable_r)) {
+				foreach ($ror_report_rows as $ctable_d) {
 					$company_name = "";
 					$person_name = "";
 					$mobile_no = "";
@@ -142,6 +150,7 @@ span.ror-badge-gray { cursor: default; }
 					$customer_flag_text = "";
 					$linked_customer_id = 0;
 					$followup_flag = "customer_followup";
+					$is_quo_only = !empty($ctable_d['ror_quotation_only']);
 
 					if ($ctable_d['reference_table'] == "sales_executive") {
 						$get_customer_d = mysqli_fetch_assoc($db->rp_getData("executive", "company_name,cname,mobile_no1,client_code,customer_flag", "id='" . $ctable_d['visitor_id'] . "'"));
@@ -201,10 +210,12 @@ span.ror-badge-gray { cursor: default; }
 
 					$created_txt = "";
 					if (!empty($ctable_d['created_date']) && $ctable_d['created_date'] != "0000-00-00 00:00:00" && $ctable_d['created_date'] != "1970-01-01 00:00:00") {
-						$created_txt = date('d-m-Y h:i A', strtotime($ctable_d['created_date']));
+						$created_txt = $is_quo_only
+							? date('d-m-Y', strtotime($ctable_d['created_date']))
+							: date('d-m-Y h:i A', strtotime($ctable_d['created_date']));
 					}
 					$due_txt = "";
-					if ($created_txt !== "") {
+					if (!$is_quo_only && $created_txt !== "") {
 						$due_ts = strtotime($ctable_d['created_date'] . " +20 days");
 						if ($due_ts !== false) $due_txt = date('d-m-Y', $due_ts);
 					}
@@ -245,17 +256,29 @@ span.ror-badge-gray { cursor: default; }
 					<td class="ror-nowrap"><?php echo htmlspecialchars($sales_name); ?></td>
 					<td class="ror-nowrap"><?php echo htmlspecialchars($created_txt); ?></td>
 					<td class="ror-due"><?php echo htmlspecialchars($due_txt); ?></td>
-					<td class="ror-nowrap"><span class="ror-badge ror-badge-blue"><?php echo htmlspecialchars($ctable_d['description']); ?></span></td>
-					<td class="ror-nowrap"><?php echo htmlspecialchars($slug); ?></td>
+					<td class="ror-nowrap">
+						<?php if ($is_quo_only) { ?>
+							<span class="ror-badge ror-badge-orange"><?php echo htmlspecialchars($ctable_d['description']); ?></span>
+						<?php } else { ?>
+							<span class="ror-badge ror-badge-blue"><?php echo htmlspecialchars($ctable_d['description']); ?></span>
+						<?php } ?>
+					</td>
+					<td class="ror-nowrap"><?php echo $is_quo_only ? '-' : htmlspecialchars($slug); ?></td>
 					<td class="ror-nowrap">
 						<?php
-						if (!empty($ctable_d['response'])) {
-							echo htmlspecialchars($ctable_d['response']);
-						}
-						if ($ctable_d['status'] == 0) {
+						if (!$is_quo_only) {
+							if (!empty($ctable_d['response'])) {
+								echo htmlspecialchars($ctable_d['response']);
+							}
+							if ($ctable_d['status'] == 0) {
 						?>
 							<a type="button" href="#FollowupResponse" data-toggle="modal" class="btn btn-circle btn-sm yellow" data-mode="add" data-followup-flag="<?= $followup_flag; ?>" data-sales-id="<?= $ctable_d['user_id']; ?>" data-visitor_id="<?= $ctable_d['visitor_id'] ?>" data-date="<?php echo date('d-m-Y H:i:s', strtotime($ctable_d['followup_date'])); ?>" data-id="<?php echo $ctable_d['id']; ?>" data-ref_id="<?php echo $ctable_d['reference_id']; ?>" data-next_action="<?php echo $ctable_d['next_action']; ?>">Response</a>
-						<?php } ?>
+						<?php
+							}
+						} else {
+							echo '<span class="text-muted">-</span>';
+						}
+						?>
 					</td>
 					<td><?php echo $app_visit_html; ?></td>
 					<td><?php echo $app_followup_html; ?></td>
@@ -267,7 +290,7 @@ span.ror-badge-gray { cursor: default; }
 			?>
 				<tr>
 					<td colspan="14" class="ror-empty">
-						<?php echo $isFillter ? "No Re-Order followup found for selected filters." : FILTER_INFO; ?>
+						<?php echo $isFillter ? "No Re-Order followup / pending quotation found for selected filters." : FILTER_INFO; ?>
 					</td>
 				</tr>
 			<?php } ?>

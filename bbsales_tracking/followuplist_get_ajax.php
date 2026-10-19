@@ -306,15 +306,89 @@ if (isset($_REQUEST["page"])) {
     $page_number = 1; //if there's no page number, set it to 1
 }
 
+$ror_report_rows = array();
 if ($isFillter) {
-    $get_total_rows = $db->rp_getTotalRecord($ctable, $ctable_where, 0); //hold total records in variable
-    //break records into pages
-    $total_pages = ceil($get_total_rows / $item_per_page);
+    if (!empty($_REQUEST['reorder_only'])) {
+        /*
+         * Combined list:
+         *  1) Re-Order followups (send_to_brm=1)
+         *  2) Customers with open quotations (not converted) who have NO Re-Order followup
+         */
+        $fu_total = (int) $db->rp_getTotalRecord($ctable, $ctable_where, 0);
 
-    //get starting position to fetch the records
-    $page_position = (($page_number - 1) * $item_per_page);
+        $quoOpts = array(
+            'sales_executive' => (isset($_REQUEST['sales_executive']) && $_REQUEST['sales_executive'] !== '' && $_REQUEST['sales_executive'] !== 'undefined')
+                ? (int) $_REQUEST['sales_executive'] : 0,
+            'searchName' => (isset($_REQUEST['searchName']) ? trim($_REQUEST['searchName']) : ''),
+            'created_from' => '',
+            'created_to' => '',
+        );
+        /* Created-date filter applies to quotation_date for quotation-only rows */
+        if (!empty($_REQUEST['df1']) && $_REQUEST['df1'] !== 'undefined') {
+            $df1ex = explode(" to ", urldecode($_REQUEST['df1']));
+            if (count($df1ex) >= 2) {
+                $quoOpts['created_from'] = date("Y-m-d", strtotime($df1ex[0]));
+                $quoOpts['created_to'] = date("Y-m-d", strtotime($df1ex[1]));
+            }
+        }
 
-    $ctable_r = $db->rp_getData($ctable, "*", $ctable_where, "id DESC limit $page_position, $item_per_page", 0);
+        /*
+         * Skip quotation-only when filters that only apply to followups are active:
+         * due-date (df), through, or today/future/pending type windows.
+         */
+        $includeQuoOnly = true;
+        if (!empty($_REQUEST['df']) && $_REQUEST['df'] !== 'undefined') {
+            $includeQuoOnly = false;
+        }
+        if (!empty($_REQUEST['through']) && $_REQUEST['through'] !== 'undefined') {
+            $includeQuoOnly = false;
+        }
+        $ft = isset($_REQUEST['followup_type']) ? (string) $_REQUEST['followup_type'] : 'all';
+        if ($ft !== '' && $ft !== 'all' && $ft !== 'undefined') {
+            $includeQuoOnly = false;
+        }
+
+        $quo_total = $includeQuoOnly ? reorder_report_quotation_only_count($db, $quoOpts) : 0;
+        $get_total_rows = $fu_total + $quo_total;
+        $total_pages = ($item_per_page > 0) ? (int) ceil($get_total_rows / $item_per_page) : 1;
+        $page_position = (($page_number - 1) * $item_per_page);
+
+        $need = $item_per_page;
+        if ($page_position < $fu_total) {
+            $fu_limit = min($need, $fu_total - $page_position);
+            $fu_r = $db->rp_getData($ctable, "*", $ctable_where, "id DESC limit {$page_position}, {$fu_limit}", 0);
+            if ($fu_r) {
+                while ($fu_row = mysqli_fetch_assoc($fu_r)) {
+                    $ror_report_rows[] = $fu_row;
+                }
+            }
+            $need -= count($ror_report_rows);
+            $quo_offset = 0;
+        } else {
+            $quo_offset = $page_position - $fu_total;
+        }
+
+        if ($includeQuoOnly && $need > 0 && $quo_total > 0) {
+            $quoOpts['offset'] = $quo_offset;
+            $quoOpts['limit'] = $need;
+            $quoRows = reorder_report_quotation_only_customers($db, $quoOpts);
+            foreach ($quoRows as $qr) {
+                $ror_report_rows[] = $qr;
+            }
+        }
+
+        /* Keep $ctable_r for any legacy checks (empty result set ok) */
+        $ctable_r = false;
+    } else {
+        $get_total_rows = $db->rp_getTotalRecord($ctable, $ctable_where, 0); //hold total records in variable
+        //break records into pages
+        $total_pages = ceil($get_total_rows / $item_per_page);
+
+        //get starting position to fetch the records
+        $page_position = (($page_number - 1) * $item_per_page);
+
+        $ctable_r = $db->rp_getData($ctable, "*", $ctable_where, "id DESC limit $page_position, $item_per_page", 0);
+    }
 }
 
 /* Re-Order Followup Report: dedicated clean table layout */
