@@ -471,11 +471,12 @@ function searchByExecutive(id){
 	return false;
 }
 
-/*function searchBysalesExecutive(id){
+function searchBysalesExecutive(id){
 	sales_executive = id;
-	//displayRecords(50,1);
+	isFillter=true;
+	displayRecords(50,1);
 	return false;
-}*/
+}
 
 // $(".datetimerange-picker-btn").on("click",function(){
 // 		$(".datetimerange-picker-input",$(this).closest(".input-group")).focus();
@@ -574,7 +575,9 @@ $("#searchName").keyup(function(event){
 
 
 function loadDataTable(){
-	
+	<?php if (!empty($__reorder_followup_report)) { ?>
+	return; /* Re-Order report uses custom table layout — skip DataTables */
+	<?php } ?>
 	$('#datatable_1').dataTable({
 		"bPaginate": false,
 		"order":['desc'],
@@ -595,6 +598,15 @@ function loadDataTable(){
 function displayRecords(numRecords) {
 	var searchName 	= $("#searchName").val();
 	searchName 	= encodeURIComponent(searchName.trim());
+	if ($("#sales_executive").length) {
+		sales_executive = $("#sales_executive").val() || "";
+	}
+	if ($("#through").length) {
+		through = $("#through").val() || "";
+	}
+	if ($("#followup_type").length) {
+		followup_type = $("#followup_type").val() || followup_type;
+	}
 	
 	$('.preloader').fadeIn('slow');
 	$("#results" ).html("");

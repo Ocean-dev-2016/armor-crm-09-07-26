@@ -305,6 +305,12 @@ if ($isFillter) {
 
     $ctable_r = $db->rp_getData($ctable, "*", $ctable_where, "id DESC limit $page_position, $item_per_page", 0);
 }
+
+/* Re-Order Followup Report: dedicated clean table layout */
+if (!empty($_REQUEST['reorder_only'])) {
+    include __DIR__ . '/reorder_followup_report_table.inc.php';
+    return;
+}
 ?>
 <style type="text/css">
     #portal-drivers {
