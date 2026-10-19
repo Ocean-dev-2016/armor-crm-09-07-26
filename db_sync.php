@@ -1555,6 +1555,44 @@ if ($adminTypesResPor) {
 	}
 }
 
+// page_table id=677 — Re-Order Followup Report (Customer Reports) — BRM + all roles view
+$rorPageCheck = mysqli_query($conn, "SELECT id FROM page_table WHERE id=677 LIMIT 1");
+if ($rorPageCheck && mysqli_num_rows($rorPageCheck) > 0) {
+	db_sync_append_page_urls($conn, 677, array(
+		'reorder_followup_report.php',
+		'reorder_followup_report_get_ajax.php',
+	));
+	db_sync_run_query($conn, "UPDATE page_table SET page_title='Re-Order Followup Report', page_slug='reorder_followup_report', isDelete=0, isActive=1 WHERE id=677", 'Update page_table id=677 Re-Order Followup Report');
+} else {
+	$now = date('Y-m-d H:i:s');
+	$urls = 'reorder_followup_report.php,reorder_followup_report_get_ajax.php';
+	db_sync_run_query($conn, "INSERT INTO page_table (id, page_title, page_slug, page_count, page_urls, isActive, isDelete, adate, created_date)
+		VALUES (677, 'Re-Order Followup Report', 'reorder_followup_report', 0, '{$urls}', 1, 0, '{$now}', '{$now}')", 'Insert page_table id=677 Re-Order Followup Report');
+}
+
+$adminTypesResRor = mysqli_query($conn, "SELECT id FROM admin_type WHERE isDelete=0");
+if ($adminTypesResRor) {
+	while ($at = mysqli_fetch_assoc($adminTypesResRor)) {
+		$aid = (int) $at['id'];
+		if ($aid === 0) {
+			continue;
+		}
+		$chk = mysqli_query($conn, "SELECT id FROM page_admin_right WHERE admin_id='{$aid}' AND page_id=677 AND isDelete=0 LIMIT 1");
+		if ($chk && mysqli_num_rows($chk) > 0) {
+			/* Ensure BRM (23) keeps view access even if row already existed */
+			if ($aid === 23) {
+				db_sync_run_query($conn, "UPDATE page_admin_right SET view_flag=1, all_data_flag=1, isDelete=0 WHERE admin_id=23 AND page_id=677", "Re-Order Followup Report ensure BRM view");
+			} else {
+				db_sync_log('SKIP', "Re-Order Followup Report rights already exist for admin_type {$aid}");
+			}
+		} else {
+			$now = date('Y-m-d H:i:s');
+			db_sync_run_query($conn, "INSERT INTO page_admin_right (page_id, admin_id, view_flag, insert_flag, update_flag, delete_flag, all_data_flag, personal_flag, chain_vise_flag, isDelete, created_by, created_by_type, created_date)
+				VALUES (677, {$aid}, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, '{$now}')", "Re-Order Followup Report rights insert admin_type {$aid}");
+		}
+	}
+}
+
 db_sync_run_query($conn, "CREATE TABLE IF NOT EXISTS `approval_entry` (
 	`id` int(11) NOT NULL AUTO_INCREMENT,
 	`entry_date` date DEFAULT NULL,

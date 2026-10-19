@@ -1,19 +1,24 @@
 <?php 
-$page_id=583;$page_slug='page_followup';
+if (empty($__reorder_followup_report)) {
+	$page_id=583;$page_slug='page_followup';
+}
 include("connect.php");
 $ctable 	= "visitor";
 $ctable1 	= "visitor";
 $main_page 	= $ctable;
 $page 		= "manage_".$ctable;
-if($_REQUEST['followup_type']=="today")
+if (!empty($__reorder_followup_report)) {
+	$page_title = "Re-Order Followup Report";
+	$main_page = "Re-Order Followup Report";
+} else if($_REQUEST['followup_type']=="today")
 {
 	$page_title = "Today's Followup";
 }
-if($_REQUEST['followup_type']=="future")
+else if($_REQUEST['followup_type']=="future")
 {
 	$page_title = "Future  Followup";
 }
-if($_REQUEST['followup_type']=="pending")
+else if($_REQUEST['followup_type']=="pending")
 {
 	$page_title = "Pending  Followup";
 }
@@ -56,7 +61,11 @@ if ($_REQUEST['followup_type'] == "") {
 	
 }
 
-$page_hierarchy=array(array("link"=>"","title"=>"HR"),array("link"=>"followuplist_manage.php","title"=>$page_title));
+if (!empty($__reorder_followup_report)) {
+	$page_hierarchy=array(array("link"=>"","title"=>"Customer Reports"),array("link"=>"reorder_followup_report.php","title"=>$page_title));
+} else {
+	$page_hierarchy=array(array("link"=>"","title"=>"HR"),array("link"=>"followuplist_manage.php","title"=>$page_title));
+}
 $SEID=$db->rp_getvalue("dealer_distributor_network","sales_executive_id","id='".$_SESSION[SITE_SESS.'_ADMIN_SESS_ID']."' ",0);
 ?>
 <!DOCTYPE html>
@@ -398,7 +407,7 @@ $SEID=$db->rp_getvalue("dealer_distributor_network","sales_executive_id","id='".
 </script>
 <script type="text/javascript">
 
-var data_url = "followuplist_get_ajax.php";
+var data_url = "<?php echo !empty($__reorder_followup_report) ? 'reorder_followup_report_get_ajax.php' : 'followuplist_get_ajax.php'; ?>";
 var searchName="";
 var df="";
 var df1="";
@@ -410,7 +419,7 @@ var reference_media_id="";
 var executive="<?php echo $_REQUEST['customer_id']; ?>";
 var sales_executive="<?php echo $_REQUEST['sales_id'] ?>";
 var followup_type = "";
-var isFillter=false;
+var isFillter=<?php echo !empty($__reorder_followup_report) ? 'true' : 'false'; ?>;
 var todate="<?= date('d-m-Y',strtotime($_REQUEST['todate'])); ?>";
 var fromdate="<?=date('d-m-Y',strtotime($_REQUEST['fromdate'])); ?>";
 if (todate != "" && fromdate != "" && todate !="01-01-1970" && fromdate!="01-01-1970") {
@@ -526,14 +535,14 @@ function clearSearchByName(){
 	reference_media_id="";
 	executive="";
 	sales_executive="";
-	followup_type="";
+	followup_type=<?php echo !empty($__reorder_followup_report) ? '"today"' : '""'; ?>;
 	todate="";
 	fromdate="";
 	df="";
 	df1="";
 	df2 = "";
 	through="";
-	isFillter=false;
+	isFillter=<?php echo !empty($__reorder_followup_report) ? 'true' : 'false'; ?>;
 	$("#searchName").val("");
 	$("#material_request_filter_input").val("");
 	$("#material_request_filter_input_1").val("");
@@ -541,6 +550,11 @@ function clearSearchByName(){
 	$("#reference_media_id").val("");
 	$("#executive").select2("val","");
 	$("#sales_executive").select2("val","");
+	<?php if (!empty($__reorder_followup_report)) { ?>
+	$("#followup_type").fSelect("destroy");
+	$("#followup_type").val("today");
+	$("#followup_type").fSelect("create");
+	<?php } ?>
 	// $("#followup_type").select2("val","");
 	// $("#followup_type").fSelect("destroy");
 	// $("#followup_type").val("");

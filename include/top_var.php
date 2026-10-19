@@ -395,6 +395,8 @@ $left_pages_Customer_reports_array11 = array("1"=>array("Sales Product Report","
 $left_pages_Customer_reports_array12 = array("1"=>array("Invoice Report","Invoice Report","invoice_report_manage.php",628),); 
 
 $left_pages_Customer_reports_array13 = array("1"=>array("Chain Wise Customer Report","Chain Wise Customer Report","chain_wise_customer_report.php",654),); 
+
+$left_pages_Customer_reports_array14 = array("1"=>array("Re-Order Followup Report","Re-Order Followup Report","reorder_followup_report.php",677),); 
 /*------------------------------- Customer Reports -------------------------------------*/
 
 
@@ -814,6 +816,7 @@ $left_head_Customer_reports_array = array(
 	11=>array("Dispatch Report","Sales Product Report",$left_pages_Customer_reports_array11,623),
 	12=>array("Invoice Report","Sales Invoice Report",$left_pages_Customer_reports_array12,628),
 	13=>array("Chain Wise Customer Report","Chain Wise Customer Report",$left_pages_Customer_reports_array13,654),
+	14=>array("Re-Order Followup Report","Re-Order Followup Report",$left_pages_Customer_reports_array14,677),
 );
 
 /*------------------------------- Customer Reports -------------------------------------*/	
@@ -1162,6 +1165,7 @@ $left_Customer_reports_array = array(
 				//9=>$left_head_Customer_reports_array[9],
 				// 10=>$left_head_Customer_reports_array[10],
 				//13=>$left_head_Customer_reports_array[13],
+				14=>$left_head_Customer_reports_array[14],
 			
 			);
 

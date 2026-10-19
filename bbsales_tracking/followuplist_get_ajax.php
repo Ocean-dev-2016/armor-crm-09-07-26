@@ -1,13 +1,21 @@
 <?php
-$page_id = 583;
-$page_slug = 'page_followup';
-include("connect.php");
+if (empty($__followuplist_ajax_embedded)) {
+    $page_id = 583;
+    $page_slug = 'page_followup';
+    include("connect.php");
+}
 $ctable     = "followup";
 $ctable1    = "followup";
 $isFillter = filter_var($_REQUEST['isFillter'], FILTER_VALIDATE_BOOLEAN);
 
 $ctable_where = "";
 // Get the total number of rows in the table
+
+/* Re-Order Followup Report: match Re-Order / RE ORDER / Re - Order etc. */
+if (!empty($_REQUEST['reorder_only'])) {
+    $ctable_where .= " REPLACE(REPLACE(LOWER(IFNULL(description,'')), '-', ''), ' ', '') LIKE '%reorder%' AND ";
+    $isFillter = true;
+}
 
 if (isset($_REQUEST['searchName']) && $_REQUEST['searchName'] != "") {
     $ctable_where .= "(";
