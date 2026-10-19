@@ -124,12 +124,15 @@ $SEID=$db->rp_getvalue("dealer_distributor_network","sales_executive_id","id='".
 			   	    
                         <label>Search By FollowUp Type</label>	
 							<select class="form-control" multiple="multiple" name="followup_type" id="followup_type">
+							    	<?php
+							    	$__fu_type_req = isset($_REQUEST['followup_type']) ? (string) $_REQUEST['followup_type'] : (string) $followup_type;
+							    	$__fu_type_sel = array_filter(array_map('trim', explode(',', $__fu_type_req)));
+							    	?>
 							    	<option value="">Select Followup Type</option>
-							    	<option value="all" <?= ($followup_type=="all" || $_REQUEST['followup_type'] == "all")?"selected":""; ?>>All</option>
-							    	<option value="today" <?= ($followup_type=="today" || $_REQUEST['followup_type'] == "today")?"selected":""; ?>>Today Followup</option>
-							    	<option value="future" <?= ($followup_type==
-							    		"future" || $_REQUEST['followup_type'] == "future" )?"selected":""; ?>>Future Followup</option>
-							    	<option value="pending" <?= ($followup_type=="pending" || $_REQUEST['followup_type'] == "pending")?"selected":""; ?>>Pending Followup</option>
+							    	<option value="all" <?= in_array("all", $__fu_type_sel, true)?"selected":""; ?>>All</option>
+							    	<option value="today" <?= in_array("today", $__fu_type_sel, true)?"selected":""; ?>>Today Followup</option>
+							    	<option value="future" <?= in_array("future", $__fu_type_sel, true)?"selected":""; ?>>Future Followup</option>
+							    	<option value="pending" <?= in_array("pending", $__fu_type_sel, true)?"selected":""; ?>>Pending Followup</option>
 							</select>	
 								
                 </div>
@@ -535,7 +538,7 @@ function clearSearchByName(){
 	reference_media_id="";
 	executive="";
 	sales_executive="";
-	followup_type=<?php echo !empty($__reorder_followup_report) ? '"today"' : '""'; ?>;
+	followup_type=<?php echo !empty($__reorder_followup_report) ? '"today,pending"' : '""'; ?>;
 	todate="";
 	fromdate="";
 	df="";
@@ -552,7 +555,7 @@ function clearSearchByName(){
 	$("#sales_executive").select2("val","");
 	<?php if (!empty($__reorder_followup_report)) { ?>
 	$("#followup_type").fSelect("destroy");
-	$("#followup_type").val("today");
+	$("#followup_type").val(["today","pending"]);
 	$("#followup_type").fSelect("create");
 	<?php } ?>
 	// $("#followup_type").select2("val","");

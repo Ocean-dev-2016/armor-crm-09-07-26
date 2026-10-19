@@ -11,9 +11,14 @@ $isFillter = filter_var($_REQUEST['isFillter'], FILTER_VALIDATE_BOOLEAN);
 $ctable_where = "";
 // Get the total number of rows in the table
 
-/* Re-Order Followup Report: match Re-Order / RE ORDER / Re - Order etc. */
+/* Re-Order Followup Report:
+ * - Admin Panel created only (entry_type=1)
+ * - Description contains Re-Order / RE ORDER / etc.
+ * - Due date = created_date + 20 days (used for today/future/pending & Followup Date filter)
+ */
+$reorderDueExpr = "DATE_ADD(DATE(created_date), INTERVAL 20 DAY)";
 if (!empty($_REQUEST['reorder_only'])) {
-    $ctable_where .= " REPLACE(REPLACE(LOWER(IFNULL(description,'')), '-', ''), ' ', '') LIKE '%reorder%' AND ";
+    $ctable_where .= " entry_type='1' AND REPLACE(REPLACE(LOWER(IFNULL(description,'')), '-', ''), ' ', '') LIKE '%reorder%' AND ";
     $isFillter = true;
 }
 
@@ -45,30 +50,79 @@ if (isset($_REQUEST['searchName']) && $_REQUEST['searchName'] != "") {
 }
 // echo $ctable_where;exit;
 
-if ($_REQUEST['df'] != "" && $_REQUEST['df'] != undefined) {
-    if (isset($_REQUEST['df']) && $_REQUEST['df'] != "" && $_REQUEST['df'] != NULL && $_REQUEST['df'] != undefined) {
-        //echo $_REQUEST['df'];exit;
-        $date_filter_query = urldecode($_REQUEST['df']);
-        $date_filter_query_ex = explode(" to ", $date_filter_query);
-        $ctable_where .= " ( DATE(followup_date)>='" . date("Y-m-d", strtotime($date_filter_query_ex['0'])) . "' AND DATE(followup_date)<='" . date("Y-m-d", strtotime($date_filter_query_ex['1'])) . "'  ) AND ";
-        $isFillter = true;
+if (!empty($_REQUEST['reorder_only'])) {
+    /* Re-Order report: date filters use (created_date + 20 days) as due date */
+    if ($_REQUEST['df'] != "" && $_REQUEST['df'] != undefined) {
+        if (isset($_REQUEST['df']) && $_REQUEST['df'] != "" && $_REQUEST['df'] != NULL && $_REQUEST['df'] != undefined) {
+            $date_filter_query = urldecode($_REQUEST['df']);
+            $date_filter_query_ex = explode(" to ", $date_filter_query);
+            $ctable_where .= " (" . $reorderDueExpr . " >= '" . date("Y-m-d", strtotime($date_filter_query_ex[0])) . "' AND " . $reorderDueExpr . " <= '" . date("Y-m-d", strtotime($date_filter_query_ex[1])) . "') AND ";
+            $isFillter = true;
+        }
+    } elseif ($_REQUEST['df1'] != "" && $_REQUEST['df1'] != undefined) {
+        if (isset($_REQUEST['df1']) && $_REQUEST['df1'] != "" && $_REQUEST['df1'] != NULL && $_REQUEST['df1'] != undefined) {
+            $date_filter_query_1 = urldecode($_REQUEST['df1']);
+            $date_filter_query_1_ex = explode(" to ", $date_filter_query_1);
+            $ctable_where .= " (DATE(created_date) >= '" . date("Y-m-d", strtotime($date_filter_query_1_ex[0])) . "' AND DATE(created_date) <= '" . date("Y-m-d", strtotime($date_filter_query_1_ex[1])) . "') AND ";
+            $isFillter = true;
+        }
+    } elseif ($_REQUEST['df2'] != "" && $_REQUEST['df2'] != undefined) {
+        if (isset($_REQUEST['df2']) && $_REQUEST['df2'] != "" && $_REQUEST['df2'] != NULL && $_REQUEST['df2'] != undefined) {
+            $date_filter_query_2 = urldecode($_REQUEST['df2']);
+            $date_filter_query_2_ex = explode(" to ", $date_filter_query_2);
+            $ctable_where .= " (DATE(response_date) >= '" . date("Y-m-d", strtotime($date_filter_query_2_ex[0])) . "' AND DATE(response_date) <= '" . date("Y-m-d", strtotime($date_filter_query_2_ex[1])) . "') AND ";
+            $isFillter = true;
+        }
+    } else {
+        $today = date('Y-m-d');
+        if ($_REQUEST['followup_type'] == "today") {
+            $ctable_where .= $reorderDueExpr . " = '" . $today . "' AND ";
+            $isFillter = true;
+        }
+        if ($_REQUEST['followup_type'] == "future") {
+            $ctable_where .= $reorderDueExpr . " > '" . $today . "' AND response = '' AND ";
+            $isFillter = true;
+        }
+        if ($_REQUEST['followup_type'] == "pending") {
+            $ctable_where .= $reorderDueExpr . " < '" . $today . "' AND response = '' AND ";
+            $isFillter = true;
+        }
+        if ($_REQUEST['followup_type'] == "today,pending") {
+            $ctable_where .= $reorderDueExpr . " <= '" . $today . "' AND response = '' AND ";
+            $isFillter = true;
+        }
+        if ($_REQUEST['followup_type'] == "today,future") {
+            $ctable_where .= $reorderDueExpr . " >= '" . $today . "' AND response = '' AND ";
+            $isFillter = true;
+        }
+        if ($_REQUEST['followup_type'] == "future,pending") {
+            $ctable_where .= "(" . $reorderDueExpr . " < '" . $today . "' OR " . $reorderDueExpr . " > '" . $today . "') AND response = '' AND ";
+            $isFillter = true;
+        }
+        if ($_REQUEST['followup_type'] == "all") {
+            $isFillter = true;
+        }
+        if ($_REQUEST['followup_type'] == "responsed") {
+            $ctable_where .= "response != '' AND ";
+            $isFillter = true;
+        }
     }
 }
-if ($_REQUEST['df'] != "" && $_REQUEST['df'] != undefined) {
+if (empty($_REQUEST['reorder_only']) && $_REQUEST['df'] != "" && $_REQUEST['df'] != undefined) {
     if (isset($_REQUEST['df']) && $_REQUEST['df'] != "" && $_REQUEST['df'] != NULL && $_REQUEST['df'] != undefined) {
         $date_filter_query = urldecode($_REQUEST['df']);
         $date_filter_query_ex = explode(" to ", $date_filter_query);
         $ctable_where .= " (DATE(followup_date) >= '" . date("Y-m-d", strtotime($date_filter_query_ex[0])) . "' AND DATE(followup_date) <= '" . date("Y-m-d", strtotime($date_filter_query_ex[1])) . "') AND ";
         $isFillter = true;
     }
-} elseif ($_REQUEST['df1'] != "" && $_REQUEST['df1'] != undefined) {
+} elseif (empty($_REQUEST['reorder_only']) && $_REQUEST['df1'] != "" && $_REQUEST['df1'] != undefined) {
     if (isset($_REQUEST['df1']) && $_REQUEST['df1'] != "" && $_REQUEST['df1'] != NULL && $_REQUEST['df1'] != undefined) {
         $date_filter_query_1 = urldecode($_REQUEST['df1']);
         $date_filter_query_1_ex = explode(" to ", $date_filter_query_1);
         $ctable_where .= " (DATE(created_date) >= '" . date("Y-m-d", strtotime($date_filter_query_1_ex[0])) . "' AND DATE(created_date) <= '" . date("Y-m-d", strtotime($date_filter_query_1_ex[1])) . "') AND ";
         $isFillter = true;
     }
-} elseif ($_REQUEST['df2'] != "" && $_REQUEST['df2'] != undefined) {
+} elseif (empty($_REQUEST['reorder_only']) && $_REQUEST['df2'] != "" && $_REQUEST['df2'] != undefined) {
 
     // echo $_REQUEST['df2'];exit;
     if (isset($_REQUEST['df2']) && $_REQUEST['df2'] != "" && $_REQUEST['df2'] != NULL && $_REQUEST['df2'] != undefined) {
@@ -77,7 +131,7 @@ if ($_REQUEST['df'] != "" && $_REQUEST['df'] != undefined) {
         $ctable_where .= " (DATE(response_date) >= '" . date("Y-m-d", strtotime($date_filter_query_2_ex[0])) . "' AND DATE(response_date) <= '" . date("Y-m-d", strtotime($date_filter_query_2_ex[1])) . "') AND ";
         $isFillter = true;
     }
-} else {
+} elseif (empty($_REQUEST['reorder_only'])) {
     if ($_REQUEST['followup_type'] == "today") {
         $today = date('Y-m-d');
         $ctable_where .= "DATE(followup_date) = '" . $today . "' AND ";
@@ -401,7 +455,7 @@ if ($isFillter) {
                 <th class="fix-th1">Mobile No</th>
                 <th class="fix-th1">Sales Person Name</th>
                 <th class="fix-th1">Created Date and Time</th>
-                <th class="fix-th1">Followup Date and Time</th>
+                <th class="fix-th1"><?php echo !empty($_REQUEST['reorder_only']) ? "Due Date<br/><small>(Created + 20 days)</small>" : "Followup Date and Time"; ?></th>
                 <th class="fix-th1">Description</th>
                 <th class="fix-th1">Through</th>
                 <th class="fix-th1">Type of Follow up</th>
@@ -568,7 +622,19 @@ if ($isFillter) {
                             } else { ?>
                                 <td><?php echo date('d-m-Y h:i A', strtotime($ctable_d['created_date'])); ?></td>
                             <?php } ?>
-                            <?php if ($ctable_d['followup_date'] == "0000-00-00 00:00:00" || $ctable_d['followup_date'] == "1970-01-01 00:00:00") { ?>
+                            <?php
+                            if (!empty($_REQUEST['reorder_only'])) {
+                                $reorder_due_ts = strtotime($ctable_d['created_date'] . " +20 days");
+                                if (empty($ctable_d['created_date']) || $ctable_d['created_date'] == "0000-00-00 00:00:00" || $reorder_due_ts === false) {
+                                    echo "<td></td>";
+                                } else {
+                                    echo "<td><b>" . date('d-m-Y', $reorder_due_ts) . "</b><br/><small class='text-muted'>Followup: "
+                                        . (($ctable_d['followup_date'] != "0000-00-00 00:00:00" && $ctable_d['followup_date'] != "1970-01-01 00:00:00")
+                                            ? date('d-m-Y h:i A', strtotime($ctable_d['followup_date']))
+                                            : "-")
+                                        . "</small></td>";
+                                }
+                            } else if ($ctable_d['followup_date'] == "0000-00-00 00:00:00" || $ctable_d['followup_date'] == "1970-01-01 00:00:00") { ?>
                                 <td></td>
                             <?php
                             } else { ?>

@@ -9,7 +9,7 @@ include("connect.php");
 
 $_REQUEST['reorder_only'] = 1;
 if (!isset($_REQUEST['followup_type']) || $_REQUEST['followup_type'] === '' || $_REQUEST['followup_type'] === 'undefined') {
-	$_REQUEST['followup_type'] = 'today';
+	$_REQUEST['followup_type'] = 'today,pending';
 }
 if (!isset($_REQUEST['isFillter']) || $_REQUEST['isFillter'] === '' || $_REQUEST['isFillter'] === 'false') {
 	$_REQUEST['isFillter'] = 'true';

@@ -40,6 +40,11 @@ if(isset($_GET['m']) && $_GET['m']!="")
 		//echo $inquiry_id; exit;
 
 		$entry_type = "1";
+		/* Re-Order: Admin Panel create → followup_date = today + 20 days (report due date) */
+		$descNorm = strtolower(str_replace(array("-", " ", "_"), "", (string) $description));
+		if ($descNorm !== "" && strpos($descNorm, "reorder") !== false) {
+			$followup_date = date("Y-m-d H:i:s", strtotime("+20 days"));
+		}
 		if($through!="" && $followup_date!="")
 		{
 			// added by shivani (if admin create then get sales from customer)
