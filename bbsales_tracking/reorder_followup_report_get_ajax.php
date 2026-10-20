@@ -15,7 +15,8 @@ reorder_brm_auto_send_pending($db, $adminId);
 
 $_REQUEST['reorder_only'] = 1;
 if (!isset($_REQUEST['followup_type']) || $_REQUEST['followup_type'] === '' || $_REQUEST['followup_type'] === 'undefined') {
-	$_REQUEST['followup_type'] = 'all';
+	/* Default: Pending only (no response) — overdue + today + future */
+	$_REQUEST['followup_type'] = 'future,pending';
 }
 if (!isset($_REQUEST['isFillter']) || $_REQUEST['isFillter'] === '' || $_REQUEST['isFillter'] === 'false') {
 	$_REQUEST['isFillter'] = 'true';

@@ -52,7 +52,7 @@ $total_pages = isset($total_pages) ? $total_pages : 0;
 	vertical-align: top !important;
 }
 .ror-table .ror-response .ror-response-txt {
-	display: block; max-height: 72px; overflow: auto;
+	display: block; max-height: none; overflow: visible;
 	white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere;
 	font-size: 12px; color: #333; margin-bottom: 4px;
 }
@@ -103,7 +103,7 @@ $is_quo_view = ($ror_view === 'quotation');
 		<?php if ($is_quo_view) { ?>
 			Showing customers who have <b>quotation not converted to order</b>, and do <b>not</b> have any Re-Order followup sent to BRM.
 		<?php } else { ?>
-			Showing Admin <b>Re-Order</b> followups already sent to BRM. Due date = Created + 20 days.
+			Default: <b>Pending</b> only (no BRM Response yet) — overdue + today + future due. Due date = Created + 20 days.
 		<?php } ?>
 	</p>
 	<?php if ($is_quo_view) {

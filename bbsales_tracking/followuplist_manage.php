@@ -559,7 +559,7 @@ function clearSearchByName(){
 	reference_media_id="";
 	executive="";
 	sales_executive="";
-	followup_type=<?php echo !empty($__reorder_followup_report) ? '"all"' : '""'; ?>;
+	followup_type=<?php echo !empty($__reorder_followup_report) ? '"future,pending"' : '""'; ?>;
 	todate="";
 	fromdate="";
 	df="";
@@ -576,7 +576,7 @@ function clearSearchByName(){
 	$("#sales_executive").select2("val","");
 	<?php if (!empty($__reorder_followup_report)) { ?>
 	$("#followup_type").fSelect("destroy");
-	$("#followup_type").val("all");
+	$("#followup_type").val(["future","pending"]);
 	$("#followup_type").fSelect("create");
 	<?php } ?>
 	// $("#followup_type").select2("val","");
@@ -625,7 +625,12 @@ function displayRecords(numRecords) {
 		through = $("#through").val() || "";
 	}
 	if ($("#followup_type").length) {
-		followup_type = $("#followup_type").val() || followup_type;
+		var _ft = $("#followup_type").val();
+		if ($.isArray(_ft)) {
+			followup_type = _ft.join(",");
+		} else if (_ft) {
+			followup_type = _ft;
+		}
 	}
 	
 	var rorViewQ = "";
