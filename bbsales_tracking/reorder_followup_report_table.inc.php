@@ -44,6 +44,18 @@ $total_pages = isset($total_pages) ? $total_pages : 0;
 .ror-table .ror-nowrap { white-space: nowrap; }
 .ror-table .ror-cust { min-width: 160px; max-width: 220px; font-weight: 600; }
 .ror-table .ror-person { min-width: 120px; max-width: 160px; }
+.ror-table .ror-response {
+	min-width: 180px; max-width: 280px; width: 240px;
+	white-space: normal !important;
+	word-wrap: break-word; overflow-wrap: anywhere;
+	word-break: break-word; line-height: 1.35;
+	vertical-align: top !important;
+}
+.ror-table .ror-response .ror-response-txt {
+	display: block; max-height: 72px; overflow: auto;
+	white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere;
+	font-size: 12px; color: #333; margin-bottom: 4px;
+}
 .ror-badge {
 	display: inline-block; padding: 4px 10px; border-radius: 12px;
 	font-size: 12px; font-weight: 700; color: #fff; line-height: 1.4;
@@ -324,10 +336,10 @@ $is_quo_view = ($ror_view === 'quotation');
 					</td>
 					<?php if (!$is_quo_view) { ?>
 					<td class="ror-nowrap"><?php echo htmlspecialchars($slug); ?></td>
-					<td class="ror-nowrap">
+					<td class="ror-response">
 						<?php
 						if (!empty($ctable_d['response'])) {
-							echo htmlspecialchars($ctable_d['response']);
+							echo '<div class="ror-response-txt">' . htmlspecialchars($ctable_d['response']) . '</div>';
 						}
 						if ($ctable_d['status'] == 0) {
 						?>
