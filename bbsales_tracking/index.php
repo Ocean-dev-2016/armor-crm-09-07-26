@@ -1,37 +1,34 @@
 <?php
-// echo "SD";exit;
-$page_id=402;
-$page_slug="login";
+$page_id = 402;
+$page_slug = "login";
 session_start();
 error_reporting(0);
 date_default_timezone_set('Asia/Kolkata');
 include("../include/define.php");
 include("../include/function.class.php");
-	
+
 $db = new Admin();
 $conn = $db->connect();
 
 $last_login = date('Y-m-d H:i:s');
-$last_ip 	= $db->rp_get_client_ip();
+$last_ip = $db->rp_get_client_ip();
 
-$scheck_where = " ip='".$last_ip."' AND attempts>3 AND status='1' ";
-$scheck_res = $db->rp_getData("security","*",$scheck_where);
+$scheck_where = " ip='" . $last_ip . "' AND attempts>3 AND status='1' ";
+$scheck_res = $db->rp_getData("security", "*", $scheck_where);
 
 if ($scheck_res && mysqli_num_rows($scheck_res) > 0) {
-	//404
-	$fail_data 	= mysqli_fetch_array($scheck_res);
-	$attempts 	= $fail_data['attempts'];
+	$fail_data = mysqli_fetch_array($scheck_res);
+	$attempts = $fail_data['attempts'];
 	$attempts++;
-	$rows 	= array(
-			"attempts"=>$attempts,
-			"ltime"=>$last_login
-			);
-
-	$where3	= "ip='".$last_ip."'";
-	$db->rp_update("security",$rows,$where3);
-	$db->rp_location(SITEURL."404/");
+	$rows = array(
+		"attempts" => $attempts,
+		"ltime" => $last_login
+	);
+	$where3 = "ip='" . $last_ip . "'";
+	$db->rp_update("security", $rows, $where3);
+	$db->rp_location(SITEURL . "404/");
 }
- if((isset($_SESSION[SITE_SESS.'_ADMIN_SESS_ID']) && $_SESSION[SITE_SESS.'_ADMIN_SESS_ID']>0)){
+if ((isset($_SESSION[SITE_SESS . '_ADMIN_SESS_ID']) && $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'] > 0)) {
 	require_once("../include/master_activity_helper.php");
 	if (armor_is_master_activity_user()) {
 		$db->rp_location("master_activity_dashboard.php");
@@ -39,213 +36,174 @@ if ($scheck_res && mysqli_num_rows($scheck_res) > 0) {
 		$db->rp_location("dashboard.php");
 	}
 }
+
+$logoUrl = CRM_LOGIN_LOGO_URL . '?v=' . @filemtime(CRM_LOGIN_LOGO_PATH);
+$alertHtml = '';
+if (isset($_REQUEST['msg'])) {
+	if ($_REQUEST['msg'] == "0") {
+		$alertHtml = '<div class="armor-alert armor-alert-danger">Incorrect Username OR Password.</div>';
+	} else if ($_REQUEST['msg'] == "1") {
+		$alertHtml = '<div class="armor-alert armor-alert-success">Login detail has been sent successfully. Please check your mail box.</div>';
+	} else if ($_REQUEST['msg'] == "3") {
+		$alertHtml = '<div class="armor-alert armor-alert-success">Password updated successfully.</div>';
+	} else if ($_REQUEST['msg'] == "4") {
+		$alertHtml = '<div class="armor-alert armor-alert-danger">Something went wrong. Please try again.</div>';
+	} else if ($_REQUEST['msg'] == "5") {
+		$alertHtml = '<div class="armor-alert armor-alert-danger">Current Password is wrong.</div>';
+	} else if ($_REQUEST['msg'] == "2") {
+		$alertHtml = '<div class="armor-alert armor-alert-danger">Invalid Email-Id.</div>';
+	}
+}
 ?>
 <!DOCTYPE html>
-<!--[if IE 8]> <html lang="en" class="ie8 no-js"> <![endif]-->
-<!--[if IE 9]> <html lang="en" class="ie9 no-js"> <![endif]-->
-<!--[if !IE]><!-->
 <html lang="en">
-<!--<![endif]-->
-<!-- BEGIN HEAD -->
 <head>
 <meta charset="utf-8"/>
 <title>Login | <?php echo SITETITLE; ?></title>
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<meta http-equiv="Content-type" content="text/html; charset=utf-8">
-<meta content="" name="description"/>
-<meta content="" name="author"/>
-<!-- BEGIN GLOBAL MANDATORY STYLES -->
-<link href="http://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&subset=all" rel="stylesheet" type="text/css"/>
-<link href="assets/global/plugins/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css"/>
-<link href="assets/global/plugins/simple-line-icons/simple-line-icons.min.css" rel="stylesheet" type="text/css"/>
-<link href="assets/global/plugins/bootstrap/css/bootstrap.min.css" rel="stylesheet" type="text/css"/>
-<link href="assets/global/plugins/uniform/css/uniform.default.css" rel="stylesheet" type="text/css"/>
-<!-- END GLOBAL MANDATORY STYLES -->
-<!-- BEGIN PAGE LEVEL STYLES -->
-<link href="assets/admin/pages/css/login.css" rel="stylesheet" type="text/css"/>
-<!-- END PAGE LEVEL SCRIPTS -->
-<!-- BEGIN THEME STYLES -->
-<link href="assets/global/css/components-md.css" id="style_components" rel="stylesheet" type="text/css"/>
-<link href="assets/global/css/plugins-md.css" rel="stylesheet" type="text/css"/>
-<link href="assets/admin/layout/css/layout.css" rel="stylesheet" type="text/css"/>
-<link href="assets/admin/layout/css/themes/default.css" rel="stylesheet" type="text/css" id="style_color"/>
-<link href="assets/admin/layout/css/custom.css" rel="stylesheet" type="text/css"/>
-<!-- END THEME STYLES -->
-<link rel="shortcut icon" href="favicon.ico"/>
+<meta name="description" content="Armor Fire CRM — Command Hub Login"/>
+<link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+<link href="assets/admin/pages/css/armor-login.css" rel="stylesheet" type="text/css"/>
+<link href="assets/admin/layout/css/armor-theme.css" rel="stylesheet" type="text/css"/>
+<link rel="shortcut icon" href="<?php echo htmlspecialchars($logoUrl); ?>"/>
+<style>
+body, .login-container, .form-input, .login-btn, h1, p, button, input {
+	font-family: "Open Sans", sans-serif !important;
+}
+.armor-alert {
+	margin: 0 0 14px;
+	padding: 12px 14px;
+	border-radius: 12px;
+	font-size: 13px;
+	font-weight: 600;
+	text-align: left;
+}
+.armor-alert-danger {
+	background: rgba(227, 28, 35, 0.1);
+	color: #b91c1c;
+	border: 1px solid rgba(227, 28, 35, 0.25);
+}
+.armor-alert-success {
+	background: rgba(22, 163, 74, 0.1);
+	color: #166534;
+	border: 1px solid rgba(22, 163, 74, 0.25);
+}
+.logo-section img {
+	max-width: 168px;
+	width: 100%;
+	height: auto;
+	display: block;
+	margin: 0 auto;
+}
+</style>
 </head>
-<!-- END HEAD -->
-<!-- BEGIN BODY -->
-<body class="page-md login">
-<!-- BEGIN SIDEBAR TOGGLER BUTTON -->
-<div class="menu-toggler sidebar-toggler">
-</div>
-<!-- END SIDEBAR TOGGLER BUTTON -->
-<!-- BEGIN LOGO -->
-<!-- END LOGO -->
-<!-- BEGIN LOGIN -->
-<div class="content" style="background-color: #ffffff!important;">
-	<div class="logo" style="display:flex;justify-content:center;align-items:center;padding:10px 0 5px;">
-		<a href="<?php echo SITEURL."bbsales_tracking/index.php"; ?>">
-			<img src="<?php echo CRM_LOGIN_LOGO_URL; ?>?v=<?php echo @filemtime(CRM_LOGIN_LOGO_PATH); ?>" alt="<?php echo SITETITLE; ?>" style="max-height:160px;max-width:100%;height:auto;display:block;" />
-		</a>
+<body>
+<?php include __DIR__ . '/assets/admin/pages/partials/armor_login_bg_scene.html'; ?>
+
+<div class="login-container">
+	<div class="corner-top-left"></div>
+	<div class="corner-bottom-right"></div>
+	<div class="command-hub-badge">Command Hub</div>
+
+	<div class="logo-section">
+		<span class="since-text">SINCE 2010</span>
+		<img src="<?php echo htmlspecialchars($logoUrl); ?>" alt="Armor Fire Logo">
 	</div>
-	<form class="login-form" action="password_admin.php" method="post" onSubmit="return check_form();">
-		<h3 class="form-title">Login to your account</h3>
-		<?php
-		if(isset($_REQUEST['msg']) && $_REQUEST['msg']=="0"){
-		?>
-			<div class="alert alert-danger">
-				<button class="close" data-close="alert"></button>
-				<span>Incorrect Username OR Password. </span>
-			</div>
-		<?php
-		}else if(isset($_REQUEST['msg']) && $_REQUEST['msg']=="1"){
-		?>
-			<div class="alert alert-success">
-				<button class="close" data-close="alert"></button>
-				<span>Login detail has been sent successfully. Please check your mail box. </span>
-			</div>
-		<?php
-		}else if(isset($_REQUEST['msg']) && $_REQUEST['msg']=="3"){
-		?>
-			<div class="alert alert-success">
-				<button class="close" data-close="alert"></button>
-				<span>Password updated successfully. </span>
-			</div>    
-		<?php
-		}else if(isset($_REQUEST['msg']) && $_REQUEST['msg']=="4"){
-		?>
-			<div class="alert alert-success">
-				<button class="close" data-close="alert"></button>
-				<span>Something went wrong. Please try again. </span>
-			</div>    
-		<?php
-		}
-		else if(isset($_REQUEST['msg']) && $_REQUEST['msg']=="5"){
-		?>
-			<div class="alert alert-success">
-				<button class="close" data-close="alert"></button>
-				<span>Current Password is wrong </span>
-			</div>    
-		<?php
-		}
-		?>
+
+	<div class="title-section">
+		<h1>CRM Portal</h1>
+		<p>Engineered for Safety | Precision CRM Node</p>
+	</div>
+
+	<?php echo $alertHtml; ?>
+
+	<form class="login-form" action="password_admin.php" method="post" onsubmit="return armorLoginSubmit(event);">
 		<div class="form-group">
-			<!--ie8, ie9 does not support html5 placeholder, so we just show field title for that-->
-			<label class="control-label visible-ie8 visible-ie9">Username</label>
-			<div class="input-icon"> <i class="fa fa-envelope-o"></i>
-				<input class="form-control placeholder-no-fix" type="text" autocomplete="off" placeholder="Username" name="username" id="username" />
-			</div>
+			<i class="ri-shield-user-line"></i>
+			<input type="text" name="username" id="username" class="form-input" placeholder="Credential ID" required autocomplete="off">
 		</div>
+
 		<div class="form-group">
-			<label class="control-label visible-ie8 visible-ie9">Password</label>
-			<div class="input-icon"> <i class="fa fa-lock"></i>
-				<input class="form-control placeholder-no-fix" type="password" autocomplete="off" placeholder="Password" name="password" id="password"/>
-			</div>
+			<i class="ri-lock-password-line"></i>
+			<input type="password" name="password" id="password" class="form-input" placeholder="Encryption Key" required autocomplete="off">
 		</div>
-		<div class="form-actions">
-			<center><button type="submit" class="btn btn-success uppercase" type="submit" >Login</button></center>
-			<!-- <a class="forget-password" id="forget-password" href="javascript:;">Forgot Password?</a><br/> -->
-			<!-- <a class="forget-password" id="forget-password" href="index.php">Customer Login</a> -->
-		</div>
+
+		<button type="submit" class="login-btn" id="loginBtn">
+			Validate &amp; Initiate Session
+			<i class="ri-flashlight-fill"></i>
+		</button>
 	</form>
-	<form class="forget-form" action="pass-recover.php" method="post" onSubmit="return check_form2();">
-		<h3>Forget Password ?</h3>
-		<?php
-		if(isset($_REQUEST['msg']) && $_REQUEST['msg']=="2"){
-		?>
-			<div class="alert alert-danger">
-				<button class="close" data-close="alert"></button>
-				<span>Invalid Email-Id. </span>
-			</div>    
-		<?php
-		}
-		?>
-		<p class="text-center"> Enter your e-mail address below to reset password. </p>
-		<div class="form-group">
-			<div class="input-icon"> <i class="fa fa-envelope"></i>
-				<input class="form-control placeholder-no-fix" type="text" autocomplete="off" placeholder="Email" name="admin_mail" id="admin_mail" />
-			</div>
-		</div>
-		<div class="form-actions">
-			<button type="button" id="back-btn" class="btn"> <i class="m-icon-swapleft"></i> Back </button>
-			<button type="submit" class="btn green-haze pull-right"> Submit <i class="m-icon-swapright m-icon-white"></i> </button>
-		</div>
-	</form>
+
+	<div class="footer-section">
+		<p class="developed-by">Designed &amp; Developed By</p>
+		<p class="company-name">
+			<a href="<?php echo htmlspecialchars(DESIGNBY_LINK); ?>" target="_blank" rel="noopener noreferrer"><?php echo htmlspecialchars(strtoupper(DESIGNBY)); ?></a>
+		</p>
+	</div>
 </div>
-<div class="copyright">
-	<?php echo date("Y"); ?> &copy; <?php echo SITENAME; ?> by <a href="<?= DESIGNBY_LINK ?>" target="_blank" title="Web, Mobile And Software Development Company" class="font-yellow"><?= DESIGNBY; ?></a>
+
+<div class="login-loader" id="loginLoader" role="status" aria-live="polite" aria-hidden="true">
+	<div class="loader-emblem">
+		<span class="loader-ring"></span>
+		<span class="loader-ring inner"></span>
+		<span class="loader-ring dash"></span>
+		<div class="loader-core">
+			<img src="<?php echo htmlspecialchars($logoUrl); ?>" alt="Armor Fire">
+		</div>
+		<span class="loader-ember"></span><span class="loader-ember e2"></span><span class="loader-ember e3"></span><span class="loader-ember e4"></span>
+	</div>
+	<div>
+		<div class="loader-title">Initiating Secure Session</div>
+		<div class="loader-step" id="loaderStep">Verifying credentials…</div>
+	</div>
+	<div class="loader-bar"></div>
+	<div class="loader-brand">Armor Fire · CRM Portal</div>
 </div>
-<!--[if lt IE 9]>
-<script src="assets/global/plugins/respond.min.js"></script>
-<script src="assets/global/plugins/excanvas.min.js"></script> 
-<![endif]-->
-<script src="assets/global/plugins/jquery.min.js" type="text/javascript"></script>
-<script src="assets/global/plugins/jquery-migrate.min.js" type="text/javascript"></script>
-<script src="assets/global/plugins/bootstrap/js/bootstrap.min.js" type="text/javascript"></script>
-<script src="assets/global/plugins/jquery.blockui.min.js" type="text/javascript"></script>
-<script src="assets/global/plugins/uniform/jquery.uniform.min.js" type="text/javascript"></script>
-<script src="assets/global/plugins/jquery.cokie.min.js" type="text/javascript"></script>
-<!-- END CORE PLUGINS -->
-<!-- BEGIN PAGE LEVEL PLUGINS -->
-<script src="assets/global/plugins/jquery-validation/js/jquery.validate.min.js" type="text/javascript"></script>
-<!-- END PAGE LEVEL PLUGINS -->
-<!-- BEGIN PAGE LEVEL SCRIPTS -->
-<script src="assets/global/scripts/metronic.js" type="text/javascript"></script>
-<script src="assets/admin/layout/scripts/layout.js" type="text/javascript"></script>
-<script src="assets/admin/layout/scripts/demo.js" type="text/javascript"></script>
-<script src="assets/admin/pages/scripts/login.js" type="text/javascript"></script>
-<!-- END PAGE LEVEL SCRIPTS -->
+
 <script>
-jQuery(document).ready(function() {     
-	Metronic.init(); // init metronic core components
-	Layout.init(); // init current layout
-	Login.init();
-	Demo.init();
-});
-</script>
-<script>
-<?php
-if(isset($_REQUEST['msg']) && $_REQUEST['msg']=="2"){
-?>
-	$(document).ready(function() {
-		$("#forget-password").trigger("click");
-	});
-	$(document).ready(function() {
-		$("#customer-login").trigger("click");
-	});
-<?php
-}
-?>
-</script>
-<script>
-function check_form(){
-	if($("#username").val()=="" || $("#username").val().split(" ")==""){
-		alert("Please enter username.");
-		$("#username").focus();
+function armorLoginSubmit(e) {
+	var u = document.getElementById('username');
+	var p = document.getElementById('password');
+	if (!u.value || !u.value.trim()) {
+		alert('Please enter username.');
+		u.focus();
+		e.preventDefault();
 		return false;
 	}
-	if($("#password").val()=="" || $("#password").val().split(" ")==""){
-		alert("Please enter password.");
-		$("#password").focus();
+	if (!p.value || !p.value.trim()) {
+		alert('Please enter password.');
+		p.focus();
+		e.preventDefault();
 		return false;
 	}
-}
-function check_form2(){
-	if($("#admin_mail").val()=="" || $("#admin_mail").val().split(" ")==""){
-		alert("Please enter email.");
-		$("#admin_mail").focus();
-		return false;
-	}else{
-		if (/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test($("#admin_mail").val())){  
-			 
-		}else{
-			alert("Please enter valid email.");
-			$("#admin_mail").focus();
-			return false;
-		}
+
+	var loader = document.getElementById('loginLoader');
+	var stepEl = document.getElementById('loaderStep');
+	var btn = document.getElementById('loginBtn');
+	var steps = [
+		'Verifying credentials…',
+		'Checking role & permissions…',
+		'Loading CRM modules…',
+		'Preparing your dashboard…'
+	];
+	var i = 0;
+	if (btn) btn.disabled = true;
+	if (loader) {
+		loader.classList.add('show');
+		loader.setAttribute('aria-hidden', 'false');
 	}
+	if (stepEl) stepEl.textContent = steps[0];
+	setInterval(function () {
+		i = (i + 1) % steps.length;
+		if (!stepEl) return;
+		stepEl.style.opacity = 0;
+		setTimeout(function () {
+			stepEl.textContent = steps[i];
+			stepEl.style.opacity = 1;
+		}, 200);
+	}, 900);
+	return true;
 }
 </script>
 </body>

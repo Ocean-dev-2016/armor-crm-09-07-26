@@ -1731,6 +1731,23 @@ foreach ($rorAllowTypes as $aid) {
 	}
 }
 
+/* page_table id=678 — BRM Customer Assign (Super Admin only; does not change seid/sales) */
+$brmAssignPageCheck = mysqli_query($conn, "SELECT id FROM page_table WHERE id=678 LIMIT 1");
+if ($brmAssignPageCheck && mysqli_num_rows($brmAssignPageCheck) > 0) {
+	db_sync_append_page_urls($conn, 678, array(
+		'brm_customer_assign_manage.php',
+		'brm_customer_assign_ajax.php',
+	));
+	db_sync_run_query($conn, "UPDATE page_table SET page_title='BRM Customer Assign', page_slug='brm_customer_assign', isDelete=0, isActive=1 WHERE id=678", 'Update page_table id=678 BRM Customer Assign');
+} else {
+	$urls678 = 'brm_customer_assign_manage.php,brm_customer_assign_ajax.php';
+	db_sync_run_query($conn, "INSERT INTO page_table (id, page_title, page_slug, page_count, page_urls, isActive, isDelete, adate, created_date)
+		VALUES (678, 'BRM Customer Assign', 'brm_customer_assign', 0, '{$urls678}', 1, 0, '{$nowRor}', '{$nowRor}')", 'Insert page_table id=678 BRM Customer Assign');
+}
+/* Revoke 678 for non–Super-Admin roles (SA type=0 bypasses rights) */
+db_sync_run_query($conn, "UPDATE page_admin_right SET view_flag=0, insert_flag=0, update_flag=0, delete_flag=0, all_data_flag=0
+	WHERE page_id=678 AND isDelete=0 AND admin_id>0", 'BRM Assign revoke for non-SA roles');
+
 db_sync_run_query($conn, "CREATE TABLE IF NOT EXISTS `approval_entry` (
 	`id` int(11) NOT NULL AUTO_INCREMENT,
 	`entry_date` date DEFAULT NULL,

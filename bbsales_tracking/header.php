@@ -1,5 +1,5 @@
-<div class="page-header" style="padding-bottom: 45px;">
-	<div class="page-header-top navbar-fixed-top">
+<div class="page-header armor-page-header">
+	<div class="page-header-top navbar-fixed-top armor-header-top">
 	<?php include("top.php"); ?>
 	</div>
 </div>

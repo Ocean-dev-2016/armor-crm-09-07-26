@@ -487,7 +487,7 @@ $flag_d = mysqli_fetch_array($flag_r);
 					if ($flag_d['print_flag'] == 1 || $_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0) {
 					?>
 						<div class="btn-group btn-theme-panel">
-							<a class="btn dropdown-toggle blue-ebonyclay" href="javascript:;" onClick="printReport('<?php echo $bid; ?>');" title="Print">Print</a>
+							<a class="btn blue" href="javascript:;" onClick="printReport('<?php echo $bid; ?>');" title="Print">Print</a>
 						</div>
 					<?php
 					}

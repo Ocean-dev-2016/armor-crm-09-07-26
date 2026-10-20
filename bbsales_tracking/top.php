@@ -6,9 +6,9 @@ $ctableAPK        = "application_info";
 ?>
 <div class="page-header-menu">
 	<div class="container">
-		<div class="page-logo" style="width:auto;">
-			<a href="dashboard.php">
-				<img src="<?php echo CRM_LOGO_URL; ?>?v=<?php echo @filemtime(CRM_LOGO_PATH); ?>" alt="<?php echo SITETITLE; ?>" height="40" style="margin:-6px 50px 0 0;max-width:180px;object-fit:contain;" class="logo-default">
+		<div class="page-logo">
+			<a href="dashboard.php" title="<?php echo SITETITLE; ?>">
+				<img src="<?php echo CRM_LOGO_URL; ?>?v=<?php echo @filemtime(CRM_LOGO_PATH); ?>" alt="<?php echo SITETITLE; ?>" class="logo-default">
 			</a>
 		</div>
 

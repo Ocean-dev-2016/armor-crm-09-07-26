@@ -45,16 +45,32 @@ $total_pages = isset($total_pages) ? $total_pages : 0;
 .ror-table .ror-cust { min-width: 160px; max-width: 220px; font-weight: 600; }
 .ror-table .ror-person { min-width: 120px; max-width: 160px; }
 .ror-table .ror-response {
-	min-width: 180px; max-width: 280px; width: 240px;
+	min-width: 140px; max-width: 220px; width: 180px;
 	white-space: normal !important;
-	word-wrap: break-word; overflow-wrap: anywhere;
-	word-break: break-word; line-height: 1.35;
-	vertical-align: top !important;
+	vertical-align: middle !important;
 }
 .ror-table .ror-response .ror-response-txt {
-	display: block; max-height: none; overflow: visible;
-	white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	max-height: 2.8em;
+	white-space: normal;
+	word-wrap: break-word;
+	overflow-wrap: anywhere;
 	font-size: 12px; color: #333; margin-bottom: 4px;
+	line-height: 1.35;
+}
+.ror-table .ror-response .ror-response-done {
+	display: inline-block;
+	padding: 4px 10px;
+	border-radius: 12px;
+	background: #26C281;
+	color: #fff;
+	font-size: 11px;
+	font-weight: 700;
+	max-width: 100%;
+	cursor: default;
 }
 .ror-badge {
 	display: inline-block; padding: 4px 10px; border-radius: 12px;
@@ -114,6 +130,13 @@ $is_quo_view = ($ror_view === 'quotation');
 			if (function_exists('reorder_brm_is_brm_login') && reorder_brm_is_brm_login($db)) {
 				$__brmLabel = isset($_SESSION[SITE_SESS . 'SESS_NAME']) ? $_SESSION[SITE_SESS . 'SESS_NAME'] : 'BRM';
 				echo ' &nbsp;|&nbsp; Showing customers assigned to <b>' . htmlspecialchars($__brmLabel) . '</b> only.';
+				echo ' &nbsp;|&nbsp; Report rows (this filter): <b>' . (int) $get_total_rows . '</b>';
+			}
+			$__adminTypeRor = isset($_SESSION[SITE_SESS . '_ADMIN_TYPE']) ? (int) $_SESSION[SITE_SESS . '_ADMIN_TYPE'] : -1;
+			if ($__adminTypeRor === 0 && function_exists('reorder_brm_assign_stats')) {
+				$__st = reorder_brm_assign_stats($db);
+				echo ' &nbsp;|&nbsp; Split: BRM1 <b>' . (int) $__st['brm1'] . '</b> / BRM2 <b>' . (int) $__st['brm2'] . '</b>';
+				echo ' &nbsp;|&nbsp; <a href="brm_customer_assign_manage.php"><b>Manage BRM Assign / Exchange</b></a>';
 			}
 			?>
 		<?php } ?>
@@ -350,12 +373,16 @@ $is_quo_view = ($ror_view === 'quotation');
 					<td class="ror-nowrap"><?php echo htmlspecialchars($slug); ?></td>
 					<td class="ror-response">
 						<?php
-						if (!empty($ctable_d['response'])) {
-							echo '<div class="ror-response-txt">' . htmlspecialchars($ctable_d['response']) . '</div>';
-						}
-						if ($ctable_d['status'] == 0) {
+						$__ror_resp = isset($ctable_d['response']) ? trim((string) $ctable_d['response']) : '';
+						if ($__ror_resp !== '') {
+							/* Already responded — compact badge + full text on hover (no row blow-up) */
+							echo '<span class="ror-response-done" title="' . htmlspecialchars($__ror_resp, ENT_QUOTES, 'UTF-8') . '">Responded</span>';
+							echo '<div class="ror-response-txt" title="' . htmlspecialchars($__ror_resp, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($__ror_resp) . '</div>';
+						} else if ((int) $ctable_d['status'] === 0) {
 						?>
 							<a type="button" href="#FollowupResponse" data-toggle="modal" class="btn btn-circle btn-sm yellow" data-mode="add" data-followup-flag="<?= $followup_flag; ?>" data-sales-id="<?= $ctable_d['user_id']; ?>" data-visitor_id="<?= $ctable_d['visitor_id'] ?>" data-date="<?php echo date('d-m-Y H:i:s', strtotime($ctable_d['followup_date'])); ?>" data-id="<?php echo $ctable_d['id']; ?>" data-ref_id="<?php echo $ctable_d['reference_id']; ?>" data-next_action="<?php echo $ctable_d['next_action']; ?>">Response</a>
+						<?php } else { ?>
+							<span class="text-muted">—</span>
 						<?php } ?>
 					</td>
 					<?php } ?>

@@ -561,3 +561,76 @@ if (!function_exists('reorder_report_quotation_only_value_total')) {
 		return (float) $row['amt'];
 	}
 }
+
+if (!function_exists('reorder_brm_assign_stats')) {
+	/**
+	 * Customer counts by BRM assignment (executive.brm_admin_id only — does not touch seid).
+	 * @return array{brm1_id:int,brm2_id:int,brm1:int,brm2:int,unassigned:int,total:int}
+	 */
+	function reorder_brm_assign_stats($db)
+	{
+		reorder_brm_ensure_customer_assign_column($db);
+		$ids = reorder_brm_login_ids($db);
+		$out = array(
+			'brm1_id' => (int) $ids['brm1'],
+			'brm2_id' => (int) $ids['brm2'],
+			'brm1' => 0,
+			'brm2' => 0,
+			'unassigned' => 0,
+			'total' => 0,
+		);
+		$conn = reorder_brm_conn($db);
+		if (!$conn) {
+			return $out;
+		}
+		$b1 = $out['brm1_id'];
+		$b2 = $out['brm2_id'];
+		$r = @mysqli_query($conn, "SELECT IFNULL(brm_admin_id,0) AS bid, COUNT(*) AS c
+			FROM executive WHERE isDelete=0 GROUP BY IFNULL(brm_admin_id,0)");
+		if ($r) {
+			while ($row = mysqli_fetch_assoc($r)) {
+				$bid = (int) $row['bid'];
+				$c = (int) $row['c'];
+				$out['total'] += $c;
+				if ($b1 > 0 && $bid === $b1) {
+					$out['brm1'] = $c;
+				} else if ($b2 > 0 && $bid === $b2) {
+					$out['brm2'] = $c;
+				} else if ($bid === 0) {
+					$out['unassigned'] = $c;
+				}
+			}
+		}
+		return $out;
+	}
+}
+
+if (!function_exists('reorder_brm_set_customer_admin')) {
+	/**
+	 * Assign / exchange customer to BRM1 or BRM2. Only updates executive.brm_admin_id.
+	 * Never changes seid / sales person.
+	 * @param int $customerId executive.id
+	 * @param int $brmAdminId dealer_distributor_network.id of BRM1/BRM2 (0 = unassign)
+	 */
+	function reorder_brm_set_customer_admin($db, $customerId, $brmAdminId)
+	{
+		$customerId = (int) $customerId;
+		$brmAdminId = (int) $brmAdminId;
+		if ($customerId <= 0) {
+			return false;
+		}
+		reorder_brm_ensure_customer_assign_column($db);
+		if ($brmAdminId > 0) {
+			$ids = reorder_brm_login_ids($db);
+			if ($brmAdminId !== (int) $ids['brm1'] && $brmAdminId !== (int) $ids['brm2']) {
+				return false;
+			}
+		}
+		return (bool) $db->rp_update(
+			"executive",
+			array("brm_admin_id" => $brmAdminId),
+			"id='" . $customerId . "' AND isDelete=0",
+			0
+		);
+	}
+}

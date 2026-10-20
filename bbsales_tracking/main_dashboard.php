@@ -68,7 +68,7 @@ $total_quotation = $db->rp_getTotalRecord("quotation_detail", "isDelete=0", 0);
 
 		/* Admin dashboard list panels */
 		.admin-dash-panel .portlet-title {
-			background: #3598dc;
+			background: #e31c23;
 			color: #fff;
 			padding: 10px 15px;
 			min-height: 42px;
@@ -80,11 +80,11 @@ $total_quotation = $db->rp_getTotalRecord("quotation_detail", "isDelete=0", 0);
 		}
 		.admin-dash-panel .portlet-title .badge {
 			background: #fff;
-			color: #3598dc;
+			color: #e31c23;
 			font-weight: 700;
 		}
 		.admin-dash-panel .portlet-title .actions .btn {
-			color: #3598dc;
+			color: #e31c23;
 			background: #fff;
 			border: none;
 		}
@@ -157,7 +157,7 @@ $total_quotation = $db->rp_getTotalRecord("quotation_detail", "isDelete=0", 0);
 		}
 		/* Today's Followup card — dedicated styling */
 		.today-followup-panel .portlet-title {
-			background: linear-gradient(135deg, #1e88e5 0%, #1565c0 100%);
+			background: linear-gradient(135deg, #e31c23 0%, #c4161c 100%);
 			padding: 12px 18px;
 			min-height: 48px;
 		}
@@ -180,20 +180,20 @@ $total_quotation = $db->rp_getTotalRecord("quotation_detail", "isDelete=0", 0);
 		}
 		.today-followup-panel .portlet-title .badge {
 			background: #fff;
-			color: #1565c0;
+			color: #e31c23;
 			font-size: 13px;
 			padding: 4px 10px;
 			margin-left: 10px;
 			border-radius: 12px;
 		}
 		.today-followup-panel .portlet-title .actions .btn {
-			color: #1565c0;
+			color: #e31c23;
 			font-weight: 600;
 			padding: 5px 12px;
 			margin-left: 4px;
 		}
 		.today-followup-panel .portlet-title .actions .btn:hover {
-			background: #f0f7ff;
+			background: #fde8e9;
 		}
 		.today-followup-panel .tf-summary-bar {
 			display: flex;
@@ -217,7 +217,7 @@ $total_quotation = $db->rp_getTotalRecord("quotation_detail", "isDelete=0", 0);
 		.today-followup-panel .tf-stat .num {
 			font-size: 20px;
 			font-weight: 700;
-			color: #1565c0;
+			color: #e31c23;
 			line-height: 1;
 		}
 		.today-followup-panel .tf-stat .lbl {
@@ -237,7 +237,7 @@ $total_quotation = $db->rp_getTotalRecord("quotation_detail", "isDelete=0", 0);
 			border: 1px solid #e3e8ef;
 			border-radius: 6px;
 		}
-		.today-followup-panel .tf-date-label i { color: #1565c0; margin-right: 5px; }
+		.today-followup-panel .tf-date-label i { color: #e31c23; margin-right: 5px; }
 		.today-followup-panel .today-followup-table-wrap {
 			max-height: 480px;
 			overflow: auto;
@@ -274,18 +274,18 @@ $total_quotation = $db->rp_getTotalRecord("quotation_detail", "isDelete=0", 0);
 			background: #fafbfc;
 		}
 		.today-followup-panel .today-followup-table tbody tr:hover {
-			background: #eef6ff !important;
+			background: #fde8e9 !important;
 		}
 		.today-followup-panel .tf-col-no { width: 4%; text-align: center; }
 		.today-followup-panel .tf-col-customer { font-weight: 600; color: #2c3e50; }
 		.today-followup-panel .tf-col-mobile a {
-			color: #1565c0;
+			color: #e31c23;
 			text-decoration: none;
 		}
 		.today-followup-panel .tf-col-mobile a:hover { text-decoration: underline; }
 		.today-followup-panel .tf-col-datetime {
 			font-weight: 600;
-			color: #1565c0;
+			color: #e31c23;
 			font-size: 11px;
 			white-space: nowrap;
 		}
@@ -308,7 +308,7 @@ $total_quotation = $db->rp_getTotalRecord("quotation_detail", "isDelete=0", 0);
 			white-space: nowrap;
 		}
 		.today-followup-panel .tf-badge-through-call { background: #e0f2f1; color: #00796b; }
-		.today-followup-panel .tf-badge-through-sms { background: #e3f2fd; color: #1565c0; }
+		.today-followup-panel .tf-badge-through-sms { background: #fde8e9; color: #e31c23; }
 		.today-followup-panel .tf-badge-through-email { background: #f3e5f5; color: #7b1fa2; }
 		.today-followup-panel .tf-badge-through-whatsapp { background: #e8f5e9; color: #2e7d32; }
 		.today-followup-panel .tf-badge-through-visit { background: #fff3e0; color: #e65100; }
@@ -336,13 +336,13 @@ $total_quotation = $db->rp_getTotalRecord("quotation_detail", "isDelete=0", 0);
 			padding: 4px 10px;
 			font-size: 11px;
 			border-radius: 4px;
-			background: #1565c0;
+			background: #e31c23;
 			color: #fff !important;
 			text-decoration: none !important;
 			white-space: nowrap;
 		}
 		.today-followup-panel .tf-btn-view:hover {
-			background: #0d47a1;
+			background: #c4161c;
 			color: #fff;
 		}
 		.today-followup-panel .tf-empty-state {
@@ -369,7 +369,7 @@ $total_quotation = $db->rp_getTotalRecord("quotation_detail", "isDelete=0", 0);
 			border-top: 1px solid #e7ecf1;
 		}
 		.today-followup-panel .tf-table-footer a {
-			color: #1565c0;
+			color: #e31c23;
 			font-weight: 600;
 		}
 		@media (max-width: 991px) {

@@ -81,64 +81,68 @@ if (isset($_REQUEST['searchName']) && $_REQUEST['searchName'] != "") {
 // echo $ctable_where;exit;
 
 if (!empty($_REQUEST['reorder_only'])) {
-    /* Re-Order report: date filters use (created_date + 20 days) as due date */
-    if ($_REQUEST['df'] != "" && $_REQUEST['df'] != undefined) {
-        if (isset($_REQUEST['df']) && $_REQUEST['df'] != "" && $_REQUEST['df'] != NULL && $_REQUEST['df'] != undefined) {
-            $date_filter_query = urldecode($_REQUEST['df']);
-            $date_filter_query_ex = explode(" to ", $date_filter_query);
+    /* Re-Order report: date filters use (created_date + 20 days) as due date
+     * IMPORTANT: date filters must NOT skip followup_type / response filter (else responded rows leak in).
+     */
+    if (isset($_REQUEST['df']) && $_REQUEST['df'] != "" && $_REQUEST['df'] != NULL && $_REQUEST['df'] != undefined) {
+        $date_filter_query = urldecode($_REQUEST['df']);
+        $date_filter_query_ex = explode(" to ", $date_filter_query);
+        if (count($date_filter_query_ex) >= 2) {
             $ctable_where .= " (" . $reorderDueExpr . " >= '" . date("Y-m-d", strtotime($date_filter_query_ex[0])) . "' AND " . $reorderDueExpr . " <= '" . date("Y-m-d", strtotime($date_filter_query_ex[1])) . "') AND ";
             $isFillter = true;
         }
-    } elseif ($_REQUEST['df1'] != "" && $_REQUEST['df1'] != undefined) {
-        if (isset($_REQUEST['df1']) && $_REQUEST['df1'] != "" && $_REQUEST['df1'] != NULL && $_REQUEST['df1'] != undefined) {
-            $date_filter_query_1 = urldecode($_REQUEST['df1']);
-            $date_filter_query_1_ex = explode(" to ", $date_filter_query_1);
+    }
+    if (isset($_REQUEST['df1']) && $_REQUEST['df1'] != "" && $_REQUEST['df1'] != NULL && $_REQUEST['df1'] != undefined) {
+        $date_filter_query_1 = urldecode($_REQUEST['df1']);
+        $date_filter_query_1_ex = explode(" to ", $date_filter_query_1);
+        if (count($date_filter_query_1_ex) >= 2) {
             $ctable_where .= " (DATE(created_date) >= '" . date("Y-m-d", strtotime($date_filter_query_1_ex[0])) . "' AND DATE(created_date) <= '" . date("Y-m-d", strtotime($date_filter_query_1_ex[1])) . "') AND ";
             $isFillter = true;
         }
-    } elseif ($_REQUEST['df2'] != "" && $_REQUEST['df2'] != undefined) {
-        if (isset($_REQUEST['df2']) && $_REQUEST['df2'] != "" && $_REQUEST['df2'] != NULL && $_REQUEST['df2'] != undefined) {
-            $date_filter_query_2 = urldecode($_REQUEST['df2']);
-            $date_filter_query_2_ex = explode(" to ", $date_filter_query_2);
+    }
+    if (isset($_REQUEST['df2']) && $_REQUEST['df2'] != "" && $_REQUEST['df2'] != NULL && $_REQUEST['df2'] != undefined) {
+        $date_filter_query_2 = urldecode($_REQUEST['df2']);
+        $date_filter_query_2_ex = explode(" to ", $date_filter_query_2);
+        if (count($date_filter_query_2_ex) >= 2) {
             $ctable_where .= " (DATE(response_date) >= '" . date("Y-m-d", strtotime($date_filter_query_2_ex[0])) . "' AND DATE(response_date) <= '" . date("Y-m-d", strtotime($date_filter_query_2_ex[1])) . "') AND ";
             $isFillter = true;
         }
-    } else {
-        $today = date('Y-m-d');
-        $hasAll = in_array('all', $__fu_type_parts, true);
-        $hasToday = in_array('today', $__fu_type_parts, true);
-        $hasFuture = in_array('future', $__fu_type_parts, true);
-        $hasPending = in_array('pending', $__fu_type_parts, true);
-        $hasResponsed = in_array('responsed', $__fu_type_parts, true);
+    }
 
-        if ($hasResponsed) {
-            $ctable_where .= " IFNULL(TRIM(response),'') != '' AND ";
-            $isFillter = true;
-        } else if ($hasAll) {
-            $isFillter = true;
-        } else if ($hasFuture && $hasPending) {
-            /* Pending only: no BRM response (overdue + today + future) */
-            $ctable_where .= " IFNULL(TRIM(response),'') = '' AND ";
-            $isFillter = true;
-        } else if ($hasToday && $hasPending) {
-            $ctable_where .= $reorderDueExpr . " <= '" . $today . "' AND IFNULL(TRIM(response),'') = '' AND ";
-            $isFillter = true;
-        } else if ($hasToday && $hasFuture) {
-            $ctable_where .= $reorderDueExpr . " >= '" . $today . "' AND IFNULL(TRIM(response),'') = '' AND ";
-            $isFillter = true;
-        } else if ($hasToday) {
+    $today = date('Y-m-d');
+    $hasAll = in_array('all', $__fu_type_parts, true);
+    $hasToday = in_array('today', $__fu_type_parts, true);
+    $hasFuture = in_array('future', $__fu_type_parts, true);
+    $hasPending = in_array('pending', $__fu_type_parts, true);
+    $hasResponsed = in_array('responsed', $__fu_type_parts, true);
+
+    if ($hasResponsed) {
+        $ctable_where .= " IFNULL(TRIM(response),'') != '' AND ";
+        $isFillter = true;
+    } else if ($hasAll) {
+        $isFillter = true;
+    } else {
+        /* Default / pending / today / future: never show already-responded rows */
+        $ctable_where .= " IFNULL(TRIM(response),'') = '' AND ";
+        $isFillter = true;
+    }
+
+    /* Due-date type filters (independent of response filter above) */
+    if (!$hasResponsed && !$hasAll) {
+        if ($hasToday && $hasFuture && !$hasPending) {
+            $ctable_where .= $reorderDueExpr . " >= '" . $today . "' AND ";
+        } else if ($hasToday && $hasPending && !$hasFuture) {
+            $ctable_where .= $reorderDueExpr . " <= '" . $today . "' AND ";
+        } else if ($hasToday && !$hasPending && !$hasFuture) {
             $ctable_where .= $reorderDueExpr . " = '" . $today . "' AND ";
-            $isFillter = true;
-        } else if ($hasFuture) {
-            $ctable_where .= $reorderDueExpr . " > '" . $today . "' AND IFNULL(TRIM(response),'') = '' AND ";
-            $isFillter = true;
-        } else if ($hasPending) {
-            $ctable_where .= $reorderDueExpr . " < '" . $today . "' AND IFNULL(TRIM(response),'') = '' AND ";
-            $isFillter = true;
-        } else {
-            /* Re-Order report safety default: hide already-responded */
-            $ctable_where .= " IFNULL(TRIM(response),'') = '' AND ";
-            $isFillter = true;
+        } else if ($hasFuture && !$hasPending && !$hasToday) {
+            $ctable_where .= $reorderDueExpr . " > '" . $today . "' AND ";
+        } else if ($hasPending && !$hasToday && !$hasFuture) {
+            $ctable_where .= $reorderDueExpr . " < '" . $today . "' AND ";
+        } else if ($hasFuture && $hasPending && !$hasToday) {
+            /* overdue + future (any due except none) — response already forced empty */
+        } else if ($hasToday && $hasFuture && $hasPending) {
+            /* all dues, no response */
         }
     }
 }

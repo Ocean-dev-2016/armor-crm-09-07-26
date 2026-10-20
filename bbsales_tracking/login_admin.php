@@ -77,7 +77,7 @@ if((isset($_SESSION[SITE_SESS.'_ADMIN_SESS_ID']) && $_SESSION[SITE_SESS.'_ADMIN_
 </div>
 <!-- END SIDEBAR TOGGLER BUTTON -->
 <!-- BEGIN LOGO -->
-<div class="logo"> <a href="<?php echo SITEURL."bbsales_tracking/admin_login.php"; ?>"> <img src="../images/cmk_logo.png" style="height:120px;" alt=""/> </a> </div>
+<div class="logo"> <a href="<?php echo SITEURL."bbsales_tracking/index.php"; ?>"> <img src="<?php echo CRM_LOGIN_LOGO_URL; ?>?v=<?php echo @filemtime(CRM_LOGIN_LOGO_PATH); ?>" alt="<?php echo SITETITLE; ?>" style="max-height:140px;max-width:100%;height:auto;"/> </a> </div>
 <!-- END LOGO -->
 <!-- BEGIN LOGIN -->
 <div class="content">

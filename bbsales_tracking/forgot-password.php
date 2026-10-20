@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 error_reporting(0);
 date_default_timezone_set('Asia/Kolkata');
@@ -67,7 +67,7 @@ if(isset($_REQUEST['submit']) && $_REQUEST['f']==$_SESSION['forgot_pass_string']
 <!--<link rel="shortcut icon" href="favicon.ico"/>-->
 </head>
 <body class="page-md login">
-<div class="logo"> <a href="<?php echo SITEURL; ?>"> <img src="assets/admin/layout/img/logo-keshav.png" alt=""/> </a> </div>
+<div class="logo"> <a href="<?php echo SITEURL; ?>"> <img src="<?php echo CRM_LOGIN_LOGO_URL; ?>" alt=""/> </a> </div>
 <div class="menu-toggler sidebar-toggler"> </div>
 <div class="content">
 	<!-- BEGIN LOGIN FORM -->

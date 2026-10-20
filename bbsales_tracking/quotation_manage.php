@@ -110,7 +110,7 @@ $uid=$_SESSION[SITE_SESS.'_ADMIN_SESS_ID'];
 																		</li> -->
 																	</ul>
 																</div>
-																<a style="background-color: #20761fc7;" onclick="showStatics()" title="Show Statistics" type="button" class="btn btn-sm">
+																<a onclick="showStatics()" title="Show Statistics" type="button" class="btn btn-sm blue">
 																		<i class="fa fa-eye"></i>
 																	</a>
                              	</div>

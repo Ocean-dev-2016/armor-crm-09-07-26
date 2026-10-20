@@ -1,0 +1,647 @@
+/**
+ * Armor Fire CRM — brand theme (logo colors)
+ * Red #e31c23 / Black #1a1a1a / White
+ * Font: original Metronic Open Sans (not overridden)
+ */
+:root {
+	--armor-red: #e31c23;
+	--armor-red-dark: #c4161c;
+	--armor-red-hover: #a81218;
+	--armor-red-soft: #fde8e9;
+	--armor-black: #1a1a1a;
+	--armor-menu: #e31c23;
+	--armor-menu-hover: #a81218;
+	--armor-muted: #6b7280;
+	--armor-border: #e5e7eb;
+}
+
+body {
+	color: var(--armor-black);
+	font-family: "Open Sans", sans-serif;
+}
+
+/* ========== Fixed top wrapper (top.php sits inside page-header-top) ========== */
+.page-header {
+	/* no !important — include_js armorFitHeaderPad sets inline height when menu wraps */
+	padding-bottom: 52px;
+}
+.page-header .page-header-top.navbar-fixed-top,
+.page-header .page-header-top {
+	background: var(--armor-menu) !important;
+	background-color: var(--armor-menu) !important;
+	border: 0 !important;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+	min-height: 52px;
+	height: auto !important;
+}
+
+/* ========== Header menu bar — logo red ========== */
+.page-header .page-header-menu,
+.page-header .page-header-menu.fixed {
+	background: var(--armor-menu) !important;
+	background-color: var(--armor-menu) !important;
+	min-height: 52px !important;
+	padding: 0 !important;
+	margin: 0 !important;
+	box-shadow: none;
+}
+.page-header .page-header-menu > .container {
+	/* keep Metronic float layout — do NOT use flex (breaks top-menu) */
+	position: relative;
+	min-height: 52px;
+	padding-top: 0;
+	padding-bottom: 0;
+	padding-right: 220px; /* room for absolutely-positioned chat/bell/user */
+}
+.page-header .page-header-menu .hor-menu {
+	float: left;
+	margin: 0;
+	max-width: 100%;
+}
+.page-header .page-header-menu .hor-menu .navbar-nav {
+	margin: 0;
+}
+.page-header .page-header-menu .hor-menu .navbar-nav > li {
+	float: left;
+}
+.page-header .page-header-menu .hor-menu .navbar-nav > li > a {
+	color: #ffffff !important;
+	font-family: "Open Sans", sans-serif !important;
+	font-size: 12px !important;
+	font-weight: 600 !important;
+	line-height: 20px !important;
+	padding: 16px 9px !important;
+	display: block;
+	white-space: nowrap;
+}
+.page-header .page-header-menu .hor-menu .navbar-nav > li > a > i {
+	color: #ffffff !important;
+}
+.page-header .page-header-menu .hor-menu .navbar-nav > li.open > a,
+.page-header .page-header-menu .hor-menu .navbar-nav > li > a:hover,
+.page-header .page-header-menu .hor-menu .navbar-nav > li:hover > a {
+	color: #ffffff !important;
+	background: var(--armor-menu-hover) !important;
+}
+.page-header .page-header-menu .hor-menu .navbar-nav > li.open > a > i,
+.page-header .page-header-menu .hor-menu .navbar-nav > li > a:hover > i {
+	color: #ffffff !important;
+}
+.page-header .page-header-menu .hor-menu .navbar-nav > li.active > a,
+.page-header .page-header-menu .hor-menu .navbar-nav > li.active > a:hover,
+.page-header .page-header-menu .hor-menu .navbar-nav > li.current > a,
+.page-header .page-header-menu .hor-menu .navbar-nav > li.current > a:hover {
+	color: #ffffff !important;
+	background: var(--armor-red-hover) !important;
+}
+.page-header .page-header-menu .hor-menu .navbar-nav > li.active > a > i,
+.page-header .page-header-menu .hor-menu .navbar-nav > li.current > a > i {
+	color: #ffffff !important;
+}
+.page-header .page-header-menu .hor-menu .navbar-nav > li .dropdown-menu {
+	background: #ffffff !important;
+	border: 0 !important;
+	border-top: 3px solid var(--armor-red) !important;
+	box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12) !important;
+}
+.page-header .page-header-menu .hor-menu .navbar-nav > li .dropdown-menu li > a {
+	color: #333333 !important;
+	font-family: "Open Sans", sans-serif !important;
+	background: transparent !important;
+}
+.page-header .page-header-menu .hor-menu .navbar-nav > li .dropdown-menu li:hover > a,
+.page-header .page-header-menu .hor-menu .navbar-nav > li .dropdown-menu li.active > a,
+.page-header .page-header-menu .hor-menu .navbar-nav > li .dropdown-menu li.current > a,
+.page-header .page-header-menu .hor-menu .navbar-nav > li .dropdown-menu li.open > a {
+	background: var(--armor-red) !important;
+	color: #ffffff !important;
+}
+.page-header .page-header-menu .hor-menu .navbar-nav > li .dropdown-menu li:hover > a > i,
+.page-header .page-header-menu .hor-menu .navbar-nav > li .dropdown-menu li.active > a > i {
+	color: #ffffff !important;
+}
+
+/* Top-right icons — pin to first header row (never wrap under menu) */
+.page-header .page-header-menu .top-menu {
+	position: absolute !important;
+	top: 0;
+	right: 15px;
+	float: none !important;
+	margin: 0;
+	padding: 0;
+	z-index: 20;
+}
+.page-header .page-header-menu .top-menu .navbar-nav > li.dropdown {
+	height: 52px;
+}
+.page-header .page-header-menu .top-menu .navbar-nav > li.dropdown > .dropdown-toggle {
+	padding: 10px 8px !important;
+	position: relative;
+}
+.page-header .page-header-menu .top-menu .navbar-nav > li.dropdown > .dropdown-toggle > i,
+.page-header .page-header-menu .top-menu .navbar-nav > li.dropdown > .dropdown-toggle .username {
+	color: #ffffff !important;
+}
+
+/* Chat + Bell: white pill so icons pop on red header */
+.page-header .page-header-menu .top-menu #header_chat_bar > .dropdown-toggle,
+.page-header .page-header-menu .top-menu #header_notification_bar > .dropdown-toggle {
+	display: inline-block !important;
+	min-width: 36px;
+	height: 34px;
+	line-height: 34px;
+	text-align: center;
+	margin: 8px 4px 0 !important;
+	padding: 0 10px !important;
+	background: rgba(255, 255, 255, 0.95) !important;
+	border-radius: 18px !important;
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+}
+.page-header .page-header-menu .top-menu #header_chat_bar > .dropdown-toggle > i,
+.page-header .page-header-menu .top-menu #header_notification_bar > .dropdown-toggle > i {
+	color: #e31c23 !important;
+	font-size: 18px !important;
+	line-height: 34px !important;
+	vertical-align: middle;
+}
+.page-header .page-header-menu .top-menu #header_chat_bar > .dropdown-toggle:hover,
+.page-header .page-header-menu .top-menu #header_notification_bar > .dropdown-toggle:hover {
+	background: #ffffff !important;
+}
+.page-header .page-header-menu .top-menu #header_chat_bar > .dropdown-toggle .badge,
+.page-header .page-header-menu .top-menu #header_notification_bar > .dropdown-toggle .badge,
+.page-header .page-header-menu .top-menu #header_chat_bar > .dropdown-toggle .badge.badge-default,
+.page-header .page-header-menu .top-menu #header_notification_bar > .dropdown-toggle .badge.badge-default {
+	background: #1a1a1a !important;
+	color: #ffffff !important;
+	border: 2px solid #ffffff !important;
+	font-size: 11px !important;
+	font-weight: 700 !important;
+	min-width: 18px;
+	height: 18px;
+	line-height: 14px !important;
+	padding: 0 5px !important;
+	top: -4px !important;
+	right: -6px !important;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+.page-header .page-header-menu .menu-toggler {
+	float: right;
+	margin: 14px 0 0 10px;
+	background-image: none;
+	border: 1px solid rgba(255, 255, 255, 0.55);
+}
+
+/* ========== Header logo — white plate, vertically centered ========== */
+.page-header .page-header-menu .page-logo {
+	float: left !important;
+	display: block !important;
+	width: auto !important;
+	height: 40px !important;
+	min-width: 0;
+	max-width: 150px;
+	margin: 6px 18px 6px 0 !important;
+	padding: 2px 10px !important;
+	background: #ffffff !important;
+	border-radius: 6px;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+	line-height: 36px;
+	overflow: hidden;
+}
+.page-header .page-header-menu .page-logo > a {
+	display: inline-block;
+	height: 36px;
+	line-height: 36px;
+	vertical-align: middle;
+}
+.page-header .page-header-menu .page-logo .logo-default,
+.page-header .page-header-menu .page-logo img {
+	display: inline-block !important;
+	height: 34px !important;
+	width: auto !important;
+	max-width: 130px !important;
+	max-height: 34px !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	vertical-align: middle !important;
+	object-fit: contain !important;
+}
+
+/* ========== Buttons — logo red (all common Metronic action colors) ========== */
+.btn.blue,
+.btn.blue:hover,
+.btn.blue:focus,
+.btn.blue:active,
+.btn.blue.active,
+.btn.blue:not(.btn-outline),
+.open > .dropdown-toggle.btn.blue,
+.btn.blue-ebonyclay,
+.btn.blue-ebonyclay:hover,
+.btn.blue-ebonyclay:focus,
+.btn.blue-dark,
+.btn.blue-steel,
+.btn.blue-madison,
+.btn.blue-soft,
+.btn.blue-chambray,
+.btn.blue-hoki,
+.btn.blue-sharp,
+.btn.dark,
+.btn.dark:hover,
+.btn-primary,
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active,
+.btn-primary.active,
+.open > .dropdown-toggle.btn-primary,
+.btn.red,
+.btn.red:hover,
+.btn.red-sunglo,
+.btn.red-intense,
+.btn-danger,
+.btn-danger:hover,
+.btn.btn-success.uppercase,
+.btn.green-haze,
+.btn.green-jungle,
+.btn.green-seagreen,
+.btn.yellow,
+.btn.yellow-crusta,
+.btn.yellow-casablanca,
+.btn.purple,
+.btn.purple-studio,
+.btn.purple-plum,
+.yellow-crusta.btn,
+.btn.default.yellow-crusta,
+.btn.btn-info,
+.btn-info,
+.btn-warning,
+.btn.btn-warning {
+	background-color: var(--armor-red) !important;
+	background-image: none !important;
+	border-color: var(--armor-red-dark) !important;
+	color: #fff !important;
+}
+a.btn.blue-ebonyclay,
+a.btn.sbold.blue-ebonyclay,
+a.btn.blue-ebonyclay:hover,
+a.btn.blue-ebonyclay:focus {
+	background-color: var(--armor-red) !important;
+	border-color: var(--armor-red-dark) !important;
+	color: #fff !important;
+}
+.btn.blue:hover,
+.btn-primary:hover,
+.btn.red:hover,
+.btn-danger:hover,
+.btn-info:hover,
+.btn-warning:hover {
+	background-color: var(--armor-red-dark) !important;
+	border-color: #a81218 !important;
+}
+
+/* Search / Refresh / form-action buttons */
+.btn.btn-sm.red,
+.btn.btn-sm.blue,
+.btn.btn-sm.green,
+.btn.btn-sm.yellow,
+.btn.btn-sm.purple,
+.input-group-btn .btn.blue,
+.input-group-btn .btn.red,
+.form-actions .btn.blue,
+.form-actions .btn.red,
+.form-actions .btn.green,
+.form-actions .btn-primary,
+.btn-success,
+.btn.btn-success,
+.btn.green-haze,
+.btn.green,
+.fileinput-button,
+.btn.fileinput-button {
+	background-color: var(--armor-red) !important;
+	border-color: var(--armor-red-dark) !important;
+	color: #fff !important;
+}
+.btn-success:hover,
+.btn.green-haze:hover,
+.btn.green:hover {
+	background-color: var(--armor-red-dark) !important;
+}
+
+/* ========== Portlets / form section headers — all Metronic color variants → logo red ========== */
+.portlet.box {
+	border-color: var(--armor-red) !important;
+}
+.portlet > .portlet-title,
+.portlet.box > .portlet-title,
+.portlet.box.blue > .portlet-title,
+.portlet.box.blue-madison > .portlet-title,
+.portlet.box.blue-steel > .portlet-title,
+.portlet.box.blue-hoki > .portlet-title,
+.portlet.box.blue-soft > .portlet-title,
+.portlet.box.blue-dark > .portlet-title,
+.portlet.box.blue-sharp > .portlet-title,
+.portlet.box.blue-chambray > .portlet-title,
+.portlet.box.blue-ebonyclay > .portlet-title,
+.portlet.box.grey > .portlet-title,
+.portlet.box.grey-cascade > .portlet-title,
+.portlet.box.grey-steel > .portlet-title,
+.portlet.box.grey-cararra > .portlet-title,
+.portlet.box.grey-gallery > .portlet-title,
+.portlet.box.green > .portlet-title,
+.portlet.box.green-haze > .portlet-title,
+.portlet.box.green-jungle > .portlet-title,
+.portlet.box.green-seagreen > .portlet-title,
+.portlet.box.green-meadow > .portlet-title,
+.portlet.box.yellow > .portlet-title,
+.portlet.box.yellow-crusta > .portlet-title,
+.portlet.box.yellow-casablanca > .portlet-title,
+.portlet.box.yellow-gold > .portlet-title,
+.portlet.box.purple > .portlet-title,
+.portlet.box.purple-studio > .portlet-title,
+.portlet.box.purple-plum > .portlet-title,
+.portlet.box.red > .portlet-title,
+.portlet.box.red-sunglo > .portlet-title,
+.portlet.box.red-intense > .portlet-title {
+	background-color: var(--armor-red) !important;
+	background-image: none !important;
+	border-color: var(--armor-red-dark) !important;
+}
+/* light portlets keep default title (do not force red — dark text on red) */
+.portlet.light > .portlet-title {
+	background-color: transparent !important;
+	background-image: none !important;
+	border-color: transparent !important;
+}
+.portlet.light > .portlet-title > .caption,
+.portlet.light > .portlet-title > .caption > i,
+.portlet.light > .portlet-title > .caption > .caption-subject {
+	color: var(--armor-black) !important;
+}
+.portlet > .portlet-title > .caption,
+.portlet > .portlet-title > .caption > i,
+.portlet > .portlet-title > .caption > .caption-subject,
+.portlet.box > .portlet-title > .caption,
+.portlet.box > .portlet-title > .caption > i,
+.portlet.box > .portlet-title > .caption > .caption-subject,
+.portlet.box.grey-cascade > .portlet-title > .caption,
+.portlet.box.grey-cascade > .portlet-title > .caption > i,
+.portlet.box.grey-cascade > .portlet-title > .caption > .caption-subject {
+	color: #ffffff !important;
+}
+.portlet > .portlet-title > .tools > a,
+.portlet > .portlet-title > .actions .btn,
+.portlet.box > .portlet-title .tools > a {
+	color: #ffffff !important;
+}
+
+/* Page / filter bars often use bg-grey or solid blue */
+.page-head,
+.page-head.bg-grey,
+.bg-grey,
+.bg-blue,
+.bg-primary,
+.bg-green,
+.bg-yellow,
+.bg-purple,
+.bg-red,
+.caption.bg-grey,
+.solid.bg-grey,
+.solid.bg-blue {
+	background-color: var(--armor-red) !important;
+	border-color: var(--armor-red) !important;
+	color: #fff !important;
+}
+.page-head .page-title,
+.page-head .page-title > h1,
+.page-head .page-title > h1 > small,
+.page-head .page-title > h2,
+.page-head h1,
+.page-head h2,
+.page-head h1 small,
+.page-head .page-title h1 a,
+.page-head .page-title h1 a.primary,
+.page-head .page-title h1 a:hover,
+.page-head .page-title h1 a:focus,
+.page-head a,
+.page-head a:hover,
+.page-head a:focus,
+.page-head span,
+.page-head i,
+.page-head .fa {
+	color: #ffffff !important;
+}
+
+/* View Quotation / report toolbars — white pills on red bar (readable) */
+.page-head .page-toolbar {
+	margin-top: 0 !important;
+	padding-top: 2px;
+}
+.page-head .btn-theme-panel {
+	margin-top: 0 !important;
+	margin-left: 6px;
+	display: inline-block;
+	vertical-align: middle;
+}
+.page-head .page-toolbar .btn,
+.page-head .btn-theme-panel .btn,
+.page-head .page-toolbar a.btn,
+.page-head .btn-theme-panel a.btn {
+	opacity: 1 !important;
+	filter: none !important;
+	background: #ffffff !important;
+	background-image: none !important;
+	border: 1px solid #ffffff !important;
+	color: var(--armor-red) !important;
+	font-weight: 700 !important;
+	font-size: 12px !important;
+	text-transform: uppercase;
+	padding: 6px 12px !important;
+	line-height: 18px !important;
+	border-radius: 3px !important;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+.page-head .page-toolbar .btn:hover,
+.page-head .btn-theme-panel .btn:hover,
+.page-head .page-toolbar a.btn:hover,
+.page-head .btn-theme-panel a.btn:hover {
+	background: var(--armor-red-soft) !important;
+	color: var(--armor-red-dark) !important;
+	border-color: #ffffff !important;
+}
+.font-blue,
+.font-primary,
+.text-primary,
+.theme-font {
+	color: var(--armor-red) !important;
+}
+/* Portlet / page-head titles only — white text on red bar */
+.portlet-title .font-dark,
+.portlet-title .font-blue,
+.portlet-title .caption-subject,
+.portlet-title .caption-subject.font-dark,
+.portlet-title .caption-subject.font-blue,
+.page-head .font-dark {
+	color: #ffffff !important;
+}
+
+.badge-primary,
+.badge.badge-primary,
+.label-primary,
+.label.label-primary,
+.badge-info,
+.label-info {
+	background-color: var(--armor-red) !important;
+}
+
+a {
+	color: var(--armor-red-dark);
+}
+a:hover, a:focus {
+	color: var(--armor-red);
+}
+
+.page-header .page-header-top .top-menu .navbar-nav > li.dropdown > .dropdown-toggle .badge.badge-default {
+	background-color: #1a1a1a !important;
+	color: #fff !important;
+}
+
+.pace .pace-progress {
+	background: var(--armor-red) !important;
+}
+
+.pagination > .active > a,
+.pagination > .active > span,
+.pagination > .active > a:hover,
+.dataTables_paginate .pagination > .active > a {
+	background-color: var(--armor-red) !important;
+	border-color: var(--armor-red) !important;
+}
+
+.form-control:focus,
+.select2-container-active .select2-choice,
+.select2-drop-active {
+	border-color: var(--armor-red) !important;
+	box-shadow: 0 0 0 1px rgba(227, 28, 35, 0.25) !important;
+}
+
+.nav-tabs > li.active > a,
+.nav-tabs > li.active > a:hover,
+.nav-tabs > li.active > a:focus,
+.nav-pills > li.active > a {
+	background-color: var(--armor-red) !important;
+	border-color: var(--armor-red) !important;
+	color: #fff !important;
+}
+
+.select2-results .select2-highlighted {
+	background: var(--armor-red) !important;
+}
+
+.progress-bar-info,
+.progress-bar-primary {
+	background-color: var(--armor-red) !important;
+}
+
+.note.note-info,
+.alert-info,
+.alert.alert-info {
+	border-color: var(--armor-red) !important;
+	border-left: 4px solid var(--armor-red) !important;
+	background: var(--armor-red-soft) !important;
+	color: var(--armor-black) !important;
+}
+.alert-info b,
+.alert.alert-info b,
+.note.note-info b {
+	color: var(--armor-red-dark) !important;
+}
+.alert-info code,
+.alert.alert-info code {
+	background: #ffffff !important;
+	color: var(--armor-red-dark) !important;
+	padding: 1px 6px;
+	border-radius: 3px;
+}
+
+/* Dashboard stat tiles — logo red family */
+.dashboard-stat.red,
+.dashboard-stat.red-intense,
+.dashboard-stat.red-sunglo,
+.dashboard-stat.blue,
+.dashboard-stat.blue-madison,
+.dashboard-stat.blue-steel,
+.dashboard-stat.green,
+.dashboard-stat.green-haze,
+.dashboard-stat.purple,
+.dashboard-stat.yellow {
+	background-color: var(--armor-red) !important;
+}
+.dashboard-stat.grey,
+.dashboard-stat.grey-cascade,
+.dashboard-stat.grey-gallery {
+	background-color: #6b7280 !important;
+}
+.dashboard-stat .details .number,
+.dashboard-stat .details .desc,
+.dashboard-stat .visual > i {
+	color: #ffffff !important;
+}
+
+a.btn.blue,
+button.btn.blue {
+	background-color: var(--armor-red) !important;
+	border-color: var(--armor-red-dark) !important;
+	color: #fff !important;
+}
+
+.admin-notif-dropdown .external {
+	background: var(--armor-red) !important;
+}
+.admin-notif-dropdown .notif-meta-item i,
+.admin-notif-dropdown .notif-followup-time i {
+	color: var(--armor-red) !important;
+}
+
+.today-followup-panel .tf-header,
+.today-followup-panel .panel-heading,
+.mis-panel-header,
+.followup-header {
+	background: var(--armor-red) !important;
+	border-color: var(--armor-red-dark) !important;
+}
+
+/* ========== Footer — logo red (match header) ========== */
+.page-footer {
+	background: var(--armor-red) !important;
+	background-color: var(--armor-red) !important;
+	color: #ffffff !important;
+	border-top: 0 !important;
+}
+.page-footer a,
+.page-footer a.font-yellow,
+.page-footer .font-yellow {
+	color: #ffffff !important;
+	text-decoration: underline;
+	font-weight: 600;
+}
+.page-footer a:hover,
+.page-footer a.font-yellow:hover {
+	color: #ffe5e6 !important;
+}
+.page-footer span,
+.page-footer b {
+	color: #ffffff !important;
+}
+.scroll-to-top {
+	background: var(--armor-red-dark) !important;
+	border-radius: 50%;
+	width: 36px;
+	height: 36px;
+	line-height: 36px;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+.scroll-to-top > i {
+	color: #ffffff !important;
+	opacity: 1 !important;
+	font-size: 18px !important;
+	line-height: 32px;
+}

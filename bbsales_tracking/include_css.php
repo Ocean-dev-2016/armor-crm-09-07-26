@@ -13,8 +13,9 @@
 <link href="assets/admin/layout/css/layout.css" rel="stylesheet" type="text/css">
 <link href="assets/admin/layout/css/themes/default.css" rel="stylesheet" type="text/css" id="style_color">
 <link href="assets/admin/layout/css/custom.css" rel="stylesheet" type="text/css">
+<link href="assets/admin/layout/css/armor-theme.css" rel="stylesheet" type="text/css">
 <link rel="stylesheet" type="text/css" href="css/toastr.css"/>
-<link rel="shortcut icon" href="favicon.ico">
+<link rel="shortcut icon" href="<?php echo CRM_LOGO_URL; ?>?v=<?php echo @filemtime(CRM_LOGO_PATH); ?>">
 <link rel="stylesheet" type="text/css" href="assets/global/plugins/select2/select2.css"/>
 <link rel="stylesheet" href="<?=ADMINSITEURL?>css/lightbox.css" />
 <script type="text/javascript" src="https://www.gstatic.com/firebasejs/4.9.1/firebase.js"></script>
@@ -52,7 +53,7 @@ div.xdsoft_datetimepicker{
 	color: #333 !important;
 }
 .admin-notif-dropdown .external {
-	background: #3598dc !important;
+	background: #e31c23 !important;
 	padding: 12px 15px;
 }
 .admin-notif-dropdown .external h3 {
@@ -125,7 +126,7 @@ div.xdsoft_datetimepicker{
 	color: #222 !important;
 }
 .admin-notif-dropdown .notif-meta-item i {
-	color: #3598dc !important;
+	color: #e31c23 !important;
 	width: 14px;
 }
 .admin-notif-dropdown .notif-followup-time {
@@ -134,7 +135,7 @@ div.xdsoft_datetimepicker{
 	margin-bottom: 4px;
 }
 .admin-notif-dropdown .notif-followup-time i {
-	color: #3598dc !important;
+	color: #e31c23 !important;
 }
 .admin-notif-dropdown .notif-empty {
 	padding: 30px 15px;

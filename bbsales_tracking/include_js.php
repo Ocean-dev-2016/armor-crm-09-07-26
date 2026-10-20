@@ -127,6 +127,19 @@ $("ul.dropdown-menu").each(function(){
 	Demo.init();
 	$('select:not(.noSelect2)').select2({
 	});
+	/* Keep page content below fixed header when menu wraps */
+	(function armorFitHeaderPad() {
+		function fit() {
+			var top = document.querySelector('.page-header-top');
+			var ph = document.querySelector('.page-header');
+			if (!top || !ph) return;
+			var h = Math.max(52, top.offsetHeight || 52);
+			ph.style.setProperty('padding-bottom', h + 'px', 'important');
+		}
+		fit();
+		window.addEventListener('resize', fit);
+		setTimeout(fit, 0);
+	})();
 });
 
 /*$(document).ready(function(){

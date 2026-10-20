@@ -5,7 +5,7 @@ require_once __DIR__ . '/armor_mbstring_bootstrap.php';
 $armorAppConfig = armor_get_app_config();
 // Local development base URL (match Apache port from XAMPP).
 define("SITEURL", $armorAppConfig['site_url']);
-define("SITENAME","Amor Fire");
+define("SITENAME","Armor Fire");
 define("SITETITLE","Armor Fire");
 
 define("ADMINTITLE","Armor Fire");
@@ -13,12 +13,12 @@ define("ADMINFOLDER","bbsales_tracking");
 define("ADMINSITEURL",SITEURL.ADMINFOLDER."/");
 define("ADMINSITEURL_STATIC", $armorAppConfig['site_url']);
 define("SITE_SESS","MAHADEV_2025");
-/* Dashboard / header logo */
-define("CRM_LOGO_FILE", "crm_logo.png");
+/* Dashboard / header logo — Armor Fire brand */
+define("CRM_LOGO_FILE", "armor-fire-logo.png");
 define("CRM_LOGO_URL", SITEURL . "images/" . CRM_LOGO_FILE);
 define("CRM_LOGO_PATH", dirname(__DIR__) . "/images/" . CRM_LOGO_FILE);
-/* Login page logo (separate from dashboard) */
-define("CRM_LOGIN_LOGO_FILE", "crm_logo2.png");
+/* Login page logo (same Armor brand mark as ERP Command Hub) */
+define("CRM_LOGIN_LOGO_FILE", "armor-fire-logo.png");
 define("CRM_LOGIN_LOGO_URL", SITEURL . "images/" . CRM_LOGIN_LOGO_FILE);
 define("CRM_LOGIN_LOGO_PATH", dirname(__DIR__) . "/images/" . CRM_LOGIN_LOGO_FILE);
 // define('EXPIRE_DATE',"01-09-2025");
