@@ -442,6 +442,7 @@ var executive="<?php echo $_REQUEST['customer_id']; ?>";
 var sales_executive="<?php echo $_REQUEST['sales_id'] ?>";
 var followup_type = "";
 var ror_view = "reorder";
+var from_brm_reorder = <?php echo !empty($__reorder_followup_report) ? '1' : '0'; ?>;
 var isFillter=<?php echo !empty($__reorder_followup_report) ? 'true' : 'false'; ?>;
 var todate="<?= date('d-m-Y',strtotime($_REQUEST['todate'])); ?>";
 var fromdate="<?=date('d-m-Y',strtotime($_REQUEST['fromdate'])); ?>";
@@ -1005,7 +1006,8 @@ $('#FollowupResponse').on('show.bs.modal', function (event) {
 							quotation_id:quotation_id,
 							executive_id:executive_id,
 							followup_flag:followup_flag,
-							sales_id:sales_id
+							sales_id:sales_id,
+							from_brm_reorder: (typeof from_brm_reorder !== "undefined" ? from_brm_reorder : 0)
 						},
 						success:function(result){
 							var result=$.parseJSON(result);

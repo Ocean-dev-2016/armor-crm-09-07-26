@@ -1578,11 +1578,26 @@ if (db_sync_table_exists($conn, 'followup')) {
 		"int(11) NOT NULL DEFAULT 0 COMMENT 'Admin id who sent to BRM'",
 		array('send_to_brm_date')
 	);
-	/* Keep existing Admin Re-Order rows visible in BRM report */
+	db_sync_add_column_if_missing(
+		$conn,
+		'followup',
+		'brm_reminder_admin_id',
+		"int(11) NOT NULL DEFAULT 0 COMMENT 'BRM admin login id for private next-followup reminder'",
+		array('send_to_brm_by')
+	);
+	db_sync_add_column_if_missing(
+		$conn,
+		'followup',
+		'brm_reminder_sent',
+		"tinyint(1) NOT NULL DEFAULT 0 COMMENT '1=BRM reminder already shown'",
+		array('brm_reminder_admin_id')
+	);
+	/* Keep existing Admin Re-Order rows visible in BRM report (exclude BRM private next-followups) */
 	db_sync_run_query(
 		$conn,
 		"UPDATE followup SET send_to_brm=1
 			WHERE isDelete=0 AND entry_type='1' AND IFNULL(send_to_brm,0)=0
+			AND IFNULL(brm_reminder_admin_id,0)=0
 			AND REPLACE(REPLACE(LOWER(IFNULL(description,'')), '-', ''), ' ', '') LIKE '%reorder%'",
 		'Backfill send_to_brm=1 for existing Admin Re-Order followups'
 	);

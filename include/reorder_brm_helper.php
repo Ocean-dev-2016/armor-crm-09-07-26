@@ -45,6 +45,8 @@ if (!function_exists('reorder_brm_ensure_columns')) {
 			'send_to_brm' => "ALTER TABLE `followup` ADD COLUMN `send_to_brm` tinyint(1) NOT NULL DEFAULT 0 COMMENT '1=sent to BRM Re-Order Report'",
 			'send_to_brm_date' => "ALTER TABLE `followup` ADD COLUMN `send_to_brm_date` datetime DEFAULT NULL",
 			'send_to_brm_by' => "ALTER TABLE `followup` ADD COLUMN `send_to_brm_by` int(11) NOT NULL DEFAULT 0",
+			'brm_reminder_admin_id' => "ALTER TABLE `followup` ADD COLUMN `brm_reminder_admin_id` int(11) NOT NULL DEFAULT 0 COMMENT 'BRM admin login id for private next-followup reminder'",
+			'brm_reminder_sent' => "ALTER TABLE `followup` ADD COLUMN `brm_reminder_sent` tinyint(1) NOT NULL DEFAULT 0 COMMENT '1=BRM reminder already shown'",
 		);
 		foreach ($cols as $col => $alter) {
 			$res = @mysqli_query($conn, "SHOW COLUMNS FROM `followup` LIKE '" . mysqli_real_escape_string($conn, $col) . "'");
@@ -95,6 +97,7 @@ if (!function_exists('reorder_brm_auto_send_pending')) {
 			WHERE isDelete=0
 			AND entry_type='1'
 			AND IFNULL(send_to_brm,0)=0
+			AND IFNULL(brm_reminder_admin_id,0)=0
 			AND REPLACE(REPLACE(LOWER(IFNULL(description,'')), '-', ''), ' ', '') LIKE '%reorder%'";
 		@mysqli_query($conn, $sql);
 		return (int) mysqli_affected_rows($conn);
@@ -286,6 +289,105 @@ if (!function_exists('reorder_report_quotation_only_count')) {
 		}
 		$row = mysqli_fetch_assoc($res);
 		return (int) $row['c'];
+	}
+}
+
+if (!function_exists('reorder_brm_mark_private_reminder')) {
+	/**
+	 * Tag Next Followup created from Re-Order BRM Response for private BRM login reminder.
+	 */
+	function reorder_brm_mark_private_reminder($db, $followupId, $adminId)
+	{
+		reorder_brm_ensure_columns($db);
+		$followupId = (int) $followupId;
+		$adminId = (int) $adminId;
+		if ($followupId <= 0 || $adminId <= 0) {
+			return false;
+		}
+		return (bool) $db->rp_update("followup", array(
+			"brm_reminder_admin_id" => $adminId,
+			"brm_reminder_sent" => 0,
+			"send_to_brm" => 0,
+		), "id='" . $followupId . "' AND isDelete=0", 0);
+	}
+}
+
+if (!function_exists('reorder_brm_fire_due_reminders')) {
+	/**
+	 * Fire due BRM private next-followup reminders for one admin login.
+	 * Due = followup_date <= now, status pending, not yet reminded.
+	 *
+	 * @return array list of toast payloads
+	 */
+	function reorder_brm_fire_due_reminders($db, $adminId)
+	{
+		$toasts = array();
+		$adminId = (int) $adminId;
+		if ($adminId <= 0) {
+			return $toasts;
+		}
+		reorder_brm_ensure_columns($db);
+		$conn = reorder_brm_conn($db);
+		if (!$conn) {
+			return $toasts;
+		}
+		$now = date('Y-m-d H:i:s');
+		$sql = "SELECT id, visitor_id, reference_id, reference_table, description, through, followup_date, user_id
+			FROM followup
+			WHERE isDelete=0 AND IFNULL(status,0)=0
+			AND IFNULL(brm_reminder_admin_id,0)='" . $adminId . "'
+			AND IFNULL(brm_reminder_sent,0)=0
+			AND followup_date IS NOT NULL
+			AND followup_date!='0000-00-00 00:00:00'
+			AND followup_date<='" . mysqli_real_escape_string($conn, $now) . "'
+			ORDER BY followup_date ASC
+			LIMIT 20";
+		$res = @mysqli_query($conn, $sql);
+		if (!$res) {
+			return $toasts;
+		}
+		$throughMap = array("1" => "Call", "2" => "SMS", "3" => "Email", "4" => "Whatsapp", "5" => "Visit");
+		while ($row = mysqli_fetch_assoc($res)) {
+			$fid = (int) $row['id'];
+			$cust = "Customer";
+			if ($row['reference_table'] == "executive" || $row['reference_table'] == "sales_executive") {
+				$cid = ($row['reference_table'] == "executive") ? (int) $row['reference_id'] : (int) $row['visitor_id'];
+				$cust = $db->rp_getValue("executive", "company_name", "id='" . $cid . "'", 0);
+			} else if ($row['reference_table'] == "quotation_detail") {
+				$cust = $db->rp_getValue("quotation_detail", "company_name", "id='" . (int) $row['reference_id'] . "'", 0);
+			} else if (!empty($row['visitor_id'])) {
+				$cust = $db->rp_getValue("executive", "company_name", "id='" . (int) $row['visitor_id'] . "'", 0);
+			}
+			if ($cust == "") {
+				$cust = "Customer";
+			}
+			$thru = isset($throughMap[$row['through']]) ? $throughMap[$row['through']] : "Followup";
+			$ftime = date("d-m-Y h:i A", strtotime($row['followup_date']));
+			$title = "BRM Reminder — " . $cust;
+			$desc = "Followup due: " . $ftime . " via " . $thru;
+			if (trim((string) $row['description']) !== "") {
+				$desc .= " | " . strip_tags($row['description']);
+			}
+
+			/* Private notification for this BRM login only (not HR broadcast) */
+			require_once dirname(__FILE__) . '/push_notification.class.php';
+			$objPush = new PushNotification();
+			$objPush->commonNotification($adminId, $fid, "followup", $title, $desc, "admin", "brm_followup_reminder");
+
+			$db->rp_update("followup", array("brm_reminder_sent" => 1), "id='" . $fid . "'", 0);
+
+			$toasts[] = array(
+				'id' => $fid,
+				'title' => $title,
+				'sales_name' => 'BRM',
+				'customer_name' => $cust,
+				'followup_time' => $ftime,
+				'through_label' => $thru,
+				'description' => strip_tags((string) $row['description']),
+				'link' => 'reorder_followup_report.php',
+			);
+		}
+		return $toasts;
 	}
 }
 

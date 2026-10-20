@@ -67,6 +67,15 @@ class System extends Functions
 	{
 
 		$where = "isDelete=0  AND isActive=1";
+		$adminSessId = isset($_SESSION[SITE_SESS . '_ADMIN_SESS_ID']) ? (int) $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'] : 0;
+		$adminType = isset($_SESSION[SITE_SESS . '_ADMIN_TYPE']) ? (int) $_SESSION[SITE_SESS . '_ADMIN_TYPE'] : -1;
+		/* BRM private reminders: only that login; Super Admin sees all */
+		if ($adminType !== 0 && $adminSessId > 0) {
+			$where .= " AND (
+				(IFNULL(notification_type,'')='brm_followup_reminder' AND user_id='" . $adminSessId . "')
+				OR (IFNULL(notification_type,'')!='brm_followup_reminder' AND (IFNULL(user_id,0)=0 OR user_id='" . $adminSessId . "'))
+			)";
+		}
 		$limit = (int) $limit;
 		if ($limit <= 0) {
 			$limit = 50;
@@ -148,7 +157,18 @@ class System extends Functions
 	public function getNewFollowupToastNotifications($last_id = 0, $init_only = false)
 	{
 		$last_id = (int) $last_id;
-		$where = "isDelete=0 AND isActive=1 AND (notification_type='followup' OR referance_type='followup')";
+		$adminSessId = isset($_SESSION[SITE_SESS . '_ADMIN_SESS_ID']) ? (int) $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'] : 0;
+		$adminType = isset($_SESSION[SITE_SESS . '_ADMIN_TYPE']) ? (int) $_SESSION[SITE_SESS . '_ADMIN_TYPE'] : -1;
+		$where = "isDelete=0 AND isActive=1 AND (notification_type='followup' OR referance_type='followup' OR notification_type='brm_followup_reminder')";
+		/* Hide BRM private reminders from other logins */
+		if ($adminType !== 0 && $adminSessId > 0) {
+			$where .= " AND (
+				(IFNULL(notification_type,'')='brm_followup_reminder' AND user_id='" . $adminSessId . "')
+				OR (IFNULL(notification_type,'')!='brm_followup_reminder')
+			)";
+		} else if ($adminType !== 0) {
+			$where .= " AND IFNULL(notification_type,'')!='brm_followup_reminder'";
+		}
 		if ($last_id > 0) {
 			$where .= " AND id > '" . $last_id . "'";
 		}

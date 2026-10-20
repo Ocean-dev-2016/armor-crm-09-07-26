@@ -17,10 +17,12 @@ function buildAdminNotificationHtml($system, $notification, $timeZone)
 	$followup_meta = '';
 	$anchor_href = 'notification_manage.php?mode=all';
 
-	if ($notif_type == 'followup' || $ref_type == 'followup') {
-		$view_link = '<a href="followuplist_manage.php?followup_type=today" class="btn btn-xs btn-info" style="margin-right:4px;"><i class="fa fa-eye"></i> View</a>';
+	if ($notif_type == 'followup' || $notif_type == 'brm_followup_reminder' || $ref_type == 'followup') {
+		$isBrmRem = ($notif_type == 'brm_followup_reminder');
+		$view_href = $isBrmRem ? 'reorder_followup_report.php' : 'followuplist_manage.php?followup_type=today';
+		$view_link = '<a href="' . $view_href . '" class="btn btn-xs btn-info" style="margin-right:4px;"><i class="fa fa-eye"></i> View</a>';
 		$details = $system->resolveFollowupPartyNames($ref_id);
-		$anchor_href = 'followuplist_manage.php?followup_type=today';
+		$anchor_href = $view_href;
 		$followup_meta = '
 			<div class="notif-followup-meta">
 				<span class="notif-meta-item"><i class="fa fa-user"></i> <strong>Employee:</strong> ' . htmlspecialchars(stripslashes($details['sales_name'])) . '</span>
@@ -106,6 +108,17 @@ if(isset($_REQUEST['mode']) && $_REQUEST['mode']!="")
 				'toasts' => $toast_data['toasts'],
 				'max_id' => $toast_data['max_id'],
 				'count' => $toast_data['count']
+			));
+		}
+		else if ($service == "check_brm_followup_reminders")
+		{
+			require_once dirname(__DIR__) . '/include/reorder_brm_helper.php';
+			$adminId = isset($_SESSION[SITE_SESS . '_ADMIN_SESS_ID']) ? (int) $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'] : 0;
+			$toasts = reorder_brm_fire_due_reminders($db, $adminId);
+			echo json_encode(array(
+				'ack' => 1,
+				'toasts' => $toasts,
+				'count' => count($toasts)
 			));
 		}
 		else if($service=="employee_wise_today_followup_toast")

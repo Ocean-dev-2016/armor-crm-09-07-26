@@ -88,6 +88,15 @@
 				return;
 			}
 
+			/* Skip HR/admin broadcast for BRM private next-followup reminders */
+			$brmAdminId = (int) $this->db->rp_getValue("followup", "brm_reminder_admin_id", "id='" . (int) $followup_id . "'", 0);
+			if ($brmAdminId > 0) {
+				return;
+			}
+			if (isset($_REQUEST['from_brm_reorder']) && ($_REQUEST['from_brm_reorder'] == '1' || $_REQUEST['from_brm_reorder'] === 1)) {
+				return;
+			}
+
 			require_once("push_notification.class.php");
 			$objPushNotification = new PushNotification();
 

@@ -42,9 +42,11 @@ if(isset($_GET['m']) && $_GET['m']!="")
 		//echo $inquiry_id; exit;
 
 		$entry_type = "1";
-		/* Re-Order: Admin Panel create → followup_date = today + 20 days + auto Send to BRM */
+		$fromBrmReorder = (isset($_REQUEST['from_brm_reorder']) && ($_REQUEST['from_brm_reorder'] == '1' || $_REQUEST['from_brm_reorder'] === 1));
+		/* Re-Order: Admin Panel create → followup_date = today + 20 days + auto Send to BRM
+		 * Exception: BRM Next Followup from Re-Order report keeps selected date/time (private reminder). */
 		$isReorderDesc = reorder_brm_is_reorder_desc($description);
-		if ($isReorderDesc) {
+		if ($isReorderDesc && !$fromBrmReorder) {
 			$followup_date = date("Y-m-d H:i:s", strtotime("+20 days"));
 		}
 		if($through!="" && $followup_date!="")
@@ -103,9 +105,12 @@ if(isset($_GET['m']) && $_GET['m']!="")
 			//echo $inquiry_id; exit;
 			$data=$ObjFollowup->CreateFollowup($user_id,$visitor_id,$description,$through,$followup_date,$followup_flag,$inquiry_id,$entry_type,$entry_flag);
 
-			/* Auto Send to BRM when Description is Re-Order */
-			if ($isReorderDesc && is_array($data) && !empty($data['a']) && !empty($data['followup_id'])) {
-				$adminId = isset($_SESSION[SITE_SESS . '_ADMIN_SESS_ID']) ? (int) $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'] : 0;
+			$adminId = isset($_SESSION[SITE_SESS . '_ADMIN_SESS_ID']) ? (int) $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'] : 0;
+			/* BRM Next Followup from Re-Order Response → private reminder for this BRM login only */
+			if ($fromBrmReorder && is_array($data) && !empty($data['a']) && !empty($data['followup_id'])) {
+				reorder_brm_mark_private_reminder($db, (int) $data['followup_id'], $adminId);
+			} else if ($isReorderDesc && is_array($data) && !empty($data['a']) && !empty($data['followup_id'])) {
+				/* Auto Send to BRM when Description is Re-Order (normal admin create) */
 				reorder_brm_mark_sent($db, (int) $data['followup_id'], $adminId);
 			}
  

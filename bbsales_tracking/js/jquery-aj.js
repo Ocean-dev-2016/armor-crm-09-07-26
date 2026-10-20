@@ -32,6 +32,7 @@
 				getNotifications:getNotifications,
 				refreshAdminNotifications:refreshAdminNotifications,
 				pollFollowupToasts:pollFollowupToasts,
+				pollBrmFollowupReminders:pollBrmFollowupReminders,
 				redirect:redirect,					
 				getLoadingBlock:getLoadingBlock,
 				getErrorBlock:getErrorBlock,                         
@@ -534,6 +535,7 @@
 				if (item.description && $.trim(item.description) !== "") {
 					body += "<br><em>" + item.description + "</em>";
 				}
+				var goLink = item.link || "followuplist_manage.php?followup_type=today";
 				toastr.options = {
 					closeButton: true,
 					progressBar: true,
@@ -542,10 +544,38 @@
 					extendedTimeOut: 4000,
 					enableHtml: true,
 					onclick: function(){
-						window.location.href = "followuplist_manage.php?followup_type=today";
+						window.location.href = goLink;
 					}
 				};
 				toastr.info(body, item.title || "Today's Followup");
+			}
+
+			function pollBrmFollowupReminders(){
+				if (window.__brmFollowupReminderStarted) {
+					return;
+				}
+				window.__brmFollowupReminderStarted = true;
+				function checkBrmReminders(){
+					$.ajax({
+						url: "ajax_function_system.php",
+						data: { mode: "check_brm_followup_reminders" },
+						dataType: "json",
+						timeout: 15000,
+						success: function(res){
+							if (!res || res.ack != 1 || !res.toasts || !res.toasts.length) {
+								return;
+							}
+							for (var i = 0; i < res.toasts.length; i++) {
+								showFollowupToast(res.toasts[i]);
+							}
+							if (typeof refreshAdminNotifications === "function") {
+								refreshAdminNotifications();
+							}
+						}
+					});
+				}
+				checkBrmReminders();
+				setInterval(checkBrmReminders, 60000);
 			}
 
 			function showEmployeeWiseFollowupToasts(summary){

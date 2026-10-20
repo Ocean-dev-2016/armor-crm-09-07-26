@@ -110,6 +110,9 @@ if (typeof aj.pollFollowupToasts === "function") {
 	}
 }
 ?>
+if (typeof aj.pollBrmFollowupReminders === "function") {
+	aj.pollBrmFollowupReminders();
+}
 jQuery(document).ready(function() {   
 $("ul.dropdown-menu").each(function(){
 	if($(this).html().trim()=="")
