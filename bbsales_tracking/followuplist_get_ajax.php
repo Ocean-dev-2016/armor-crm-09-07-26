@@ -11,6 +11,21 @@ $ctable     = "followup";
 $ctable1    = "followup";
 $isFillter = filter_var($_REQUEST['isFillter'], FILTER_VALIDATE_BOOLEAN);
 
+/* Normalize followup_type (multi-select may send array) */
+if (isset($_REQUEST['followup_type']) && is_array($_REQUEST['followup_type'])) {
+    $_REQUEST['followup_type'] = implode(',', array_filter(array_map('trim', $_REQUEST['followup_type'])));
+}
+if (!isset($_REQUEST['followup_type']) || $_REQUEST['followup_type'] === null) {
+    $_REQUEST['followup_type'] = '';
+}
+$_REQUEST['followup_type'] = trim((string) $_REQUEST['followup_type']);
+$__fu_type_parts = array_values(array_unique(array_filter(array_map('trim', explode(',', $_REQUEST['followup_type'])))));
+sort($__fu_type_parts);
+$__fu_type_key = implode(',', $__fu_type_parts);
+if ($__fu_type_key !== '') {
+    $_REQUEST['followup_type'] = $__fu_type_key;
+}
+
 $ctable_where = "";
 // Get the total number of rows in the table
 
@@ -86,36 +101,39 @@ if (!empty($_REQUEST['reorder_only'])) {
         }
     } else {
         $today = date('Y-m-d');
-        if ($_REQUEST['followup_type'] == "today") {
-            $ctable_where .= $reorderDueExpr . " = '" . $today . "' AND ";
+        $hasAll = in_array('all', $__fu_type_parts, true);
+        $hasToday = in_array('today', $__fu_type_parts, true);
+        $hasFuture = in_array('future', $__fu_type_parts, true);
+        $hasPending = in_array('pending', $__fu_type_parts, true);
+        $hasResponsed = in_array('responsed', $__fu_type_parts, true);
+
+        if ($hasResponsed) {
+            $ctable_where .= " IFNULL(TRIM(response),'') != '' AND ";
             $isFillter = true;
-        }
-        if ($_REQUEST['followup_type'] == "future") {
-            $ctable_where .= $reorderDueExpr . " > '" . $today . "' AND IFNULL(TRIM(response),'') = '' AND ";
+        } else if ($hasAll) {
             $isFillter = true;
-        }
-        if ($_REQUEST['followup_type'] == "pending") {
-            $ctable_where .= $reorderDueExpr . " < '" . $today . "' AND IFNULL(TRIM(response),'') = '' AND ";
-            $isFillter = true;
-        }
-        if ($_REQUEST['followup_type'] == "today,pending") {
-            $ctable_where .= $reorderDueExpr . " <= '" . $today . "' AND IFNULL(TRIM(response),'') = '' AND ";
-            $isFillter = true;
-        }
-        if ($_REQUEST['followup_type'] == "today,future") {
-            $ctable_where .= $reorderDueExpr . " >= '" . $today . "' AND IFNULL(TRIM(response),'') = '' AND ";
-            $isFillter = true;
-        }
-        if ($_REQUEST['followup_type'] == "future,pending" || $_REQUEST['followup_type'] == "pending,future") {
-            /* All pending BRM response: overdue + today + future (no response yet) */
+        } else if ($hasFuture && $hasPending) {
+            /* Pending only: no BRM response (overdue + today + future) */
             $ctable_where .= " IFNULL(TRIM(response),'') = '' AND ";
             $isFillter = true;
-        }
-        if ($_REQUEST['followup_type'] == "all") {
+        } else if ($hasToday && $hasPending) {
+            $ctable_where .= $reorderDueExpr . " <= '" . $today . "' AND IFNULL(TRIM(response),'') = '' AND ";
             $isFillter = true;
-        }
-        if ($_REQUEST['followup_type'] == "responsed") {
-            $ctable_where .= " IFNULL(TRIM(response),'') != '' AND ";
+        } else if ($hasToday && $hasFuture) {
+            $ctable_where .= $reorderDueExpr . " >= '" . $today . "' AND IFNULL(TRIM(response),'') = '' AND ";
+            $isFillter = true;
+        } else if ($hasToday) {
+            $ctable_where .= $reorderDueExpr . " = '" . $today . "' AND ";
+            $isFillter = true;
+        } else if ($hasFuture) {
+            $ctable_where .= $reorderDueExpr . " > '" . $today . "' AND IFNULL(TRIM(response),'') = '' AND ";
+            $isFillter = true;
+        } else if ($hasPending) {
+            $ctable_where .= $reorderDueExpr . " < '" . $today . "' AND IFNULL(TRIM(response),'') = '' AND ";
+            $isFillter = true;
+        } else {
+            /* Re-Order report safety default: hide already-responded */
+            $ctable_where .= " IFNULL(TRIM(response),'') = '' AND ";
             $isFillter = true;
         }
     }
