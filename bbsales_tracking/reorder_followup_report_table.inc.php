@@ -109,6 +109,9 @@ if (!isset($ror_view) || ($ror_view !== 'quotation' && $ror_view !== 'reorder'))
 	$ror_view = (isset($_REQUEST['ror_view']) && $_REQUEST['ror_view'] === 'quotation') ? 'quotation' : 'reorder';
 }
 $is_quo_view = ($ror_view === 'quotation');
+/* Quotation Pending actions (Response / Set Follow-up) — BRM login only */
+$is_brm_login = (function_exists('reorder_brm_is_brm_login') && reorder_brm_is_brm_login($db));
+$show_quo_brm_actions = ($is_quo_view && $is_brm_login);
 ?>
 <div class="ror-wrap">
 	<div class="ror-view-tabs">
@@ -224,6 +227,9 @@ $is_quo_view = ($ror_view === 'quotation');
 					<?php if (!$is_quo_view) { ?>
 					<th>Through</th>
 					<th>BRM Response</th>
+					<?php } ?>
+					<?php if ($show_quo_brm_actions) { ?>
+					<th>BRM Action</th>
 					<?php } ?>
 					<th>Sales Person Visit</th>
 					<th>Sales Person Follow-up</th>
@@ -386,6 +392,25 @@ $is_quo_view = ($ror_view === 'quotation');
 						<?php } ?>
 					</td>
 					<?php } ?>
+					<?php if ($show_quo_brm_actions) { ?>
+					<td class="ror-response ror-nowrap">
+						<a type="button" href="#FollowupResponse" data-toggle="modal" class="btn btn-circle btn-sm yellow"
+							data-mode="quo_brm"
+							data-followup-flag="customer_followup"
+							data-sales-id="<?php echo (int) $ctable_d['user_id']; ?>"
+							data-visitor_id="<?php echo (int) $linked_customer_id; ?>"
+							data-date="<?php echo htmlspecialchars(date('d-m-Y H:i:s')); ?>"
+							data-id="0"
+							data-ref_id="<?php echo (int) $linked_customer_id; ?>"
+							data-next_action="1">Response</a>
+						<a type="button" href="javascript:;" class="btn btn-circle btn-sm green ror-quo-set-followup"
+							data-followup-flag="customer_followup"
+							data-sales-id="<?php echo (int) $ctable_d['user_id']; ?>"
+							data-visitor_id="<?php echo (int) $linked_customer_id; ?>"
+							data-ref_id="<?php echo (int) $linked_customer_id; ?>"
+							style="margin-top:4px;">Set Follow-up</a>
+					</td>
+					<?php } ?>
 					<td><?php echo $app_visit_html; ?></td>
 					<td><?php echo $app_followup_html; ?></td>
 					<td><?php echo $quo_html; ?></td>
@@ -393,7 +418,7 @@ $is_quo_view = ($ror_view === 'quotation');
 			<?php
 				}
 			} else {
-				$colspan = $is_quo_view ? 11 : 14;
+				$colspan = $is_quo_view ? ($show_quo_brm_actions ? 12 : 11) : 14;
 			?>
 				<tr>
 					<td colspan="<?php echo (int) $colspan; ?>" class="ror-empty">
@@ -456,6 +481,24 @@ $is_quo_view = ($ror_view === 'quotation');
 		df1 = "";
 		through = "";
 		displayRecords($("#numRecords").val() || 50, 1);
+	});
+
+	/* Quotation Pending — BRM only: open Create Followup for this customer */
+	$(".ror-wrap").off("click.rorQuoSet").on("click.rorQuoSet", ".ror-quo-set-followup", function (e) {
+		e.preventDefault();
+		var $btn = $(this);
+		var sales_id = $btn.data("sales-id") || "";
+		var visitor_id = $btn.data("visitor_id") || "";
+		var ref_id = $btn.data("ref_id") || visitor_id;
+		var followup_flag = $btn.data("followup-flag") || "customer_followup";
+		$("#sales_id").val(sales_id);
+		$("#response_sales_id").val(sales_id);
+		$("#visitor_id").val(visitor_id);
+		$("#response_followup_flag").val(followup_flag);
+		$("#followup_flag").val(followup_flag);
+		$("#response_followup_btn").data("ref_id", ref_id).attr("data-ref_id", ref_id);
+		$("#description").val("");
+		$("#createFollowup").modal("show");
 	});
 
 	$(".filterBtn").on("click", function () {

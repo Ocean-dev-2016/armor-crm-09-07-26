@@ -875,8 +875,10 @@ $('#FollowupResponse').on('show.bs.modal', function (event) {
 			  $("#followup_action").removeAttr("disabled","disabled");
 		  }
 		  var response=button.data("response");
-		  $("#response_followup_btn").attr("data-id",followup_id);
-		  $("#response_followup_btn").attr("data-ref_id",ref_id);
+		  /* .data() so jQuery cache matches attrs used on SAVE / CreateFollowup */
+		  $("#response_followup_btn").data("id",followup_id).attr("data-id",followup_id);
+		  $("#response_followup_btn").data("ref_id",ref_id).attr("data-ref_id",ref_id);
+		  $("#response_followup_btn").data("mode", mode || "add");
 		  $("#response_followup_title").html(title);
 		  $("#response").val(response);
 		  $("#sales_id").val(sales_id);
@@ -943,38 +945,43 @@ $('#FollowupResponse').on('show.bs.modal', function (event) {
    	function CreateFollowup()
    	{ 
 		var isValid =true;
+		/* BRM / admin without SEID: use sales person from Response button */
 		var sales_id = '<?= $SEID ?>';
-		// var sales_id = $("#sales_id").val(); comment by shivani
+		if(!sales_id || sales_id==="0" || sales_id==="")
+		{
+			sales_id = $("#sales_id").val() || $("#response_sales_id").val() || "";
+		}
    		var followup_flag=$("#response_followup_flag").val();
+		var inquiry_id="";
+		var quotation_id="";
+		var invoice_id="";
+		var executive_id="";
+		var ref_id=$("#response_followup_btn").data("ref_id");
 
    		if(followup_flag=="inquiry_followup" || followup_flag=="leads_followup")
    		{
-   			var inquiry_id=$("#response_followup_btn").data("ref_id");
+   			inquiry_id=ref_id;
    		}
-   		if(followup_flag=="quotation_followup" || followup_flag=="quotation_followup")
+   		else if(followup_flag=="quotation_followup")
    		{
-   			var quotation_id=$("#response_followup_btn").data("ref_id");
+   			quotation_id=ref_id;
    		}
-   		if(followup_flag=="manual_invoice_import")
+   		else if(followup_flag=="manual_invoice_import")
    		{
-   			var invoice_id=$("#response_followup_btn").data("ref_id");
+   			invoice_id=ref_id;
    		}
-   		if(followup_flag=="customer_followup" || followup_flag=="customer_followup")
+   		else if(followup_flag=="customer_followup")
    		{
-   			var executive_id=$("#response_followup_btn").data("ref_id");
+   			executive_id=ref_id;
+   		}
+   		else if(followup_flag=="followup" || followup_flag=="sales_executive")
+   		{
+   			/* Re-Order rows linked to sales_executive / visitor */
+   			inquiry_id=ref_id;
    		}
 
-   		/*if(followup_flag=="inquiry_followup" || followup_flag=="leads_followup")
-   		{
-   			var inquiry_id=$("#response_followup_btn").data("ref_id");
-   			// alert(inquiry_id);
-   		}
-   		else
-   		{
-   		}*/
-   			var visitor_id=$("#visitor_id").val();
+   		var visitor_id=$("#visitor_id").val();
    		var description=$('#description').val();
-   		//var through=$('#through').val();
    		var through=$('select.through1234').val();
    		var followup_date=$('#followup_date').val();
    		var followup_status=$('#followup_status').val();
@@ -1003,7 +1010,12 @@ $('#FollowupResponse').on('show.bs.modal', function (event) {
 							from_brm_reorder: (typeof from_brm_reorder !== "undefined" ? from_brm_reorder : 0)
 						},
 						success:function(result){
-							var result=$.parseJSON(result);
+							try {
+								var result=$.parseJSON(result);
+							} catch(e) {
+								toastr.error("Save failed (session/access). Reload and try again.");
+								return;
+							}
 							if(result.a==1)
 							{
 								$("#createFollowup").modal('hide');
@@ -1019,6 +1031,9 @@ $('#FollowupResponse').on('show.bs.modal', function (event) {
 							{
 								toastr.error(result.mg);
 							}
+						},
+						error:function(){
+							toastr.error("Save failed. Check access / network.");
 						}
 					})
 	   			}
@@ -1062,18 +1077,34 @@ $('#FollowupResponse').on('show.bs.modal', function (event) {
 					toastr.error("Select Next Action!!","Error");
 				}
 			}
+			if(!isValid)
+			{
+				return;
+			}
+			var respMode = $(this).data("mode") || "add";
+			var ajaxData = {
+				response:response,
+				followup_id:followup_id,
+				followup_action:followup_action,
+				followup_future_date:followup_future_date,
+				m: (respMode === "quo_brm" ? "quo_brm_response" : "add_response"),
+				from_brm_reorder: (typeof from_brm_reorder !== "undefined" ? from_brm_reorder : 0)
+			};
+			if (respMode === "quo_brm") {
+				ajaxData.visitor_id = $("#visitor_id").val();
+				ajaxData.sales_id = $("#sales_id").val() || $("#response_sales_id").val();
+			}
 			$.ajax({
 				type: "GET",
 				url:"followup_ajax_function.php",
-				data:{
-					response:response,
-					followup_id:followup_id,
-					followup_action:followup_action,
-					followup_future_date:followup_future_date,
-					m:"add_response"
-				},
+				data: ajaxData,
 				success: function(json) {
-					json=$.parseJSON(json);
+					try {
+						json=$.parseJSON(json);
+					} catch(e) {
+						toastr.error("Save failed (session/access). Reload and try again.");
+						return;
+					}
 					msg=json.mg;
 					if(json.a==1)
 					{
@@ -1085,7 +1116,6 @@ $('#FollowupResponse').on('show.bs.modal', function (event) {
 						$("response_followup_title").val("");
 						$("#followup-ajax-result-container-1").empty();
 						displayRecords(500, 1);
-						//location.reload();
 						$("#response").val("");
 						$("#followup_action").val("");
 						$("#followup_future_date").val("");
@@ -1094,6 +1124,9 @@ $('#FollowupResponse').on('show.bs.modal', function (event) {
 					{
 						toastr.error(msg, 'Error!!')
 					}
+				},
+				error:function(){
+					toastr.error("Save failed. Check access / network.");
 				}
 			});			
 		});
@@ -1145,7 +1178,8 @@ $('#FollowupResponse').on('show.bs.modal', function (event) {
 						status:status,
 						followup_reason_id:followup_reason_id,
 						followup_status_id:followup_status_id,
-						m:"end_followup"
+						m:"end_followup",
+						from_brm_reorder: (typeof from_brm_reorder !== "undefined" ? from_brm_reorder : 0)
 					},
 					success: function(json) {
 						json=$.parseJSON(json);

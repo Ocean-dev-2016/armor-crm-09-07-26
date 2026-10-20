@@ -1,5 +1,13 @@
 <?php 
-$page_id=583;$page_slug='future_followup_manage';
+/* Re-Order Followup Report (BRM) uses page 677 — do not force 583 or BRM gets access_denied on SAVE */
+$from_brm_req = (isset($_REQUEST['from_brm_reorder']) && ($_REQUEST['from_brm_reorder'] == '1' || $_REQUEST['from_brm_reorder'] === 1));
+if ($from_brm_req) {
+	$page_id = 677;
+	$page_slug = 'reorder_followup_report';
+} else {
+	$page_id = 583;
+	$page_slug = 'future_followup_manage';
+}
 include("connect.php");
 include('../include/followup.class.php');
 require_once('../include/reorder_brm_helper.php');
@@ -92,13 +100,21 @@ if(isset($_GET['m']) && $_GET['m']!="")
 				$reference_table = "quotation_detail";
 				$cuscol = "customer_id";
 			}
-			if($user_id==0 || $_SESSION[SITE_SESS.'_ADMIN_TYPE']!=0)
+			/* BRM Re-Order Next Followup: keep sales_id from Response row (customer SE) */
+			$request_sales_id = isset($_REQUEST['sales_id']) ? $_REQUEST['sales_id'] : "";
+			if ($fromBrmReorder && $request_sales_id !== "" && (int) $request_sales_id > 0) {
+				$user_id = $request_sales_id;
+			} else if($user_id==0 || $_SESSION[SITE_SESS.'_ADMIN_TYPE']!=0)
 			{
-				$idx = $db->rp_getValue($reference_table,$cuscol,"id='".$inquiry_id."'",0);
-				$user_id = $db->rp_getValue("executive","seid","id='".$idx."'",0);
+				if (!empty($cuscol) && $inquiry_id !== "") {
+					$idx = $db->rp_getValue($reference_table,$cuscol,"id='".$inquiry_id."'",0);
+					$user_id = $db->rp_getValue("executive","seid","id='".$idx."'",0);
+				} else if ($visitor_id !== "") {
+					$user_id = $db->rp_getValue("executive","seid","id='".$visitor_id."'",0);
+				}
 				if($user_id=="")
 				{
-					$user_id=$_REQUEST['sales_id'];
+					$user_id=$request_sales_id;
 				}
 			}
 			// added by shivani 
@@ -145,14 +161,11 @@ if(isset($_GET['m']) && $_GET['m']!="")
 		$id=isset($_REQUEST['followup_id'])?$_REQUEST['followup_id']:"";
 		$followup_future_date=isset($_REQUEST['followup_future_date'])?$_REQUEST['followup_future_date']:"";
 		$entry_type = "1";
-		$response_entry_flag = "1";
+		/* Signature: response, action, followup_id, future_date, reason_id, entry_type, status */
+		$followup_status_id = isset($_REQUEST['followup_status_id']) ? $_REQUEST['followup_status_id'] : "1";
 		if($response!="" && $followup_action!="")
 		{
-			$data=$ObjFollowup->AddFollowupResponse($response,$followup_action,$id,$followup_future_date,$followup_id,$followup_reason_id,$entry_type,$response_entry_flag);
-				// if ($data['a'] == 1) {
-				// 	$db->addStatusTimelineEntry($_REQUEST['inquiry_id'],$followup_status_id);
-				// }
-			
+			$data=$ObjFollowup->AddFollowupResponse($response,$followup_action,$id,$followup_future_date,$followup_reason_id,$entry_type,$followup_status_id);
 			echo json_encode($data);	
 		}
 		else
@@ -161,6 +174,51 @@ if(isset($_GET['m']) && $_GET['m']!="")
 			echo json_encode($reply);	
 		}
 		
+	}
+	else if ($m == 'quo_brm_response')
+	{
+		/* Quotation Pending (BRM only): create customer followup + save response in one step */
+		if (!reorder_brm_is_brm_login($db)) {
+			echo json_encode(array("a" => 0, "mg" => "Only BRM login can respond here.", "dmg" => "not brm"));
+		} else {
+			$response = isset($_REQUEST['response']) ? trim($_REQUEST['response']) : "";
+			$followup_action = isset($_REQUEST['followup_action']) ? $_REQUEST['followup_action'] : "";
+			$visitor_id = isset($_REQUEST['visitor_id']) ? (int) $_REQUEST['visitor_id'] : 0;
+			$sales_id = isset($_REQUEST['sales_id']) ? (int) $_REQUEST['sales_id'] : 0;
+			$followup_future_date = isset($_REQUEST['followup_future_date']) ? $_REQUEST['followup_future_date'] : "";
+			if ($response === "" || $followup_action === "" || $visitor_id <= 0) {
+				echo json_encode(array("a" => 0, "mg" => "Response, action and customer are required.", "dmg" => "validation"));
+			} else {
+				if ($sales_id <= 0) {
+					$sales_id = (int) $db->rp_getValue("executive", "seid", "id='" . $visitor_id . "'", 0);
+				}
+				$create = $ObjFollowup->CreateFollowup(
+					$sales_id,
+					$visitor_id,
+					"Quotation Pending",
+					"1",
+					date("Y-m-d H:i:s"),
+					"customer_followup",
+					$visitor_id,
+					"1",
+					"1"
+				);
+				if (!is_array($create) || empty($create['a']) || empty($create['followup_id'])) {
+					echo json_encode(array("a" => 0, "mg" => "Could not create followup for response.", "dmg" => "create failed"));
+				} else {
+					$fid = (int) $create['followup_id'];
+					$adminId = isset($_SESSION[SITE_SESS . '_ADMIN_SESS_ID']) ? (int) $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'] : 0;
+					/* Keep as BRM private note — not shared Re-Order queue */
+					reorder_brm_mark_private_reminder($db, $fid, $adminId);
+					$data = $ObjFollowup->AddFollowupResponse($response, $followup_action, $fid, $followup_future_date, "", "1", "1");
+					if (!is_array($data)) {
+						$data = array("a" => 0, "mg" => "Response save failed.", "dmg" => "bad reply");
+					}
+					$data['followup_id'] = $fid;
+					echo json_encode($data);
+				}
+			}
+		}
 	}
 	else if ($m == 'send_to_brm')
 	{
