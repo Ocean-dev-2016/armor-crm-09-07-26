@@ -102,8 +102,20 @@ $is_quo_view = ($ror_view === 'quotation');
 	<p class="ror-view-note">
 		<?php if ($is_quo_view) { ?>
 			Showing customers who have <b>quotation not converted to order</b>, and do <b>not</b> have any Re-Order followup sent to BRM.
+			<?php
+			if (function_exists('reorder_brm_is_brm_login') && reorder_brm_is_brm_login($db)) {
+				$__brmLabelQ = isset($_SESSION[SITE_SESS . 'SESS_NAME']) ? $_SESSION[SITE_SESS . 'SESS_NAME'] : 'BRM';
+				echo ' &nbsp;|&nbsp; Assigned to <b>' . htmlspecialchars($__brmLabelQ) . '</b> only.';
+			}
+			?>
 		<?php } else { ?>
-			Default: <b>Pending</b> only (no BRM Response yet) — overdue + today + future due. Due date = Created + 20 days.
+			Default: <b>Today Followup</b> + <b>Pending Followup</b> (due ≤ today, no BRM Response). Due date = Created + 20 days.
+			<?php
+			if (function_exists('reorder_brm_is_brm_login') && reorder_brm_is_brm_login($db)) {
+				$__brmLabel = isset($_SESSION[SITE_SESS . 'SESS_NAME']) ? $_SESSION[SITE_SESS . 'SESS_NAME'] : 'BRM';
+				echo ' &nbsp;|&nbsp; Showing customers assigned to <b>' . htmlspecialchars($__brmLabel) . '</b> only.';
+			}
+			?>
 		<?php } ?>
 	</p>
 	<?php if ($is_quo_view) {

@@ -45,6 +45,10 @@ $reorderDueExpr = "DATE_ADD(DATE(created_date), INTERVAL 20 DAY)";
 if (!empty($_REQUEST['reorder_only'])) {
     /* ONLY already sent to BRM */
     $ctable_where .= " entry_type='1' AND IFNULL(send_to_brm,0)='1' AND REPLACE(REPLACE(LOWER(IFNULL(description,'')), '-', ''), ' ', '') LIKE '%reorder%' AND ";
+    /* BRM1/BRM2 login: only assigned customers (Super Admin / others = all) */
+    reorder_brm_ensure_customer_assign_column($db);
+    reorder_brm_auto_divide_customers($db);
+    $ctable_where .= reorder_brm_customer_filter_sql($db, '');
     $isFillter = true;
 }
 
@@ -343,6 +347,7 @@ if ($isFillter) {
             'searchName' => (isset($_REQUEST['searchName']) ? trim($_REQUEST['searchName']) : ''),
             'created_from' => '',
             'created_to' => '',
+            'brm_admin_id' => reorder_brm_scoped_admin_id($db),
         );
         if (!empty($_REQUEST['df1']) && $_REQUEST['df1'] !== 'undefined') {
             $df1ex = explode(" to ", urldecode($_REQUEST['df1']));

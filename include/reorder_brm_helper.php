@@ -104,22 +104,164 @@ if (!function_exists('reorder_brm_auto_send_pending')) {
 	}
 }
 
+if (!function_exists('reorder_brm_ensure_customer_assign_column')) {
+	function reorder_brm_ensure_customer_assign_column($db)
+	{
+		static $done = false;
+		if ($done) {
+			return true;
+		}
+		$conn = reorder_brm_conn($db);
+		if (!$conn) {
+			return false;
+		}
+		$res = @mysqli_query($conn, "SHOW COLUMNS FROM `executive` LIKE 'brm_admin_id'");
+		if (!$res || mysqli_num_rows($res) == 0) {
+			@mysqli_query($conn, "ALTER TABLE `executive` ADD COLUMN `brm_admin_id` int(11) NOT NULL DEFAULT 0 COMMENT 'BRM1/BRM2 dealer_distributor_network.id for Re-Order report split'");
+		}
+		$done = true;
+		return true;
+	}
+}
+
+if (!function_exists('reorder_brm_login_ids')) {
+	/**
+	 * @return array{brm1:int,brm2:int}
+	 */
+	function reorder_brm_login_ids($db)
+	{
+		static $cache = null;
+		if ($cache !== null) {
+			return $cache;
+		}
+		$cache = array('brm1' => 0, 'brm2' => 0);
+		$conn = reorder_brm_conn($db);
+		if (!$conn) {
+			return $cache;
+		}
+		$r = @mysqli_query($conn, "SELECT id, username, admin_type FROM dealer_distributor_network
+			WHERE isDelete=0 AND (
+				username IN ('BRM1','BRM2')
+				OR admin_type IN (23,32)
+			)");
+		if ($r) {
+			while ($row = mysqli_fetch_assoc($r)) {
+				$u = strtoupper(trim($row['username']));
+				$at = (int) $row['admin_type'];
+				if ($u === 'BRM1' || $at === 23) {
+					$cache['brm1'] = (int) $row['id'];
+				}
+				if ($u === 'BRM2' || $at === 32) {
+					$cache['brm2'] = (int) $row['id'];
+				}
+			}
+		}
+		return $cache;
+	}
+}
+
+if (!function_exists('reorder_brm_is_brm_login')) {
+	/** Current session is BRM1 or BRM2 login (not Super Admin). */
+	function reorder_brm_is_brm_login($db)
+	{
+		$adminType = isset($_SESSION[SITE_SESS . '_ADMIN_TYPE']) ? (int) $_SESSION[SITE_SESS . '_ADMIN_TYPE'] : -1;
+		if ($adminType === 0) {
+			return false;
+		}
+		/* Known BRM admin_type ids + slug check */
+		if ($adminType === 23 || $adminType === 32) {
+			return true;
+		}
+		$slug = strtolower((string) $db->rp_getValue("admin_type", "slug", "id='" . $adminType . "' AND isDelete=0", 0));
+		if ($slug === 'brm1' || $slug === 'brm2') {
+			return true;
+		}
+		$name = strtoupper(trim((string) $db->rp_getValue("admin_type", "name", "id='" . $adminType . "' AND isDelete=0", 0)));
+		if ($name === 'BRM1' || $name === 'BRM2') {
+			return true;
+		}
+		$ids = reorder_brm_login_ids($db);
+		$sess = isset($_SESSION[SITE_SESS . '_ADMIN_SESS_ID']) ? (int) $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'] : 0;
+		return ($sess > 0 && ($sess === $ids['brm1'] || $sess === $ids['brm2']));
+	}
+}
+
+if (!function_exists('reorder_brm_auto_divide_customers')) {
+	/**
+	 * Default split: unassigned customers → BRM1 / BRM2 by customer id (odd/even).
+	 * Does not change seid / sales person.
+	 */
+	function reorder_brm_auto_divide_customers($db)
+	{
+		reorder_brm_ensure_customer_assign_column($db);
+		$conn = reorder_brm_conn($db);
+		if (!$conn) {
+			return 0;
+		}
+		$ids = reorder_brm_login_ids($db);
+		$b1 = (int) $ids['brm1'];
+		$b2 = (int) $ids['brm2'];
+		if ($b1 <= 0 || $b2 <= 0) {
+			return 0;
+		}
+		$sql = "UPDATE executive
+			SET brm_admin_id = IF(MOD(id,2)=1, {$b1}, {$b2})
+			WHERE isDelete=0 AND IFNULL(brm_admin_id,0)=0";
+		@mysqli_query($conn, $sql);
+		return (int) mysqli_affected_rows($conn);
+	}
+}
+
+if (!function_exists('reorder_brm_scoped_admin_id')) {
+	/**
+	 * If current user is BRM1/BRM2 → return their admin sess id for customer filter.
+	 * Super Admin / other roles → 0 (see all).
+	 */
+	function reorder_brm_scoped_admin_id($db)
+	{
+		if (!reorder_brm_is_brm_login($db)) {
+			return 0;
+		}
+		return isset($_SESSION[SITE_SESS . '_ADMIN_SESS_ID']) ? (int) $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'] : 0;
+	}
+}
+
+if (!function_exists('reorder_brm_customer_filter_sql')) {
+	/**
+	 * SQL fragment: followup rows limited to customers assigned to this BRM login.
+	 * Empty string when no scope (show all).
+	 */
+	function reorder_brm_customer_filter_sql($db, $followupAlias = '')
+	{
+		$adminId = reorder_brm_scoped_admin_id($db);
+		if ($adminId <= 0) {
+			return '';
+		}
+		reorder_brm_ensure_customer_assign_column($db);
+		$cidExpr = reorder_report_customer_id_expr($followupAlias);
+		return " ({$cidExpr}) IN (
+			SELECT e.id FROM executive e WHERE e.isDelete=0 AND e.brm_admin_id='" . (int) $adminId . "'
+		) AND ";
+	}
+}
+
 if (!function_exists('reorder_report_customer_id_expr')) {
 	/**
 	 * SQL expression to resolve followup → executive/customer id.
 	 */
 	function reorder_report_customer_id_expr($alias = 'f')
 	{
-		$a = preg_replace('/[^a-zA-Z0-9_]/', '', $alias);
+		$a = preg_replace('/[^a-zA-Z0-9_]/', '', (string) $alias);
+		$p = ($a !== '') ? ($a . '.') : '';
 		return "CASE
-			WHEN {$a}.reference_table='executive' THEN {$a}.reference_id
-			WHEN {$a}.reference_table='quotation_detail' THEN (
-				SELECT qd.customer_id FROM quotation_detail qd WHERE qd.id={$a}.reference_id LIMIT 1
+			WHEN {$p}reference_table='executive' THEN {$p}reference_id
+			WHEN {$p}reference_table='quotation_detail' THEN (
+				SELECT qd.customer_id FROM quotation_detail qd WHERE qd.id={$p}reference_id LIMIT 1
 			)
-			WHEN {$a}.reference_table='manual_invoice_import' THEN (
-				SELECT mi.customer_id FROM manually_invoice_outstanding_import mi WHERE mi.id={$a}.reference_id LIMIT 1
+			WHEN {$p}reference_table='manual_invoice_import' THEN (
+				SELECT mi.customer_id FROM manually_invoice_outstanding_import mi WHERE mi.id={$p}reference_id LIMIT 1
 			)
-			ELSE IFNULL({$a}.visitor_id,0)
+			ELSE IFNULL({$p}visitor_id,0)
 		END";
 	}
 }
@@ -173,6 +315,14 @@ if (!function_exists('reorder_report_quo_only_where')) {
 
 		$where = "q.isDelete=0 AND q.status!=-1 AND q.status!=4 AND IFNULL(q.customer_id,0)>0
 			AND q.customer_id NOT IN ({$notIn})";
+
+		$brmScope = isset($opts['brm_admin_id']) ? (int) $opts['brm_admin_id'] : reorder_brm_scoped_admin_id($db);
+		if ($brmScope > 0) {
+			reorder_brm_ensure_customer_assign_column($db);
+			$where .= " AND q.customer_id IN (
+				SELECT e.id FROM executive e WHERE e.isDelete=0 AND e.brm_admin_id='" . $brmScope . "'
+			)";
+		}
 
 		if ($salesId > 0) {
 			/* Match quotation.sales_id, or customer.seid when quotation has no sales */

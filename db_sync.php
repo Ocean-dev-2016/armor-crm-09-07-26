@@ -1592,6 +1592,43 @@ if (db_sync_table_exists($conn, 'followup')) {
 		"tinyint(1) NOT NULL DEFAULT 0 COMMENT '1=BRM reminder already shown'",
 		array('brm_reminder_admin_id')
 	);
+}
+
+/* BRM1/BRM2 customer split for Re-Order report (does not touch sales person / seid) */
+if (db_sync_table_exists($conn, 'executive')) {
+	db_sync_add_column_if_missing(
+		$conn,
+		'executive',
+		'brm_admin_id',
+		"int(11) NOT NULL DEFAULT 0 COMMENT 'BRM1/BRM2 dealer_distributor_network.id'",
+		array('seid', 'isDelete', 'isActive')
+	);
+	$brm1Id = 0;
+	$brm2Id = 0;
+	$brmUsers = mysqli_query($conn, "SELECT id, username, admin_type FROM dealer_distributor_network WHERE isDelete=0 AND (username IN ('BRM1','BRM2') OR admin_type IN (23,32))");
+	if ($brmUsers) {
+		while ($bu = mysqli_fetch_assoc($brmUsers)) {
+			$buName = strtoupper(trim($bu['username']));
+			$buType = (int) $bu['admin_type'];
+			if ($buName === 'BRM1' || $buType === 23) {
+				$brm1Id = (int) $bu['id'];
+			}
+			if ($buName === 'BRM2' || $buType === 32) {
+				$brm2Id = (int) $bu['id'];
+			}
+		}
+	}
+	if ($brm1Id > 0 && $brm2Id > 0) {
+		db_sync_run_query(
+			$conn,
+			"UPDATE executive SET brm_admin_id=IF(MOD(id,2)=1, {$brm1Id}, {$brm2Id})
+				WHERE isDelete=0 AND IFNULL(brm_admin_id,0)=0",
+			'Auto-divide unassigned customers between BRM1 and BRM2'
+		);
+	}
+}
+
+if (db_sync_table_exists($conn, 'followup')) {
 	/* Keep existing Admin Re-Order rows visible in BRM report (exclude BRM private next-followups) */
 	db_sync_run_query(
 		$conn,

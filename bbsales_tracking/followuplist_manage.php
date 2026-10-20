@@ -560,7 +560,7 @@ function clearSearchByName(){
 	reference_media_id="";
 	executive="";
 	sales_executive="";
-	followup_type=<?php echo !empty($__reorder_followup_report) ? '"future,pending"' : '""'; ?>;
+	followup_type=<?php echo !empty($__reorder_followup_report) ? '"today,pending"' : '""'; ?>;
 	todate="";
 	fromdate="";
 	df="";
@@ -577,7 +577,7 @@ function clearSearchByName(){
 	$("#sales_executive").select2("val","");
 	<?php if (!empty($__reorder_followup_report)) { ?>
 	$("#followup_type").fSelect("destroy");
-	$("#followup_type").val(["future","pending"]);
+	$("#followup_type").val(["today","pending"]);
 	$("#followup_type").fSelect("create");
 	<?php } ?>
 	// $("#followup_type").select2("val","");
@@ -616,9 +616,9 @@ function loadDataTable(){
 			"oLanguage": { "sEmptyTable":     "<i class='fa fa- fa-cubes '></i> &nbsp; No Product Found"},
 	});
 }
-function displayRecords(numRecords) {
+function displayRecords(numRecords, gotoPage) {
 	var searchName 	= $("#searchName").val();
-	searchName 	= encodeURIComponent(searchName.trim());
+	searchName 	= encodeURIComponent((searchName || "").trim());
 	if ($("#sales_executive").length) {
 		sales_executive = $("#sales_executive").val() || "";
 	}
@@ -633,6 +633,15 @@ function displayRecords(numRecords) {
 			followup_type = _ft;
 		}
 	}
+	<?php if (!empty($__reorder_followup_report)) { ?>
+	if (!followup_type || followup_type === "undefined") {
+		followup_type = "today,pending";
+	}
+	<?php } ?>
+	var pageNum = parseInt(gotoPage, 10);
+	if (!pageNum || pageNum < 1) {
+		pageNum = 1;
+	}
 	
 	var rorViewQ = "";
 	<?php if (!empty($__reorder_followup_report)) { ?>
@@ -641,7 +650,9 @@ function displayRecords(numRecords) {
 	<?php } ?>
 	$('.preloader').fadeIn('slow');
 	$("#results" ).html("");
-	$("#results" ).load( data_url+"?show=" + numRecords + "&ToDate=" + df + "&reference_media_id=" + reference_media_id + "&searchName=" + searchName + "&executive=" + executive + "&sales_executive=" + sales_executive + "&followup_type=" + followup_type + "&df=" + df+ "&df1=" + df1 + "&df2=" + df2 + "&through=" + through+ "&todate=" + todate+ "&fromdate=" + fromdate + "&isFillter="+isFillter + rorViewQ,function(){
+	var listUrl = data_url+"?show=" + numRecords + "&ToDate=" + df + "&reference_media_id=" + reference_media_id + "&searchName=" + searchName + "&executive=" + executive + "&sales_executive=" + sales_executive + "&followup_type=" + followup_type + "&df=" + df+ "&df1=" + df1 + "&df2=" + df2 + "&through=" + through+ "&todate=" + todate+ "&fromdate=" + fromdate + "&isFillter="+isFillter + rorViewQ;
+	var listPost = (pageNum > 1) ? {"page": pageNum} : {};
+	$("#results" ).load(listUrl, listPost, function(){
 		$('.preloader').fadeOut('slow');
 		loadDataTable();
 	}); //load initial records
@@ -649,31 +660,13 @@ function displayRecords(numRecords) {
 	//executes code below when user click on pagination links
 	$("#results").off("click.rorPaging").on( "click.rorPaging", ".paging_simple_numbers a", function (e){
 		e.preventDefault();
-		// alert("hello");
-		var numRecords  = $("#numRecords").val();
-		$(".loading-div").show(); //show loading element
-		var page = $(this).attr("data-page"); //get page number from link
-		var rorViewQ2 = "";
-		<?php if (!empty($__reorder_followup_report)) { ?>
-		if (typeof ror_view === "undefined" || !ror_view) { ror_view = "reorder"; }
-		rorViewQ2 = "&ror_view=" + encodeURIComponent(ror_view);
-		<?php } ?>
-		$("#results").load(data_url+"?show=" + numRecords + "&ToDate=" + df + "&reference_media_id=" + reference_media_id + "&searchName=" + searchName + "&executive=" + executive + "&sales_executive=" + sales_executive + "&followup_type=" + followup_type + "&df=" + df+ "&df1=" + df1 + "&df2=" + df2 +"&through=" + through+ "&todate=" + todate+ "&fromdate=" + fromdate + "&isFillter=" + true + rorViewQ2 ,{"page":page}, function(){ //get content from PHP page
-			$(".loading-div").hide(); //once done, hide loading element
-			loadDataTable();
-		});
+		var page = $(this).attr("data-page");
+		if (!page) {
+			return;
+		}
+		var rows = $("#numRecords").val() || numRecords || 50;
+		displayRecords(rows, page);
 	});
-	
-	// $("#results").on( "change", "#numRecords", function (e){
-	// 	e.preventDefault();
-	// 	var numRecords  = $("#numRecords").val();
-	// 	$(".loading-div").show(); //show loading element
-	// 	var page = $(this).attr("data-page"); //get page number from link
-	// 	$("#results").load(data_url+"?show=" + numRecords + "&ToDate=" + df + "&reference_media_id=" + reference_media_id + "&searchName=" + searchName + "&executive=" + executive + "&sales_executive=" + sales_executive + "&df=" + df,{"page":page}, function(){ //get content from PHP page
-	// 		$(".loading-div").hide(); //once done, hide loading element
-	// 		loadDataTable();
-	// 	});
-	// });
 }
 
 // used when user change row limit

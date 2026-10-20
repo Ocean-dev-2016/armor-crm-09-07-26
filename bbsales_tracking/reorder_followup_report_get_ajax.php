@@ -11,12 +11,14 @@ require_once dirname(__DIR__) . '/include/reorder_brm_helper.php';
 /* Ensure columns + auto-send any Admin Re-Order not yet flagged (idempotent) */
 $adminId = isset($_SESSION[SITE_SESS . '_ADMIN_SESS_ID']) ? (int) $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'] : 0;
 reorder_brm_ensure_columns($db);
+reorder_brm_ensure_customer_assign_column($db);
+reorder_brm_auto_divide_customers($db);
 reorder_brm_auto_send_pending($db, $adminId);
 
 $_REQUEST['reorder_only'] = 1;
 if (!isset($_REQUEST['followup_type']) || $_REQUEST['followup_type'] === '' || $_REQUEST['followup_type'] === 'undefined') {
-	/* Default: Pending only (no response) — overdue + today + future */
-	$_REQUEST['followup_type'] = 'future,pending';
+	/* Default: Today Followup + Pending Followup (due <= today, no BRM response) */
+	$_REQUEST['followup_type'] = 'today,pending';
 }
 if (!isset($_REQUEST['isFillter']) || $_REQUEST['isFillter'] === '' || $_REQUEST['isFillter'] === 'false') {
 	$_REQUEST['isFillter'] = 'true';
