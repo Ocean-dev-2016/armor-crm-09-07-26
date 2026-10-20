@@ -3,6 +3,7 @@
 // echo "hello";exit();
 require_once("main.class.php");
 require_once("function.class.php");
+require_once dirname(__FILE__) . "/reorder_brm_helper.php";
 class Executive extends Functions
 {
 	public $db;
@@ -328,6 +329,8 @@ class Executive extends Functions
 			$uid = $this->db->rp_insert($this->ctable, $values, $rows, 0);
 
 			if ($uid != 0) {
+				/* Re-Order report: auto BRM1/BRM2 assign (odd→BRM1, even→BRM2); seid unchanged */
+				reorder_brm_assign_new_customer($this->db, $uid);
 
 				$count_value = 0;
 				foreach ($_REQUEST['shipping_address'] as $key) {
@@ -789,6 +792,10 @@ class Executive extends Functions
 
 			$uid = $this->db->rp_insert($this->ctable, $values, $rows, 0);
 			// echo "<pre>"; print_r($uid); exit();
+			if ($uid != 0) {
+				/* Re-Order report: auto BRM1/BRM2 assign (odd→BRM1, even→BRM2); seid unchanged */
+				reorder_brm_assign_new_customer($this->db, $uid);
+			}
 			$CreateAccount = $this->CreateCustomerAccount($uid);
 			/*add image*/
 			$image_path = array();

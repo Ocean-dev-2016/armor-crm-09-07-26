@@ -634,3 +634,35 @@ if (!function_exists('reorder_brm_set_customer_admin')) {
 		);
 	}
 }
+
+if (!function_exists('reorder_brm_assign_new_customer')) {
+	/**
+	 * Auto-assign a newly created customer to BRM1 or BRM2 (odd id → BRM1, even → BRM2).
+	 * Same rule as reorder_brm_auto_divide_customers. Does not change seid.
+	 * Safe if already assigned (no overwrite).
+	 * @return int assigned brm_admin_id (0 if skipped/failed)
+	 */
+	function reorder_brm_assign_new_customer($db, $customerId)
+	{
+		$customerId = (int) $customerId;
+		if ($customerId <= 0) {
+			return 0;
+		}
+		reorder_brm_ensure_customer_assign_column($db);
+		$ids = reorder_brm_login_ids($db);
+		$b1 = (int) $ids['brm1'];
+		$b2 = (int) $ids['brm2'];
+		if ($b1 <= 0 || $b2 <= 0) {
+			return 0;
+		}
+		$cur = (int) $db->rp_getValue("executive", "brm_admin_id", "id='" . $customerId . "' AND isDelete=0", 0);
+		if ($cur > 0) {
+			return $cur;
+		}
+		$assignId = (($customerId % 2) === 1) ? $b1 : $b2;
+		if (reorder_brm_set_customer_admin($db, $customerId, $assignId)) {
+			return $assignId;
+		}
+		return 0;
+	}
+}
