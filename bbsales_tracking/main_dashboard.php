@@ -523,7 +523,7 @@ $total_quotation = $db->rp_getTotalRecord("quotation_detail", "isDelete=0", 0);
 					}
 					?>
 
-					<?php if ($_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0) { ?>
+					<?php if ($_SESSION[SITE_SESS . 'REFERANCE_TYPE'] != 3) { ?>
 					<div class="row today-followup-top-row">
 						<div class="col-md-12 col-sm-12 col-xs-12 col-lg-12" id="today-followup-data">
 							<div class="text-center" style="padding:30px;color:#999;">
@@ -740,16 +740,18 @@ $total_quotation = $db->rp_getTotalRecord("quotation_detail", "isDelete=0", 0);
 		$("#leave-data").load("leave_data_get_ajax.php");
 		$("#followup-data").load("followup_data_get_ajax.php");
 		$("#attendance-data").load("attendance_data_get_ajax.php");
-		<?php if ($_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0) { ?>
+		<?php if ($_SESSION[SITE_SESS . 'REFERANCE_TYPE'] != 3) { ?>
 		function loadTodayFollowupDashboard() {
 			var salesId = $("#all_sales_executive").val() || "";
 			$("#today-followup-data").load("today_followup_dashboard_ajax.php?sales_id=" + encodeURIComponent(salesId));
 		}
 		loadTodayFollowupDashboard();
-		$("#dashboard-notification-data").load("dashboard_notifications_ajax.php");
 		$("#all_sales_executive").on("change", function() {
 			loadTodayFollowupDashboard();
 		});
+		<?php } ?>
+		<?php if ($_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0) { ?>
+		$("#dashboard-notification-data").load("dashboard_notifications_ajax.php");
 		<?php } ?>
 		//$( "#sales_person_target" ).load("sales_person_target.php");
 		//$( "#outstanding_data" ).load("outstanding_data_get_ajax.php");
@@ -2007,7 +2009,7 @@ $total_quotation = $db->rp_getTotalRecord("quotation_detail", "isDelete=0", 0);
 			// getleave(todate_all,fromdate_all,all_sales_executive);
 			// getfollowup(todate_all,fromdate_all,all_sales_executive);
 			getattendance(todate_all, fromdate_all, all_sales_executive);
-			<?php if ($_SESSION[SITE_SESS . '_ADMIN_TYPE'] == 0) { ?>
+			<?php if ($_SESSION[SITE_SESS . 'REFERANCE_TYPE'] != 3) { ?>
 			if (typeof loadTodayFollowupDashboard === 'function') {
 				loadTodayFollowupDashboard();
 			}

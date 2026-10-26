@@ -1,14 +1,62 @@
 <?php
-$page_id = 583;
-$page_slug = 'page_followup';
+$page_id = 400;
+$page_slug = 'dashboard';
 include("connect.php");
-
-if (!isset($_SESSION[SITE_SESS . '_ADMIN_TYPE']) || $_SESSION[SITE_SESS . '_ADMIN_TYPE'] != 0) {
-	exit;
-}
 
 $today = date('Y-m-d');
 $ctable_where = "DATE(followup_date) = '" . $today . "' AND isDelete=0 AND isActive=1";
+$scope_label = "All Team";
+$is_admin = (isset($_SESSION[SITE_SESS . '_ADMIN_TYPE']) && (int) $_SESSION[SITE_SESS . '_ADMIN_TYPE'] === 0);
+
+if (!$is_admin) {
+	$my_id = isset($_SESSION[SITE_SESS . 'REFERANCE_ID']) ? (int) $_SESSION[SITE_SESS . 'REFERANCE_ID'] : 0;
+	$fu_all = 0;
+	$fu_personal = 0;
+	$fu_chain = 0;
+	$admin_type = (int) $_SESSION[SITE_SESS . '_ADMIN_TYPE'];
+	$rr = $db->rp_getData("page_admin_right", "all_data_flag,personal_flag,chain_vise_flag", "page_id='583' AND admin_id='" . $admin_type . "'", "", 0);
+	if ($rr && $fu = mysqli_fetch_assoc($rr)) {
+		$fu_all = (int) $fu['all_data_flag'];
+		$fu_personal = (int) $fu['personal_flag'];
+		$fu_chain = (int) $fu['chain_vise_flag'];
+	}
+
+	if ($fu_all === 1) {
+		$scope_label = "All Team";
+	} else if ($fu_chain === 1 && $fu_personal !== 1 && isset($_SESSION[SITE_SESS . 'REFERANCE_TYPE']) && (int) $_SESSION[SITE_SESS . 'REFERANCE_TYPE'] === 2 && $my_id > 0) {
+		$get_sales_type = $db->rp_getValue("sales_executive", "type", "isDelete=0 AND id='" . $my_id . "'", 0);
+		$key = "";
+		if ($get_sales_type == "sales_manager") {
+			$key = "sm_id";
+		} else if ($get_sales_type == "area_sales_manager") {
+			$key = "asm_id";
+		} else if ($get_sales_type == "sales_officer") {
+			$key = "so_id";
+		} else if ($get_sales_type == "sales_executive") {
+			$key = "se_id";
+		}
+		$where_chain = ($key != "") ? ($key . "=" . $my_id) : "type='service_engineer'";
+		$chain_ids = array($my_id);
+		$chain_r = $db->rp_getData("sales_executive", "id", $where_chain, "", 0);
+		if ($chain_r) {
+			while ($chain_d = mysqli_fetch_assoc($chain_r)) {
+				$chain_ids[] = (int) $chain_d['id'];
+			}
+		}
+		$chain_ids = array_unique(array_filter($chain_ids));
+		$ctable_where .= " AND user_id IN (" . implode(",", $chain_ids) . ")";
+		$scope_label = "My Team";
+	} else if ($my_id > 0) {
+		$ctable_where .= " AND user_id='" . $my_id . "'";
+		$scope_label = $db->rp_getValue("sales_executive", "name", "id='" . $my_id . "'", 0);
+		if ($scope_label == "") {
+			$scope_label = "My Followup";
+		}
+	} else {
+		$ctable_where .= " AND 1=0";
+		$scope_label = "My Followup";
+	}
+}
 
 $SEID = array();
 $sales_type_r = $db->rp_getData("sales_executive", "id", "type='service_executive'", "", 0);
@@ -126,7 +174,7 @@ if ($ctable_r && mysqli_num_rows($ctable_r) > 0) {
 		<div class="caption">
 			<i class="fa fa-calendar-check-o"></i>
 			<span class="caption-subject bold uppercase">Today's Followup</span>
-			<span class="tf-subtitle">Full Details — All Team</span>
+			<span class="tf-subtitle">Pending and responded — <?php echo htmlspecialchars(stripslashes($scope_label)); ?></span>
 			<span class="badge"><?php echo (int) $total_today; ?></span>
 		</div>
 		<div class="actions">
