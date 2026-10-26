@@ -36,8 +36,12 @@ else
 			if($rights)
 			{
 				$_SESSION['rights']=$rights=mysqli_fetch_assoc($rights);
-				/* Re-Order Followup Report: require explicit view right */
-				if ((int) $page_id === 677 && (!isset($rights['view_flag']) || (int) $rights['view_flag'] !== 1)) {
+				if (isset($rights['all_data_flag']) && (int)$rights['all_data_flag'] === 1) {
+					$rights['personal_flag'] = 0;
+					$rights['chain_vise_flag'] = 0;
+					$_SESSION['rights'] = $rights;
+				}
+				if (!isset($rights['view_flag']) || (int) $rights['view_flag'] !== 1) {
 					$db->rp_location("access_denied.php?msg=access_denied");
 				}
 			}

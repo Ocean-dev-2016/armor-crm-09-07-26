@@ -1,5 +1,5 @@
 <?php
-$page_id=580;$page_slug='price_list_master';
+$page_id=680;$page_slug='document_list';
 $ctable 	= "document_list";
 $ctable1 	= "Document List";
 $main_page 	= "product_mgmt";

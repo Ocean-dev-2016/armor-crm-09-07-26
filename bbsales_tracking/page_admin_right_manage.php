@@ -6,6 +6,7 @@ $main_page 	= "product_mgmt";
 $page 		= "manage_".$ctable;
 $page_title = "Manage ".$ctable1;
 include("connect.php");
+include("../include/menu_permission_label.php");
 $pid=$_REQUEST['pid'];
 ?>
 <!DOCTYPE html>
@@ -22,31 +23,45 @@ $pid=$_REQUEST['pid'];
 <link rel="stylesheet" type="text/css" href="assets/global/plugins/datatables/plugins/bootstrap/dataTables.bootstrap.css"/>
 <link href="js/toastr.css" rel="stylesheet" type="text/css" />	
 <style type="text/css">
-	.tableFixHead 
+	.tableFixHead
 	{
-      overflow-y: auto;
-      height: 500px;
+      overflow: auto;
+      max-height: 70vh;
    }
-   .tableFixHead thead th 
+   .tableFixHead thead th
    {
       position: sticky;
       top: 0;
+      background: #e5e5e5;
+      z-index: 2;
    }
-   table 
+   table
    {
       border-collapse: collapse;
       width: 100%;
    }
-   th,td 
+   th,td
    {
-      padding: 8px 16px;
+      padding: 8px 10px;
       border: 1px solid #ccc;
    }
-   th 
+   .perm-section td
    {
-      background: #e5e5e5;
-      position: fixed;
-      z-index: 1;
+      background: #c62828;
+      color: #fff;
+      font-weight: bold;
+      letter-spacing: 0.3px;
+   }
+   .perm-sub, .perm-alias
+   {
+      font-size: 12px;
+      color: #666;
+      margin-top: 3px;
+   }
+   .perm-search
+   {
+      margin: 10px 0;
+      max-width: 320px;
    }
 </style>	
 </head>
@@ -89,12 +104,13 @@ $pid=$_REQUEST['pid'];
 								?>
 								<button class="btn btn-primary sidebar" type="button" onClick="clc();">Update All</button>								
 								</div>
+							<input type="text" id="permSearch" class="form-control perm-search" placeholder="Search menu or submenu">
 							<div class="tableFixHead" > 
-								<table id="example1" class="table table-bordered table-striped dataTable">
+								<table id="example1" class="table table-bordered table-striped">
 									<thead>
 										<tr>
-											<th>No.</th>
-											<th>Page Name</th>									
+											<th>Menu / Submenu</th>
+											<th>All <input type="checkbox" id="permHeadAll" title="All rights for every menu"></th>
 											<th>View </th>
 											<th>Insert </th>
 											<th>Update </th>
@@ -112,68 +128,9 @@ $pid=$_REQUEST['pid'];
 									</thead>
 									<tbody>
 											<?php
-												
-													$ctable_r = $db->rp_getData("page_admin_right","*","admin_id='".$pid."' AND isDelete=0","",0);
-												
-												if(mysqli_num_rows($ctable_r)>0){
-													$count = 0;
-													
-													while($ctable_d = mysqli_fetch_array($ctable_r)){
-														$count++;
-												?>
-										   <tr id="row<?php echo $ctable_d['id']; ?>">
-																		<td><?php echo $count; ?></td>
-																		<td><?php 
-												echo stripslashes($db->rp_getValue("page_table","page_title","id='".$ctable_d['page_id']."'")); 
-												?></td>
-																		<td align="center">
-																			<input type="checkbox" name="view<?php echo $ctable_d['id']; ?>[]" id="view<?php echo $ctable_d['id']; ?>" value="1" <?php echo ($ctable_d['view_flag']==1)?"checked":""; ?> style="width:60px;text-align:center">
-																		</td>	
-								<td align="center">
-																			<input type="checkbox" name="insert<?php echo $ctable_d['id']; ?>[]" id="insert<?php echo $ctable_d['id']; ?>" value="1" <?php echo ($ctable_d['insert_flag']==1)?"checked":""; ?> style="width:60px;text-align:center">
-																		</td>	
-								<td align="center">
-																			<input type="checkbox" name="update<?php echo $ctable_d['id']; ?>[]" id="update<?php echo $ctable_d['id']; ?>" value="1"  <?php echo ($ctable_d['update_flag']==1)?"checked":""; ?> style="width:60px;text-align:center">
-																		</td>	
-								<td align="center">
-																			<input type="checkbox" name="delete<?php echo $ctable_d['id']; ?>[]" id="delete<?php echo $ctable_d['id']; ?>" value="1" <?php echo ($ctable_d['delete_flag']==1)?"checked":""; ?> style="width:60px;text-align:center">
-																		</td>			
-
-																			<td align="center">
-															<input type="checkbox" name="export_excel<?php echo $ctable_d['id']; ?>[]" id="export_excel<?php echo $ctable_d['id']; ?>" value="1" <?php echo ($ctable_d['export_excel_flag']==1)?"checked":""; ?> style="width:60px;text-align:center">
-														</td>
-														<td align="center">
-															<input type="checkbox" name="print<?php echo $ctable_d['id']; ?>[]" id="print<?php echo $ctable_d['id']; ?>" value="1" <?php echo ($ctable_d['print_flag']==1)?"checked":""; ?> style="width:60px;text-align:center">
-														</td>	
-														<td align="center">
-															<input type="checkbox" name="pdf_download<?php echo $ctable_d['id']; ?>[]" id="pdf_download<?php echo $ctable_d['id']; ?>" value="1" <?php echo ($ctable_d['pdf_download_flag']==1)?"checked":""; ?> style="width:60px;text-align:center">
-														</td>	
-														<td align="center">
-															<input type="checkbox" name="email<?php echo $ctable_d['id']; ?>[]" id="email<?php echo $ctable_d['id']; ?>" value="1" <?php echo ($ctable_d['email_flag']==1)?"checked":""; ?> style="width:60px;text-align:center">
-														</td>	
-														<td align="center">
-															<input type="checkbox" name="all_data<?php echo $ctable_d['id']; ?>[]" id="all_data<?php echo $ctable_d['id']; ?>" value="1" <?php echo ($ctable_d['all_data_flag']==1)?"checked":""; ?> style="width:60px;text-align:center">
-														</td>	
-														<td align="center">
-															<input type="checkbox" name="approve<?php echo $ctable_d['id']; ?>[]" id="approve<?php echo $ctable_d['id']; ?>" value="1" <?php echo ($ctable_d['approve_flag']==1)?"checked":""; ?> style="width:60px;text-align:center">
-														</td>	
-														<td align="center">
-															<input type="checkbox" name="personal<?php echo $ctable_d['id']; ?>[]" id="personal<?php echo $ctable_d['id']; ?>" value="1" <?php echo ($ctable_d['personal_flag']==1)?"checked":""; ?> style="width:60px;text-align:center">
-														</td>		
-														<td align="center">
-															<input type="checkbox" name="chain_vise<?php echo $ctable_d['id']; ?>[]" id="chain_vise<?php echo $ctable_d['id']; ?>" value="1" <?php echo ($ctable_d['chain_vise_flag']==1)?"checked":""; ?> style="width:60px;text-align:center">
-														</td>																												
-																		
-																		<td>
-																			<a class="btn btn-info btn-sm clc" href="javascript:void(0);" title="Add" onClick="addPT('<?php echo $ctable_d['id']; ?>');"><i class="fa fa-pencil"></i> Update</a>
-																			<a class="btn btn-danger btn-sm" onClick="del_conf('<?php echo $ctable_d['id']; ?>');" title="Delete"><i class="fa fa-times"></i></a>
-																		</td>
-																	</tr>
-																	<?php
-																		}
-																	}
-																	
-																	?>
+												armor_echo_permission_board($db, $pid, 'manage', array());
+												$count = (int) $db->rp_getTotalRecord("page_admin_right", "admin_id='".$pid."' AND isDelete=0");
+											?>
 										</tbody>
 									
 								</table>
@@ -207,7 +164,7 @@ $pid=$_REQUEST['pid'];
 <script type="text/javascript">function clc(){
 	$(".clc").trigger('click');
 }
-function addPT(pid){
+function addPT(pid, quiet, done){
 	var view_flag=0;
 	var insert_flag=0;
 	var update_flag=0;
@@ -235,7 +192,7 @@ function addPT(pid){
 	}
 	if(document.getElementById("delete"+pid).checked)
 	{
-		delete_flag=document.getElementById("update"+pid).value;
+		delete_flag=document.getElementById("delete"+pid).value;
 	}
 
 	if(document.getElementById("export_excel"+pid).checked)
@@ -273,19 +230,29 @@ function addPT(pid){
 	
 	
 	if(insert_flag==0 && view_flag==0 && update_flag==0 && delete_flag==0 && export_excel_flag==0 && print_flag==0 && pdf_download_flag==0 && email_flag==0 && all_data_flag==0 && approve_flag==0  && personal_flag==0 && chain_vise_flag==0){
-		toastr.error("Please enter valid rights or delete completly");
+		if(!quiet){
+			toastr.error("Please enter valid rights or delete completly");
+		}
+		if(done){ done(); }
 	}else{
 		$.ajax({
 			type: "POST",
 			url: "ajax_addAR.php",
 			data: 'mode=edit&id='+pid+'&insert_flag='+insert_flag+'&view_flag='+view_flag+'&update_flag='+update_flag+'&delete_flag='+delete_flag+'&export_excel_flag='+export_excel_flag+'&print_flag='+print_flag+'&pdf_download_flag='+pdf_download_flag+'&email_flag='+email_flag+'&all_data_flag='+all_data_flag+'&approve_flag='+approve_flag+'&personal_flag='+personal_flag+'&chain_vise_flag='+chain_vise_flag,
 			success: function(result){
-					if(result==1){
-						toastr.success("Rights updated successfully.");
-					}else{
-						toastr.error("Something went wrong. Please try again.");
+					if(!quiet){
+						if(result==1){
+							toastr.success("Rights updated successfully.");
+						}else{
+							toastr.error("Something went wrong. Please try again.");
+						}
 					}
-				}
+					if(done){ done(); }
+				},
+			error: function(){
+				if(!quiet){ toastr.error("Something went wrong. Please try again."); }
+				if(done){ done(); }
+			}
 		});
 		
 	}
@@ -298,12 +265,113 @@ function del_conf(id){
 }
 </script>
 <script>
-$(document).ready(function() {       
-   $('#example1').dataTable({
-	    "paging":   false,
-        "ordering": false,
-        "info":     false
-   });
+$(document).ready(function() {
+	$('#permSearch').on('keyup', function() {
+		var q = $.trim($(this).val()).toLowerCase();
+		$('.perm-row').each(function() {
+			var show = q === '' || $(this).text().toLowerCase().indexOf(q) !== -1;
+			$(this).toggle(show);
+		});
+		$('.perm-section').each(function() {
+			var next = $(this).nextUntil('.perm-section');
+			$(this).toggle(next.filter(':visible').length > 0);
+		});
+	});
+});
+</script>
+<script type="text/javascript">
+var permFields = ['view','insert','update','delete','export_excel','print','pdf_download','email','all_data','approve','personal','chain_vise'];
+function permPaint(el, on) {
+	if (!el) { return; }
+	el.checked = on;
+	if (window.jQuery && jQuery.uniform && jQuery.uniform.update) {
+		jQuery.uniform.update(el);
+	}
+}
+function permSetKey(key, on) {
+	var i, el, row;
+	for (i = 0; i < permFields.length; i++) {
+		permPaint(document.getElementById(permFields[i] + key), on);
+	}
+	permPaint(document.getElementById('rowall' + key), on);
+	row = document.getElementById('row' + key);
+	if (row) {
+		var boxes = row.getElementsByTagName('input');
+		for (i = 0; i < boxes.length; i++) {
+			if (boxes[i].type === 'checkbox') {
+				permPaint(boxes[i], on);
+			}
+		}
+	}
+}
+function permSaveKeys(keys) {
+	var left = keys.length;
+	if (!left) { return; }
+	function finishOne() {
+		left--;
+		if (left === 0 && window.toastr) {
+			toastr.success('All rights saved.');
+		}
+	}
+	for (var i = 0; i < keys.length; i++) {
+		permSetKey(keys[i], true);
+		if (typeof addAR === 'function') {
+			addAR(keys[i], true, finishOne);
+		} else if (typeof addPT === 'function') {
+			addPT(keys[i], true, finishOne);
+		} else {
+			finishOne();
+		}
+	}
+}
+$(document).on('change', '.perm-row-all', function() {
+	var key = $(this).attr('data-key');
+	if (this.checked) {
+		permSaveKeys([key]);
+	} else {
+		permSetKey(key, false);
+	}
+});
+$(document).on('change', '.perm-section-all', function() {
+	var on = this.checked;
+	var keys = [];
+	$(this).closest('tr').nextUntil('.perm-section').filter('.perm-row:visible').each(function() {
+		keys.push($(this).attr('data-key'));
+	});
+	if (on) {
+		permSaveKeys(keys);
+	} else {
+		for (var i = 0; i < keys.length; i++) {
+			permSetKey(keys[i], false);
+		}
+	}
+});
+$(document).on('change', '#permHeadAll', function() {
+	var on = this.checked;
+	$('.perm-section-all').prop('checked', on);
+	var keys = [];
+	$('.perm-row:visible').each(function() {
+		keys.push($(this).attr('data-key'));
+	});
+	if (on) {
+		permSaveKeys(keys);
+	} else {
+		for (var i = 0; i < keys.length; i++) {
+			permSetKey(keys[i], false);
+		}
+	}
+});
+$(document).on('change', '.perm-flag', function() {
+	var row = $(this).closest('tr');
+	var key = row.attr('data-key');
+	var on = true;
+	var i, el;
+	for (i = 0; i < permFields.length; i++) {
+		el = document.getElementById(permFields[i] + key);
+		if (!el || !el.checked) { on = false; break; }
+	}
+	el = document.getElementById('rowall' + key);
+	if (el) { el.checked = on; }
 });
 </script>
 </body>

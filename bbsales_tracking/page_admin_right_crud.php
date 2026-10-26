@@ -7,6 +7,7 @@ $page 		= "manage_page_admin_right";
 $page_title = "Add ".$ctable1;
 
 include("connect.php");
+include("../include/menu_permission_label.php");
 $tids = "5895,".implode(",",$comman_pages).",";
 if(!isset($_REQUEST['pid']) || $_REQUEST['pid']==''){
 	$db->rp_location("admin_type_manage.php");
@@ -44,25 +45,36 @@ if(mysqli_num_rows($pctable_r)>0){
 <link href="js/toastr.css" rel="stylesheet" type="text/css" />
 <style type="text/css">
 	.tableFixHead {
-        overflow-y: auto;
-        height: 500px;
+        overflow: auto;
+        max-height: 70vh;
     }
     .tableFixHead thead th {
         position: sticky;
         top: 0;
+        background: #e5e5e5;
+        z-index: 2;
     }
     table {
         border-collapse: collapse;
         width: 100%;
     }
     th,td {
-        padding: 8px 16px;
+        padding: 8px 10px;
         border: 1px solid #ccc;
     }
-    th {
-        background: #e5e5e5;
-        position: fixed;
-        z-index: 1;
+    .perm-section td {
+        background: #c62828;
+        color: #fff;
+        font-weight: bold;
+    }
+    .perm-sub, .perm-alias {
+        font-size: 12px;
+        color: #666;
+        margin-top: 3px;
+    }
+    .perm-search {
+        margin: 10px 0;
+        max-width: 320px;
     }
 </style>
 </head>
@@ -91,13 +103,13 @@ if(mysqli_num_rows($pctable_r)>0){
 							<div id="results">
 							
 <form action="" name="frm" id="frm" method="post">
+  <input type="text" id="permSearch" class="form-control perm-search" placeholder="Search menu or submenu">
   <div class="tableFixHead" >
 	<table id="datatable_1" class="table table-striped table-bordered table-hover">
         <thead>
-            <tr>
 				<tr>
-					<th>No.</th>
-					<th>Page Name</th>									
+					<th>Menu / Submenu</th>
+					<th>All <input type="checkbox" id="permHeadAll" title="All rights for every menu"></th>
 					<th>View </th>
 					<th>Insert </th>
 					<th>Update </th>
@@ -112,72 +124,13 @@ if(mysqli_num_rows($pctable_r)>0){
 					<th>Chain Vise</th>
 					<th>Action</th>
 				</tr>
-            </tr>
         </thead>
         <tbody>
 			<?php
-				if($tids=="")
-					$ctable_r = $db->rp_getData("page_table","*","isDelete=0","",0);
-				else
-				$ctable_r = $db->rp_getData("page_table","*","id not in ($tids) AND isDelete=0","",0);
-				if(mysqli_num_rows($ctable_r)>0){
-					$count = 0;
-					
-					while($ctable_d = mysqli_fetch_array($ctable_r)){
-						$count++;
-				?>
-           <tr id="row<?php echo $ctable_d['id']; ?>">
-										<td><?php echo $count; ?></td>
-										<td><?php echo stripslashes($ctable_d['page_title']); ?></td>
-										<td align="center">
-											<input type="checkbox" name="view<?php echo $ctable_d['id']; ?>[]" id="view<?php echo $ctable_d['id']; ?>" value="1" style="width:60px;text-align:center">
-										</td>	
-<td align="center">
-											<input type="checkbox" name="insert<?php echo $ctable_d['id']; ?>[]" id="insert<?php echo $ctable_d['id']; ?>" value="1" style="width:60px;text-align:center">
-										</td>	
-<td align="center">
-											<input type="checkbox" name="update<?php echo $ctable_d['id']; ?>[]" id="update<?php echo $ctable_d['id']; ?>" value="1" style="width:60px;text-align:center">
-										</td>	
-<td align="center">
-											<input type="checkbox" name="delete<?php echo $ctable_d['id']; ?>[]" id="delete<?php echo $ctable_d['id']; ?>" value="1" style="width:60px;text-align:center">
-										</td>			
-
-										<td align="center">
-															<input type="checkbox" name="export_excel<?php echo $ctable_d['id']; ?>[]" id="export_excel<?php echo $ctable_d['id']; ?>" value="1" <?php echo ($ctable_d['export_excel_flag']==1)?"checked":""; ?> style="width:60px;text-align:center">
-														</td>
-														<td align="center">
-															<input type="checkbox" name="print<?php echo $ctable_d['id']; ?>[]" id="print<?php echo $ctable_d['id']; ?>" value="1" <?php echo ($ctable_d['print_flag']==1)?"checked":""; ?> style="width:60px;text-align:center">
-														</td>	
-														<td align="center">
-															<input type="checkbox" name="pdf_download<?php echo $ctable_d['id']; ?>[]" id="pdf_download<?php echo $ctable_d['id']; ?>" value="1" <?php echo ($ctable_d['pdf_download_flag']==1)?"checked":""; ?> style="width:60px;text-align:center">
-														</td>	
-														<td align="center">
-															<input type="checkbox" name="email<?php echo $ctable_d['id']; ?>[]" id="email<?php echo $ctable_d['id']; ?>" value="1" <?php echo ($ctable_d['email_flag']==1)?"checked":""; ?> style="width:60px;text-align:center">
-														</td>	
-														<td align="center">
-															<input type="checkbox" name="all_data<?php echo $ctable_d['id']; ?>[]" id="all_data<?php echo $ctable_d['id']; ?>" value="1" <?php echo ($ctable_d['all_data_flag']==1)?"checked":""; ?> style="width:60px;text-align:center">
-														</td>	
-														<td align="center">
-															<input type="checkbox" name="approve<?php echo $ctable_d['id']; ?>[]" id="approve<?php echo $ctable_d['id']; ?>" value="1" <?php echo ($ctable_d['approve_flag']==1)?"checked":""; ?> style="width:60px;text-align:center">
-														</td>	
-														<td align="center">
-															<input type="checkbox" name="personal<?php echo $ctable_d['id']; ?>[]" id="personal<?php echo $ctable_d['id']; ?>" value="1" <?php echo ($ctable_d['personal_flag']==1)?"checked":""; ?> style="width:60px;text-align:center">
-														</td>															
-
-														<td align="center">
-															<input type="checkbox" name="chain_vise<?php echo $ctable_d['id']; ?>[]" id="chain_vise<?php echo $ctable_d['id']; ?>" value="1" <?php echo ($ctable_d['chain_vise_flag']==1)?"checked":""; ?> style="width:60px;text-align:center">
-														</td>															
-										
-										<td>
-											<a class="btn btn-info btn-sm" href="javascript:void(0);" title="Add" onClick="addAR('<?php echo $ctable_d['id']; ?>');"><i class="fa fa-plus"></i> Add</a>
-											
-										</td>
-									</tr>
-									<?php
-										}
-									}
-									
-									?>
+				$exclude_pages = $comman_pages;
+				$exclude_pages[] = 5895;
+				armor_echo_permission_board($db, $pid, 'add', $exclude_pages);
+			?>
         </tbody>
     </table>
     </div>
@@ -199,21 +152,17 @@ if(mysqli_num_rows($pctable_r)>0){
 <script type="text/javascript" src="assets/global/plugins/datatables/plugins/bootstrap/dataTables.bootstrap.js"></script>
 <script src="js/toastr.js"></script>
 <script type="text/javascript">
-$('#datatable_1').dataTable({
-		"bPaginate": false,
-		"bFilter": false,
-		"bInfo": false,
-		"bAutoWidth": false, 
-		"aoColumns": [
-			  { "sWidth": "10%" }, 
-			  { "sWidth": "30%" },
-			  { "sWidth": "10%" },
-			  { "sWidth": "10%" },
-			  { "sWidth": "10%" },
-			  { "sWidth": "10%" },			  
-			  { "sWidth": "20%","bSortable": false }
-			]
+$('#permSearch').on('keyup', function() {
+	var q = $.trim($(this).val()).toLowerCase();
+	$('.perm-row').each(function() {
+		var show = q === '' || $(this).text().toLowerCase().indexOf(q) !== -1;
+		$(this).toggle(show);
 	});
+	$('.perm-section').each(function() {
+		var next = $(this).nextUntil('.perm-section');
+		$(this).toggle(next.filter(':visible').length > 0);
+	});
+});
 var searchName="";
 var data_url = "<?php echo $ctable ?>_get_ajax.php";
 function searchByName(){
@@ -239,7 +188,7 @@ function loadDataTable(){
 function changeDisplayRowCount(numRecords) {
 	displayRecords(numRecords, 1);
 }
-function addAR(pid){
+function addAR(pid, quiet, done){
 	
 	var view_flag=0;
 	var insert_flag=0;
@@ -267,7 +216,7 @@ function addAR(pid){
 	}
 	if(document.getElementById("delete"+pid).checked)
 	{
-		delete_flag=document.getElementById("update"+pid).value;
+		delete_flag=document.getElementById("delete"+pid).value;
 	}
 	if(document.getElementById("export_excel"+pid).checked)
 	{
@@ -306,23 +255,32 @@ function addAR(pid){
 	
 	
 	if(insert_flag==0 && view_flag==0 && update_flag==0 && delete_flag==0 && export_excel_flag==0 && print_flag==0 && pdf_download_flag==0 && email_flag==0 && all_data_flag==0 && approve_flag==0 && personal_flag==0 && chain_vise_flag==0){
-		alert("Please select atleast one right."+insert_flag+view_flag);
-		
+		if(!quiet){
+			alert("Please select atleast one right.");
+		}
+		if(done){ done(); }
 	}else{
 		$.ajax({
 			type: "POST",
 			url: "ajax_addAR.php",
 data: 'mode=add&pid=<?php echo $_REQUEST['pid']; ?>&tid='+pid+'&insert_flag='+insert_flag+'&view_flag='+view_flag+'&update_flag='+update_flag+'&delete_flag='+delete_flag +'&export_excel_flag='+export_excel_flag+'&print_flag='+print_flag+'&pdf_download_flag='+pdf_download_flag+'&email_flag='+email_flag+'&all_data_flag='+all_data_flag+'&approve_flag='+approve_flag+'&personal_flag='+personal_flag+'&chain_vise_flag='+chain_vise_flag,
 			success: function(result){
-					if(result==1){
-						toastr.success("Right added successfully.");
-					}else if(result==2){
-						toastr.error("This Right is already added.");
-					}else{
-						toastr.error("Something went wrong. Please try again.");
+					if(!quiet){
+						if(result==1){
+							toastr.success("Right added successfully.");
+						}else if(result==2){
+							toastr.error("This Right is already added.");
+						}else{
+							toastr.error("Something went wrong. Please try again.");
+						}
 					}
 					$("#row"+pid).fadeOut(1200);
-				}
+					if(done){ done(); }
+				},
+			error: function(){
+				if(!quiet){ toastr.error("Something went wrong. Please try again."); }
+				if(done){ done(); }
+			}
 		});
 		
 	}
@@ -335,6 +293,101 @@ function del_conf(id){
 		window.location.href='<?php echo $ctable; ?>_crud.php?mode=delete&id='+id;
 	}
 }
+</script>
+<script type="text/javascript">
+var permFields = ['view','insert','update','delete','export_excel','print','pdf_download','email','all_data','approve','personal','chain_vise'];
+function permPaint(el, on) {
+	if (!el) { return; }
+	el.checked = on;
+	if (window.jQuery && jQuery.uniform && jQuery.uniform.update) {
+		jQuery.uniform.update(el);
+	}
+}
+function permSetKey(key, on) {
+	var i, el, row;
+	for (i = 0; i < permFields.length; i++) {
+		permPaint(document.getElementById(permFields[i] + key), on);
+	}
+	permPaint(document.getElementById('rowall' + key), on);
+	row = document.getElementById('row' + key);
+	if (row) {
+		var boxes = row.getElementsByTagName('input');
+		for (i = 0; i < boxes.length; i++) {
+			if (boxes[i].type === 'checkbox') {
+				permPaint(boxes[i], on);
+			}
+		}
+	}
+}
+function permSaveKeys(keys) {
+	var left = keys.length;
+	if (!left) { return; }
+	function finishOne() {
+		left--;
+		if (left === 0 && window.toastr) {
+			toastr.success('All rights saved.');
+		}
+	}
+	for (var i = 0; i < keys.length; i++) {
+		permSetKey(keys[i], true);
+		if (typeof addAR === 'function') {
+			addAR(keys[i], true, finishOne);
+		} else if (typeof addPT === 'function') {
+			addPT(keys[i], true, finishOne);
+		} else {
+			finishOne();
+		}
+	}
+}
+$(document).on('change', '.perm-row-all', function() {
+	var key = $(this).attr('data-key');
+	if (this.checked) {
+		permSaveKeys([key]);
+	} else {
+		permSetKey(key, false);
+	}
+});
+$(document).on('change', '.perm-section-all', function() {
+	var on = this.checked;
+	var keys = [];
+	$(this).closest('tr').nextUntil('.perm-section').filter('.perm-row:visible').each(function() {
+		keys.push($(this).attr('data-key'));
+	});
+	if (on) {
+		permSaveKeys(keys);
+	} else {
+		for (var i = 0; i < keys.length; i++) {
+			permSetKey(keys[i], false);
+		}
+	}
+});
+$(document).on('change', '#permHeadAll', function() {
+	var on = this.checked;
+	$('.perm-section-all').prop('checked', on);
+	var keys = [];
+	$('.perm-row:visible').each(function() {
+		keys.push($(this).attr('data-key'));
+	});
+	if (on) {
+		permSaveKeys(keys);
+	} else {
+		for (var i = 0; i < keys.length; i++) {
+			permSetKey(keys[i], false);
+		}
+	}
+});
+$(document).on('change', '.perm-flag', function() {
+	var row = $(this).closest('tr');
+	var key = row.attr('data-key');
+	var on = true;
+	var i, el;
+	for (i = 0; i < permFields.length; i++) {
+		el = document.getElementById(permFields[i] + key);
+		if (!el || !el.checked) { on = false; break; }
+	}
+	el = document.getElementById('rowall' + key);
+	if (el) { el.checked = on; }
+});
 </script>
 </body>
 </html>

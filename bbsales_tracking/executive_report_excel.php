@@ -66,7 +66,8 @@ if (isset($_REQUEST['seid']) && $_REQUEST['seid'] != "" && $_REQUEST['seid'] != 
   $Where .= " seid = '" . $_REQUEST['seid'] . "' AND";
 }
 if ($_SESSION[SITE_SESS . '_ADMIN_TYPE'] != 0) {
-  if ($rights['personal_flag'] == 1) {
+  if (isset($rights['all_data_flag']) && $rights['all_data_flag'] == 1) {
+  } else if ($rights['personal_flag'] == 1) {
     $Where .= " created_by ='" . $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'] . "' AND ";
     $customer_type = $db->rp_getValue("sales_executive", "customer_type", "id='" . $_SESSION[SITE_SESS . 'REFERANCE_ID'] . "'", 0);
     $filter_where .= " id IN (" . $customer_type . ") AND ";

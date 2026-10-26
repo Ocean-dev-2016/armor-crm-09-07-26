@@ -1,5 +1,5 @@
 <?php
-$page_id=580;$page_slug='price_list_master';
+$page_id=679;$page_slug='push_notification';
 include("connect.php");
 require_once("../include/push_notification.class.php");
 $objPushNotification= new PushNotification();

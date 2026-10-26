@@ -1,5 +1,5 @@
 <?php
-$page_id=580;$page_slug='price_list_master';
+$page_id=680;$page_slug='document_list';
 include("connect.php");
 //$Where=" isDelete=0 ";
 $OrderBy="";

@@ -50,7 +50,9 @@ if (isset($_REQUEST["page"])) {
 }
 
 if ($_SESSION[SITE_SESS . '_ADMIN_TYPE'] != 0) {
-	if ($rights['personal_flag'] == 1) {
+	if (isset($rights['all_data_flag']) && $rights['all_data_flag'] == 1) {
+		// All Data shows every customer. Personal and Chain Vise stay unused while this is on.
+	} else if ($rights['personal_flag'] == 1) {
 		$sales_id = $db->rp_getValue("dealer_distributor_network", "sales_executive_id", "isDelete=0 AND id='" . $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'] . "'", 0);
 
 		// $ctable_where .=" AND created_by ='".$_SESSION[SITE_SESS.'_ADMIN_SESS_ID']."' ";

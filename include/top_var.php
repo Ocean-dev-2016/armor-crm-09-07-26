@@ -212,9 +212,9 @@ $left_pages_utility_array1 = array("1"=>array("Manage Designation","manage_desig
 
 /*$left_pages_utility_array4 = array("1"=>array("Manage Unit ","manage_unit_master","unit_manage.php",503),);*/
 
-$left_pages_utility_array5 = array("1"=>array("Manage System User","manage_ddm","dealer_distributor_network_manage.php",503),);
+$left_pages_utility_array5 = array("1"=>array("Manage System User","manage_ddm","dealer_distributor_network_manage.php",406),);
 
-$left_pages_utility_array15 = array("1"=>array("Push Notification","push_notification","push_notification_manage.php",503),);
+$left_pages_utility_array15 = array("1"=>array("Push Notification","push_notification","push_notification_manage.php",679),);
 				
  $left_pages_utility_array16 = array("1"=>array("Product Stock","product_stock","stock_manage.php",638),);
 $left_pages_utility_array17 = array("1"=>array("Import Stock","import_stock","import_stock_crud.php?mode=add",503),);
@@ -230,7 +230,7 @@ $left_pages_utility_array23=array("1"=>array("Self Analysis","self_analysis","se
 $left_pages_utility_array24=array("1"=>array("Goal Setting to Goal Achieving","goal_setting_to_goal_achieving","goal_setting_to_achieving_manage.php",661),);
 
 
-$left_pages_utility_array18 = array("1"=>array("Document List","document_list","document_list_manage.php",554),);
+$left_pages_utility_array18 = array("1"=>array("Document List","document_list","document_list_manage.php",680),);
 
 $left_pages_utility_array8 = array("1"=>array("Manage Complain","manage_complain","manage_complain.php",581),);
 
@@ -716,12 +716,12 @@ $left_head_product_stock_array = array(0=>array("Product Stock","product_stock",
 $left_head_utility_array = array(
 	0=>array("News","Manage News",$left_pages_utility_array13,579),
 	1=>array("Banner","Manage Banner",$left_pages_utility_array14,574),
-	2=>array("System User","Manage System user",$left_pages_utility_array5,503),
-	3=>array("Push Notification","Push Notification",$left_pages_utility_array15,503),
+	2=>array("System User","Manage System user",$left_pages_utility_array5,406),
+	3=>array("Push Notification","Push Notification",$left_pages_utility_array15,679),
 	4=>array("Product Stock","Product Stock",$left_pages_utility_array16,638),
 	5=>array("Import Stock","Import Stock",$left_pages_utility_array17,503),
 	// 6=>array("Import Item","Import Item",$left_pages_utility_array19,629),
-	7=>array("Document List","Document List",$left_pages_utility_array18,503),
+	7=>array("Document List","Document List",$left_pages_utility_array18,680),
 	8=>array("Add Manual Stock","Add Manual Stock",$left_pages_utility_array20,633),
 	9=>array("Customer Manual Stock","Customer Manual Stock",$left_pages_utility_array21,650),
 	10=>array("Document Type","Manage Document Type",$left_sub_pages_array37,653),
