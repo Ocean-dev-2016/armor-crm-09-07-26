@@ -41,16 +41,23 @@ if ($searchName !== '' && strtolower($searchName) !== 'undefined' && strtolower(
 	$searchName = mysqli_real_escape_string($db->myconn, $searchName);
 	$USER_IDS = array();
 	$CUSTOMER_IDS = array();
+	$INQ_IDS = array();
 	$sales_id = $db->rp_getData("sales_executive", "id", "name LIKE '%" . $searchName . "%' AND isDelete=0", "", 0);
 	if ($sales_id) {
 		while ($K = mysqli_fetch_assoc($sales_id)) {
 			$USER_IDS[] = (int) $K['id'];
 		}
 	}
-	$customer_r = $db->rp_getData("executive", "id", "(cname LIKE '%" . $searchName . "%' OR phone LIKE '%" . $searchName . "%' OR mobile_no1 LIKE '%" . $searchName . "%' OR company_name LIKE '%" . $searchName . "%') AND isDelete=0", "", 0);
+	$customer_r = $db->rp_getData("executive", "id", "(cname LIKE '%" . $searchName . "%' OR phone LIKE '%" . $searchName . "%' OR mobile_no1 LIKE '%" . $searchName . "%' OR company_name LIKE '%" . $searchName . "%' OR client_code LIKE '%" . $searchName . "%') AND isDelete=0", "", 0);
 	if ($customer_r) {
 		while ($K1 = mysqli_fetch_assoc($customer_r)) {
 			$CUSTOMER_IDS[] = (int) $K1['id'];
+		}
+	}
+	$inquiry_r = $db->rp_getData("no_order_inquiry", "id", "(person_name LIKE '%" . $searchName . "%' OR mobile_number LIKE '%" . $searchName . "%' OR company_name LIKE '%" . $searchName . "%') AND isDelete=0", "", 0);
+	if ($inquiry_r) {
+		while ($D1 = mysqli_fetch_assoc($inquiry_r)) {
+			$INQ_IDS[] = (int) $D1['id'];
 		}
 	}
 	$parts = array();
@@ -59,6 +66,9 @@ if ($searchName !== '' && strtolower($searchName) !== 'undefined' && strtolower(
 	}
 	if (!empty($CUSTOMER_IDS)) {
 		$parts[] = "customer_id IN (" . implode(",", $CUSTOMER_IDS) . ")";
+	}
+	if (!empty($INQ_IDS)) {
+		$parts[] = "inquiry_id IN (" . implode(",", $INQ_IDS) . ")";
 	}
 	if (!empty($parts)) {
 		$ctable_where .= "(" . implode(" OR ", $parts) . ") AND ";
@@ -138,6 +148,13 @@ if ($date_filter_query != "") {
 	if ($date_from != "" && $date_to != "") {
 		$ctable_where .= " ( DATE(created_date)>='" . $date_from . "' AND DATE(created_date)<='" . $date_to . "' ) AND ";
 	}
+}
+
+if (isset($_REQUEST['visit_month']) && $_REQUEST['visit_month'] != "" && $_REQUEST['visit_month'] != 'undefined' && $_REQUEST['visit_month'] != 'null') {
+	$ctable_where .= " MONTH(created_date) = '" . (int) $_REQUEST['visit_month'] . "' AND ";
+}
+if (isset($_REQUEST['visit_year']) && $_REQUEST['visit_year'] != "" && $_REQUEST['visit_year'] != 'undefined' && $_REQUEST['visit_year'] != 'null') {
+	$ctable_where .= " YEAR(created_date) = '" . (int) $_REQUEST['visit_year'] . "' AND ";
 }
 
 $ctable_where .= " isDelete=0";

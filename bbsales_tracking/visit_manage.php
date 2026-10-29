@@ -285,48 +285,74 @@ include("connect.php");
 	</script>
 
 	<script type="text/javascript">
-		function genReport() {
-			var searchName = ($("#searchName").val() || "").trim();
-			var sales_executive = $("#sales_executive").length ? $("#sales_executive").val() : "";
-			var customer_id = $("#customer_id").length ? $("#customer_id").val() : "";
-			var company_id = $("#company_id").length ? $("#company_id").val() : "";
-			var visit_type = $("#visit_type").length ? $("#visit_type").val() : "";
-			var df1 = ($("#material_request_filter_input").val() || "");
-			if (sales_executive && sales_executive.constructor === Array) {
-				sales_executive = sales_executive.join(",");
+		function armorVisitExportFilters() {
+			/* Use same filters that are currently loaded in the list (global vars),
+			   not just the dropdown selected value (which may not be filtered yet). */
+			var exportSearch = ($("#searchName").val() || "").trim();
+			var exportSales = (typeof sales_executive !== "undefined" && sales_executive) ? sales_executive : "";
+			var exportCustomer = (typeof customer_id !== "undefined" && customer_id) ? customer_id : "";
+			var exportCompany = (typeof company_id !== "undefined" && company_id) ? company_id : "";
+			var exportVisitType = (typeof visit_type !== "undefined" && visit_type) ? visit_type : "";
+			var exportDf = (typeof df1 !== "undefined" && df1) ? df1 : "";
+			var exportMonth = (typeof visit_month !== "undefined" && visit_month) ? visit_month : "";
+			var exportYear = (typeof visit_year !== "undefined" && visit_year) ? visit_year : "";
+			var exportTo = (typeof todate !== "undefined" && todate) ? todate : "";
+			var exportFrom = (typeof fromdate !== "undefined" && fromdate) ? fromdate : "";
+
+			try {
+				if (exportDf) {
+					exportDf = decodeURIComponent(exportDf);
+				}
+			} catch (e) {}
+
+			if (!exportDf && $("#material_request_filter_input").length) {
+				exportDf = $("#material_request_filter_input").val() || "";
 			}
-			if (customer_id && customer_id.constructor === Array) {
-				customer_id = customer_id.join(",");
+			if (exportSales && exportSales.constructor === Array) {
+				exportSales = exportSales.join(",");
 			}
-			if (!sales_executive || sales_executive === "null" || sales_executive === "undefined") {
-				sales_executive = "";
+			if (exportCustomer && exportCustomer.constructor === Array) {
+				exportCustomer = exportCustomer.join(",");
 			}
-			if (!customer_id || customer_id === "null" || customer_id === "undefined") {
-				customer_id = "";
+			if (!exportSales || exportSales === "null" || exportSales === "undefined") {
+				exportSales = "";
+			}
+			if (!exportCustomer || exportCustomer === "null" || exportCustomer === "undefined") {
+				exportCustomer = "";
+			}
+			if (!exportCompany || exportCompany === "null" || exportCompany === "undefined") {
+				exportCompany = "";
+			}
+			if (!exportVisitType || exportVisitType === "null" || exportVisitType === "undefined") {
+				exportVisitType = "";
 			}
 
+			return {
+				searchName: exportSearch,
+				sales_executive: exportSales,
+				customer_id: exportCustomer,
+				company_id: exportCompany,
+				visit_type: exportVisitType,
+				df1: exportDf,
+				df: exportDf,
+				visit_month: exportMonth,
+				visit_year: exportYear,
+				todate: exportTo,
+				fromdate: exportFrom,
+				src_page_id: 577
+			};
+		}
+
+		function genReport() {
 			$.ajax({
 				method: "POST",
 				url: "visit_genReport_ajax.php",
-				data: {
-					searchName: searchName,
-					sales_executive: sales_executive,
-					customer_id: customer_id,
-					company_id: company_id,
-					visit_type: visit_type,
-					df1: df1,
-					df: df1,
-					todate: typeof todate !== "undefined" ? todate : "",
-					fromdate: typeof fromdate !== "undefined" ? fromdate : "",
-					src_page_id: 577
-				},
+				data: armorVisitExportFilters(),
 				dataType: 'json',
 				beforeSend: function() {
-					// $("#loading-modal").modal('show');
 					$('.preloader').fadeIn('slow');
 				},
 				success: function(result) {
-					// $("#loading-modal").modal('hide');
 					$('.preloader').fadeOut('slow');
 					if (result && result.file_path) {
 						window.location.href = "<?= SITEURL ?>" + result.file_path;
@@ -339,18 +365,20 @@ include("connect.php");
 					alert("Excel download failed. Please check Excel permission on this role.");
 				}
 			});
-
-
 		}
 	</script>
 
 	<script type="text/javascript">
 		function genVisitPrint() {
-			var searchName = $("#searchName").val();
-			var sales_executive = $("#sales_executive").val();
-			df1 = $("#material_request_filter_input").val();
-			searchName = encodeURIComponent(searchName.trim());
-			var myWindow = window.open('print_visit_ajax.php?searchName=' + searchName + '&sales_executive=' + sales_executive + '&df=' + df1 + '&customer_id=' + customer_id + '&company_id=' + company_id + "&visit_type=" + visit_type, '', 'width=700,height=800');
+			var f = armorVisitExportFilters();
+			var q = 'searchName=' + encodeURIComponent(f.searchName) +
+				'&sales_executive=' + encodeURIComponent(f.sales_executive) +
+				'&df=' + encodeURIComponent(f.df) +
+				'&customer_id=' + encodeURIComponent(f.customer_id) +
+				'&company_id=' + encodeURIComponent(f.company_id) +
+				'&visit_type=' + encodeURIComponent(f.visit_type) +
+				'&src_page_id=577';
+			var myWindow = window.open('print_visit_ajax.php?' + q, '', 'width=700,height=800');
 			myWindow.print();
 		}
 	</script>
