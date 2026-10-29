@@ -308,6 +308,7 @@ include("connect.php");
 					df1: df1,
 					todate: todate,
 					fromdate: fromdate,
+					src_page_id: 577
 				},
 				dataType: 'json',
 				beforeSend: function() {
@@ -317,11 +318,16 @@ include("connect.php");
 				success: function(result) {
 					// $("#loading-modal").modal('hide');
 					$('.preloader').fadeOut('slow');
-					window.location.href = "<?= SITEURL ?>" + result.file_path;
+					if (result && result.file_path) {
+						window.location.href = "<?= SITEURL ?>" + result.file_path;
+					} else {
+						alert((result && result.ack_msg) ? result.ack_msg : "Excel download failed. Please try again.");
+					}
 				},
-				/*error:function(result){
-					window.location.href="<?= SITEURL ?>"+result.file_path;
-				}*/
+				error: function() {
+					$('.preloader').fadeOut('slow');
+					alert("Excel download failed. Please check Excel permission on this role.");
+				}
 			});
 
 

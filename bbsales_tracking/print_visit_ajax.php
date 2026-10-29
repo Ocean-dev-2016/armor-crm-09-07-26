@@ -1,6 +1,7 @@
 <?php
-$page_id = 577;
-$page_slug = 'visit_page';
+$src_page_id = isset($_REQUEST['src_page_id']) ? (int) $_REQUEST['src_page_id'] : 577;
+$page_id = in_array($src_page_id, array(577, 599), true) ? $src_page_id : 577;
+$page_slug = ($page_id === 599) ? 'visit_report_page' : 'visit_page';
 /*
  * @author Ravi Patel
  */

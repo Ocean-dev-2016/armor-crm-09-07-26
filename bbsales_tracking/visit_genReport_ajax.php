@@ -1,4 +1,7 @@
 <?php
+$src_page_id = isset($_REQUEST['src_page_id']) ? (int) $_REQUEST['src_page_id'] : 599;
+$page_id = in_array($src_page_id, array(577, 599), true) ? $src_page_id : 599;
+$page_slug = ($page_id === 577) ? 'visit_page' : 'visit_report_page';
 include("connect.php");
 include('PHPExcel/IOFactory.php');
 
@@ -58,10 +61,16 @@ if (isset($_REQUEST["visit_type"]) && $_REQUEST["visit_type"] != "" && $_REQUEST
   $ctable_where .= " visit_type='" . $_REQUEST["visit_type"] . "' AND ";
 }
 // echo sizeof($_REQUEST['sales_executive']);exit;
-if (isset($_REQUEST['sales_executive']) && $_REQUEST['sales_executive'] != "" && $_REQUEST['sales_executive'] != NULL && $_REQUEST['sales_executive'] != null && $_REQUEST['sales_executive'] != "NULL" && $_REQUEST['sales_executive'] != "null" && $_REQUEST['sales_executive'] != 'UNDEFINED' && $_REQUEST['sales_executive'] != 'undefined' && $_REQUEST['sales_executive'] != "UNDEFINED" && $_REQUEST['sales_executive'] != "undefined" && sizeof($_REQUEST['sales_executive']) > 0) {
-  // $ctable_where .= " user_id='".implode(" ", $_REQUEST["sales_executive"])."' AND ";
-
-  $ctable_where .= " user_id='" . $_REQUEST["sales_executive"] . "' AND ";
+if (isset($_REQUEST['sales_executive']) && $_REQUEST['sales_executive'] != "" && $_REQUEST['sales_executive'] != NULL && $_REQUEST['sales_executive'] != null && $_REQUEST['sales_executive'] != "NULL" && $_REQUEST['sales_executive'] != "null" && $_REQUEST['sales_executive'] != 'UNDEFINED' && $_REQUEST['sales_executive'] != 'undefined' && $_REQUEST['sales_executive'] != "UNDEFINED" && $_REQUEST['sales_executive'] != "undefined") {
+  $sales_exec_filter = $_REQUEST['sales_executive'];
+  if (is_array($sales_exec_filter)) {
+    $sales_exec_filter = implode(",", array_map('intval', $sales_exec_filter));
+  } else {
+    $sales_exec_filter = preg_replace('/[^0-9,]/', '', (string) $sales_exec_filter);
+  }
+  if ($sales_exec_filter != "") {
+    $ctable_where .= " user_id IN (" . $sales_exec_filter . ") AND ";
+  }
 }
 if (isset($_REQUEST['todate']) && $_REQUEST['todate'] != "" && $_REQUEST['todate'] != NULL && $_REQUEST['todate'] != 'undefined') {
   $ctable_where .= "  DATE(created_date) >= '" . $_REQUEST['todate'] . "' AND ";
@@ -72,10 +81,16 @@ if (isset($_REQUEST['fromdate']) && $_REQUEST['fromdate'] != "" && $_REQUEST['fr
 }
 
 
-if (isset($_REQUEST['customer_id']) && $_REQUEST['customer_id'] != "" && $_REQUEST['customer_id'] != NULL && $_REQUEST['customer_id'] != null && $_REQUEST['customer_id'] != "NULL" && $_REQUEST['customer_id'] != "null" && $_REQUEST['customer_id'] != 'UNDEFINED' && $_REQUEST['customer_id'] != 'undefined' && $_REQUEST['customer_id'] != "UNDEFINED" && $_REQUEST['customer_id'] != "undefined" && sizeof($_REQUEST['customer_id']) > 0) {
-  // $ctable_where .= " customer_id='".implode(" ", $_REQUEST["customer_id"])."' AND ";
-
-  $ctable_where .= " customer_id='" . $_REQUEST["customer_id"] . "' AND ";
+if (isset($_REQUEST['customer_id']) && $_REQUEST['customer_id'] != "" && $_REQUEST['customer_id'] != NULL && $_REQUEST['customer_id'] != null && $_REQUEST['customer_id'] != "NULL" && $_REQUEST['customer_id'] != "null" && $_REQUEST['customer_id'] != 'UNDEFINED' && $_REQUEST['customer_id'] != 'undefined' && $_REQUEST['customer_id'] != "UNDEFINED" && $_REQUEST['customer_id'] != "undefined") {
+  $customer_filter = $_REQUEST['customer_id'];
+  if (is_array($customer_filter)) {
+    $customer_filter = implode(",", array_map('intval', $customer_filter));
+  } else {
+    $customer_filter = preg_replace('/[^0-9,]/', '', (string) $customer_filter);
+  }
+  if ($customer_filter != "") {
+    $ctable_where .= " customer_id IN (" . $customer_filter . ") AND ";
+  }
 }
 
 if (isset($_REQUEST['df1']) && $_REQUEST['df1'] != "") {
@@ -98,6 +113,45 @@ if (isset($_REQUEST['df1']) && $_REQUEST['df1'] != "") {
 //service_executive user not show condition end --//
 
 $ctable_where .= " isDelete=0";
+
+if ($_SESSION[SITE_SESS . '_ADMIN_TYPE'] != 0) {
+	if (isset($rights['personal_flag']) && (int) $rights['personal_flag'] === 1) {
+		$ctable_where .= " AND user_id='" . $_SESSION[SITE_SESS . 'REFERANCE_ID'] . "'";
+	} else if (isset($rights['chain_vise_flag']) && (int) $rights['chain_vise_flag'] === 1) {
+		$check_id = $_SESSION[SITE_SESS . 'REFERANCE_ID'];
+		$WhereCondition = "";
+		$get_sales_type = $db->rp_getValue("sales_executive", "type", "isDelete=0 AND id='" . $check_id . "'", 0);
+		if ($get_sales_type == "sales_manager") {
+			$key = "sm_id";
+			$WhereCondition .= ' ' . $key . '=' . $check_id;
+		} else if ($get_sales_type == "area_sales_manager") {
+			$key = "asm_id";
+			$WhereCondition .= ' ' . $key . '=' . $check_id;
+		} else if ($get_sales_type == "sales_officer") {
+			$key = "so_id";
+			$WhereCondition .= ' ' . $key . '=' . $check_id;
+		} else if ($get_sales_type == "sales_executive") {
+			$key = "se_id";
+			$WhereCondition .= ' ' . $key . '=' . $check_id;
+		} else {
+			$WhereCondition .= ' type = "service_engineer"';
+		}
+		$data = $db->rp_getData("sales_executive", "id", $WhereCondition, "", 0);
+		$SALEID1 = array();
+		if ($data) {
+			while ($data_d = mysqli_fetch_assoc($data)) {
+				$SALEID1[] = $data_d['id'];
+			}
+		}
+		if (!empty($SALEID1)) {
+			$SALEID1 = implode(",", $SALEID1);
+			$ctable_where .= " AND user_id IN (" . $SALEID1 . ',' . $_SESSION[SITE_SESS . 'REFERANCE_ID'] . ")";
+		} else {
+			$ctable_where .= " AND user_id IN (" . $_SESSION[SITE_SESS . 'REFERANCE_ID'] . ")";
+		}
+	}
+}
+
 $ctable1_r = $db->rp_getData("visit", "*", $ctable_where, "id DESC", 0);
 
 // Instantiate a new PHPExcel object 

@@ -437,9 +437,15 @@ function del_conf(id){
 <script type="text/javascript">
 	function genReport(){
 		var searchName     = $("#searchName").val();
-		var sales_executive = String($("#sales_executive").val());
-		var customer_id = String($("#customer_id").val());
+		var sales_executive = $("#sales_executive").val();
+		var customer_id = $("#customer_id").val();
 		var df1 = $("#material_request_filter_input").val();
+		if (sales_executive && sales_executive.constructor === Array) {
+			sales_executive = sales_executive.join(",");
+		}
+		if (customer_id && customer_id.constructor === Array) {
+			customer_id = customer_id.join(",");
+		}
       	searchName     = encodeURIComponent(searchName.trim());
       	// window.location.href='visit_genReport_ajax.php?searchName='+searchName+'&sales_executive='+sales_executive+'&customer_id='+customer_id+'&df='+df1;
       	$.ajax({
@@ -450,6 +456,7 @@ function del_conf(id){
 				sales_executive:sales_executive,
 				customer_id:customer_id,
 				df1:df1,
+				src_page_id: 599
 			},	
 			dataType : 'json',
 			beforeSend: function()
@@ -460,11 +467,16 @@ function del_conf(id){
         	success: function(result){
         		// $("#loading-modal").modal('hide');
         		$('.preloader').fadeOut('slow');
-        		window.location.href="<?=SITEURL?>"+result.file_path;
+				if (result && result.file_path) {
+        			window.location.href="<?=SITEURL?>"+result.file_path;
+				} else {
+					alert((result && result.ack_msg) ? result.ack_msg : "Excel download failed. Please try again.");
+				}
         	},
-			/*error:function(result){
-				window.location.href="<?=SITEURL?>"+result.file_path;
-			}*/
+			error: function(){
+				$('.preloader').fadeOut('slow');
+				alert("Excel download failed. Please check Excel permission on this role.");
+			}
     	});
     }
 </script>
@@ -473,9 +485,16 @@ function del_conf(id){
 	function genVisitPrint(){
 		var searchName     = $("#searchName").val();
       	var sales_executive = $("#sales_executive").val();
+		var customer_id = $("#customer_id").val();
       	df1=$("#material_request_filter_input").val();
+		if (sales_executive && sales_executive.constructor === Array) {
+			sales_executive = sales_executive.join(",");
+		}
+		if (customer_id && customer_id.constructor === Array) {
+			customer_id = customer_id.join(",");
+		}
       	searchName     = encodeURIComponent(searchName.trim());
-     	var myWindow = window.open('print_visit_ajax.php?searchName='+searchName+'&sales_executive='+sales_executive+'&df='+df1+'&customer_id='+customer_id,'','width=700,height=800');
+     	var myWindow = window.open('print_visit_ajax.php?searchName='+searchName+'&sales_executive='+sales_executive+'&df='+df1+'&customer_id='+customer_id+'&src_page_id=599','','width=700,height=800');
      	myWindow.print();
     }
 </script>
