@@ -286,15 +286,24 @@ include("connect.php");
 
 	<script type="text/javascript">
 		function genReport() {
-			var searchName = $("#searchName").val();
-			var sales_executive = $("#sales_executive").val();
-			var customer_id = $("#customer_id").val();
-			var company_id = $("#company_id").val();
-			var visit_type = $("#visit_type").val();
-			var df1 = $("#material_request_filter_input").val();
-			searchName = encodeURIComponent(searchName.trim());
-			// window.location.href='visit_genReport_ajax.php?searchName='+searchName+'&sales_executive='+sales_executive+'&customer_id='+customer_id+'&df='+df1;
-
+			var searchName = ($("#searchName").val() || "").trim();
+			var sales_executive = $("#sales_executive").length ? $("#sales_executive").val() : "";
+			var customer_id = $("#customer_id").length ? $("#customer_id").val() : "";
+			var company_id = $("#company_id").length ? $("#company_id").val() : "";
+			var visit_type = $("#visit_type").length ? $("#visit_type").val() : "";
+			var df1 = ($("#material_request_filter_input").val() || "");
+			if (sales_executive && sales_executive.constructor === Array) {
+				sales_executive = sales_executive.join(",");
+			}
+			if (customer_id && customer_id.constructor === Array) {
+				customer_id = customer_id.join(",");
+			}
+			if (!sales_executive || sales_executive === "null" || sales_executive === "undefined") {
+				sales_executive = "";
+			}
+			if (!customer_id || customer_id === "null" || customer_id === "undefined") {
+				customer_id = "";
+			}
 
 			$.ajax({
 				method: "POST",
@@ -306,8 +315,9 @@ include("connect.php");
 					company_id: company_id,
 					visit_type: visit_type,
 					df1: df1,
-					todate: todate,
-					fromdate: fromdate,
+					df: df1,
+					todate: typeof todate !== "undefined" ? todate : "",
+					fromdate: typeof fromdate !== "undefined" ? fromdate : "",
 					src_page_id: 577
 				},
 				dataType: 'json',

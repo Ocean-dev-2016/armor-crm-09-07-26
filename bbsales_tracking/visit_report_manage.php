@@ -436,36 +436,43 @@ function del_conf(id){
 
 <script type="text/javascript">
 	function genReport(){
-		var searchName     = $("#searchName").val();
-		var sales_executive = $("#sales_executive").val();
-		var customer_id = $("#customer_id").val();
-		var df1 = $("#material_request_filter_input").val();
+		var searchName = ($("#searchName").val() || "").trim();
+		var sales_executive = $("#sales_executive").length ? $("#sales_executive").val() : "";
+		var customer_id = $("#customer_id").length ? $("#customer_id").val() : "";
+		var df1 = ($("#material_request_filter_input").val() || "");
+		var class_id_val = $("#class_id").length ? ($("#class_id").val() || "") : (typeof class_id !== "undefined" ? class_id : "");
+		var area_val = $("#area").length ? ($("#area").val() || "") : (typeof area !== "undefined" ? area : "");
 		if (sales_executive && sales_executive.constructor === Array) {
 			sales_executive = sales_executive.join(",");
 		}
 		if (customer_id && customer_id.constructor === Array) {
 			customer_id = customer_id.join(",");
 		}
-      	searchName     = encodeURIComponent(searchName.trim());
-      	// window.location.href='visit_genReport_ajax.php?searchName='+searchName+'&sales_executive='+sales_executive+'&customer_id='+customer_id+'&df='+df1;
+		if (!sales_executive || sales_executive === "null" || sales_executive === "undefined") {
+			sales_executive = "";
+		}
+		if (!customer_id || customer_id === "null" || customer_id === "undefined") {
+			customer_id = "";
+		}
       	$.ajax({
 	        method: "POST",
 	        url: "visit_genReport_ajax.php",
 	        data:{
-        		searchName:searchName,
-				sales_executive:sales_executive,
-				customer_id:customer_id,
-				df1:df1,
+        		searchName: searchName,
+				sales_executive: sales_executive,
+				customer_id: customer_id,
+				df1: df1,
+				df: df1,
+				class_id: class_id_val,
+				area: area_val,
 				src_page_id: 599
 			},	
 			dataType : 'json',
 			beforeSend: function()
 			{
-				// $("#loading-modal").modal('show');
 				$('.preloader').fadeIn('slow');
 			},
         	success: function(result){
-        		// $("#loading-modal").modal('hide');
         		$('.preloader').fadeOut('slow');
 				if (result && result.file_path) {
         			window.location.href="<?=SITEURL?>"+result.file_path;
