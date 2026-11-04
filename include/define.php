@@ -197,9 +197,9 @@ define("VISITING_DOWNLOAD_PATH",SITEURL."download/".VISITING_TITLE);
 define("ACTIVE_TIME","10"); // here 10 is minit
 
 define("DEFAULTIMG", SITEURL . "images/no-image.svg");
-define("TRACKING_TIME_LIVE_API","3600000"); // 60 min (milliseconds)
-define("TRACKING_TIME_LOCAL_API","3600000"); // 60 min (milliseconds)
-define("DISTANCE_API","10"); // 10 meter 
+define("TRACKING_TIME_LIVE_API","7200000"); // 2 hours (milliseconds)
+define("TRACKING_TIME_LOCAL_API","7200000"); // 2 hours (milliseconds)
+define("DISTANCE_API","300"); // 300 meter 
 define("TRACKING_LIVE_URL", SITEURL);  
 
 define("ATTENDANCE","../images/attendance/");
