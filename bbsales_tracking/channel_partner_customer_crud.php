@@ -395,7 +395,7 @@ function city_data(val, city_name) {
 	$.ajax({
 		type: "POST",
 		url: "ajax_get_main_city.php",
-		data: 'sid=' + val + '&city=' + city_name,
+		data: { sid: val, city: city_name },
 		success: function(result) {
 			$("#city").html(result);
 		}

@@ -833,7 +833,7 @@ $(document).ready(function(){
 			$.ajax({
 				type: "POST",
 				url: "ajax_get_main_city.php",
-				data: 'sid=' + val + '&city='+city_name,
+				data: { sid: val, city: city_name },
 				success: function(result) {
 					$("#main_city").html(result);
 					$("#main_city").select2("destroy");
@@ -848,7 +848,7 @@ $(document).ready(function(){
 			$.ajax({
 				type: "POST",
 				url: "ajax_get_city.php",
-				data: 'sid=' + val + '&city='+city_name,
+				data: { sid: val, city: city_name },
 				success: function(result) {
 			    $("#city").html(result);
 			    var class_id = $("#state").find(':selected').attr('data-state_id');
