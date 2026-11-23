@@ -66,10 +66,12 @@ class SalesExecutive extends Functions
 				$type_slug = 'ServiceExecutive';
 			}
 
+			$emp_code = isset($_REQUEST['emp_code']) ? $this->db->clean($_REQUEST['emp_code']) : "";
 			$adate	= date('Y-m-d H:i:s');
 			$rows 	= array(
 				"class_id",
 				"name",
+				"emp_code",
 				"email",
 				"username",
 				"password",
@@ -253,6 +255,7 @@ class SalesExecutive extends Functions
 			$values = array(
 				$class_id,
 				$name,
+				$emp_code,
 				$email,
 				$username,
 				$password,
@@ -503,8 +506,10 @@ class SalesExecutive extends Functions
 			if ($city == "") {
 				$city = $this->db->rp_getValue($this->ctable, "city", "id='" . $_REQUEST['id'] . "'", 0);
 			}
+			$emp_code = isset($_REQUEST['emp_code']) ? $this->db->clean($_REQUEST['emp_code']) : "";
 			$rows 	= array(
 				"name"	=> $name,
+				"emp_code"		=> $emp_code,
 				"email"			=> $email,
 				"username"			=> $username,
 				//"password"			=> $password,	
@@ -720,6 +725,7 @@ class SalesExecutive extends Functions
 
 		$result = array();
 		$result['name']		= htmlentities($ctable_d['name']);
+		$result['emp_code']		= stripslashes($ctable_d['emp_code']);
 		$result['email']		= stripslashes($ctable_d['email']);
 		$result['username']		= stripslashes($ctable_d['username']);
 		$result['password']		= stripslashes($ctable_d['password']);

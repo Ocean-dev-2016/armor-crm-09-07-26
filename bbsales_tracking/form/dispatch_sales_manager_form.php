@@ -39,6 +39,13 @@
 								<p class="help-block"></p>
 							</div>
 						</div>
+						<div class="col-md-6">
+							<div class="form-group">
+								<label>Emp. Code</label>
+								<input type="text" class="form-control" name="emp_code" id="emp_code" value="<?php echo $emp_code; ?>">
+								<p class="help-block"></p>
+							</div>
+						</div>
 
 						<div class="col-md-6">
 							<div class="form-group">

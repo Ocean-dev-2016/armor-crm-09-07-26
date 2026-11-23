@@ -21,6 +21,7 @@ $se_id	= "";
 $class_id	= "";
 $password	= "";
 $name			= "";
+$emp_code		= "";
 $email			= "";
 $phone 			= "";
 $address		= "";

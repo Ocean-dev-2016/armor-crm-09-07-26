@@ -97,14 +97,21 @@
 								</div>
 								<div class="row">
 
-									<div class="col-md-6">
+									<div class="col-md-4">
 										<div class="form-group">
 											<label>Person Name <code>*</code></label>
 											<input type="text" class="form-control" name="name" id="name" value="<?php echo $name; ?>" autofocus>
 											<p class="help-block"></p>
 										</div>
 									</div>
-									<div class="col-md-6">
+									<div class="col-md-4">
+										<div class="form-group">
+											<label>Emp. Code</label>
+											<input type="text" class="form-control" name="emp_code" id="emp_code" value="<?php echo $emp_code; ?>">
+											<p class="help-block"></p>
+										</div>
+									</div>
+									<div class="col-md-4">
 										<div class="form-group">
 											<label>User Name <code>*</code></label>
 											<input type="text" class="form-control" name="username" id="username" value="<?php echo $username; ?>">

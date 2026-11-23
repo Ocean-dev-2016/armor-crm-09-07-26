@@ -15,6 +15,7 @@ if (isset($_REQUEST['submit']) && isset($_REQUEST['mode']) && $_REQUEST['mode'] 
 		$item = array();
 		$id						= $_SESSION[SITE_SESS . '_ADMIN_SESS_ID'];
 		$name					= isset($_REQUEST['name']) ? $db->clean($_REQUEST['name']) : "";
+		$emp_code				= isset($_REQUEST['emp_code']) ? $db->clean($_REQUEST['emp_code']) : "";
 		$email					= isset($_REQUEST['email']) ? $db->clean($_REQUEST['email']) : "";
 		$username				= isset($_REQUEST['username']) ? $db->clean($_REQUEST['username']) : "";
 		$password				= isset($_REQUEST['password']) ? md5($db->clean($_REQUEST['password'])) : "";
@@ -285,6 +286,7 @@ if (isset($_REQUEST['submit']) && isset($_REQUEST['mode']) && $_REQUEST['mode'] 
 		$detail = array();
 		$detail['id'] = $id;
 		$detail['name'] = $name;
+		$detail['emp_code'] = $emp_code;
 		$detail['email'] = $email;
 		$detail['username'] = $username;
 		$detail['password'] = $password;

@@ -205,6 +205,7 @@ $ctable_r = $db->rp_getData($ctable,"*",$ctable_where,"isActive DESC,id DESC",0)
         		<th></th>
         		<th></th>
         		<th></th>
+        		<th></th>
         		<th>
         			<select class="form-control status" name="state" id="state" onChange="filter_state(this.value);" autofocus >
 	                    <option value="">Select State</option>
@@ -259,6 +260,7 @@ $ctable_r = $db->rp_getData($ctable,"*",$ctable_where,"isActive DESC,id DESC",0)
                 <th class="fix-th1">No.</th>
 				<th class="fix-th1">Sales Officer Type</th>
                 <th class="fix-th1">Name</th>
+                <th class="fix-th1">Emp. Code</th>
                 <th class="fix-th1">Username</th>
 				<th class="fix-th1">Email</th>
 				<th class="fix-th1">CUG No</th>	
@@ -448,6 +450,11 @@ $ctable_r = $db->rp_getData($ctable,"*",$ctable_where,"isActive DESC,id DESC",0)
                 </td>
                 <td >
                 	<span style="<?= $exe_deactive_color?>;">	
+                		<?php echo stripslashes($ctable_d['emp_code']); ?>
+                	</span>
+                </td>
+                <td >
+                	<span style="<?= $exe_deactive_color?>;">	
                 		<strong><?php echo stripslashes($ctable_d['username']); ?></strong>
                 	</span>
                 </td>
@@ -482,7 +489,7 @@ $ctable_r = $db->rp_getData($ctable,"*",$ctable_where,"isActive DESC,id DESC",0)
 		else{
 			?>
 			<tr>
-			<td colspan="10"><p style="text-align:center;">No data available in table</p></td>
+			<td colspan="11"><p style="text-align:center;">No data available in table</p></td>
 			</tr>
 			<?php
 		}

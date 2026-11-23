@@ -3,7 +3,7 @@
  * Armor CRM — Database Sync (idempotent)
  *
  * Safe to run multiple times on local or live.
- * Live URL: https://armor-crm.oceanhub.co.in/db_sync.php?key=armor_cp_sync_2026
+ * Live URL: https://crm.mahadevcasting.in/db_sync.php?key=armor_cp_sync_2026
  *
  * Delete this file from production after all checks show READY.
  */
@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 define('DB_SYNC_KEY', 'armor_cp_sync_2026');
-define('DB_SYNC_VERSION', '2026.09.07.1');
+define('DB_SYNC_VERSION', '2026.11.23.1');
 
 if (!isset($_GET['key']) || $_GET['key'] !== DB_SYNC_KEY) {
 	header('HTTP/1.1 403 Forbidden');
@@ -208,7 +208,10 @@ function db_sync_append_page_urls($conn, $pageId, $newUrls)
 }
 
 db_sync_log('INFO', '--- Armor CRM DB Sync v' . DB_SYNC_VERSION . ' ---');
-db_sync_log('INFO', 'Changes: Channel Partner flag restore, Expense, Visit APIs, Employee Chat, CP Order Status #267, CP Partial Payment #260/#261, Quotation approve_by_id');
+db_sync_log('INFO', 'Changes: Channel Partner flag restore, Expense, Visit APIs, Employee Chat, CP Order Status #267, CP Partial Payment #260/#261, Quotation approve_by_id, Sales Officer emp_code');
+
+/* Avoid ALTER failures on tables with zero-date defaults (e.g. sales_executive.regDate) */
+@mysqli_query($conn, "SET SESSION sql_mode=''");
 
 /* Quotation Approved By (KRA / quotation viewer) */
 if (db_sync_table_exists($conn, 'quotation_detail')) {
@@ -769,6 +772,15 @@ db_sync_add_column_if_missing(
 	array('refreshToken', 'imei')
 );
 
+/* Sales Officer Emp. Code — list + add/edit */
+db_sync_add_column_if_missing(
+	$conn,
+	'sales_executive',
+	'emp_code',
+	"varchar(50) DEFAULT NULL COMMENT 'Employee Code'",
+	array('name')
+);
+
 db_sync_add_column_if_missing(
 	$conn,
 	'visit',
@@ -1220,6 +1232,13 @@ if (db_sync_table_exists($conn, 'api_table')) {
 			$allReady = false;
 			db_sync_log('FAIL', 'MISSING: ' . $devTable . '.' . $devCol);
 		}
+	}
+
+	if (db_sync_column_exists($conn, 'sales_executive', 'emp_code')) {
+		db_sync_log('CHECK', 'READY: sales_executive.emp_code');
+	} else {
+		$allReady = false;
+		db_sync_log('FAIL', 'MISSING: sales_executive.emp_code');
 	}
 
 	if (db_sync_column_exists($conn, 'orders', 'channel_partner_order_flag')) {
@@ -2063,7 +2082,7 @@ $environment = isset($config['environment']) ? $config['environment'] : 'unknown
 		<ol>
 			<li>Upload all PHP/code files to live server</li>
 			<li>Open this URL in browser:<br>
-				<code>https://armor-crm.oceanhub.co.in/db_sync.php?key=armor_cp_sync_2026</code>
+				<code>https://crm.mahadevcasting.in/db_sync.php?key=armor_cp_sync_2026</code>
 			</li>
 			<li>Wait until status shows <span class="ready">READY</span> and FAIL = 0</li>
 			<li>Test Channel Partner Customer web page + App APIs (#223-#228)</li>
@@ -2086,6 +2105,7 @@ $environment = isset($config['environment']) ? $config['environment'] : 'unknown
 			<li>Columns <code>orders.payment_received_flag</code>, <code>payment_received_date</code>, <code>payment_received_by</code>, <code>payment_received_amount</code>, <code>payment_received_type</code> (CP Receive Payment. <code>flag=1</code> only when fully paid; <code>payment_received_amount</code> is cumulative. Each receipt is a row in <code>payment</code> table. APIs <code>#259-#261</code>, PDF <code>#265</code>, Ledger <code>#262</code>)</li>
 			<li>Heal: CP orders with partial amount no longer stay <code>payment_received_flag=1</code></li>
 			<li>Column <code>sales_executive.device_id</code> + <code>sales_executive_login.device_id</code> (App login <code>token</code> → device_id for notifications)</li>
+			<li>Column <code>sales_executive.emp_code</code> (Sales Officer Emp. Code — list + add/edit)</li>
 			<li>Column <code>visit.note</code> + <code>visit.followup_date</code> (App stopVisit <code>note</code> / <code>date</code> → <code>followup_date</code>, format <code>Y-m-d H:i</code>)</li>
 			<li>Column <code>quotation_detail.approve_by_id</code> (Quotation Approve → Approved By in KRA)</li>
 			<li>Widen <code>sales_vs_consultant_approval_process.process_four_product_name</code> (+ project name/location) from <code>varchar(255)</code> → <code>TEXT</code> so all selected products show in Consultant Approval Process Report</li>
